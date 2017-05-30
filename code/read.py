@@ -4,11 +4,11 @@ import glob
 import itertools
 import json
 import os
+import re
 import shutil
 import time
 import urllib.request
 import zipfile
-import re
 
 import fuzzywuzzy.process
 import geopandas as gpd
@@ -19,12 +19,22 @@ import shapefile
 import shapely.geometry
 
 from download import get_download_url, make_file_path, download_subregion_osm_file, get_subregion_index
-from psql import OSM
-from utilities import cdd_osm_dat, load_pickle, save_pickle, osm_geometry_types
+from utilities import cdd_osm_dat, load_pickle, save_pickle, osm_geom_types
 
 
 # Search the OSM directory and its sub-directories to get the path to the file =======================================
 def fetch_osm_file(subregion, layer, feature=None, file_format=".shp", update=False):
+    """
+    :param subregion: [str] name of a subregion, e.g. 'england', 'oxfordshire', or 'europe'; case-insensitive
+    :param layer: [str] name of a OSM layer, e.g. 'railways'
+    :param feature: [str] name of a feature, e.g. 'rail'; if None, all available features included; default None
+    :param file_format: [str] the extension of a file; default '.shp'
+    :param update: [bool] indicates whether to update the relevant file/information; default False
+    :return: [list] a list of paths
+                fetch_osm_file('england', 'railways', feature=None, file_format=".shp", update=False) may return
+                ['...\\osm-util\\dat\\europe\\great-britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp']
+                if such a file exists; [] otherwise.
+    """
     subregion_index = get_subregion_index("subregion-index", update)
     subregion_name = fuzzywuzzy.process.extractOne(subregion, subregion_index, score_cutoff=10)[0]
     subregion = subregion_name.lower().replace(" ", "-")
@@ -48,15 +58,15 @@ def fetch_osm_file(subregion, layer, feature=None, file_format=".shp", update=Fa
 # Merge a set of .shp files (for a given layer) ======================================================================
 def merge_shp_files(subregions, layer, update=False):
     """
+    :param subregions: [list] a list of subregion names, e.g. ['cambridgeshire', 'oxfordshire', 'West Yorkshire']
+    :param layer: [str] name of a OSM layer, e.g. 'railways'
+    :param update: [bool] indicates whether to update the relevant file/information; default False
+
     Layers include buildings, landuse, natural, places, points, railways, roads and waterways
 
-    Create a .prj projection file for a .shp file: 
-    http://geospatialpython.com/2011/02/create-prj-projection-file-for.html
+    Note that this function does not create projection (.prj) for the merged map. Refer to
+    http://geospatialpython.com/2011/02/create-prj-projection-file-for.html for creating a .prj file.
 
-    :param subregions: 
-    :param layer:
-    :param update: 
-    :return:
     """
     # Make sure all the required shapefiles are ready
     subregion_name_and_download_url = [get_download_url(subregion, '.shp.zip') for subregion in subregions]
@@ -120,11 +130,11 @@ def merge_shp_files(subregions, layer, update=False):
     w.save(os.path.join(layer_path, layer))
 
 
-# (Alternative to geopandas.read_file()) =============================================================================
+# (Alternative to, though not the same as, geopandas.read_file()) ====================================================
 def read_shp_file(path_to_shp):
     """
-    :param path_to_shp:
-    :return:
+    :param path_to_shp: [str] path to a .shp file
+    :return: [DataFrame]
 
     len(shp.records()) == shp.numRecords
     len(shp.shapes()) == shp.numRecords
@@ -141,34 +151,41 @@ def read_shp_file(path_to_shp):
 
     # shp_data['name'] = shp_data.name.str.encode('utf-8').str.decode('utf-8')  # Clean data
     shape_info = pd.DataFrame([(s.points, s.shapeType) for s in shp_reader.iterShapes()],
-                              index=shp_data.index, columns=['coords', 'shape_type'])
+                              index=shp_data.index,
+                              columns=['coords', 'shape_type'])
     shp_data = shp_data.join(shape_info)
 
     return shp_data
 
 
-#
-def make_osm_pickle_file_path(extract_dir, layer, feature, suffix='shp'):
-    subregion_name = os.path.basename(extract_dir).split('-')[0]
-    filename = "-".join((s for s in [subregion_name, layer, feature, suffix] if s is not None)) + ".pickle"
-    path_to_file = os.path.join(extract_dir, filename)
-    return path_to_file
-
-
-#
+# Read a .shp.zip file
 def read_shp_zip(subregion, layer, feature=None, update=False, keep_extracts=True):
     """
-    :param subregion: 
-    :param layer: 
-    :param feature: 
-    :param update: 
-    :param keep_extracts: 
-    :return: 
+    :param subregion: [str] name of a subregion, e.g. 'england', 'oxfordshire', or 'europe'; case-insensitive
+    :param layer: [str] name of a OSM layer, e.g. 'railways'
+    :param feature: [str] name of a feature, e.g. 'rail'; if None, all available features included; default None
+    :param update: [bool] indicates whether to update the relevant file/information; default False
+    :param keep_extracts: [bool] indicates whether to keep extracted files from the .shp.zip file; default True
+    :return: [GeoDataFrame]
     """
     _, download_url = get_download_url(subregion, file_format=".shp.zip")
     _, file_path = make_file_path(download_url)
 
     extract_dir = os.path.splitext(file_path)[0]
+
+    # Make a local path for saving the pickle file later
+    def make_osm_pickle_file_path(extr_dir, lyr, feat, suffix='shp'):
+        """
+        :param extr_dir: [str] a directory for storing extracted files from the .shp.zip file
+        :param lyr: [str] ditto
+        :param feat: [str] ditto
+        :param suffix: [str] a suffix to the filename
+        :return: [str] a path to save the pickle file eventually
+        """
+        subregion_name = os.path.basename(extr_dir).split('-')[0]
+        filename = "-".join((s for s in [subregion_name, lyr, feat, suffix] if s is not None)) + ".pickle"
+        path_to_file = os.path.join(extr_dir, filename)
+        return path_to_file
 
     path_to_shp_pickle = make_osm_pickle_file_path(extract_dir, layer, feature)
 
@@ -229,37 +246,24 @@ def read_shp_zip(subregion, layer, feature=None, update=False, keep_extracts=Tru
     return shp_data
 
 
-#
+# Get the local path to a OSM file
 def get_local_file_path(subregion, file_format='.osm.pbf'):
     """
-    :param subregion: 
-    :param file_format: 
-    :return: 
+    :param subregion: [str] name of a subregion, e.g. 'england'
+    :param file_format: [str] default '.osm.pbf'
+    :return: [str] a local path to the file with the extension of the specified file_format
     """
     _, download_url = get_download_url(subregion, file_format)
     _, file_path = make_file_path(download_url)
     return file_path
 
 
-#
-def parse_other_tags(x):
-    """
-    :param x: [str] or None
-    :return:
-    """
-    if x is not None:
-        raw_other_tags = [re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', x)]
-        other_tags = {k: v.replace('<br>', ' ') for k, v in (each_tag.split('"=>"') for each_tag in raw_other_tags)}
-    else:
-        other_tags = x
-    return other_tags
-
-
-#
+# Read '.osm.pbf' file roughly into DataFrames
 def parse_osm_pbf(subregion):
     """
-    OpenStreetMap XML and PBF (GDAL/OGR >= 1.10.0)
+    Reference: http://www.gdal.org/drv_osm.html
 
+    OpenStreetMap XML and PBF (GDAL/OGR >= 1.10.0)
     The driver will categorize features into 5 layers :
         'points'            - 0: "node" features that have significant tags attached
         'lines'             - 1: "way" features that are recognized as non-area
@@ -271,22 +275,23 @@ def parse_osm_pbf(subregion):
     """
     osm_pbf_file = get_local_file_path(subregion, file_format='.osm.pbf')
 
+    # If the target file is not available, download it.
     if not os.path.isfile(osm_pbf_file):
         download_subregion_osm_file(subregion, file_format='.osm.pbf')
 
+    # Start parsing the '.osm.pbf' file
     osm = ogr.Open(osm_pbf_file)
 
     # Grab available layers in file, i.e. points, lines, multilinestrings, multipolygons, and other_relations
-    layer_count = osm.GetLayerCount()
-    layer_names, layer_data = [], []
+    layer_count, layer_names, layer_data = osm.GetLayerCount(), [], []
+
     # Loop through all available layers
     for i in range(layer_count):
         lyr = osm.GetLayerByIndex(i)  # Hold the i-th layer
         layer_names.append(lyr.GetName())  # Get the name of the i-th layer
 
         # Get features from the i-th layer
-        feat = lyr.GetNextFeature()
-        feat_data = []
+        feat, feat_data = lyr.GetNextFeature(), []
         while feat is not None:
             feat_dat = json.loads(feat.ExportToJson())
             feat_data.append(feat_dat)
@@ -302,36 +307,52 @@ def parse_osm_pbf(subregion):
 
 
 #
-def format_single_geometry(geo_type, coordinates):
-    geo_type_func = osm_geometry_types()
-    if not geo_type.startswith('Multi'):
-        return geo_type_func[geo_type](coordinates)
-    else:
-        multi_poly = [shapely.geometry.Polygon(poly) for poly in coordinates[0]]
-        return shapely.geometry.MultiPolygon(multi_poly)
+def parse_layer_data(dat, geo_typ):
 
+    # Tranform a 'other_tags' into a dictionay
+    def parse_other_tags(x):
+        """
+        :param x: [str] or None
+        :return:
+        """
+        if x is not None:
+            raw_other_tags = [re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', x)]
+            other_tags = {k: v.replace('<br>', ' ') for k, v in (each_tag.split('"=>"') for each_tag in raw_other_tags)}
+        else:
+            other_tags = x
+        return other_tags
 
-#
-def format_geometries(geometries):
-    geo_types, coordinates = [geo['type'] for geo in geometries], [geo['coordinates'] for geo in geometries]
-    geo_type_func = osm_geometry_types()
-    geo_collection = [geo_type_func[geo_type](coord) if geo_type != 'Polygon' else geo_type_func[geo_type](coord[0])
-                      for geo_type, coord in zip(geo_types, coordinates)]
-    return shapely.geometry.GeometryCollection(geo_collection)
+    # Format the coordinates with shapely.geometry
+    def format_single_geometry(geom_data):
+        geom_types_funcs, geom_type = osm_geom_types(), list(set(geom_data.geom_type))[0]
+        geom_type_func = geom_types_funcs[geom_type]
+        if geom_type == 'MultiPolygon':
+            sub_geom_type_func = geom_types_funcs[geom_type.lstrip('Multi')]
+            geom_coords = geom_data.coordinates.map(
+                lambda x: geom_type_func(sub_geom_type_func(l) for ls in x for l in ls))
+        else:
+            geom_coords = geom_data.coordinates.map(geom_type_func)
+        return geom_coords
 
-
-#
-def parse_layer_data(dat, geo_type):
+    # Format geometry collections with shapely.geometry
+    def format_multi_geometries(geometries):
+        geom_types, coordinates = [geom['type'] for geom in geometries], [geoms['coordinates'] for geoms in geometries]
+        geom_types_funcs = osm_geom_types()
+        geom_collection = [geom_types_funcs[geom_type](coords)
+                           if 'Polygon' not in geom_type
+                           else geom_types_funcs[geom_type](pt for pts in coords for pt in pts)
+                           for geom_type, coords in zip(geom_types, coordinates)]
+        return shapely.geometry.GeometryCollection(geom_collection)
 
     dat_properties = pd.DataFrame(x for x in dat.properties)
-    dat_geometries = pd.DataFrame(x for x in dat.geometry).rename(columns={'type': 'geo_type'})
+    dat_geometries = pd.DataFrame(x for x in dat.geometry).rename(columns={'type': 'geom_type'})
     data = dat_properties.join(dat_geometries)
     data.other_tags = data.other_tags.map(parse_other_tags)
 
-    if geo_type != 'other_relations':
-        data.coordinates = data.apply(lambda x: format_single_geometry(x.geo_type, x.coordinates), axis=1)
-    else:  # geo_type == 'other_relations'
-        data.coordinates = data.geometries.map(format_geometries)
+    if geo_typ == 'other_relations':
+        data['coordinates'] = data.geometries.map(format_multi_geometries)
+    else:  # geo_type is any of 'points', 'lines', 'multilinestrings', and 'multipolygons'
+        data.coordinates = format_single_geometry(data[['geom_type', 'coordinates']])
 
     return data
 
@@ -342,8 +363,8 @@ def read_osm_pbf(subregion):
     osm_data = parse_osm_pbf(subregion)
 
     layer_data = []
-    for geo_type, dat in osm_data.items():
-        layer_dat = parse_layer_data(dat, geo_type)
+    for geom_type, dat in osm_data.items():
+        layer_dat = parse_layer_data(dat, geom_type)
         layer_data.append(layer_dat)
 
     osm_pbf_data = dict(zip(list(osm_data.keys()), layer_data))
@@ -351,7 +372,7 @@ def read_osm_pbf(subregion):
     return osm_pbf_data
 
 
+# from psql import OSM
 # osmdb = OSM()
 # data.to_sql('points', osmdb.engine, index=False)
 # x = pd.read_sql_table('points', osmdb.engine, index_col='index')
-# lambda x: json.loads('{' + x.other_tags.replace('=>', ':') + '}')

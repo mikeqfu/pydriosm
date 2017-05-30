@@ -29,7 +29,7 @@ def cdd_osm_dat(*directories):
 
 
 # Make a dictionary with keys and values being shape_type code (in OSM .shp file) and shapely.geometry, respectively =
-def osm_geometry_types():
+def osm_geom_types():
     shape_types = {'Point': shapely.geometry.Point,
                    'LineString': shapely.geometry.LineString,
                    'LinearRing': shapely.geometry.LinearRing,
