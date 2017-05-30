@@ -13,18 +13,18 @@ def kill_extra_sessions():
 
 
 class OSM:
-    def __init__(self, database_name='OpenStreetMap'):
+    def __init__(self):
         """
         We need to be connected to the database server in order to execute the "CREATE DATABASE" command. There is a 
         database called "postgres" created by the "initdb" command when the data storage area is initialised. If we 
         need to create the first of our own database, we can set up a connection to "postgres" in the first instance.
         """
         database_info = {'drivername': 'postgresql+psycopg2',
-                         'username': input('Username: '),
-                         'password': input('Password: '),
+                         'username': str(input('Username: ')),
+                         'password': int(input('Password: ')),
                          'host': 'localhost',
                          'port': 5432,
-                         'database': database_name}
+                         'database': 'postgres'}
         # The typical form of a database URL is: url = backend+driver://username:password@host:port/database
         self.url = URL(**database_info)
         self.dialect = self.url.get_dialect()
@@ -33,7 +33,7 @@ class OSM:
         self.user = self.url.username
         self.host = self.url.host
         self.port = self.url.port
-        self.database_name = database_name
+        self.database_name = database_info['database']
 
         # Create a sqlalchemy connectable
         self.engine = create_engine(self.url, isolation_level='AUTOCOMMIT')
@@ -42,6 +42,15 @@ class OSM:
 
         self.connection = self.engine.connect()
 
+    #
+    def create_database(self, database_name):
+        """
+        :param database_name: [str] default 'OpenStreetMap'
+        """
+        engine = create_engine(self.url)
+        engine.execute('CREATE DATABASE {}'.format(database_name))
+
+    #
     def kill_session(self):
         engine = create_engine('postgresql+psycopg2://postgres:123@localhost:5432/postgres')
         engine.execute('SELECT pg_terminate_backend(pg_stat_activity.pid) '
@@ -55,6 +64,7 @@ class OSM:
         engine.execute('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();')
         engine.dispose()
 
+    #
     def drop(self):
         drop_database(self.url)
         OSM.kill_sessions()
@@ -62,10 +72,12 @@ class OSM:
 
     # def create_schema(self):
 
+    #
     def import_dataframe(self, data, table_name):
         data.to_sql(table_name, self.engine)
         OSM.table_name = table_name
 
+    #
     def drop_table(self, table_name):
         self.connection('DROP TABLE {}'.format(table_name))
 
