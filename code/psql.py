@@ -1,6 +1,5 @@
 """ Data storage with PostgreSQL """
 
-from pandas import DataFrame
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL, make_url
 from sqlalchemy_utils import database_exists, create_database, drop_database
@@ -21,8 +20,8 @@ class OSM:
         need to create the first of our own database, we can set up a connection to "postgres" in the first instance.
         """
         database_info = {'drivername': 'postgresql+psycopg2',
-                         'username': 'postgres',
-                         'password': 123,
+                         'username': input('Username: '),
+                         'password': input('Password: '),
                          'host': 'localhost',
                          'port': 5432,
                          'database': database_name}
@@ -64,7 +63,6 @@ class OSM:
     # def create_schema(self):
 
     def import_dataframe(self, data, table_name):
-        assert isinstance(data, DataFrame)
         data.to_sql(table_name, self.engine)
         OSM.table_name = table_name
 
