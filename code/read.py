@@ -8,6 +8,7 @@ import shutil
 import time
 import urllib.request
 import zipfile
+import re
 
 import fuzzywuzzy.process
 import geopandas as gpd
@@ -15,10 +16,11 @@ import ogr
 import pandas as pd
 import progressbar
 import shapefile
+import shapely.geometry
 
 from download import get_download_url, make_file_path, download_subregion_osm_file, get_subregion_index
 from psql import OSM
-from utilities import cdd_osm_dat, load_pickle, save_pickle
+from utilities import cdd_osm_dat, load_pickle, save_pickle, osm_geometry_types
 
 
 # Search the OSM directory and its sub-directories to get the path to the file =======================================
@@ -240,6 +242,20 @@ def get_local_file_path(subregion, file_format='.osm.pbf'):
 
 
 #
+def parse_other_tags(x):
+    """
+    :param x: [str] or None
+    :return:
+    """
+    if x is not None:
+        raw_other_tags = [re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', x)]
+        other_tags = {k: v.replace('<br>', ' ') for k, v in (each_tag.split('"=>"') for each_tag in raw_other_tags)}
+    else:
+        other_tags = x
+    return other_tags
+
+
+#
 def parse_osm_pbf(subregion):
     """
     OpenStreetMap XML and PBF (GDAL/OGR >= 1.10.0)
@@ -259,36 +275,83 @@ def parse_osm_pbf(subregion):
         download_subregion_osm_file(subregion, file_format='.osm.pbf')
 
     osm = ogr.Open(osm_pbf_file)
-    osmdb = OSM()
 
-    # Grab available layers in file
+    # Grab available layers in file, i.e. points, lines, multilinestrings, multipolygons, and other_relations
     layer_count = osm.GetLayerCount()
-
-    layers = []
+    layer_names, layer_data = [], []
     # Loop through all available layers
     for i in range(layer_count):
-        # Get the i-th layer
-        lyr = osm.GetLayerByIndex(i)  # points, lines, multilinestrings, multipolygons, other_relations
+        lyr = osm.GetLayerByIndex(i)  # Hold the i-th layer
+        layer_names.append(lyr.GetName())  # Get the name of the i-th layer
+
         # Get features from the i-th layer
         feat = lyr.GetNextFeature()
-        feat_dicts = []
-
+        feat_data = []
         while feat is not None:
-            feat_dict = json.loads(feat.ExportToJson())
-            feat_dicts.append(feat_dict)
+            feat_dat = json.loads(feat.ExportToJson())
+            feat_data.append(feat_dat)
             feat.Destroy()
             feat = lyr.GetNextFeature()
 
-        layers.append(feat_dicts)
+        layer_data.append(pd.DataFrame(feat_data))
 
-        print(lyr.GetName())
+    # Make a dictionary, {layer_name: layer_DataFrame}
+    data = dict(zip(layer_names, layer_data))
 
-        dat0 = pd.DataFrame(feat_dicts)
-        dat1 = pd.DataFrame(x for x in dat0.geometry).join(pd.DataFrame(x for x in dat0.properties))
-        data = dat1.join(pd.DataFrame([x for x in dat1.coordinates], columns=['longitude', 'latitude']))
-        data.drop('coordinates', axis=1, inplace=True)
+    return data
 
-        data.to_sql('points', osmdb.engine, index=False)
 
-        # x = pd.read_sql_table('points', osmdb.engine, index_col='index')
-        # lambda x: json.loads('{' + x.other_tags.replace('=>', ':') + '}')
+#
+def format_single_geometry(geo_type, coordinates):
+    geo_type_func = osm_geometry_types()
+    if not geo_type.startswith('Multi'):
+        return geo_type_func[geo_type](coordinates)
+    else:
+        multi_poly = [shapely.geometry.Polygon(poly) for poly in coordinates[0]]
+        return shapely.geometry.MultiPolygon(multi_poly)
+
+
+#
+def format_geometries(geometries):
+    geo_types, coordinates = [geo['type'] for geo in geometries], [geo['coordinates'] for geo in geometries]
+    geo_type_func = osm_geometry_types()
+    geo_collection = [geo_type_func[geo_type](coord) if geo_type != 'Polygon' else geo_type_func[geo_type](coord[0])
+                      for geo_type, coord in zip(geo_types, coordinates)]
+    return shapely.geometry.GeometryCollection(geo_collection)
+
+
+#
+def parse_layer_data(dat, geo_type):
+
+    dat_properties = pd.DataFrame(x for x in dat.properties)
+    dat_geometries = pd.DataFrame(x for x in dat.geometry).rename(columns={'type': 'geo_type'})
+    data = dat_properties.join(dat_geometries)
+    data.other_tags = data.other_tags.map(parse_other_tags)
+
+    if geo_type != 'other_relations':
+        data.coordinates = data.apply(lambda x: format_single_geometry(x.geo_type, x.coordinates), axis=1)
+    else:  # geo_type == 'other_relations'
+        data.coordinates = data.geometries.map(format_geometries)
+
+    return data
+
+
+#
+def read_osm_pbf(subregion):
+
+    osm_data = parse_osm_pbf(subregion)
+
+    layer_data = []
+    for geo_type, dat in osm_data.items():
+        layer_dat = parse_layer_data(dat, geo_type)
+        layer_data.append(layer_dat)
+
+    osm_pbf_data = dict(zip(list(osm_data.keys()), layer_data))
+
+    return osm_pbf_data
+
+
+# osmdb = OSM()
+# data.to_sql('points', osmdb.engine, index=False)
+# x = pd.read_sql_table('points', osmdb.engine, index_col='index')
+# lambda x: json.loads('{' + x.other_tags.replace('=>', ':') + '}')

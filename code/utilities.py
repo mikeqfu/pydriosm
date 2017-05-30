@@ -28,31 +28,15 @@ def cdd_osm_dat(*directories):
     return path
 
 
-#
-def available_layers():
-    layer_names = ['buildings',
-                   'landuse',
-                   'natural',
-                   'places',
-                   'pofw',
-                   'pois',
-                   'railways',
-                   'roads',
-                   'traffic',
-                   'transport',
-                   'water',
-                   'waterways']
-    return layer_names
-
-
 # Make a dictionary with keys and values being shape_type code (in OSM .shp file) and shapely.geometry, respectively =
-def shape_type_dict():
-    shape_types = {1: shapely.geometry.Point,
-                   2: shapely.geometry.MultiPoint,
-                   3: shapely.geometry.LineString,
-                   4: shapely.geometry.MultiLineString,
-                   5: shapely.geometry.Polygon,
-                   6: shapely.geometry.MultiPolygon}
+def osm_geometry_types():
+    shape_types = {'Point': shapely.geometry.Point,
+                   'LineString': shapely.geometry.LineString,
+                   'LinearRing': shapely.geometry.LinearRing,
+                   'MultiLineString': shapely.geometry.MultiLineString,
+                   'Polygon': shapely.geometry.Polygon,
+                   'MultiPolygon': shapely.geometry.MultiPolygon,
+                   'GeometryCollection': shapely.geometry.GeometryCollection}
     return shape_types
 
 
