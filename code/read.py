@@ -260,7 +260,7 @@ def get_local_file_path(subregion, file_format='.osm.pbf'):
 
 
 # Read '.osm.pbf' file roughly into DataFrames
-def parse_osm_pbf(subregion):
+def parse_osm_pbf(subregion, update=False):
     """
     Reference: http://www.gdal.org/drv_osm.html
 
@@ -277,9 +277,9 @@ def parse_osm_pbf(subregion):
     osm_pbf_file = get_local_file_path(subregion, file_format='.osm.pbf')
 
     # If the target file is not available, download it.
-    if not os.path.isfile(osm_pbf_file):
+    if not os.path.isfile(osm_pbf_file) or update:
         if confirmed(prompt="Download '{}'?".format(os.path.basename(osm_pbf_file), subregion), resp=False):
-            download_subregion_osm_file(subregion, file_format='.osm.pbf')
+            download_subregion_osm_file(subregion, file_format='.osm.pbf', update=update)
 
     try:
         # Start parsing the '.osm.pbf' file
