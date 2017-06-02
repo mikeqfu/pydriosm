@@ -13,7 +13,7 @@ import zipfile
 
 import fuzzywuzzy.process
 import geopandas as gpd
-import ogr
+import osgeo.ogr
 import pandas as pd
 import progressbar
 import shapefile
@@ -59,7 +59,7 @@ def fetch_osm_file(subregion, layer, feature=None, file_format=".shp", update=Fa
 # Merge a set of .shp files (for a given layer) ======================================================================
 def merge_shp_files(subregions, layer, update=False):
     """
-    :param subregions: [list] a list of subregion names, e.g. ['cambridgeshire', 'oxfordshire', 'West Yorkshire']
+    :param subregions: a sequence of subregion names, e.g. ['cambridgeshire', 'oxfordshire', 'West Yorkshire']
     :param layer: [str] name of a OSM layer, e.g. 'railways'
     :param update: [bool] indicates whether to update the relevant file/information; default False
 
@@ -283,14 +283,14 @@ def parse_osm_pbf(subregion, update=False):
 
     try:
         # Start parsing the '.osm.pbf' file
-        osm = ogr.Open(osm_pbf_file)
+        osm_pbf = osgeo.ogr.Open(osm_pbf_file)
 
         # Grab available layers in file, i.e. points, lines, multilinestrings, multipolygons, and other_relations
-        layer_count, layer_names, layer_data = osm.GetLayerCount(), [], []
+        layer_count, layer_names, layer_data = osm_pbf.GetLayerCount(), [], []
 
         # Loop through all available layers
         for i in range(layer_count):
-            lyr = osm.GetLayerByIndex(i)  # Hold the i-th layer
+            lyr = osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
             layer_names.append(lyr.GetName())  # Get the name of the i-th layer
 
             # Get features from the i-th layer
