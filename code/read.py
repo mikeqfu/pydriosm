@@ -19,7 +19,7 @@ import shapefile
 import shapely.geometry
 
 from download import get_download_url, make_file_path, download_subregion_osm_file, get_subregion_index
-from utilities import cdd_osm_dat, load_pickle, save_pickle, osm_geom_types
+from utils import cdd_osm_dat, load_pickle, save_pickle, osm_geom_types
 
 
 # Search the OSM directory and its sub-directories to get the path to the file =======================================
@@ -32,7 +32,7 @@ def fetch_osm_file(subregion, layer, feature=None, file_format=".shp", update=Fa
     :param update: [bool] indicates whether to update the relevant file/information; default False
     :return: [list] a list of paths
                 fetch_osm_file('england', 'railways', feature=None, file_format=".shp", update=False) may return
-                ['...\\osm-util\\dat\\europe\\great-britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp']
+                ['...\\osm-utils\\dat\\europe\\great-britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp']
                 if such a file exists; [] otherwise.
     """
     subregion_index = get_subregion_index("subregion-index", update)

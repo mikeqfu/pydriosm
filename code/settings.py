@@ -46,6 +46,10 @@ def mpl_preferences(use_cambria=False, reset=False):
             # Set 'font.family' to 'serif', so that matplotlib will use that list
             pyplot.rcParams['font.family'] = 'serif'
         pyplot.rcParams['font.size'] = 13
+        pyplot.rcParams['font.weight'] = 'normal'
+        pyplot.rcParams['legend.labelspacing'] = 0.9
+        pyplot.rcParams['hatch.linewidth'] = 1.0
+        pyplot.rcParams['hatch.color'] = 'k'
     else:
         pyplot.style.use('classic')
         pyplot.rcParams = rcParamsDefault

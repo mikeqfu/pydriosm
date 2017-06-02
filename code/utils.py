@@ -91,6 +91,17 @@ def load_json(path_to_json):
 
 # Save data locally (.pickle, .csv or .xlsx) =========================================================================
 def save(data, path_to_file, sep=',', sheet_name='Details', deep_copy=True):
+    """
+    :param data: [DataFrame] (mainly) or any other type of objects
+    :param path_to_file: [str] local path
+    :param sep: [str] separator for saving data as a .csv file; default ','
+    :param sheet_name: [str] sheet name for saving data as a .xlsx file; default 'Details'
+    :param deep_copy: [bool] indicate whether to make a deep copy of data; default True
+    :return: None
+
+    Note if the file extension is not none of .pickle, .csv or .xlsx, or unknown, data will be saved as a pickle file
+
+    """
 
     dat = copy.deepcopy(data) if deep_copy else copy.copy(data)
 
@@ -119,8 +130,13 @@ def save(data, path_to_file, sep=',', sheet_name='Details', deep_copy=True):
     print("Done.")
 
 
-# Find from a list the closest, case-insensitive, string to the given one ============================================
+# Find from a list the closest, case-insensitive, str to the given one ===============================================
 def find_match(x, lookup):
+    """
+    :param x: [str] If x is None, return None
+    :param lookup: [list], [tuple] or any other iterable object
+    :return: [str], [list]
+    """
     # assert isinstance(x, str), "'x' must be a string."
     # assert isinstance(lookup, list) or isinstance(lookup, tuple), "'lookup' must be a list/tuple"
     if x is '' or x is None:

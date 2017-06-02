@@ -13,7 +13,7 @@ import pandas as pd
 import progressbar
 import requests
 
-from utilities import cdd_osm_dat, save_pickle, load_pickle, save_json
+from utils import cdd_osm_dat, save_pickle, load_pickle, save_json
 
 
 # Get raw directory index (allowing us to see and download older files) ==============================================
