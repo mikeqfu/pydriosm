@@ -13,7 +13,7 @@ import pandas as pd
 import progressbar
 import requests
 
-from utils import cdd_osm_dat, save_pickle, load_pickle, save_json
+from utils import cdd_osm_dat0, cdd_osm_dat, save_pickle, load_pickle, save_json
 
 
 # Get raw directory index (allowing us to see and download older files) ==============================================
@@ -127,13 +127,13 @@ def scrape_available_subregion_indices():
             subregion_url_tables = list(subregion_url_tables_1)
 
         # Save a list of available subregions locally
-        save_pickle(avail_subregions, cdd_osm_dat("subregion-index.pickle"))
+        save_pickle(avail_subregions, cdd_osm_dat0("subregion-index.pickle"))
 
         # Subregion index - {Subregion: URL}
         subregion_url_index = dict(zip(avail_subregions, avail_subregion_urls))
         # Save subregion_index to local disk
-        save_pickle(subregion_url_index, cdd_osm_dat("subregion-url-index.pickle"))
-        save_json(subregion_url_index, cdd_osm_dat("subregion-url-index.json"))
+        save_pickle(subregion_url_index, cdd_osm_dat0("subregion-url-index.pickle"))
+        save_json(subregion_url_index, cdd_osm_dat0("subregion-url-index.json"))
 
         # All available URLs for downloading
         home_subregion_url_table = get_subregion_url_table(home_url)
@@ -142,8 +142,8 @@ def scrape_available_subregion_indices():
         subregion_downloads_index.drop_duplicates(inplace=True)
 
         # Save subregion_index_downloads to loacal disk
-        save_pickle(subregion_downloads_index, cdd_osm_dat("subregion-downloads-index.pickle"))
-        subregion_downloads_index.set_index('Subregion').to_json(cdd_osm_dat("subregion-downloads-index.json"))
+        save_pickle(subregion_downloads_index, cdd_osm_dat0("subregion-downloads-index.pickle"))
+        subregion_downloads_index.set_index('Subregion').to_json(cdd_osm_dat0("subregion-downloads-index.json"))
 
     except Exception as e:
         print(e)
@@ -162,10 +162,12 @@ def get_subregion_index(index_filename="subregion-index", update=False):
         index = None
     else:
         indices_filename = ["subregion-index.pickle",
-                            "subregion-url-index.pickle", "subregion-url-index.json",
-                            "subregion-downloads-index.pickle", "subregion-downloads-index.json"]
-        paths_to_files_exist = [os.path.isfile(cdd_osm_dat(f)) for f in indices_filename]
-        path_to_index_file = cdd_osm_dat(index_filename + ".pickle")
+                            "subregion-url-index.pickle",
+                            "subregion-url-index.json",
+                            "subregion-downloads-index.pickle",
+                            "subregion-downloads-index.json"]
+        paths_to_files_exist = [os.path.isfile(cdd_osm_dat0(f)) for f in indices_filename]
+        path_to_index_file = cdd_osm_dat0(index_filename + ".pickle")
         if all(paths_to_files_exist) and not update:
             index = load_pickle(path_to_index_file)
         else:

@@ -1,5 +1,6 @@
 """ Load OSM data """
 
+import errno
 import glob
 import itertools
 import json
@@ -19,7 +20,7 @@ import shapefile
 import shapely.geometry
 
 from download import get_download_url, make_file_path, download_subregion_osm_file, get_subregion_index
-from utils import cdd_osm_dat, load_pickle, save_pickle, osm_geom_types
+from utils import cdd_osm_dat, load_pickle, save_pickle, osm_geom_types, confirmed
 
 
 # Search the OSM directory and its sub-directories to get the path to the file =======================================
@@ -32,7 +33,7 @@ def fetch_osm_file(subregion, layer, feature=None, file_format=".shp", update=Fa
     :param update: [bool] indicates whether to update the relevant file/information; default False
     :return: [list] a list of paths
                 fetch_osm_file('england', 'railways', feature=None, file_format=".shp", update=False) may return
-                ['...\\osm-utils\\dat\\europe\\great-britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp']
+                ['...\\osm-pyutils\\dat\\europe\\great-britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp']
                 if such a file exists; [] otherwise.
     """
     subregion_index = get_subregion_index("subregion-index", update)
@@ -277,31 +278,38 @@ def parse_osm_pbf(subregion):
 
     # If the target file is not available, download it.
     if not os.path.isfile(osm_pbf_file):
-        download_subregion_osm_file(subregion, file_format='.osm.pbf')
+        if confirmed(prompt="Download '{}'?".format(os.path.basename(osm_pbf_file), subregion), resp=False):
+            download_subregion_osm_file(subregion, file_format='.osm.pbf')
 
-    # Start parsing the '.osm.pbf' file
-    osm = ogr.Open(osm_pbf_file)
+    try:
+        # Start parsing the '.osm.pbf' file
+        osm = ogr.Open(osm_pbf_file)
 
-    # Grab available layers in file, i.e. points, lines, multilinestrings, multipolygons, and other_relations
-    layer_count, layer_names, layer_data = osm.GetLayerCount(), [], []
+        # Grab available layers in file, i.e. points, lines, multilinestrings, multipolygons, and other_relations
+        layer_count, layer_names, layer_data = osm.GetLayerCount(), [], []
 
-    # Loop through all available layers
-    for i in range(layer_count):
-        lyr = osm.GetLayerByIndex(i)  # Hold the i-th layer
-        layer_names.append(lyr.GetName())  # Get the name of the i-th layer
+        # Loop through all available layers
+        for i in range(layer_count):
+            lyr = osm.GetLayerByIndex(i)  # Hold the i-th layer
+            layer_names.append(lyr.GetName())  # Get the name of the i-th layer
 
-        # Get features from the i-th layer
-        feat, feat_data = lyr.GetNextFeature(), []
-        while feat is not None:
-            feat_dat = json.loads(feat.ExportToJson())
-            feat_data.append(feat_dat)
-            feat.Destroy()
-            feat = lyr.GetNextFeature()
+            # Get features from the i-th layer
+            feat, feat_data = lyr.GetNextFeature(), []
+            while feat is not None:
+                feat_dat = json.loads(feat.ExportToJson())
+                feat_data.append(feat_dat)
+                feat.Destroy()
+                feat = lyr.GetNextFeature()
 
-        layer_data.append(pd.DataFrame(feat_data))
+            layer_data.append(pd.DataFrame(feat_data))
 
-    # Make a dictionary, {layer_name: layer_DataFrame}
-    data = dict(zip(layer_names, layer_data))
+        # Make a dictionary, {layer_name: layer_DataFrame}
+        data = dict(zip(layer_names, layer_data))
+
+    except Exception as e:
+        err_msg = e if os.path.isfile(osm_pbf_file) else os.strerror(errno.ENOENT)
+        print("Parsing '{}' ... failed as '{}'.".format(os.path.basename(osm_pbf_file), err_msg))
+        data = None
 
     return data
 
