@@ -2,6 +2,7 @@
 
 import os
 import re
+import time
 from urllib.error import HTTPError
 from urllib.request import urlretrieve, urljoin, urlparse
 
@@ -257,7 +258,7 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
             try:
                 urlretrieve(download_url, file_path, reporthook=show_progress)
                 pbar.finish()
-                # time.sleep(0.1)
+                time.sleep(0.1)
                 print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
             except Exception as e:
                 print("\nDownload failed due to '{}'.".format(e))

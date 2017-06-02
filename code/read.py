@@ -13,7 +13,7 @@ import zipfile
 
 import fuzzywuzzy.process
 import geopandas as gpd
-import osgeo.ogr
+import ogr
 import pandas as pd
 import progressbar
 import shapefile
@@ -283,7 +283,7 @@ def parse_osm_pbf(subregion, update=False):
 
     try:
         # Start parsing the '.osm.pbf' file
-        osm_pbf = osgeo.ogr.Open(osm_pbf_file)
+        osm_pbf = ogr.Open(osm_pbf_file)
 
         # Grab available layers in file, i.e. points, lines, multilinestrings, multipolygons, and other_relations
         layer_count, layer_names, layer_data = osm_pbf.GetLayerCount(), [], []

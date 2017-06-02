@@ -78,4 +78,3 @@ pd_preferences(reset=False)
 np_preferences(reset=False)
 mpl_preferences(use_cambria=False, reset=False)
 gdal_configurations(reset=False)
-
