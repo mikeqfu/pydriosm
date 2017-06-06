@@ -315,7 +315,7 @@ def parse_osm_pbf(subregion, update=False):
 
 
 #
-def parse_layer_data(dat, geo_typ, parse_othertags=True):
+def parse_layer_data(dat, geo_typ, parse_othertags=True, fmt_single_geom=True, fmt_multi_geom=True):
 
     # Tranform a 'other_tags' into a dictionay
     def parse_other_tags(x):
@@ -360,21 +360,23 @@ def parse_layer_data(dat, geo_typ, parse_othertags=True):
         data.other_tags = data.other_tags.map(parse_other_tags)
 
     if geo_typ == 'other_relations':
-        data['coordinates'] = data.geometries.map(format_multi_geometries)
+        if fmt_multi_geom:
+            data['coordinates'] = data.geometries.map(format_multi_geometries)
     else:  # geo_type is any of 'points', 'lines', 'multilinestrings', and 'multipolygons'
-        data.coordinates = format_single_geometry(data[['geom_type', 'coordinates']])
+        if fmt_single_geom:
+            data.coordinates = format_single_geometry(data[['geom_type', 'coordinates']])
 
     return data
 
 
 #
-def read_osm_pbf(subregion, update_osm_pbf=False, parse_othertags=True):
+def read_osm_pbf(subregion, update_osm_pbf=False, parse_othertags=False, fmt_single_geom=False, fmt_multi_geom=False):
 
     osm_data = parse_osm_pbf(subregion, update_osm_pbf)
 
     layer_data = []
     for geom_type, dat in osm_data.items():
-        layer_dat = parse_layer_data(dat, geom_type, parse_othertags)
+        layer_dat = parse_layer_data(dat, geom_type, parse_othertags, fmt_single_geom, fmt_multi_geom)
         layer_data.append(layer_dat)
 
     osm_pbf_data = dict(zip(list(osm_data.keys()), layer_data))

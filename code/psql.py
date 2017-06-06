@@ -1,6 +1,7 @@
 """ Data storage with PostgreSQL """
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
 from sqlalchemy_utils import database_exists, create_database
 
@@ -18,19 +19,18 @@ class OSM:
                               'host': 'localhost',
                               'port': 5432,
                               'database': 'postgres'}
-        # The typical form of a database URL is: url = backend+driver://username:password@host:port/database
+
+        # The typical form of a database URL is: url = backend+driver://username:password@host:port/database_name
         self.url = URL(**self.database_info)
         self.dialect = self.url.get_dialect()
         self.backend = self.url.get_backend_name()
         self.driver = self.url.get_driver_name()
-        self.user = self.url.username
-        self.host = self.url.host
+        self.user, self.host = self.url.username, self.url.host
         self.port = self.url.port
         self.database_name = self.database_info['database']
+
         # Create a sqlalchemy connectable
         self.engine = create_engine(self.url, isolation_level='AUTOCOMMIT')
-        if not database_exists(self.engine.url):
-            create_database(self.engine.url)
         self.connection = self.engine.connect()
 
     #
@@ -39,10 +39,8 @@ class OSM:
         self.database_info['database'] = self.database_name
         self.url = URL(**self.database_info)
         self.engine = create_engine(self.url, isolation_level='AUTOCOMMIT')
-        if database_exists(self.url):
-            self.connection = self.engine.connect()
-        else:
-            create_database(self.engine.url)
+        if not database_exists(self.url):
+            create_database(self.url)
         self.connection = self.engine.connect()
 
     #
@@ -54,10 +52,8 @@ class OSM:
 
     #
     def kill_session(self, database_name):
-        self.engine.execute('SELECT pg_terminate_backend(pg_stat_activity.pid) '
-                            'FROM pg_stat_activity '
-                            'WHERE pg_stat_activity.pid <> pg_backend_pid() '
-                            'AND pg_stat_activity.datname = \'{}\';'.format(database_name))
+        self.engine.execute(
+            'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = \'{}\';'.format(database_name))
 
     #
     def drop(self, database_name):
@@ -74,8 +70,8 @@ class OSM:
 
     #
     def import_data(self, data, schema, table_name):
-        if not self.engine.execute("SELECT EXISTS(SELECT schema_name FROM information_schema.schemata "
-                                   "WHERE schema_name = '{}')".format(schema)):
+        schemas = Inspector.from_engine(self.engine)
+        if schema not in schemas.get_table_names():
             self.create_schema(schema)
         data.to_sql(table_name, self.engine, schema=schema, if_exists='replace', index=False)
         OSM.table_name = table_name
