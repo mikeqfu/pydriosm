@@ -79,6 +79,11 @@ def osm_geom_types():
 
 # Save pickles =======================================================================================================
 def save_pickle(data, path_to_pickle):
+    """
+    :param data: [Any objects]
+    :param path_to_pickle: [str]
+    :return: Whether the data has been successfully saved.
+    """
     pickle_filename = os.path.basename(path_to_pickle)
     if os.path.isfile(path_to_pickle):
         print("Updating \"{}\" ... ".format(pickle_filename), end="")
@@ -90,12 +95,15 @@ def save_pickle(data, path_to_pickle):
         pickle_out.close()
         print("Done.")
     except Exception as e:
-        print("Failed.")
-        print(e)
+        print("failed due to {}.".format(e))
 
 
 # Load pickles =======================================================================================================
 def load_pickle(path_to_pickle):
+    """
+    :param path_to_pickle: [str]
+    :return: the object retrieved from the pickle
+    """
     pickle_in = open(path_to_pickle, 'rb')
     data = pickle.load(pickle_in)
     pickle_in.close()
