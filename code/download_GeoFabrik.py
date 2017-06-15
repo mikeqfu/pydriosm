@@ -1,4 +1,4 @@
-""" Geofabrik Downloads """
+""" Geofabrik data extracts http://download.geofabrik.de/ """
 
 import os
 import re
