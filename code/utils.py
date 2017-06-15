@@ -35,6 +35,13 @@ def cdd_osm_dat(*directories):
     return path
 
 
+def cdd_dat_bbbike(*directories):
+    path = cdd_osm("dat_BBBike")
+    for directory in directories:
+        path = os.path.join(path, directory)
+    return path
+
+
 def confirmed(prompt=None, resp=False):
     """
     Reference: http://code.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
@@ -78,20 +85,18 @@ def osm_geom_types():
 
 
 # Save pickles =======================================================================================================
-def save_pickle(data, path_to_pickle):
+def save_pickle(pickle_data, path_to_pickle):
     """
-    :param data: [Any objects]
-    :param path_to_pickle: [str]
-    :return: Whether the data has been successfully saved.
+    :param pickle_data: any object that could be dumped by the 'pickle' package
+    :param path_to_pickle: [str] local file path
+    :return: whether the data has been successfully saved
     """
     pickle_filename = os.path.basename(path_to_pickle)
-    if os.path.isfile(path_to_pickle):
-        print("Updating \"{}\" ... ".format(pickle_filename), end="")
-    else:
-        print("Saving \"{}\" ... ".format(pickle_filename), end="")
+    print("{} \"{}\" ... ".format("Updating" if os.path.isfile(path_to_pickle) else "Saving", pickle_filename), end="")
     try:
+        os.makedirs(os.path.dirname(path_to_pickle), exist_ok=True)
         pickle_out = open(path_to_pickle, 'wb')
-        pickle.dump(data, pickle_out)
+        pickle.dump(pickle_data, pickle_out)
         pickle_out.close()
         print("Done.")
     except Exception as e:
@@ -101,7 +106,7 @@ def save_pickle(data, path_to_pickle):
 # Load pickles =======================================================================================================
 def load_pickle(path_to_pickle):
     """
-    :param path_to_pickle: [str]
+    :param path_to_pickle: [str] local file path
     :return: the object retrieved from the pickle
     """
     pickle_in = open(path_to_pickle, 'rb')
@@ -111,41 +116,73 @@ def load_pickle(path_to_pickle):
 
 
 # Save and load json files ===========================================================================================
-def save_json(data, path_to_json):
+def save_json(json_data, path_to_json):
+    """
+    :param json_data: any object that could be dumped by the 'json' package
+    :param path_to_json: [str] local file path
+    :return: whether the data has been successfully saved
+    """
     json_filename = os.path.basename(path_to_json)
-    if os.path.isfile(path_to_json):
-        print("Updating \"{}\" ... ".format(json_filename), end="")
-    else:
-        print("Saving \"{}\" ... ".format(json_filename), end="")
+    print("{} \"{}\" ... ".format("Updating" if os.path.isfile(path_to_json) else "Saving", json_filename), end="")
     try:
+        os.makedirs(os.path.dirname(path_to_json), exist_ok=True)
         json_out = open(path_to_json, 'w')
-        json.dump(data, json_out)
+        json.dump(json_data, json_out)
         json_out.close()
         print("Done.")
     except Exception as e:
-        print("Failed.")
-        print(e)
+        print("failed due to {}.".format(e))
 
 
 def load_json(path_to_json):
+    """
+    :param path_to_json: [str] local file path
+    :return: the json data retrieved
+    """
     json_in = open(path_to_json, 'r')
     data = json.load(json_in)
     json_in.close()
     return data
 
 
-# Save data locally (.pickle, .csv or .xlsx) =========================================================================
-def save(data, path_to_file, sep=',', sheet_name='Details', deep_copy=True):
+# Save Excel workbook ================================================================================================
+def save_workbook(excel_data, path_to_excel, sep, sheet_name, engine='xlsxwriter'):
     """
-    :param data: [DataFrame] (mainly) or any other type of objects
-    :param path_to_file: [str] local path
-    :param sep: [str] separator for saving data as a .csv file; default ','
-    :param sheet_name: [str] sheet name for saving data as a .xlsx file; default 'Details'
-    :param deep_copy: [bool] indicate whether to make a deep copy of data; default True
-    :return: None
+    :param excel_data: any [DataFrame] that could be dumped saved as a Excel workbook, e.g. '.csv', '.xlsx'
+    :param path_to_excel: [str] local file path
+    :param sep: [str] separator for saving excel_data to a '.csv' file
+    :param sheet_name: [str] name of worksheet for saving the excel_data to a e.g. '.xlsx' file
+    :param engine: [str] ExcelWriter engine; pandas writes Excel files using the 'xlwt' module for '.xls' files and the
+                        'openpyxl' or 'xlsxWriter' modules for '.xlsx' files.
+    :return: whether the data has been successfully saved or updated
+    """
+    excel_filename = os.path.basename(path_to_excel)
+    filename, save_as = os.path.splitext(excel_filename)
+    print("{} \"{}\" ... ".format("Updating" if os.path.isfile(path_to_excel) else "Saving", excel_filename), end="")
+    try:
+        os.makedirs(os.path.dirname(path_to_excel), exist_ok=True)
+        if save_as == ".csv":  # Save the data to a .csv file
+            excel_data.to_csv(path_to_excel, index=False, sep=sep)
+        else:  # Save the data to a .xlsx or .xls file
+            xlsx_writer = pd.ExcelWriter(path_to_excel, engine)
+            excel_data.to_excel(xlsx_writer, sheet_name, index=False)
+            xlsx_writer.save()
+            xlsx_writer.close()
+        print("Done.")
+    except Exception as e:
+        print("failed due to {}.".format(e))
 
-    Note if the file extension is not none of .pickle, .csv or .xlsx, or unknown, data will be saved as a pickle file
 
+# Save data locally (.pickle, .csv or .xlsx) =========================================================================
+def save(data, path_to_file, sep=',', engine='xlsxwriter', sheet_name='Details', deep_copy=True):
+    """
+    :param data: any object that could be dumped
+    :param path_to_file: [str] local file path
+    :param sep: [str] separator for '.csv'
+    :param engine: [str] 'xlwt' for .xls; 'xlsxwriter' or 'openpyxl' for .xlsx
+    :param sheet_name: [str] name of worksheet
+    :param deep_copy: [bool] whether make a deep copy of the data before saving it
+    :return: whether the data has been successfully saved or updated
     """
 
     dat = copy.deepcopy(data) if deep_copy else copy.copy(data)
@@ -160,19 +197,12 @@ def save(data, path_to_file, sep=',', sheet_name='Details', deep_copy=True):
         dat.reset_index(inplace=True)
 
     # Save the data according to the file extension
-    print("Updating the data ... ", end="") if os.path.isfile(path_to_file) else print("Saving the data ... ", end="")
-    if save_as == ".csv":  # Save the data to a .csv file
-        dat.to_csv(path_to_file, index=False, sep=sep)
-    elif save_as == ".xlsx":  # Save the data to a .xlsx file
-        xlsx_writer = pd.ExcelWriter(path_to_file, engine='xlsxwriter')
-        dat.to_excel(xlsx_writer, sheet_name, index=False)
-        xlsx_writer.save()
-        xlsx_writer.close()
+    if save_as == ".csv" or save_as == ".xlsx" or save_as == ".xls":
+        save_workbook(dat, path_to_file, sep, sheet_name, engine)
     elif save_as == ".json":
         save_json(dat, path_to_file)
     else:
         save_pickle(dat, path_to_file)
-    print("Done.")
 
 
 # Find from a list the closest, case-insensitive, str to the given one ===============================================

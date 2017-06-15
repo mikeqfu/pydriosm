@@ -19,7 +19,7 @@ import progressbar
 import shapefile
 import shapely.geometry
 
-from download import get_download_url, make_file_path, download_subregion_osm_file, get_subregion_index
+from download_GeoFabrik import get_download_url, make_file_path, download_subregion_osm_file, get_subregion_index
 from utils import cdd_osm_dat, load_pickle, save_pickle, osm_geom_types, confirmed
 
 
