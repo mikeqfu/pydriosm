@@ -6,8 +6,8 @@ import time
 from urllib.request import urljoin, urlretrieve
 
 import fuzzywuzzy.process
-import progressbar
 import pandas as pd
+import progressbar
 
 from utils import cdd_osm_dat0, cdd_dat_bbbike, save_pickle, load_pickle
 
