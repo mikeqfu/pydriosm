@@ -20,7 +20,7 @@ import shapefile
 import shapely.geometry
 
 from download_GeoFabrik import get_download_url, make_file_path, download_subregion_osm_file, get_subregion_index
-from utils import cdd_osm_dat, load_pickle, save_pickle, osm_geom_types, confirmed
+from utils import cdd_osm_dat_geofabrik, load_pickle, save_pickle, osm_geom_types, confirmed
 
 
 # Search the OSM directory and its sub-directories to get the path to the file =======================================
@@ -33,7 +33,7 @@ def fetch_osm_file(subregion, layer, feature=None, file_format=".shp", update=Fa
     :param update: [bool] indicates whether to update the relevant file/information; default False
     :return: [list] a list of paths
                 fetch_osm_file('england', 'railways', feature=None, file_format=".shp", update=False) may return
-                ['...\\osm-pyutils\\dat\\europe\\great-britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp']
+                ['...\\osm-pyutils\\dat_GeoFabrik\\europe\\great-britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp']
                 if such a file exists; [] otherwise.
     """
     subregion_index = get_subregion_index("subregion-index", update)
@@ -41,7 +41,7 @@ def fetch_osm_file(subregion, layer, feature=None, file_format=".shp", update=Fa
     subregion = subregion_name.lower().replace(" ", "-")
     osm_file_path = []
 
-    for dirpath, dirnames, filenames in os.walk(cdd_osm_dat()):
+    for dirpath, dirnames, filenames in os.walk(cdd_osm_dat_geofabrik()):
         if feature is None:
             for fname in [f for f in filenames if (layer + "_a" in f or layer + "_free" in f) and f.endswith(
                     file_format)]:
@@ -110,7 +110,7 @@ def merge_shp_files(subregions, layer, update=False):
         extract_dirs.append(extract_dir)
 
     # Specify a directory that stores files for the specific layer
-    layer_path = cdd_osm_dat(os.path.commonpath(extract_dirs), layer)
+    layer_path = cdd_osm_dat_geofabrik(os.path.commonpath(extract_dirs), layer)
     if not os.path.exists(layer_path):
         os.mkdir(layer_path)
 

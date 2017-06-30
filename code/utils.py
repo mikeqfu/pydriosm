@@ -21,13 +21,6 @@ def cdd_osm(*directories):
 
 
 # Change to data directory ===========================================================================================
-def cdd_osm_dat0(*directories):
-    path = cdd_osm("dat0")
-    for directory in directories:
-        path = os.path.join(path, directory)
-    return path
-
-
 def cdd_osm_dat(*directories):
     path = cdd_osm("dat")
     for directory in directories:
@@ -35,7 +28,14 @@ def cdd_osm_dat(*directories):
     return path
 
 
-def cdd_dat_bbbike(*directories):
+def cdd_osm_dat_geofabrik(*directories):
+    path = cdd_osm("dat_GeoFabrik")
+    for directory in directories:
+        path = os.path.join(path, directory)
+    return path
+
+
+def cdd_osm_dat_bbbike(*directories):
     path = cdd_osm("dat_BBBike")
     for directory in directories:
         path = os.path.join(path, directory)
