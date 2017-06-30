@@ -4,7 +4,7 @@ from numpy.core import arrayprint
 from pandas import reset_option, set_option
 
 
-# Set preferences for displaying results =============================================================================
+# Set preferences for displaying results
 def pd_preferences(reset=False):
     if not reset:
         set_option('expand_frame_repr', False)  # Set the representation of DataFrame NOT to wrap
@@ -18,7 +18,7 @@ def pd_preferences(reset=False):
         reset_option('all')
 
 
-# Set preferences for displaying results =============================================================================
+# Set preferences for displaying results
 def np_preferences(reset=False):
     if not reset:
         arrayprint._line_width = 120
@@ -26,7 +26,7 @@ def np_preferences(reset=False):
         arrayprint._line_width = 80  # 75
 
 
-# Set preferences for plotting =======================================================================================
+# Set preferences for plotting
 def mpl_preferences(use_cambria=False, reset=False):
     """
 

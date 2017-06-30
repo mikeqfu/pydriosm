@@ -9,7 +9,7 @@ import fuzzywuzzy.process
 import pandas as pd
 import progressbar
 
-from utils import cdd_osm_dat, cdd_osm_dat_bbbike, save_pickle, load_pickle
+from utils import cd_dat, cd_dat_bbbike, save_pickle, load_pickle
 
 
 # =========================================================================================
@@ -19,7 +19,7 @@ def get_bbbike_subregion_index(url='http://download.bbbike.org/osm/bbbike/', upd
     :param update:
     :return: 
     """
-    path_to_file = cdd_osm_dat('BBBike-subregion-index.pickle')
+    path_to_file = cd_dat('BBBike-subregion-index.pickle')
     if os.path.isfile(path_to_file) and not update:
         subregion_index = load_pickle(path_to_file)
     else:
@@ -48,7 +48,7 @@ def get_bbbike_subregion_downloads_index(subregion, update=False, verbose=True):
             print("'{}' is not found. \n".format(subregion))
         print("Trying to get downloads index for '{}' ... ".format(subregion_name), end="")
 
-    path_to_file = cdd_osm_dat_bbbike(subregion_name, subregion_name + "-url-index.pickle")
+    path_to_file = cd_dat_bbbike(subregion_name, subregion_name + "-url-index.pickle")
     if os.path.isfile(path_to_file) and not update:
         subregion_downloads_index = load_pickle(path_to_file)
         if verbose:
@@ -74,7 +74,7 @@ def get_bbbike_subregion_downloads_index(subregion, update=False, verbose=True):
 
 #
 def get_bbbike_downloads_dictionary(update=False):
-    path_to_file = cdd_osm_dat("BBBike-downloads-dictionary.pickle")
+    path_to_file = cd_dat("BBBike-downloads-dictionary.pickle")
     if os.path.isfile(path_to_file) and not update:
         downloads_dictionary = load_pickle(path_to_file)
     else:
@@ -97,7 +97,7 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
 
     file_fmt, _ = fuzzywuzzy.process.extractOne(file_format, available_file_formats)
     filename, _, idx = fuzzywuzzy.process.extractOne(file_fmt, subregion_downloads.Filename)
-    url, path_to_file = subregion_downloads.URL[idx], cdd_osm_dat_bbbike(subregion_name, filename)
+    url, path_to_file = subregion_downloads.URL[idx], cd_dat_bbbike(subregion_name, filename)
 
     # Make a custom bar to show downloading progress --------------------------
     def make_custom_progressbar():
@@ -136,8 +136,8 @@ def download_subregion_osm_files(subregion, update=False):
     for url, filename in zip(subregion_downloads.URL, subregion_downloads.Filename):
         try:
             print("'{}' successfully downloaded.".format(filename))
-            urlretrieve(url, cdd_osm_dat_bbbike(subregion_name, filename))
+            urlretrieve(url, cd_dat_bbbike(subregion_name, filename))
         except Exception as e:
             print("Downloading '{}' failed due to '{}'.".format(filename, e))
 
-    print("Files saved to '{}'.".format(cdd_osm_dat_bbbike(subregion_name)))
+    print("Files saved to '{}'.".format(cd_dat_bbbike(subregion_name)))
