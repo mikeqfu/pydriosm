@@ -17,7 +17,7 @@ import requests
 from utils import cd_dat, cd_dat_geofabrik, save_pickle, load_pickle, save_json
 
 
-# Get raw directory index (allowing us to see and download older files) ==============================================
+# Get raw directory index (allowing us to see and download older files)
 def get_raw_directory_index(url):
     """
     :param url: 
@@ -43,7 +43,7 @@ def get_raw_directory_index(url):
     return raw_directory_index
 
 
-# Get a table for a given URL, which contains all available URLs for each subregion and its file downloading =========
+# Get a table for a given URL, which contains all available URLs for each subregion and its file downloading
 def get_subregion_url_table(url):
     """
     :param url: 
@@ -96,7 +96,7 @@ def get_subregion_url_table(url):
     return subregion_table
 
 
-# Scan through the downloading pages to get a list of available subregion names ======================================
+# Scan through the downloading pages to get a list of available subregion names
 def scrape_available_subregion_indices():
     home_url = 'http://download.geofabrik.de/'
 
@@ -150,7 +150,7 @@ def scrape_available_subregion_indices():
         print(e)
 
 
-# Get a list of available subregion names ============================================================================
+# Get a list of available subregion names
 def get_subregion_index(index_filename="subregion-index", update=False):
     """
     :param index_filename: 
@@ -181,7 +181,7 @@ def get_subregion_index(index_filename="subregion-index", update=False):
     return index
 
 
-# Get download URL ===================================================================================================
+# Get download URL
 def get_download_url(subregion, file_format=".osm.pbf", update=False):
     """
     :param subregion: [str] case-insensitive, e.g. 'Greater London'
@@ -199,7 +199,7 @@ def get_download_url(subregion, file_format=".osm.pbf", update=False):
     return subregion_name, download_url
 
 
-# Parse the download URL so as to specify a path for storing the downloaded file =====================================
+# Parse the download URL so as to specify a path for storing the downloaded file
 def make_file_path(download_url):
     """
     :param download_url: 
@@ -216,7 +216,7 @@ def make_file_path(download_url):
     return filename, file_path
 
 
-# Download files =====================================================================================================
+# Download files
 def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False):
     """
     :param subregion: 
@@ -264,7 +264,7 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
                 print("\nDownload failed due to '{}'.".format(e))
 
 
-# Remove the downloaded file =========================================================================================
+# Remove the downloaded file
 def remove_subregion_osm_file(subregion, file_format=".osm.pbf"):
     available_file_formats = ('.osm.pbf', '.shp.zip', '.osm.bz2')
     if file_format not in available_file_formats:

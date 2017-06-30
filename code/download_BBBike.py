@@ -12,7 +12,7 @@ import progressbar
 from utils import cd_dat, cd_dat_bbbike, save_pickle, load_pickle
 
 
-# =========================================================================================
+#
 def get_bbbike_subregion_index(url='http://download.bbbike.org/osm/bbbike/', update=False):
     """
     :param url:
@@ -33,7 +33,7 @@ def get_bbbike_subregion_index(url='http://download.bbbike.org/osm/bbbike/', upd
     return subregion_index
 
 
-# ================================================================
+#
 def get_bbbike_subregion_downloads_index(subregion, update=False, verbose=True):
     """
     :param subregion: [str]
