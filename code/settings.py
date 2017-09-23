@@ -1,3 +1,5 @@
+""" Settings """
+
 import gdal
 from matplotlib import pyplot, rcParamsDefault
 from numpy.core import arrayprint
