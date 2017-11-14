@@ -14,7 +14,7 @@ import pandas as pd
 import progressbar
 import requests
 
-from utils import cd_dat, cd_dat_geofabrik, save_pickle, load_pickle, save_json
+from utils import cd_dat, cd_dat_geofabrik, save_pickle, load_pickle, save_json, confirmed
 
 
 # Get raw directory index (allowing us to see and download older files)
@@ -255,13 +255,14 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
                 pbar.update(min(block_count * block_size, total_size))
             # -------------------------------------------------------------------------
 
-            try:
-                urlretrieve(download_url, file_path, reporthook=show_progress)
-                pbar.finish()
-                time.sleep(0.1)
-                print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
-            except Exception as e:
-                print("\nDownload failed due to '{}'.".format(e))
+            if confirmed(prompt="To download {}?".format(filename)):
+                try:
+                    urlretrieve(download_url, file_path, reporthook=show_progress)
+                    pbar.finish()
+                    time.sleep(0.1)
+                    print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
+                except Exception as e:
+                    print("\nDownload failed due to '{}'.".format(e))
 
 
 # Remove the downloaded file

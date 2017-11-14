@@ -13,6 +13,37 @@ import pandas as pd
 import shapely.geometry
 
 
+# Type to confirm whether to proceed or not
+def confirmed(prompt=None, resp=False):
+    """
+    Reference: http://code.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
+
+    :param prompt:
+    :param resp:
+    :return:
+
+    Example: confirm(prompt="Create Directory?", resp=True)
+             Create Directory? Yes|No:
+
+    """
+    if prompt is None:
+        prompt = "Confirmed? "
+
+    if resp is True:  # meaning that default response is True
+        prompt = "{} [{}]|{}: ".format(prompt, "Yes", "No")
+    else:
+        prompt = "{} [{}]|{}: ".format(prompt, "No", "Yes")
+
+    ans = input(prompt)
+    if not ans:
+        return resp
+
+    if re.match('[Yy](es)?', ans):
+        return True
+    if re.match('[Nn](o)?', ans):
+        return False
+
+
 # ====================================================================================================================
 """ Change directory """
 
