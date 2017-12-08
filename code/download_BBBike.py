@@ -3,7 +3,8 @@
 import os
 import re
 import time
-from urllib.request import urljoin, urlretrieve
+from urllib.request import urlretrieve
+from urllib.parse import urljoin
 
 import fuzzywuzzy.process
 import pandas as pd

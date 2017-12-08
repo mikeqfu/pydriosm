@@ -210,37 +210,6 @@ def save(data, path_to_file, sep=',', engine='xlsxwriter', sheet_name='Details',
 """ Misc """
 
 
-# Confirm whether to proceed
-def confirmed(prompt=None, resp=False):
-    """
-    Reference: http://code.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
-
-    :param prompt:
-    :param resp:
-    :return:
-
-    Example: confirm(prompt="Create Directory?", resp=True)
-             Create Directory? Yes|No:
-
-    """
-    if prompt is None:
-        prompt = "Confirmed? "
-
-    if resp is True:  # meaning that default response is True
-        prompt = "{} [{}]|{}: ".format(prompt, "Yes", "No")
-    else:
-        prompt = "{} [{}]|{}: ".format(prompt, "No", "Yes")
-
-    ans = input(prompt)
-    if not ans:
-        return resp
-
-    if re.match('[Yy](es)?', ans):
-        return True
-    if re.match('[Nn](o)?', ans):
-        return False
-
-
 # Make a dictionary with keys and values being shape_type code (in OSM .shp file) and shapely.geometry, respectively =
 def osm_geom_types():
     shape_types = {'Point': shapely.geometry.Point,

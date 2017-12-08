@@ -4,7 +4,8 @@ import os
 import re
 import time
 from urllib.error import HTTPError
-from urllib.request import urlretrieve, urljoin, urlparse
+from urllib.request import urlretrieve
+from urllib.parse import urljoin, urlparse
 
 import bs4
 import fuzzywuzzy.process
