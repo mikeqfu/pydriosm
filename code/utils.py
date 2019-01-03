@@ -10,7 +10,10 @@ import re
 
 import nltk.metrics
 import pandas as pd
+import progressbar
+import requests
 import shapely.geometry
+import tqdm
 
 
 # Type to confirm whether to proceed or not
@@ -210,6 +213,51 @@ def save(data, path_to_file, sep=',', engine='xlsxwriter', sheet_name='Details',
 """ Misc """
 
 
+def download(url, path_to_file):
+    """
+
+    Ref: https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests
+
+    :param url:
+    :param path_to_file:
+    :return:
+    """
+    r = requests.get(url, stream=True)  # Streaming, so we can iterate over the response
+    total_size = int(r.headers.get('content-length'))  # Total size in bytes
+    block_size = 1024 * 1024
+    wrote = 0
+    with open(path_to_file, 'wb') as f:
+        for data in tqdm.tqdm(r.iter_content(block_size), total=total_size//block_size, unit='MB'):
+            wrote = wrote + len(data)
+            f.write(data)
+    if total_size != 0 and wrote != total_size:
+        print("ERROR, something went wrong")
+
+
+# Make a custom bar to show downloading progress --------------------------
+def make_custom_progressbar():
+    widgets = [progressbar.Bar(),
+               ' ',
+               progressbar.Percentage(),
+               ' [',
+               progressbar.Timer(),
+               '] ',
+               progressbar.FileTransferSpeed(),
+               ' (',
+               progressbar.ETA(),
+               ') ']
+    progress_bar = progressbar.ProgressBar(widgets=widgets)
+    return progress_bar
+
+
+def show_progress(block_count, block_size, total_size):
+    p_bar = make_custom_progressbar()
+    if p_bar.max_value is None:
+        p_bar.max_value = total_size
+        p_bar.start()
+    p_bar.update(min(block_count * block_size, total_size))
+
+
 # Make a dictionary with keys and values being shape_type code (in OSM .shp file) and shapely.geometry, respectively =
 def osm_geom_types():
     shape_types = {'Point': shapely.geometry.Point,
@@ -240,9 +288,9 @@ def find_match(x, lookup):
 
 
 # Find similar string from a list of strings
-def find_similar_str(s, strs):
-    l_distances = [nltk.metrics.edit_distance(s, a, substitution_cost=100) for a in strs]
-    the_one = strs[l_distances.index(min(l_distances))]
+def find_similar_str(s, str_list):
+    l_distances = [nltk.metrics.edit_distance(s, a, substitution_cost=100) for a in str_list]
+    the_one = str_list[l_distances.index(min(l_distances))]
     return the_one
 
 
@@ -296,8 +344,7 @@ def distance_on_unit_sphere(x_coord, y_coord):
     # cosine( arc length ) = sin phi sin phi' cos(theta-theta') + cos phi cos phi'
     # distance = rho * arc length
 
-    cosine = (math.sin(phi1) * math.sin(phi2) * math.cos(theta1 - theta2) +
-              math.cos(phi1) * math.cos(phi2))
+    cosine = (math.sin(phi1) * math.sin(phi2) * math.cos(theta1 - theta2) + math.cos(phi1) * math.cos(phi2))
     arc = math.acos(cosine) * 3960  # in miles
 
     # Remember to multiply arc by the radius of the earth
@@ -312,13 +359,12 @@ def find_closest_point(point, pts):
     :param pts: a sequence of reference points
     :return:
 
-    hypot(x, y) return the Euclidean norm, sqrt(x*x + y*y).
+    math.hypot(x, y) return the Euclidean norm, sqrt(x*x + y*y).
     This is the length of the vector from the origin to point (x, y).
 
     """
     # Define a function calculating distance between two points
     def distance(o, d):
-        # math.hypot(o_long - d_long, o_lat - d_lat)
         return math.hypot(o[0] - d[0], o[1] - d[1])
     # Find the min value using the distance function with coord parameter
     return min(pts, key=functools.partial(distance, point))
