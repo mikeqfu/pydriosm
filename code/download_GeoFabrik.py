@@ -2,9 +2,7 @@
 
 import os
 import re
-import time
 from urllib.error import HTTPError
-from urllib.request import urlretrieve
 from urllib.parse import urljoin, urlparse
 
 import bs4
@@ -12,10 +10,9 @@ import fuzzywuzzy.process
 import humanfriendly
 import numpy as np
 import pandas as pd
-import progressbar
 import requests
 
-from utils import cd_dat, cd_dat_geofabrik, save_pickle, load_pickle, save_json, confirmed
+from utils import cd_dat, cd_dat_geofabrik, confirmed, load_pickle, save_json, save_pickle
 
 
 # Get raw directory index (allowing us to see and download older files)
@@ -24,22 +21,27 @@ def get_raw_directory_index(url):
     :param url: 
     :return: 
     """
-    try:
-        raw_directory_index = pd.read_html(url, match='file', header=0, parse_dates=['date'])
-        raw_directory_index = pd.DataFrame(pd.concat(raw_directory_index, axis=0, ignore_index=True))
-        raw_directory_index.columns = [c.title() for c in raw_directory_index.columns]
-
-        # Clean the DataFrame a little bit
-        raw_directory_index.Size = raw_directory_index.Size.apply(humanfriendly.format_size)
-        raw_directory_index.sort_values('Date', ascending=False, inplace=True)
-        raw_directory_index.index = range(len(raw_directory_index))
-
-        raw_directory_index['FileURL'] = raw_directory_index.File.map(lambda x: urljoin(url, x))
-
-    except (HTTPError, TypeError, ValueError):
+    assert isinstance(url, str)
+    if url.endswith('.osm.pbf') or url.endswith('.shp.zip') or url.endswith('.osm.bz2'):
+        print("Failed to get the requested information due to invalid input URL.")
         raw_directory_index = None
-        if len(urlparse(url).path) <= 1:
-            print("The home page does not have a raw directory index.")
+    else:
+        try:
+            raw_directory_index = pd.read_html(url, match='file', header=0, parse_dates=['date'])
+            raw_directory_index = pd.DataFrame(pd.concat(raw_directory_index, axis=0, ignore_index=True))
+            raw_directory_index.columns = [c.title() for c in raw_directory_index.columns]
+
+            # Clean the DataFrame a little bit
+            raw_directory_index.Size = raw_directory_index.Size.apply(humanfriendly.format_size)
+            raw_directory_index.sort_values('Date', ascending=False, inplace=True)
+            raw_directory_index.index = range(len(raw_directory_index))
+
+            raw_directory_index['FileURL'] = raw_directory_index.File.map(lambda x: urljoin(url, x))
+
+        except (HTTPError, TypeError, ValueError):
+            raw_directory_index = None
+            if len(urlparse(url).path) <= 1:
+                print("The home page does not have a raw directory index.")
 
     return raw_directory_index
 
@@ -50,49 +52,54 @@ def get_subregion_url_table(url):
     :param url: 
     :return: 
     """
-    try:
-        subregion_table = pd.read_html(url, match=re.compile('(Special )?Sub[ \-]Regions?'), skiprows=[0, 1],
-                                       encoding='UTF-8')
-        subregion_table = pd.DataFrame(pd.concat(subregion_table, axis=0, ignore_index=True))
-
-        # Specify column names
-        file_types = ['.osm.pbf', '.shp.zip', '.osm.bz2']
-        column_names = ['Subregion'] + file_types
-        column_names.insert(2, '.osm.pbf_Size')
-
-        # Add column/names
-        if len(subregion_table.columns) == 4:
-            subregion_table.insert(2, '.osm.pbf_Size', np.nan)
-        subregion_table.columns = column_names
-
-        subregion_table.replace({'.osm.pbf_Size': {re.compile('[()]'): '', re.compile('\xa0'): ' '}}, inplace=True)
-
-        # Get the URLs
-        source = requests.get(url)
-        soup = bs4.BeautifulSoup(source.text, 'lxml')
-        source.close()
-
-        for file_type in file_types:
-            text = '[{}]'.format(file_type)
-            urls = [urljoin(url, link['href']) for link in soup.find_all(name='a', href=True, text=text)]
-            subregion_table.loc[subregion_table[file_type].notnull(), file_type] = urls
-
-        try:
-            subregion_urls = [urljoin(url, soup.find('a', text=text)['href']) for text in subregion_table.Subregion]
-        except TypeError:
-            subregion_urls = [kml['onmouseover'] for kml in soup.find_all('tr', onmouseover=True)]
-            subregion_urls = [s[s.find('(') + 1:s.find(')')][1:-1].replace('kml', 'html') for s in subregion_urls]
-            subregion_urls = [urljoin(url, sub_url) for sub_url in subregion_urls]
-        subregion_table['SubregionURL'] = subregion_urls
-
-        column_names = list(subregion_table.columns)
-        column_names.insert(1, column_names.pop(len(column_names) - 1))
-        subregion_table = subregion_table[column_names]  # .fillna(value='')
-
-    except (ValueError, TypeError, ConnectionRefusedError, ConnectionError):
-        # No more data available for subregions within the region
-        print("Checked out \"{}\".".format(url.split('/')[-1].split('.')[0].title()))
+    assert isinstance(url, str)
+    if url.endswith('.osm.pbf') or url.endswith('.shp.zip') or url.endswith('.osm.bz2'):
+        print("Failed to get the requested information due to invalid input URL.")
         subregion_table = None
+    else:
+        try:
+            subregion_table = pd.read_html(url, match=re.compile(r'(Special )?Sub[ \-]Regions?'), skiprows=[0, 1],
+                                           encoding='UTF-8')
+            subregion_table = pd.DataFrame(pd.concat(subregion_table, axis=0, ignore_index=True))
+
+            # Specify column names
+            file_types = ['.osm.pbf', '.shp.zip', '.osm.bz2']
+            column_names = ['Subregion'] + file_types
+            column_names.insert(2, '.osm.pbf_Size')
+
+            # Add column/names
+            if len(subregion_table.columns) == 4:
+                subregion_table.insert(2, '.osm.pbf_Size', np.nan)
+            subregion_table.columns = column_names
+
+            subregion_table.replace({'.osm.pbf_Size': {re.compile('[()]'): '', re.compile('\xa0'): ' '}}, inplace=True)
+
+            # Get the URLs
+            source = requests.get(url)
+            soup = bs4.BeautifulSoup(source.text, 'lxml')
+            source.close()
+
+            for file_type in file_types:
+                text = '[{}]'.format(file_type)
+                urls = [urljoin(url, link['href']) for link in soup.find_all(name='a', href=True, text=text)]
+                subregion_table.loc[subregion_table[file_type].notnull(), file_type] = urls
+
+            try:
+                subregion_urls = [urljoin(url, soup.find('a', text=text)['href']) for text in subregion_table.Subregion]
+            except TypeError:
+                subregion_urls = [kml['onmouseover'] for kml in soup.find_all('tr', onmouseover=True)]
+                subregion_urls = [s[s.find('(') + 1:s.find(')')][1:-1].replace('kml', 'html') for s in subregion_urls]
+                subregion_urls = [urljoin(url, sub_url) for sub_url in subregion_urls]
+            subregion_table['SubregionURL'] = subregion_urls
+
+            column_names = list(subregion_table.columns)
+            column_names.insert(1, column_names.pop(len(column_names) - 1))
+            subregion_table = subregion_table[column_names]  # .fillna(value='')
+
+        except (ValueError, TypeError, ConnectionRefusedError, ConnectionError):
+            # No more data available for subregions within the region
+            print("Checked out \"{}\".".format(url.split('/')[-1].split('.')[0].title()))
+            subregion_table = None
 
     return subregion_table
 
@@ -143,7 +150,7 @@ def scrape_available_subregion_indices():
         subregion_downloads_index = pd.DataFrame(pd.concat(avail_subregion_url_tables, ignore_index=True))
         subregion_downloads_index.drop_duplicates(inplace=True)
 
-        # Save subregion_index_downloads to loacal disk
+        # Save subregion_index_downloads to local disk
         save_pickle(subregion_downloads_index, cd_dat("subregion-downloads-index.pickle"))
         subregion_downloads_index.set_index('Subregion').to_json(cd_dat("subregion-downloads-index.json"))
 
@@ -201,11 +208,13 @@ def get_download_url(subregion, file_format=".osm.pbf", update=False):
 
 
 # Parse the download URL so as to specify a path for storing the downloaded file
-def make_file_path(download_url):
+def make_file_path(subregion, file_format=".osm.pbf"):
     """
-    :param download_url: 
+    :param subregion:
+    :param file_format:
     :return: 
     """
+    _, download_url = get_download_url(subregion, file_format, update=False)
     parsed_path = os.path.normpath(urlparse(download_url).path)
     directory = cd_dat_geofabrik() + os.path.dirname(parsed_path)  # .title()
     filename = os.path.basename(parsed_path)
@@ -232,35 +241,17 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
         # Get download URL
         subregion_name, download_url = get_download_url(subregion, file_format)
         # Download the requested OSM file
-        filename, file_path = make_file_path(download_url)
+        filename, file_path = make_file_path(subregion_name, file_format)
 
         if os.path.isfile(file_path) and not update:
             print("'{}' is already available for {}.".format(filename, subregion_name))
         else:
-
-            # Make a custom bar to show downloading progress --------------------------
-            def make_custom_progressbar():
-                widgets = [progressbar.Bar(), ' ', progressbar.Percentage(),
-                           ' [', progressbar.Timer(), '] ',
-                           progressbar.FileTransferSpeed(),
-                           ' (', progressbar.ETA(), ') ']
-                progress_bar = progressbar.ProgressBar(widgets=widgets)
-                return progress_bar
-
-            pbar = make_custom_progressbar()
-
-            def show_progress(block_count, block_size, total_size):
-                if pbar.max_value is None:
-                    pbar.max_value = total_size
-                    pbar.start()
-                pbar.update(min(block_count * block_size, total_size))
-            # -------------------------------------------------------------------------
-
             if confirmed(prompt="To download {}?".format(filename)):
                 try:
-                    urlretrieve(download_url, file_path, reporthook=show_progress)
-                    pbar.finish()
-                    time.sleep(0.1)
+                    # from urllib.request import urlretrieve
+                    # urlretrieve(download_url, file_path)  # (download_url, file_path, reporthook=show_progress)
+                    from utils import download
+                    download(download_url, file_path)
                     print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
                 except Exception as e:
                     print("\nDownload failed due to '{}'.".format(e))
