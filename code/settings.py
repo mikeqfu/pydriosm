@@ -46,7 +46,7 @@ def mpl_preferences(use_cambria=False, reset=False):
         matplotlib.pyplot.style.use('ggplot')
         if use_cambria:  # Use the font, 'Cambria'
             # Add 'Cambria' to the front of the 'font.serif' list
-            matplotlib.pyplot.rcParams['font.serif'] = ['Cambria'] + pyplot.rcParams['font.serif']
+            matplotlib.pyplot.rcParams['font.serif'] = ['Cambria'] + matplotlib.pyplot.rcParams['font.serif']
             # Set 'font.family' to 'serif', so that matplotlib will use that list
             matplotlib.pyplot.rcParams['font.family'] = 'serif'
         matplotlib.pyplot.rcParams['font.size'] = 13
