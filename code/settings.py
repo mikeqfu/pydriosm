@@ -1,31 +1,32 @@
 """ Settings """
 
 import gdal
-from matplotlib import pyplot, rcParamsDefault
-from numpy.core import arrayprint
-from pandas import reset_option, set_option
+import matplotlib
+import matplotlib.pyplot
+import numpy.core
+import pandas
 
 
 # Set preferences for displaying results
 def pd_preferences(reset=False):
     if not reset:
-        set_option('expand_frame_repr', False)  # Set the representation of DataFrame NOT to wrap
-        set_option('display.width', 560)  # Set the display width
+        pandas.set_option('expand_frame_repr', False)  # Set the representation of DataFrame NOT to wrap
+        pandas.set_option('display.width', 560)  # Set the display width
         # set_option('precision', 4)
-        set_option('display.max_columns', 100)
-        set_option('display.max_rows', 10)
-        set_option('io.excel.xlsx.writer', 'xlsxwriter')
-        set_option('mode.chained_assignment', None)
+        pandas.set_option('display.max_columns', 100)
+        pandas.set_option('display.max_rows', 10)
+        pandas.set_option('io.excel.xlsx.writer', 'xlsxwriter')
+        pandas.set_option('mode.chained_assignment', None)
     else:
-        reset_option('all')
+        pandas.reset_option('all')
 
 
 # Set preferences for displaying results
 def np_preferences(reset=False):
     if not reset:
-        arrayprint._line_width = 120
+        numpy.core.arrayprint._line_width = 120
     else:
-        arrayprint._line_width = 80  # 75
+        numpy.core.arrayprint._line_width = 80  # 75
 
 
 # Set preferences for plotting
@@ -42,20 +43,20 @@ def mpl_preferences(use_cambria=False, reset=False):
 
     """
     if not reset:
-        pyplot.style.use('ggplot')
+        matplotlib.pyplot.style.use('ggplot')
         if use_cambria:  # Use the font, 'Cambria'
             # Add 'Cambria' to the front of the 'font.serif' list
-            pyplot.rcParams['font.serif'] = ['Cambria'] + pyplot.rcParams['font.serif']
+            matplotlib.pyplot.rcParams['font.serif'] = ['Cambria'] + pyplot.rcParams['font.serif']
             # Set 'font.family' to 'serif', so that matplotlib will use that list
-            pyplot.rcParams['font.family'] = 'serif'
-        pyplot.rcParams['font.size'] = 13
-        pyplot.rcParams['font.weight'] = 'normal'
-        pyplot.rcParams['legend.labelspacing'] = 0.9
-        pyplot.rcParams['hatch.linewidth'] = 1.0
-        pyplot.rcParams['hatch.color'] = 'k'
+            matplotlib.pyplot.rcParams['font.family'] = 'serif'
+        matplotlib.pyplot.rcParams['font.size'] = 13
+        matplotlib.pyplot.rcParams['font.weight'] = 'normal'
+        matplotlib.pyplot.rcParams['legend.labelspacing'] = 0.9
+        matplotlib.pyplot.rcParams['hatch.linewidth'] = 1.0
+        matplotlib.pyplot.rcParams['hatch.color'] = 'k'
     else:
-        pyplot.style.use('classic')
-        pyplot.rcParams = rcParamsDefault
+        matplotlib.pyplot.style.use('classic')
+        matplotlib.pyplot.rcParams = matplotlib.rcParamsDefault
 
 
 #
