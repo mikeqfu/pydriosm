@@ -1,9 +1,12 @@
 """ Data storage with PostgreSQL """
 
+from geoalchemy2 import types
 from sqlalchemy import create_engine
 from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
-from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy_utils import create_database, database_exists
+
+from utils import confirmed
 
 
 class OSM:
@@ -14,8 +17,8 @@ class OSM:
         need to create the first of our own database, we can set up a connection to "postgres" in the first instance.
         """
         self.database_info = {'drivername': 'postgresql+psycopg2',
-                              'username': str(input('Username: ')),
-                              'password': int(input('Password: ')),
+                              'username': str(input('PostgreSQL username: ')),
+                              'password': int(input('PostgreSQL password: ')),
                               'host': 'localhost',
                               'port': 5432,
                               'database': 'postgres'}
@@ -29,53 +32,94 @@ class OSM:
         self.port = self.url.port
         self.database_name = self.database_info['database']
 
-        # Create a sqlalchemy connectable
+        # Create a SQLAlchemy connectable
         self.engine = create_engine(self.url, isolation_level='AUTOCOMMIT')
         self.connection = self.engine.connect()
 
-    #
-    def connect_db(self, database_name):
+    # Establish a connection to the specified database (named e.g. 'osm_extracts')
+    def connect_db(self, database_name='osm_extracts'):
+        """
+        :param database_name: [str] default as 'osm_extracts'; alternatives such as 'OpenStreetMap', ...
+        :return:
+        """
         self.database_name = database_name
         self.database_info['database'] = self.database_name
         self.url = URL(**self.database_info)
-        self.engine = create_engine(self.url, isolation_level='AUTOCOMMIT')
         if not database_exists(self.url):
             create_database(self.url)
+        self.engine = create_engine(self.url, isolation_level='AUTOCOMMIT')
         self.connection = self.engine.connect()
 
-    #
-    def create_db(self, database_name):
+    # An alternative to sqlalchemy_utils.create_database()
+    def create_db(self, database_name='osm_extracts'):
         """
-        :param database_name: [str] default 'OpenStreetMap'
-        """
-        self.engine.execute('CREATE DATABASE "{}"'.format(database_name))
+        :param database_name: [str] default as 'osm_extracts'; alternatives such as 'OpenStreetMap', ...
 
-    #
-    def kill_session(self, database_name):
+        from psycopg2 import OperationalError
+        try:
+            self.engine.execute('CREATE DATABASE "{}"'.format(database_name))
+        except OperationalError:
+            self.engine.execute(
+                'SELECT *, pg_terminate_backend(pid) FROM pg_stat_activity WHERE username=\'postgres\';')
+            self.engine.execute('CREATE DATABASE "{}"'.format(database_name))
+        """
+        self.disconnect()
+        self.engine.execute('CREATE DATABASE "{}";'.format(database_name))
+        self.connect_db(database_name=database_name)
+
+    # Kill the connection to the specified database
+    def disconnect(self, database_name=None):
+        """
+        :param database_name: [str]
+        :return:
+
+        Alternative way:
+        SELECT
+            pg_terminate_backend(pg_stat_activity.pid)
+        FROM
+            pg_stat_activity
+        WHERE
+            pg_stat_activity.datname = database_name AND pid <> pg_backend_pid();
+        """
+        db_name = self.database_name if database_name is None else database_name
+        self.connect_db('postgres')
+        self.engine.execute('REVOKE CONNECT ON DATABASE {} FROM PUBLIC, postgres;'.format(db_name))
         self.engine.execute(
-            'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = \'{}\';'.format(database_name))
+            'SELECT pg_terminate_backend(pid) '
+            'FROM pg_stat_activity '
+            'WHERE datname = \'{}\' AND pid <> pg_backend_pid();'.format(db_name))
 
-    #
-    def drop(self, database_name):
-        self.kill_session(database_name)
-        self.engine.execute('DROP DATABASE "{}"'.format(database_name))
-
-    #
-    def kill_all_sessions(self):
+    # Kill connections to all other databases
+    def disconnect_all_others(self):
+        self.connect_db('postgres')
         self.engine.execute('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();')
 
-    #
+    # Drop the specified database
+    def drop(self, database_name=None):
+        db_name = self.database_name if database_name is None else database_name
+        self.disconnect(db_name)
+        if confirmed("Confirmed to drop the database \"{}\"?".format(db_name)):
+            self.engine.execute('DROP DATABASE "{}"'.format(db_name))
+        else:
+            pass
+
+    # Create a new schema in the database being currently connected
     def create_schema(self, schema_name):
-        self.engine.execute('CREATE SCHEMA "{}"'.format(schema_name))
+        self.engine.execute('CREATE SCHEMA IF NOT EXISTS "{}";'.format(schema_name))
 
-    #
-    def import_data(self, data, schema, table_name):
+    # Drop a schema in the database being currently connected
+    def drop_schema(self, schema_name):
+        self.engine.execute('DROP SCHEMA IF EXISTS "{}";'.format(schema_name))
+
+    # Import data (as a pandas.DataFrame) into the database being currently connected
+    def import_data(self, data, table_name, schema_name='public'):
         schemas = Inspector.from_engine(self.engine)
-        if schema not in schemas.get_table_names():
-            self.create_schema(schema)
-        data.to_sql(table_name, self.engine, schema=schema, if_exists='replace', index=False)
-        OSM.table_name = table_name
+        if schema_name not in schemas.get_table_names():
+            self.create_schema(schema_name)
+        data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
+                    dtype={'other_tags': types.postgresql.JSON})
 
-    #
-    def drop_table(self, table_name):
-        self.engine.execute('DROP TABLE {}'.format(table_name))
+    # Remove tables from the database being currently connected
+    def drop_table(self, schema_name, *table_names):
+        t_names = tuple(('{}.{}'.format(schema_name, t) for t in table_names))
+        self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(t_names) - 1) + '%s;') % t_names)
