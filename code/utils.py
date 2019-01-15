@@ -213,6 +213,7 @@ def save(data, path_to_file, sep=',', engine='xlsxwriter', sheet_name='Details',
 """ Misc """
 
 
+#
 def download(url, path_to_file):
     """
 
@@ -250,6 +251,7 @@ def make_custom_progressbar():
     return progress_bar
 
 
+#
 def show_progress(block_count, block_size, total_size):
     p_bar = make_custom_progressbar()
     if p_bar.max_value is None:

@@ -59,7 +59,7 @@ def mpl_preferences(use_cambria=False, reset=False):
         matplotlib.pyplot.rcParams = matplotlib.rcParamsDefault
 
 
-#
+# Set GDAL configurations
 def gdal_configurations(reset=False):
     if not reset:
         # Whether to enable interleaved reading. Defaults to NO.
