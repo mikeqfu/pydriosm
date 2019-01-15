@@ -255,10 +255,10 @@ def merge_shp_files(subregions, layer, update=False):
     shp_file_paths = glob.glob(os.path.join(layer_path, '*.shp'))
     w = shapefile.Writer()
     for f in shp_file_paths:
-        readf = shapefile.Reader(f)
-        w.shapes().extend(readf.shapes())
-        w.records.extend(readf.records())
-        w.fields = list(readf.fields)
+        read_f = shapefile.Reader(f)
+        w.shapes().extend(read_f.shapes())
+        w.records.extend(read_f.records())
+        w.fields = list(read_f.fields)
     w.save(os.path.join(layer_path, layer))
 
 
@@ -431,9 +431,3 @@ def read_osm_pbf(subregion, update_osm_pbf=False, parse_othertags=False, fmt_sin
     osm_pbf_data = dict(zip(list(osm_data.keys()), layer_data))
 
     return osm_pbf_data
-
-
-# from psql import OSM
-# osmdb = OSM()
-# data.to_sql('points', osmdb.engine, index=False)
-# x = pd.read_sql_table('points', osmdb.engine, index_col='index')
