@@ -112,12 +112,23 @@ class OSM:
         self.engine.execute('DROP SCHEMA IF EXISTS "{}";'.format(schema_name))
 
     # Import data (as a pandas.DataFrame) into the database being currently connected
-    def import_data(self, data, table_name, schema_name='public'):
+    def import_data(self, data, table_name, schema_name='public', parsed=False):
+        """
+        :param data: [pandas.DataFrame]
+        :param table_name: [str]
+        :param schema_name: [str] 'public' (default)
+        :param parsed: [bool] whether 'data' has been parsed; False (default)
+        :return:
+        """
         schemas = Inspector.from_engine(self.engine)
         if schema_name not in schemas.get_table_names():
             self.create_schema(schema_name)
-        data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
-                    dtype={'other_tags': types.postgresql.JSON})
+        if not parsed:
+            data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
+                        dtype={'geometry': types.postgresql.JSON, 'properties': types.postgresql.JSON})
+        else:  # There is an error. To be fixed...
+            data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
+                        dtype={'other_tags': types.postgresql.JSON, 'coordinates': types.postgresql.ARRAY})
 
     # Remove tables from the database being currently connected
     def drop_table(self, schema_name, *table_names):

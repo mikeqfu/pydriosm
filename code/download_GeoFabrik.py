@@ -246,7 +246,7 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
         if os.path.isfile(file_path) and not update:
             print("'{}' is already available for {}.".format(filename, subregion_name))
         else:
-            if confirmed(prompt="To download {}?".format(filename)):
+            if confirmed(prompt="To download {}?".format(filename), resp=False):
                 try:
                     # from urllib.request import urlretrieve
                     # urlretrieve(download_url, file_path)  # (download_url, file_path, reporthook=show_progress)
@@ -254,7 +254,7 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
                     download(download_url, file_path)
                     print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
                 except Exception as e:
-                    print("\nDownload failed due to '{}'.".format(e))
+                    print("\nFailed to download '{}' due to '{}'.".format(filename, e))
 
 
 # Remove the downloaded file
