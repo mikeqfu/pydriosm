@@ -295,7 +295,7 @@ def get_layer_idx_names(subregion, update=False):
 
 
 # Read '.osm.pbf' file roughly into DataFrames
-def pre_read_osm_pbf(subregion, update=False):
+def read_raw_osm_pbf(subregion, update=False):
     """
     Reference: http://www.gdal.org/drv_osm.html
 
@@ -313,23 +313,22 @@ def pre_read_osm_pbf(subregion, update=False):
 
     path_to_pickle = osm_pbf_file.replace(".osm.pbf", "-preprocessed.pickle")
     if os.path.isfile(path_to_pickle) and not update:
-        data = load_pickle(path_to_pickle)
+        raw_osm_pbf_data = load_pickle(path_to_pickle)
     else:
         # If the target file is not available, download it.
         if not os.path.isfile(osm_pbf_file) or update:
-            if confirmed(prompt="Download '{}'?".format(os.path.basename(osm_pbf_file), subregion), resp=False):
-                dGF.download_subregion_osm_file(subregion, file_format='.osm.pbf', update=update)
+            dGF.download_subregion_osm_file(subregion, file_format='.osm.pbf', update=update)
 
         try:
             # Start parsing the '.osm.pbf' file
-            osm_pbf = ogr.Open(osm_pbf_file)
+            raw_osm_pbf = ogr.Open(osm_pbf_file)
 
             # Grab available layers in file, i.e. points, lines, multilinestrings, multipolygons, and other_relations
-            layer_count, layer_names, layer_data = osm_pbf.GetLayerCount(), [], []
+            layer_count, layer_names, layer_data = raw_osm_pbf.GetLayerCount(), [], []
 
             # Loop through all available layers
             for i in range(layer_count):
-                lyr = osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
+                lyr = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
                 layer_names.append(lyr.GetName())  # Get the name of the i-th layer
 
                 # Get features from the i-th layer
@@ -343,31 +342,31 @@ def pre_read_osm_pbf(subregion, update=False):
                 layer_data.append(pd.DataFrame(feat_data))
 
             # Make a dictionary, {layer_name: layer_DataFrame}
-            data = dict(zip(layer_names, layer_data))
+            raw_osm_pbf_data = dict(zip(layer_names, layer_data))
 
         except Exception as e:
             err_msg = e if os.path.isfile(osm_pbf_file) else os.strerror(errno.ENOENT)
             print("Parsing '{}' ... failed as '{}'.".format(os.path.basename(osm_pbf_file), err_msg))
-            data = None
+            raw_osm_pbf_data = None
 
-        save_pickle(data, path_to_pickle)
+        save_pickle(raw_osm_pbf_data, path_to_pickle)
 
-    return data
+    return raw_osm_pbf_data
 
 
 #
-def parse_layer_data(dat, geo_typ, parse_othertags=True, fmt_single_geom=True, fmt_multi_geom=True):
+def parse_layer_data(layer_data, geo_typ, parse_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True):
     """
-    :param dat:
-    :param geo_typ:
-    :param parse_othertags:
-    :param fmt_single_geom:
-    :param fmt_multi_geom:
+    :param layer_data: [pandas.DataFrame]
+    :param geo_typ: [str]
+    :param parse_other_tags: [bool]
+    :param fmt_single_geom: [bool]
+    :param fmt_multi_geom: [bool]
     :return:
     """
 
     # Transform a 'other_tags' into a dictionary
-    def parse_other_tags(x):
+    def parse_other_tags_column(x):
         """
         :param x: [str] or None
         :return:
@@ -401,33 +400,43 @@ def parse_layer_data(dat, geo_typ, parse_othertags=True, fmt_single_geom=True, f
                            for geom_type, coords in zip(geom_types, coordinates)]
         return shapely.geometry.GeometryCollection(geom_collection)
 
-    dat_properties = pd.DataFrame(x for x in dat.properties)
-    dat_geometries = pd.DataFrame(x for x in dat.geometry).rename(columns={'type': 'geom_type'})
-    data = dat_properties.join(dat_geometries)
+    dat_properties = pd.DataFrame(x for x in layer_data.properties)
+    dat_geometries = pd.DataFrame(x for x in layer_data.geometry).rename(columns={'type': 'geom_type'})
+    parsed_layer_data = dat_properties.join(dat_geometries)
 
-    if parse_othertags:
-        data.other_tags = data.other_tags.map(parse_other_tags)
+    if parse_other_tags:
+        parsed_layer_data.other_tags = parsed_layer_data.other_tags.map(parse_other_tags_column)
 
-    if geo_typ == 'other_relations':
-        if fmt_multi_geom:
-            data['coordinates'] = data.geometries.map(format_multi_geometries)
-    else:  # geo_type is any of 'points', 'lines', 'multilinestrings', and 'multipolygons'
+    if geo_typ != 'other_relations':  # geo_type is any of 'points', 'lines', 'multilinestrings', and 'multipolygons'
         if fmt_single_geom:
-            data.coordinates = format_single_geometry(data[['geom_type', 'coordinates']])
+            parsed_layer_data.coordinates = format_single_geometry(parsed_layer_data[['geom_type', 'coordinates']])
+    else:  # geo_typ == 'other_relations'
+        if fmt_multi_geom:
+            parsed_layer_data['coordinates'] = parsed_layer_data.geometries.map(format_multi_geometries)
 
-    return data
+    return parsed_layer_data
 
 
 #
-def read_osm_pbf(subregion, update_osm_pbf=False, parse_othertags=False, fmt_single_geom=False, fmt_multi_geom=False):
+def read_parsed_osm_pbf(subregion, update_osm_pbf=False,
+                        parse_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True):
+    """
+    :param subregion: [str]
+    :param update_osm_pbf: [bool]
+    :param parse_other_tags: [bool]
+    :param fmt_single_geom: [bool]
+    :param fmt_multi_geom: [bool]
+    :return:
+    """
+    raw_osm_pbf_data = read_raw_osm_pbf(subregion, update_osm_pbf)
 
-    osm_data = pre_read_osm_pbf(subregion, update_osm_pbf)
+    parsed_data = []
+    geom_types = []
+    for geom_type, layer_data in raw_osm_pbf_data.items():
+        parsed_layer_data = parse_layer_data(layer_data, geom_type, parse_other_tags, fmt_single_geom, fmt_multi_geom)
+        parsed_data.append(parsed_layer_data)
+        geom_types.append(geom_type)
 
-    layer_data = []
-    for geom_type, dat in osm_data.items():
-        layer_dat = parse_layer_data(dat, geom_type, parse_othertags, fmt_single_geom, fmt_multi_geom)
-        layer_data.append(layer_dat)
+    osm_pbf = dict(zip(geom_types, parsed_data))
 
-    osm_pbf_data = dict(zip(list(osm_data.keys()), layer_data))
-
-    return osm_pbf_data
+    return osm_pbf
