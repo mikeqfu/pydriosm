@@ -21,8 +21,8 @@ def confirmed(prompt=None, resp=False):
     """
     Reference: http://code.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
 
-    :param prompt:
-    :param resp:
+    :param prompt: [str] or None
+    :param resp: [bool]
     :return:
 
     Example: confirm(prompt="Create Directory?", resp=True)
