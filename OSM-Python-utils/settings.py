@@ -75,9 +75,3 @@ def gdal_configurations(reset=False):
         gdal.SetConfigOption('USE_CUSTOM_INDEXING', 'YES')
         gdal.SetConfigOption('COMPRESS_NODES', 'NO')
         gdal.SetConfigOption('MAX_TMPFILE_SIZE', '100')
-
-
-pd_preferences(reset=False)
-np_preferences(reset=False)
-mpl_preferences(use_cambria=False, reset=False)
-gdal_configurations(reset=False)

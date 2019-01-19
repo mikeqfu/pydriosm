@@ -1,6 +1,7 @@
 """ Data storage with PostgreSQL """
 
 from geoalchemy2 import types
+from pandas import read_sql
 from sqlalchemy import create_engine
 from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
@@ -129,6 +130,16 @@ class OSM:
         else:  # There is an error. To be fixed...
             data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
                         dtype={'other_tags': types.postgresql.JSON, 'coordinates': types.postgresql.ARRAY})
+
+    # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
+    def read_table(self, subregion_name, *schemas):
+        geom_types = []
+        layer_data = []
+        for schema in schemas:
+            geom_types.append(schema)
+            sql_query = 'SELECT * FROM {}."{}";'.format(schema, subregion_name)
+            layer_data.append(read_sql(sql=sql_query, con=self.engine))
+        return dict(zip(geom_types, layer_data))
 
     # Remove tables from the database being currently connected
     def drop_table(self, schema_name, *table_names):

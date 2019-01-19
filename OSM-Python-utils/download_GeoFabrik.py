@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from utils import cd_dat, cd_dat_geofabrik, confirmed, load_pickle, save_json, save_pickle
+from utils import cd_dat, cd_dat_geofabrik, load_pickle, save_json, save_pickle
 
 
 # Get raw directory index (allowing us to see and download older files)
@@ -47,7 +47,7 @@ def get_raw_directory_index(url):
 
 
 # Get a table for a given URL, which contains all available URLs for each subregion and its file downloading
-def get_subregion_url_table(url):
+def get_subregion_table(url):
     """
     :param url: 
     :return: 
@@ -105,15 +105,13 @@ def get_subregion_url_table(url):
 
 
 # Scan through the downloading pages to get a list of available subregion names
-def scrape_available_subregion_indices():
-    home_url = 'http://download.geofabrik.de/'
-
+def scrape_available_subregion_indices(home_url='http://download.geofabrik.de/'):
     try:
         source = requests.get(home_url)
         soup = bs4.BeautifulSoup(source.text, 'lxml')
         avail_subregions = [td.a.text for td in soup.find_all('td', {'class': 'subregion'})]
         avail_subregion_urls = [urljoin(home_url, td.a['href']) for td in soup.find_all('td', {'class': 'subregion'})]
-        avail_subregion_url_tables = [get_subregion_url_table(sub_url) for sub_url in avail_subregion_urls]
+        avail_subregion_url_tables = [get_subregion_table(sub_url) for sub_url in avail_subregion_urls]
         avail_subregion_url_tables = [tbl for tbl in avail_subregion_url_tables if tbl is not None]
 
         subregion_url_tables = list(avail_subregion_url_tables)
@@ -125,7 +123,7 @@ def scrape_available_subregion_indices():
             for subregion_url_table in subregion_url_tables:
                 subregions = list(subregion_url_table.Subregion)
                 subregion_urls = list(subregion_url_table.SubregionURL)
-                subregion_url_tables_0 = [get_subregion_url_table(subregion_url) for subregion_url in subregion_urls]
+                subregion_url_tables_0 = [get_subregion_table(subregion_url) for subregion_url in subregion_urls]
                 subregion_url_tables_1 += [tbl for tbl in subregion_url_tables_0 if tbl is not None]
 
                 # (Note that 'Russian Federation' data is available in both 'Asia' and 'Europe')
@@ -145,7 +143,7 @@ def scrape_available_subregion_indices():
         save_json(subregion_url_index, cd_dat("subregion-url-index.json"))
 
         # All available URLs for downloading
-        home_subregion_url_table = get_subregion_url_table(home_url)
+        home_subregion_url_table = get_subregion_table(home_url)
         avail_subregion_url_tables.append(home_subregion_url_table)
         subregion_downloads_index = pd.DataFrame(pd.concat(avail_subregion_url_tables, ignore_index=True))
         subregion_downloads_index.drop_duplicates(inplace=True)
@@ -244,17 +242,16 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
         filename, file_path = make_file_path(subregion_name, file_format)
 
         if os.path.isfile(file_path) and not update:
-            print("'{}' is already available for {}.".format(filename, subregion_name))
+            print("\"{}\" is already available for \"{}\".".format(filename, subregion_name))
         else:
-            if confirmed(prompt="To download {}?".format(filename), resp=False):
-                try:
-                    # from urllib.request import urlretrieve
-                    # urlretrieve(download_url, file_path)  # (download_url, file_path, reporthook=show_progress)
-                    from utils import download
-                    download(download_url, file_path)
-                    print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
-                except Exception as e:
-                    print("\nFailed to download '{}' due to '{}'.".format(filename, e))
+            try:
+                # from urllib.request import urlretrieve
+                # urlretrieve(download_url, file_path)  # (download_url, file_path, reporthook=show_progress)
+                from utils import download
+                download(download_url, file_path)
+                print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
+            except Exception as e:
+                print("\nFailed to download \"{}\". {}".format(filename, e))
 
 
 # Remove the downloaded file

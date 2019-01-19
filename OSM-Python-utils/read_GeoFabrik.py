@@ -265,6 +265,7 @@ def merge_shp_files(subregions, layer, update=False):
 """ ================================================ .osm.pbf files ============================================== """
 
 
+# Get names of all layers contained in the .osm.pbf file for a given subregion
 def get_layer_idx_names(subregion, update=False):
     osm_pbf_file = get_local_file_path(subregion, file_format='.osm.pbf')
 
@@ -294,7 +295,7 @@ def get_layer_idx_names(subregion, update=False):
     return layer_idx_names
 
 
-# Read '.osm.pbf' file roughly into DataFrames
+# Read '.osm.pbf' file roughly into pandas.DataFrames
 def read_raw_osm_pbf(subregion, update=False):
     """
     Reference: http://www.gdal.org/drv_osm.html
@@ -315,46 +316,52 @@ def read_raw_osm_pbf(subregion, update=False):
     if os.path.isfile(path_to_pickle) and not update:
         raw_osm_pbf_data = load_pickle(path_to_pickle)
     else:
-        # If the target file is not available, download it.
+        # If the target file is not available, try downloading it first.
         if not os.path.isfile(osm_pbf_file) or update:
-            dGF.download_subregion_osm_file(subregion, file_format='.osm.pbf', update=update)
+            if confirmed(prompt="To download {}?".format(os.path.basename(osm_pbf_file)), resp=False):
+                dGF.download_subregion_osm_file(subregion, file_format='.osm.pbf', update=update)
 
-        try:
-            # Start parsing the '.osm.pbf' file
-            raw_osm_pbf = ogr.Open(osm_pbf_file)
+        if os.path.isfile(osm_pbf_file):
+            try:
+                # Start parsing the '.osm.pbf' file
+                raw_osm_pbf = ogr.Open(osm_pbf_file)
 
-            # Grab available layers in file, i.e. points, lines, multilinestrings, multipolygons, and other_relations
-            layer_count, layer_names, layer_data = raw_osm_pbf.GetLayerCount(), [], []
+                # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
+                layer_count, layer_names, layer_data = raw_osm_pbf.GetLayerCount(), [], []
 
-            # Loop through all available layers
-            for i in range(layer_count):
-                lyr = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
-                layer_names.append(lyr.GetName())  # Get the name of the i-th layer
+                # Loop through all available layers
+                for i in range(layer_count):
+                    lyr = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
+                    layer_names.append(lyr.GetName())  # Get the name of the i-th layer
 
-                # Get features from the i-th layer
-                feat, feat_data = lyr.GetNextFeature(), []
-                while feat is not None:
-                    feat_dat = json.loads(feat.ExportToJson())
-                    feat_data.append(feat_dat)
-                    feat.Destroy()
-                    feat = lyr.GetNextFeature()
+                    # Get features from the i-th layer
+                    feat, feat_data = lyr.GetNextFeature(), []
+                    while feat is not None:
+                        feat_dat = json.loads(feat.ExportToJson())
+                        feat_data.append(feat_dat)
+                        feat.Destroy()
+                        feat = lyr.GetNextFeature()
 
-                layer_data.append(pd.DataFrame(feat_data))
+                    layer_data.append(pd.DataFrame(feat_data))
 
-            # Make a dictionary, {layer_name: layer_DataFrame}
-            raw_osm_pbf_data = dict(zip(layer_names, layer_data))
+                # Make a dictionary, {layer_name: layer_DataFrame}
+                raw_osm_pbf_data = dict(zip(layer_names, layer_data))
 
-        except Exception as e:
-            err_msg = e if os.path.isfile(osm_pbf_file) else os.strerror(errno.ENOENT)
-            print("Parsing '{}' ... failed as '{}'.".format(os.path.basename(osm_pbf_file), err_msg))
+            except Exception as e:
+                err_msg = e if os.path.isfile(osm_pbf_file) else os.strerror(errno.ENOENT)
+                print("Parsing '{}' ... failed as '{}'.".format(os.path.basename(osm_pbf_file), err_msg))
+                raw_osm_pbf_data = None
+
+            save_pickle(raw_osm_pbf_data, path_to_pickle)
+
+        else:
+            print("\"{}\" is not available.".format(os.path.basename(osm_pbf_file)))
             raw_osm_pbf_data = None
-
-        save_pickle(raw_osm_pbf_data, path_to_pickle)
 
     return raw_osm_pbf_data
 
 
-#
+# Parse each layer's data
 def parse_layer_data(layer_data, geo_typ, parse_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True):
     """
     :param layer_data: [pandas.DataFrame]
@@ -417,7 +424,7 @@ def parse_layer_data(layer_data, geo_typ, parse_other_tags=True, fmt_single_geom
     return parsed_layer_data
 
 
-#
+# Read parsed .osm.pbf data for a specific subregion
 def read_parsed_osm_pbf(subregion, update_osm_pbf=False,
                         parse_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True):
     """

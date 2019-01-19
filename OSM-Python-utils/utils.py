@@ -19,7 +19,7 @@ import tqdm
 # Type to confirm whether to proceed or not
 def confirmed(prompt=None, resp=False):
     """
-    Reference: http://code.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
+    Reference: http://OSM-Python-utils.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
 
     :param prompt: [str] or None
     :param resp: [bool]
@@ -260,7 +260,7 @@ def show_progress(block_count, block_size, total_size):
     p_bar.update(min(block_count * block_size, total_size))
 
 
-# Make a dictionary with keys and values being shape_type code (in OSM .shp file) and shapely.geometry, respectively =
+# Make a dictionary with keys and values being shape_type OSM-Python-utils (in OSM .shp file) and shapely.geometry, respectively =
 def osm_geom_types():
     shape_types = {'Point': shapely.geometry.Point,
                    'LineString': shapely.geometry.LineString,
@@ -302,7 +302,7 @@ def distance_on_unit_sphere(x_coord, y_coord):
     Reference:
     http://www.johndcook.com/blog/python_longitude_latitude/
 
-    The following code returns the distance between two locations based on each point’s  longitude and latitude. The 
+    The following OSM-Python-utils returns the distance between two locations based on each point’s  longitude and latitude. The
     distance returned is relative to Earth’s radius. To get the distance in miles, multiply by 3960. To get the 
     distance in kilometers, multiply by 6373.
 
@@ -314,7 +314,7 @@ def distance_on_unit_sphere(x_coord, y_coord):
     :param y_coord: [list]
     :return:
 
-    The code above assumes the earth is perfectly spherical. For a discussion of how accurate this assumption is, 
+    The OSM-Python-utils above assumes the earth is perfectly spherical. For a discussion of how accurate this assumption is,
     see my blog post on http://www.johndcook.com/blog/2009/03/02/what-is-the-shape-of-the-earth/
 
     The algorithm used to calculate distances is described in detail at http://www.johndcook.com/lat_long_details.html
@@ -322,7 +322,7 @@ def distance_on_unit_sphere(x_coord, y_coord):
     A web page to calculate the distance between to cities based on longitude and latitude is available at 
     http://www.johndcook.com/lat_long_distance.html
 
-    This code is in the public domain. Do whatever you want with it, no strings attached.
+    This OSM-Python-utils is in the public domain. Do whatever you want with it, no strings attached.
 
     """
     lat1, long1 = x_coord[0], x_coord[1]
@@ -376,7 +376,7 @@ def find_closest_point(point, pts):
 def get_gps_midpoint(x_long, x_lat, y_long, y_lat):
     """
     Reference: 
-    http://code.activestate.com/recipes/577713-midpoint-of-two-gps-points/
+    http://OSM-Python-utils.activestate.com/recipes/577713-midpoint-of-two-gps-points/
     http://www.movable-type.co.uk/scripts/latlong.html
     """
     # Input values as degrees, convert them to radians
