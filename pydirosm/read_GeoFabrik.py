@@ -7,20 +7,17 @@ import json
 import os
 import re
 import shutil
-import time
-import urllib.request
 import zipfile
 
 import fuzzywuzzy.process
 import geopandas as gpd
 import ogr
 import pandas as pd
-import progressbar
 import shapefile
 import shapely.geometry
 
 import download_GeoFabrik as dGF
-from utils import cd_dat_geofabrik, confirmed, load_pickle, osm_geom_types, save_pickle
+from utils import cd_dat_geofabrik, confirmed, load_pickle, osm_geom_types, save_pickle, download
 
 
 # Search the OSM data directory and its sub-directories to get the path to the file
@@ -210,28 +207,7 @@ def merge_shp_files(subregions, layer, update=False):
     extract_dirs = []
     for subregion_name, download_url, filename, file_path in info_list:
         if not os.path.isfile(file_path) or update:
-
-            # Make a custom bar to show downloading progress
-            def make_custom_progressbar():
-                widgets = [progressbar.Bar(), ' ',
-                           progressbar.Percentage(),
-                           ' [', progressbar.Timer(), '] ',
-                           progressbar.FileTransferSpeed(),
-                           ' (', progressbar.ETA(), ') ']
-                progress_bar = progressbar.ProgressBar(widgets=widgets)
-                return progress_bar
-
-            p_bar = make_custom_progressbar()
-
-            def show_progress(block_count, block_size, total_size):
-                if p_bar.max_value is None:
-                    p_bar.max_value = total_size
-                    p_bar.start()
-                p_bar.update(block_count * block_size)
-
-            urllib.request.urlretrieve(download_url, file_path, reporthook=show_progress)
-            p_bar.finish()
-            time.sleep(0.01)
+            download(download_url, file_path)
             print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
 
         extract_dir = os.path.splitext(file_path)[0]

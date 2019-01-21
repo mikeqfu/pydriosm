@@ -2,8 +2,8 @@
 
 import os
 import re
-from urllib.error import HTTPError
-from urllib.parse import urljoin, urlparse
+import urllib.error
+import urllib.parse
 
 import bs4
 import fuzzywuzzy.process
@@ -12,13 +12,13 @@ import numpy as np
 import pandas as pd
 import requests
 
-from utils import cd_dat, cd_dat_geofabrik, load_pickle, save_json, save_pickle
+from utils import cd_dat, cd_dat_geofabrik, load_pickle, save_json, save_pickle, download
 
 
 # Get raw directory index (allowing us to see and download older files)
 def get_raw_directory_index(url):
     """
-    :param url: 
+    :param url: [str]
     :return: 
     """
     assert isinstance(url, str)
@@ -36,11 +36,11 @@ def get_raw_directory_index(url):
             raw_directory_index.sort_values('Date', ascending=False, inplace=True)
             raw_directory_index.index = range(len(raw_directory_index))
 
-            raw_directory_index['FileURL'] = raw_directory_index.File.map(lambda x: urljoin(url, x))
+            raw_directory_index['FileURL'] = raw_directory_index.File.map(lambda x: urllib.parse.urljoin(url, x))
 
-        except (HTTPError, TypeError, ValueError):
+        except (urllib.error.HTTPError, TypeError, ValueError):
             raw_directory_index = None
-            if len(urlparse(url).path) <= 1:
+            if len(urllib.parse.urlparse(url).path) <= 1:
                 print("The home page does not have a raw directory index.")
 
     return raw_directory_index
@@ -49,7 +49,7 @@ def get_raw_directory_index(url):
 # Get a table for a given URL, which contains all available URLs for each subregion and its file downloading
 def get_subregion_table(url):
     """
-    :param url: 
+    :param url: [str]
     :return: 
     """
     assert isinstance(url, str)
@@ -81,15 +81,17 @@ def get_subregion_table(url):
 
             for file_type in file_types:
                 text = '[{}]'.format(file_type)
-                urls = [urljoin(url, link['href']) for link in soup.find_all(name='a', href=True, text=text)]
+                urls = [urllib.parse.urljoin(url, link['href']) for link in
+                        soup.find_all(name='a', href=True, text=text)]
                 subregion_table.loc[subregion_table[file_type].notnull(), file_type] = urls
 
             try:
-                subregion_urls = [urljoin(url, soup.find('a', text=text)['href']) for text in subregion_table.Subregion]
+                subregion_urls = [urllib.parse.urljoin(url, soup.find('a', text=text)['href']) for text in
+                                  subregion_table.Subregion]
             except TypeError:
                 subregion_urls = [kml['onmouseover'] for kml in soup.find_all('tr', onmouseover=True)]
                 subregion_urls = [s[s.find('(') + 1:s.find(')')][1:-1].replace('kml', 'html') for s in subregion_urls]
-                subregion_urls = [urljoin(url, sub_url) for sub_url in subregion_urls]
+                subregion_urls = [urllib.parse.urljoin(url, sub_url) for sub_url in subregion_urls]
             subregion_table['SubregionURL'] = subregion_urls
 
             column_names = list(subregion_table.columns)
@@ -106,11 +108,16 @@ def get_subregion_table(url):
 
 # Scan through the downloading pages to get a list of available subregion names
 def scrape_available_subregion_indices(home_url='http://download.geofabrik.de/'):
+    """
+    :param home_url: [str]
+    :return:
+    """
     try:
         source = requests.get(home_url)
         soup = bs4.BeautifulSoup(source.text, 'lxml')
         avail_subregions = [td.a.text for td in soup.find_all('td', {'class': 'subregion'})]
-        avail_subregion_urls = [urljoin(home_url, td.a['href']) for td in soup.find_all('td', {'class': 'subregion'})]
+        avail_subregion_urls = [urllib.parse.urljoin(home_url, td.a['href']) for td in
+                                soup.find_all('td', {'class': 'subregion'})]
         avail_subregion_url_tables = [get_subregion_table(sub_url) for sub_url in avail_subregion_urls]
         avail_subregion_url_tables = [tbl for tbl in avail_subregion_url_tables if tbl is not None]
 
@@ -208,12 +215,12 @@ def get_download_url(subregion, file_format=".osm.pbf", update=False):
 # Parse the download URL so as to specify a path for storing the downloaded file
 def make_file_path(subregion, file_format=".osm.pbf"):
     """
-    :param subregion:
-    :param file_format:
+    :param subregion: [str]
+    :param file_format: [str]
     :return: 
     """
     _, download_url = get_download_url(subregion, file_format, update=False)
-    parsed_path = os.path.normpath(urlparse(download_url).path)
+    parsed_path = os.path.normpath(urllib.parse.urlparse(download_url).path)
     directory = cd_dat_geofabrik() + os.path.dirname(parsed_path)  # .title()
     filename = os.path.basename(parsed_path)
 
@@ -227,9 +234,9 @@ def make_file_path(subregion, file_format=".osm.pbf"):
 # Download files
 def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False):
     """
-    :param subregion: 
-    :param file_format: '.osm.pbf', '.shp.zip', '.osm.bz2'
-    :param update: 
+    :param subregion: [str]
+    :param file_format: [str] '.osm.pbf', '.shp.zip', '.osm.bz2'
+    :param update: [bool]
     :return: 
     """
     available_file_formats = ('.osm.pbf', '.shp.zip', '.osm.bz2')
@@ -245,9 +252,6 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
             print("\"{}\" is already available for \"{}\".".format(filename, subregion_name))
         else:
             try:
-                # from urllib.request import urlretrieve
-                # urlretrieve(download_url, file_path)  # (download_url, file_path, reporthook=show_progress)
-                from utils import download
                 download(download_url, file_path)
                 print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
             except Exception as e:
@@ -256,6 +260,11 @@ def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False)
 
 # Remove the downloaded file
 def remove_subregion_osm_file(subregion, file_format=".osm.pbf"):
+    """
+    :param subregion: [str]
+    :param file_format: [str]
+    :return:
+    """
     available_file_formats = ('.osm.pbf', '.shp.zip', '.osm.bz2')
     if file_format not in available_file_formats:
         print("'file_format' must be chosen from among {}.".format(available_file_formats))
