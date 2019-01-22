@@ -8,7 +8,7 @@ setuptools.setup(
     version='0.0.2',
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
-    description="A tool Download and parse OSM data extracts (Python3.x)",
+    description="Download, parse and store OSM data extracts",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='https://github.com/mikeqfu/pydirosm',
@@ -18,8 +18,6 @@ setuptools.setup(
         'humanfriendly',
         'numpy',
         'requests',
-        'nltk',
-        'progressbar',
         'shapely',
         'tqdm'
     ],
