@@ -5,7 +5,7 @@ with open("README.md", 'r') as readme:
 
 setuptools.setup(
     name='pydirosm',
-    version='0.0.3',
+    version='0.0.4',
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
     description="Download, parse and store OSM data extracts",
