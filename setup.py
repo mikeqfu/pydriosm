@@ -19,6 +19,8 @@ setuptools.setup(
         'numpy',
         'requests',
         'shapely',
+        'sqlalchemy',
+        'sqlalchemy_utils',
         'tqdm'
     ],
     packages=setuptools.find_packages(),
@@ -33,3 +35,5 @@ setuptools.setup(
         'Operating System :: Microsoft :: Windows :: Windows 10',
     ],
 )
+
+pydirosm.settings.gdal_configurations()
