@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from utils import cd_dat, cd_dat_geofabrik, load_pickle, save_json, save_pickle, download
+from pydirosm.utils import cd_dat, cd_dat_geofabrik, download, load_pickle, save_json, save_pickle
 
 
 # Get raw directory index (allowing us to see and download older files)

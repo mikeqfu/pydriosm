@@ -9,7 +9,7 @@ import bs4
 import fuzzywuzzy.process
 import pandas as pd
 
-from utils import cd_dat, cd_dat_bbbike, confirmed, load_pickle, save_pickle
+from pydirosm.utils import cd_dat, cd_dat_bbbike, confirmed, load_pickle, save_pickle
 
 
 #

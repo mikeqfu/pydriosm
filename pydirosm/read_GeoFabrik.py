@@ -16,8 +16,8 @@ import pandas as pd
 import shapefile
 import shapely.geometry
 
-import download_GeoFabrik as dGF
-from utils import cd_dat_geofabrik, confirmed, load_pickle, osm_geom_types, save_pickle, download
+import pydirosm.download_GeoFabrik as dGF
+from pydirosm.utils import cd_dat_geofabrik, confirmed, download, load_pickle, osm_geom_types, save_pickle
 
 
 # Search the OSM data directory and its sub-directories to get the path to the file
