@@ -1,11 +1,13 @@
 import setuptools
 
+import pydirosm.settings
+
 with open("README.md", 'r') as readme:
     long_description = readme.read()
 
 setuptools.setup(
     name='pydirosm',
-    version='0.0.4',
+    version='0.0.6',
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
     description="Download, parse and store OSM data extracts",
@@ -15,8 +17,12 @@ setuptools.setup(
     install_requires=[
         'beautifulsoup4',
         'fuzzywuzzy',
+        'gdal',
+        'geopandas',
         'humanfriendly',
         'numpy',
+        'pandas',
+        'pyshp',
         'requests',
         'shapely',
         'sqlalchemy',
