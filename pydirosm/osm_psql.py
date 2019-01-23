@@ -1,13 +1,12 @@
 """ Data storage with PostgreSQL """
 
-from geoalchemy2 import types
 from pandas import read_sql
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, types
 from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
 from sqlalchemy_utils import create_database, database_exists
 
-from utils import confirmed
+from pydirosm.utils import confirmed
 
 
 class OSM:
@@ -126,10 +125,10 @@ class OSM:
             self.create_schema(schema_name)
         if not parsed:
             data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
-                        dtype={'geometry': types.postgresql.JSON, 'properties': types.postgresql.JSON})
+                        dtype={'geometry': types.JSON, 'properties': types.JSON})
         else:  # There is an error. To be fixed...
             data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
-                        dtype={'other_tags': types.postgresql.JSON, 'coordinates': types.postgresql.ARRAY})
+                        dtype={'other_tags': types.JSON, 'coordinates': types.ARRAY})
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
     def read_table(self, subregion_name, *schemas):
