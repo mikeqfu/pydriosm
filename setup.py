@@ -1,21 +1,22 @@
 import setuptools
 
-import pydirosm.settings
+import pydriosm.settings
 
 with open("README.md", 'r') as readme:
     long_description = readme.read()
 
 setuptools.setup(
-    name='pydirosm',
-    version='0.0.7',
+    name='pydriosm',
+    version='0.0.8',
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
     description="Download, parse and store OSM data extracts",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url='https://github.com/mikeqfu/pydirosm',
+    url='https://github.com/mikeqfu/pydriosm',
     install_requires=[
         'beautifulsoup4',
+        'Fiona',
         'fuzzywuzzy',
         'gdal',
         'geopandas',
@@ -32,9 +33,11 @@ setuptools.setup(
         'sqlalchemy_utils',
         'tqdm'
     ],
+    include_package_data=True,
     packages=setuptools.find_packages(),
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
@@ -45,4 +48,4 @@ setuptools.setup(
     ],
 )
 
-pydirosm.settings.gdal_configurations()
+pydriosm.settings.gdal_configurations()
