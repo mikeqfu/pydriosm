@@ -42,7 +42,7 @@ def get_bbbike_subregion_downloads_index(subregion_name, update=False, verbose=T
     :return: 
     """
     bbbike_subregion_index = get_bbbike_subregion_index(update=False)
-    subregion_name_ = fuzzywuzzy.process.extractOne(subregion_name, bbbike_subregion_index.Name)[0]
+    subregion_name_ = fuzzywuzzy.process.extractOne(subregion_name, bbbike_subregion_index.Name, score_cutoff=10)[0]
 
     if verbose:
         if subregion_name != subregion_name_:
@@ -108,7 +108,8 @@ def get_bbbike_downloads_dictionary(update=False):
 
 
 #
-def download_bbbike_subregion_osm_file(subregion_name, file_format=".osm.pbf", update=False):
+def download_bbbike_subregion_osm_file(subregion_name, file_format=".osm.pbf",
+                                       update=False, download_confirmation_required=True):
     bbbike_downloads_dict = get_bbbike_downloads_dictionary(update=False)
     bbbike_subregion_index = get_bbbike_subregion_index(update=False)
     subregion_name_ = fuzzywuzzy.process.extractOne(subregion_name, bbbike_subregion_index.Name, score_cutoff=10)[0]
@@ -117,14 +118,15 @@ def download_bbbike_subregion_osm_file(subregion_name, file_format=".osm.pbf", u
 
     available_formats = [re.sub('{}|CHECKSUM'.format(subregion_name_), '', f) for f in subregion_downloads.File_name]
 
-    file_fmt, _ = fuzzywuzzy.process.extractOne(file_format, available_formats)
+    file_fmt, _ = fuzzywuzzy.process.extractOne(file_format, available_formats, score_cutoff=10)
     filename, _, idx = fuzzywuzzy.process.extractOne(file_fmt, subregion_downloads.File_name)
     url, path_to_file = subregion_downloads.Download_URL[idx], cd_dat_bbbike(subregion_name_, filename)
 
     if os.path.isfile(path_to_file) and not update:
         print("\"{}\" is already available for \"{}\".".format(filename, subregion_name_))
     else:
-        if confirmed(prompt="Confirm to download \"{}\"?".format(filename)):
+        if confirmed(prompt="Confirm to download \"{}\"?".format(filename),
+                     resp=False, confirmation_required=download_confirmation_required):
             try:
                 urllib.request.urlretrieve(url, path_to_file)
                 print("\"{}\" successfully downloaded.".format(filename))
@@ -134,14 +136,15 @@ def download_bbbike_subregion_osm_file(subregion_name, file_format=".osm.pbf", u
 
 
 #
-def download_bbbike_subregion_osm_all_files(subregion_name):
+def download_bbbike_subregion_osm_all_files(subregion_name, download_confirmation_required=True):
     bbbike_downloads_dict = get_bbbike_downloads_dictionary(update=False)
     bbbike_subregion_index = get_bbbike_subregion_index(update=False)
     subregion_name_ = fuzzywuzzy.process.extractOne(subregion_name, bbbike_subregion_index.Name, score_cutoff=10)[0]
 
     subregion_downloads = bbbike_downloads_dict[subregion_name_]
 
-    if confirmed(prompt="Confirm to download all available BBBike files for \"{}\"?".format(subregion_name_)):
+    if confirmed(prompt="Confirm to download all available BBBike files for \"{}\"?".format(subregion_name_),
+                 resp=False, confirmation_required=download_confirmation_required):
         for url, filename in zip(subregion_downloads.Download_URL, subregion_downloads.File_name):
             try:
                 print("\"{}\" successfully downloaded.".format(filename))
@@ -151,7 +154,8 @@ def download_bbbike_subregion_osm_all_files(subregion_name):
         print("All the downloaded files have been saved to \"{}\".".format(cd_dat_bbbike(subregion_name_)))
     else:
         for url, filename in zip(subregion_downloads.Download_URL, subregion_downloads.File_name):
-            if confirmed(prompt="Download \"{}\"?".format(filename)):
+            if confirmed(prompt="Download \"{}\"?".format(filename), resp=False,
+                         confirmation_required=download_confirmation_required):
                 try:
                     print("\"{}\" successfully downloaded.".format(filename))
                     urllib.request.urlretrieve(url, cd_dat_bbbike(subregion_name_, filename))
