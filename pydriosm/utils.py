@@ -56,7 +56,7 @@ def cd(*directories):
 
 # Change directory to "dat" and sub-directories
 def cd_dat(*directories):
-    path = cd("dat")
+    path = cd("pydriosm", "dat")
     for directory in directories:
         path = os.path.join(path, directory)
     return path
