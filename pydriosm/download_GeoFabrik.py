@@ -19,7 +19,7 @@ from pydriosm.utils import cd_dat, cd_dat_geofabrik, download, load_pickle, save
 def get_raw_directory_index(url):
     """
     :param url: [str]
-    :return: 
+    :return: [pandas.DataFrame]
     """
     assert isinstance(url, str)
     if url.endswith('.osm.pbf') or url.endswith('.shp.zip') or url.endswith('.osm.bz2'):
@@ -50,7 +50,7 @@ def get_raw_directory_index(url):
 def get_subregion_table(url):
     """
     :param url: [str]
-    :return: 
+    :return: [pandas.DataFrame]
     """
     assert isinstance(url, str)
     if url.endswith('.osm.pbf') or url.endswith('.shp.zip') or url.endswith('.osm.bz2'):
@@ -107,11 +107,8 @@ def get_subregion_table(url):
 
 
 # Scan through the downloading pages to get a list of available subregion names
-def scrape_available_subregion_indices(home_url='http://download.geofabrik.de/'):
-    """
-    :param home_url: [str]
-    :return:
-    """
+def scrape_available_subregion_links():
+    home_url = 'http://download.geofabrik.de/'
     try:
         source = requests.get(home_url)
         soup = bs4.BeautifulSoup(source.text, 'lxml')
@@ -141,13 +138,13 @@ def scrape_available_subregion_indices(home_url='http://download.geofabrik.de/')
             subregion_url_tables = list(subregion_url_tables_1)
 
         # Save a list of available subregions locally
-        save_pickle(avail_subregions, cd_dat("subregion-index.pickle"))
+        save_pickle(avail_subregions, cd_dat("GeoFabrik-subregion-name-list.pickle"))
 
         # Subregion index - {Subregion: URL}
         subregion_url_index = dict(zip(avail_subregions, avail_subregion_urls))
         # Save subregion_index to local disk
-        save_pickle(subregion_url_index, cd_dat("subregion-url-index.pickle"))
-        save_json(subregion_url_index, cd_dat("subregion-url-index.json"))
+        save_pickle(subregion_url_index, cd_dat("GeoFabrik-subregion-name-url-dictionary.pickle"))
+        save_json(subregion_url_index, cd_dat("GeoFabrik-subregion-name-url-dictionary.json"))
 
         # All available URLs for downloading
         home_subregion_url_table = get_subregion_table(home_url)
@@ -156,73 +153,84 @@ def scrape_available_subregion_indices(home_url='http://download.geofabrik.de/')
         subregion_downloads_index.drop_duplicates(inplace=True)
 
         # Save subregion_index_downloads to local disk
-        save_pickle(subregion_downloads_index, cd_dat("subregion-downloads-index.pickle"))
-        subregion_downloads_index.set_index('Subregion').to_json(cd_dat("subregion-downloads-index.json"))
+        save_pickle(subregion_downloads_index, cd_dat("GeoFabrik-subregion-downloads-index.pickle"))
+        subregion_downloads_index.set_index('Subregion').to_json(cd_dat("GeoFabrik-subregion-downloads-index.json"))
 
     except Exception as e:
         print(e)
 
 
 # Get a list of available subregion names
-def get_subregion_index(index_filename="subregion-index", update=False):
+def get_subregion_info_index(index_filename, file_format=".pickle", update=False):
     """
-    :param index_filename: 
-    :param update: 
-    :return: 
+    :param index_filename: [str] e.g. "GeoFabrik-subregion-name-list"
+    :param file_format: [str] ".pickle" (default), or ".json"
+    :param update: [bool]
+    :return: [pickle] or [json]
     """
-    available_index = ("subregion-index", "subregion-url-index", "subregion-downloads-index")
-    if index_filename not in available_index:
-        print("Error: 'index_filename' must be chosen from among {}.".format(available_index))
-        index = None
+    available_index = ["GeoFabrik-subregion-name-list",
+                       "GeoFabrik-subregion-name-url-dictionary",
+                       "GeoFabrik-subregion-downloads-index"]
+    assert index_filename in available_index, "'index_filename' must be one of {}.".format(available_index)
+
+    available_fmt = [".pickle", ".json"]
+    assert file_format in available_fmt, "'file_format' must be one of {}.".format(available_fmt)
+
+    indices_filename = ["GeoFabrik-subregion-name-list.pickle",
+                        "GeoFabrik-subregion-name-url-dictionary.pickle",
+                        "GeoFabrik-subregion-name-url-dictionary.json",
+                        "GeoFabrik-subregion-downloads-index.pickle",
+                        "GeoFabrik-subregion-downloads-index.json"]
+    paths_to_files_exist = [os.path.isfile(cd_dat(f)) for f in indices_filename]
+    path_to_info_index_file = cd_dat(index_filename + file_format)
+    if all(paths_to_files_exist) and not update:
+        index_file = load_pickle(path_to_info_index_file)
     else:
-        indices_filename = ["subregion-index.pickle",
-                            "subregion-url-index.pickle",
-                            "subregion-url-index.json",
-                            "subregion-downloads-index.pickle",
-                            "subregion-downloads-index.json"]
-        paths_to_files_exist = [os.path.isfile(cd_dat(f)) for f in indices_filename]
-        path_to_index_file = cd_dat(index_filename + ".pickle")
-        if all(paths_to_files_exist) and not update:
-            index = load_pickle(path_to_index_file)
-        else:
-            try:
-                scrape_available_subregion_indices()
-                index = load_pickle(path_to_index_file)
-            except Exception as e:
-                print("Update failed due to {}. The existing data file would be loaded instead.".format(e))
-                index = None
-    return index
+        try:
+            scrape_available_subregion_links()
+            index_file = load_pickle(path_to_info_index_file)
+        except Exception as e:
+            print("Failed to update. {}. \n...\nThe existing data file would be loaded instead.".format(e))
+            index_file = None
+    return index_file
 
 
 # Get download URL
-def get_download_url(subregion, file_format=".osm.pbf", update=False):
+def get_download_url(subregion_name, file_format=".osm.pbf", update=False):
     """
-    :param subregion: [str] case-insensitive, e.g. 'Greater London'
-    :param file_format: '.osm.pbf', '.shp.zip', '.osm.bz2'
+    :param subregion_name: [str] case-insensitive, e.g. 'Greater London'
+    :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
     :param update: [bool]
-    :return: 
+    :return: [tuple] of length=2
     """
+    available_fmt = [".osm.pbf", ".shp.zip", ".osm.bz2"]
+    assert file_format in available_fmt, "'file_format' must be one of {}.".format(available_fmt)
+
     # Get a list of available
-    subregion_index = get_subregion_index('subregion-index', update=update)
-    subregion_name = fuzzywuzzy.process.extractOne(subregion, subregion_index, score_cutoff=10)[0]
+    subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list', update=update)
+    subregion_name_ = fuzzywuzzy.process.extractOne(subregion_name, subregion_names, score_cutoff=10)[0]
     # Get an index of download URLs
-    subregion_downloads_index = get_subregion_index('subregion-downloads-index', update=update).set_index('Subregion')
+    subregion_downloads_index = get_subregion_info_index('GeoFabrik-subregion-downloads-index', update=update)
+    subregion_downloads_index.set_index('Subregion', inplace=True)
     # Get the URL
-    download_url = subregion_downloads_index.loc[subregion_name, file_format]
-    return subregion_name, download_url
+    download_url = subregion_downloads_index.loc[subregion_name_, file_format]
+    return subregion_name_, download_url
 
 
 # Parse the download URL so as to specify a path for storing the downloaded file
-def make_file_path(subregion, file_format=".osm.pbf"):
+def make_file_path(subregion_name, file_format=".osm.pbf"):
     """
-    :param subregion: [str]
-    :param file_format: [str]
-    :return: 
+    :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
+    :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
+    :return: [tuple] of length=2
     """
-    _, download_url = get_download_url(subregion, file_format, update=False)
-    parsed_path = os.path.normpath(urllib.parse.urlparse(download_url).path)
-    directory = cd_dat_geofabrik() + os.path.dirname(parsed_path)  # .title()
-    filename = os.path.basename(parsed_path)
+    _, download_url = get_download_url(subregion_name, file_format, update=False)
+    parsed_path = urllib.parse.urlparse(download_url).path.lstrip('/').split('/')
+
+    subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
+
+    directory = cd_dat_geofabrik(*[fuzzywuzzy.process.extractOne(x, subregion_names)[0] for x in parsed_path[0:-1]])
+    filename = parsed_path[-1]
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -232,49 +240,45 @@ def make_file_path(subregion, file_format=".osm.pbf"):
 
 
 # Download files
-def download_subregion_osm_file(subregion, file_format=".osm.pbf", update=False):
+def download_subregion_osm_file(subregion_name, file_format=".osm.pbf", download_path=None, update=False):
     """
-    :param subregion: [str]
-    :param file_format: [str] '.osm.pbf', '.shp.zip', '.osm.bz2'
+    :param subregion_name: [str] Name of (sub)region, or a local path where the (sub)region file will be saved
+    :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
+    :param download_path: [str] Full path to save the downloaded file, or None (default, i.e. using default path)
     :param update: [bool]
-    :return: 
+    :return: None
     """
-    available_file_formats = ('.osm.pbf', '.shp.zip', '.osm.bz2')
-    if file_format not in available_file_formats:
-        print("'file_format' must be chosen from among {}.".format(available_file_formats))
-    else:
-        # Get download URL
-        subregion_name, download_url = get_download_url(subregion, file_format)
-        # Download the requested OSM file
-        filename, file_path = make_file_path(subregion_name, file_format)
+    # Get download URL
+    subregion_name_, download_url = get_download_url(subregion_name, file_format, update=False)
 
-        if os.path.isfile(file_path) and not update:
-            print("\"{}\" is already available for \"{}\".".format(filename, subregion_name))
-        else:
-            try:
-                download(download_url, file_path)
-                print("\n'{}' is downloaded for {}.".format(filename, subregion_name))
-            except Exception as e:
-                print("\nFailed to download \"{}\". {}".format(filename, e))
+    if download_path is not None and os.path.isabs(download_path):
+        assert download_path.endswith(file_format), "'download_path' is not valid."
+        filename, path_to_file = os.path.basename(download_path), download_path
+    else:
+        # Download the requested OSM file
+        filename, path_to_file = make_file_path(subregion_name_, file_format)
+
+    if os.path.isfile(path_to_file) and not update:
+        print("\"{}\" is already available for \"{}\" at {}.".format(filename, subregion_name_, path_to_file))
+    else:
+        try:
+            download(download_url, path_to_file)
+            print("\n\"{}\" has been downloaded for \"{}\", which is now available at \n{}".format(
+                filename, subregion_name_, path_to_file))
+        except Exception as e:
+            print("\nFailed to download \"{}\". {}.".format(filename, e))
 
 
 # Remove the downloaded file
-def remove_subregion_osm_file(subregion, file_format=".osm.pbf"):
+def remove_subregion_osm_file(subregion_file_path):
     """
-    :param subregion: [str]
-    :param file_format: [str]
-    :return:
+    :param subregion_file_path: [str]
+    :return: None
     """
-    available_file_formats = ('.osm.pbf', '.shp.zip', '.osm.bz2')
-    if file_format not in available_file_formats:
-        print("'file_format' must be chosen from among {}.".format(available_file_formats))
+    assert any(subregion_file_path.endswith(ext) for ext in [".osm.pbf", ".shp.zip", ".osm.bz2"]), \
+        "'subregion_file_path' is not valid."
+    if os.path.isfile(subregion_file_path):
+        os.remove(subregion_file_path)
+        print("'{}' has been removed.".format(os.path.basename(subregion_file_path)))
     else:
-        # Get download URL
-        subregion_name, download_url = get_download_url(subregion, file_format)
-        # Download the requested OSM file
-        filename, file_path = make_file_path(download_url)
-        if os.path.isfile(file_path):
-            os.remove(file_path)
-            print("'{}' has been removed.".format(filename))
-        else:
-            print("The target file, '{}', does not exist.".format(filename))
+        print("\"{}\" does not exist at \"{}\".".format(*os.path.split(subregion_file_path)[::-1]))
