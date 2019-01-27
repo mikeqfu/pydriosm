@@ -11,34 +11,39 @@ import tqdm
 
 
 # Type to confirm whether to proceed or not
-def confirmed(prompt=None, resp=False):
+def confirmed(prompt=None, resp=False, confirmation_required=True):
     """
     Reference: http://pydriosm.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
 
     :param prompt: [str] or None
     :param resp: [bool]
+    :param confirmation_required: [bool]
     :return:
 
     Example: confirm(prompt="Create Directory?", resp=True)
              Create Directory? Yes|No:
 
     """
-    if prompt is None:
-        prompt = "Confirmed? "
+    if confirmation_required:
+        if prompt is None:
+            prompt = "Confirmed? "
 
-    if resp is True:  # meaning that default response is True
-        prompt = "{} [{}]|{}: ".format(prompt, "Yes", "No")
+        if resp is True:  # meaning that default response is True
+            prompt = "{} [{}]|{}: ".format(prompt, "Yes", "No")
+        else:
+            prompt = "{} [{}]|{}: ".format(prompt, "No", "Yes")
+
+        ans = input(prompt)
+        if not ans:
+            return resp
+
+        if re.match('[Yy](es)?', ans):
+            return True
+        if re.match('[Nn](o)?', ans):
+            return False
+
     else:
-        prompt = "{} [{}]|{}: ".format(prompt, "No", "Yes")
-
-    ans = input(prompt)
-    if not ans:
-        return resp
-
-    if re.match('[Yy](es)?', ans):
         return True
-    if re.match('[Nn](o)?', ans):
-        return False
 
 
 # ====================================================================================================================
@@ -162,6 +167,11 @@ def download(url, path_to_file):
     total_size = int(r.headers.get('content-length'))  # Total size in bytes
     block_size = 1024 * 1024
     wrote = 0
+
+    directory = os.path.dirname(path_to_file)
+    if not os.path.exists(directory):
+        os.mkdir(directory)
+
     with open(path_to_file, 'wb') as f:
         for data in tqdm.tqdm(r.iter_content(block_size), total=total_size//block_size, unit='MB'):
             wrote = wrote + len(data)
