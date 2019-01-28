@@ -259,7 +259,7 @@ def download_subregion_osm_file(subregion_name, file_format=".osm.pbf", download
         filename, path_to_file = make_file_path(subregion_name_, file_format)
 
     if os.path.isfile(path_to_file) and not update:
-        print("\"{}\" is already available for \"{}\" at {}.".format(filename, subregion_name_, path_to_file))
+        print("\"{}\" is already available for \"{}\" at: \n{}.\n".format(filename, subregion_name_, path_to_file))
     else:
         try:
             download(download_url, path_to_file)
@@ -281,4 +281,4 @@ def remove_subregion_osm_file(subregion_file_path):
         os.remove(subregion_file_path)
         print("'{}' has been removed.".format(os.path.basename(subregion_file_path)))
     else:
-        print("\"{}\" does not exist at \"{}\".".format(*os.path.split(subregion_file_path)[::-1]))
+        print("\"{}\" does not exist at \"{}\".\n".format(*os.path.split(subregion_file_path)[::-1]))

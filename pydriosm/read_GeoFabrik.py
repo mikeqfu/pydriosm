@@ -351,6 +351,7 @@ def read_raw_osm_pbf(subregion, update=False, download_confirmation_required=Tru
                 dGF.download_subregion_osm_file(subregion_filename, download_path=path_to_osm_pbf, update=update)
 
         if os.path.isfile(path_to_osm_pbf):
+            print("\nParsing \"{}\" ... ".format(subregion_filename), end="")
             try:
                 # Start parsing the '.osm.pbf' file
                 raw_osm_pbf = ogr.Open(path_to_osm_pbf)
@@ -378,9 +379,11 @@ def read_raw_osm_pbf(subregion, update=False, download_confirmation_required=Tru
                 # Make a dictionary, {layer_name: layer_DataFrame}
                 raw_osm_pbf_data = dict(zip(layer_names, layer_data))
 
+                print("Successfully.\n")
+
             except Exception as e:
                 err_msg = e if os.path.isfile(path_to_osm_pbf) else os.strerror(errno.ENOENT)
-                print("Parsing '{}' ... failed as '{}'.".format(subregion_filename, err_msg))
+                print("Failed. {}.\n".format(err_msg))
                 raw_osm_pbf_data = None
 
             if pickle_it:
@@ -390,7 +393,7 @@ def read_raw_osm_pbf(subregion, update=False, download_confirmation_required=Tru
                 dGF.remove_subregion_osm_file(path_to_osm_pbf)
 
         else:
-            print("\"{}\" is not available.".format(os.path.basename(path_to_osm_pbf)))
+            print("\"{}\" is not available.\n".format(os.path.basename(path_to_osm_pbf)))
             raw_osm_pbf_data = None
 
     return raw_osm_pbf_data
