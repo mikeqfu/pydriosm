@@ -3,6 +3,7 @@
 import json
 import os
 import pickle
+import pkg_resources
 import re
 
 import requests
@@ -59,14 +60,6 @@ def cd(*directories):
     return path
 
 
-# Change directory to "dat" and sub-directories
-def cd_dat(*directories):
-    path = cd("pydriosm", "dat")
-    for directory in directories:
-        path = os.path.join(path, directory)
-    return path
-
-
 # Change directory to "dat_GeoFabrik" and sub-directories
 def cd_dat_geofabrik(*directories):
     path = cd("dat_GeoFabrik")
@@ -78,6 +71,14 @@ def cd_dat_geofabrik(*directories):
 # Change directory to "dat_BBBike" and sub-directories
 def cd_dat_bbbike(*directories):
     path = cd("dat_BBBike")
+    for directory in directories:
+        path = os.path.join(path, directory)
+    return path
+
+
+# Change directory to "dat" and sub-directories
+def cd_dat(*directories):
+    path = pkg_resources.resource_filename(__name__, 'dat/')
     for directory in directories:
         path = os.path.join(path, directory)
     return path
@@ -173,7 +174,7 @@ def download(url, path_to_file):
         os.mkdir(directory)
 
     with open(path_to_file, 'wb') as f:
-        for data in tqdm.tqdm(r.iter_content(block_size), total=total_size//block_size, unit='MB'):
+        for data in tqdm.tqdm(r.iter_content(block_size), total=total_size // block_size, unit='MB'):
             wrote = wrote + len(data)
             f.write(data)
     if total_size != 0 and wrote != total_size:
