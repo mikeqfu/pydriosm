@@ -217,8 +217,20 @@ def get_download_url(subregion_name, file_format=".osm.pbf", update=False):
     return subregion_name_, download_url
 
 
+# Parse the download URL so as to get default filename for the given subregion name
+def get_default_filename(subregion_name, file_format=".osm.pbf"):
+    """
+    :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
+    :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
+    :return: [str] Filename
+    """
+    _, download_url = get_download_url(subregion_name, file_format, update=False)
+    subregion_filename = os.path.split(download_url)[-1]
+    return subregion_filename
+
+
 # Parse the download URL so as to specify a path for storing the downloaded file
-def make_file_path(subregion_name, file_format=".osm.pbf"):
+def make_default_file_path(subregion_name, file_format=".osm.pbf"):
     """
     :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
     :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
@@ -256,7 +268,7 @@ def download_subregion_osm_file(subregion_name, file_format=".osm.pbf", download
         filename, path_to_file = os.path.basename(download_path), download_path
     else:
         # Download the requested OSM file
-        filename, path_to_file = make_file_path(subregion_name_, file_format)
+        filename, path_to_file = make_default_file_path(subregion_name_, file_format)
 
     if os.path.isfile(path_to_file) and not update:
         print("\"{}\" is already available for \"{}\" at: \n{}.\n".format(filename, subregion_name_, path_to_file))

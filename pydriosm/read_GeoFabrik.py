@@ -64,7 +64,7 @@ def get_local_file_path(subregion_name, file_format=".osm.pbf"):
     :return: [str] default local path to the file with the extension of the specified file_format
     """
     subregion_name_, download_url = dGF.get_download_url(subregion_name, file_format, update=False)
-    _, file_path = dGF.make_file_path(subregion_name_, file_format)
+    _, file_path = dGF.make_default_file_path(subregion_name_, file_format)
     return file_path
 
 
@@ -115,7 +115,7 @@ def merge_shp_files(subregion_names, layer, update=False, download_confirmation_
     # Make sure all the required shape files are ready
     subregion_name_and_url = [dGF.get_download_url(subregion_name, ".shp.zip") for subregion_name in subregion_names]
     # Download the requested OSM file
-    filename_and_path = [dGF.make_file_path(k, ".shp.zip") for k, _ in subregion_name_and_url]
+    filename_and_path = [dGF.make_default_file_path(k, ".shp.zip") for k, _ in subregion_name_and_url]
 
     info_list = [list(itertools.chain(*x)) for x in zip(subregion_name_and_url, filename_and_path)]
 
@@ -184,7 +184,7 @@ def read_shp_zip(subregion_name, layer, feature=None,
     :return: [GeoDataFrame]
     """
     subregion_name_, _ = dGF.get_download_url(subregion_name, file_format=".shp.zip")
-    _, path_to_shp_zip = dGF.make_file_path(subregion_name_, file_format=".shp.zip")
+    _, path_to_shp_zip = dGF.make_default_file_path(subregion_name_, file_format=".shp.zip")
 
     extract_dir = os.path.splitext(path_to_shp_zip)[0]
 
