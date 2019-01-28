@@ -8,7 +8,7 @@ with open("README.md", 'r') as readme:
 setuptools.setup(
 
     name='pydriosm',
-    version='0.1.1',
+    version='0.1.2',
 
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
