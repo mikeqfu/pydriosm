@@ -1,14 +1,14 @@
 """ Data storage with PostgreSQL """
 
+from fuzzywuzzy.process import extractOne
 from pandas import read_sql
 from sqlalchemy import create_engine, types
 from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
 from sqlalchemy_utils import create_database, database_exists
 
-from pydriosm.utils import confirmed
 from pydriosm.download_GeoFabrik import get_subregion_info_index
-from fuzzywuzzy.process import extractOne
+from pydriosm.utils import confirmed
 
 
 class OSM:
@@ -154,12 +154,16 @@ class OSM:
             self.import_dat(data, table_name=table_name, schema_name=data_type, parsed=parsed)
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
-    def read_table(self, table_name, *schemas):
+    def read_table(self, table_name, *schemas, subregion_name_as_table_name=True):
         """
         :param table_name: [str] Table name; 'subregion_name' is recommended to be used when importing the data
         :param schemas: [iterable] Layer name, or a list of layer names, e.g. ['points', 'lines']
+        :param subregion_name_as_table_name: [bool] Whether to use subregion name as table name; True (default)
         :return: [dict]
         """
+        if subregion_name_as_table_name:
+            subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
+            table_name = extractOne(table_name, subregion_names, score_cutoff=10)[0]
         geom_types = []
         layer_data = []
         for schema in schemas:
