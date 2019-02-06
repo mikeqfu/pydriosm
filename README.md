@@ -1,6 +1,10 @@
 ## pydirosm
 
-(Beta version 0.1.2)
+(Beta version 0.1.4)
+
+
+
+### Quick start
 
 This package contains functions for the convenience of researchers to download and parse the OSM data extracts (in **.osm.pbf** and **.shp.zip**, which are available at [Geofabrik's free download server](https://download.geofabrik.de/) and [BBBike.org](https://www.bbbike.org/)), and if appropriate, import the parsed data into PostgreSQL. 
 
@@ -92,12 +96,10 @@ osm_db.create_db(database_name='osm_extracts')
 # osmdb.connect_db(database_name='osm_extracts')
 ```
 
-Import the parsed .osm.pbf data into the database named '**osm_extracts**':
+Import the pre-parsed .osm.pbf data into the database named '**osm_extracts**':
 
 ```python
-for data_type, data in west_midlands_parsed.items():
-    osmdb.create_schema(schema_name=data_type)
-    osmdb.import_data(data, table_name=subregion_name, schema_name=data_type)
+osm_db.import_data(west_midlands, table_name=subregion_name)
 ```
 
 
