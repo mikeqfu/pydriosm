@@ -1,11 +1,12 @@
 """ Utilities - Helper functions """
 
+import collections
 import json
 import os
 import pickle
-import pkg_resources
 import re
 
+import pkg_resources
 import requests
 import shapely.geometry
 import tqdm
@@ -191,3 +192,48 @@ def osm_geom_types():
                    'MultiPolygon': shapely.geometry.MultiPolygon,
                    'GeometryCollection': shapely.geometry.GeometryCollection}
     return shape_types
+
+
+# Get all subregions
+def get_all_subregions(region_name, region_subregion_index):
+    """
+    Source:
+    https://gist.github.com/douglasmiranda/5127251
+    https://stackoverflow.com/questions/9807634/find-all-occurrences-of-a-key-in-nested-python-dictionaries-and-lists
+
+    :param region_name: [str]
+    :param region_subregion_index: [dict]
+    :return:
+    """
+    for k, v in region_subregion_index.items():
+        if k == region_name:
+            yield v
+        elif isinstance(v, dict):
+            for x in get_all_subregions(region_name, v):
+                yield x
+        elif isinstance(v, list):
+            for d in v:
+                for y in get_all_subregions(region_name, d):
+                    yield y
+        else:
+            pass
+
+
+# Update a nested dictionary or similar mapping.
+def update_nested_dict(source_dict, overrides):
+    """
+    Source: https://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
+
+    :param source_dict: [dict]
+    :param overrides: [dict]
+    :return:
+    """
+
+    for key, val in overrides.items():
+        if isinstance(val, collections.Mapping):
+            source_dict[key] = update_nested_dict(source_dict.get(key, {}), val)
+        elif isinstance(val, list):
+            source_dict[key] = (source_dict.get(key, []) + val)
+        else:
+            source_dict[key] = overrides[key]
+    return source_dict
