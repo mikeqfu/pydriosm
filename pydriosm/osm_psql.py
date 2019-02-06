@@ -7,20 +7,23 @@ from sqlalchemy.engine.url import URL
 from sqlalchemy_utils import create_database, database_exists
 
 from pydriosm.utils import confirmed
+from pydriosm.download_GeoFabrik import get_subregion_info_index
+from fuzzywuzzy.process import extractOne
 
 
 class OSM:
     def __init__(self):
         """
-        We need to be connected to the database server in order to execute the "CREATE DATABASE" command. There is a 
-        database called "postgres" created by the "initdb" command when the data storage area is initialised. If we 
-        need to create the first of our own database, we can set up a connection to "postgres" in the first instance.
+        It requires to be connected to the database server so as to execute the "CREATE DATABASE" command.
+        A default database named "postgres" exists already, which is created by the "initdb" command when the data
+        storage area is initialised.
+        Prior to create a customised database, it requires to connect "postgres" in the first instance.
         """
         self.database_info = {'drivername': 'postgresql+psycopg2',
                               'username': str(input('PostgreSQL username: ')),
                               'password': int(input('PostgreSQL password: ')),
                               'host': 'localhost',
-                              'port': 5432,
+                              'port': 5432,  # default by installation
                               'database': 'postgres'}
 
         # The typical form of a database URL is: url = backend+driver://username:password@host:port/database_name
@@ -40,7 +43,6 @@ class OSM:
     def connect_db(self, database_name='osm_extracts'):
         """
         :param database_name: [str] default as 'osm_extracts'; alternatives such as 'OpenStreetMap', ...
-        :return:
         """
         self.database_name = database_name
         self.database_info['database'] = self.database_name
@@ -70,8 +72,7 @@ class OSM:
     # Kill the connection to the specified database
     def disconnect(self, database_name=None):
         """
-        :param database_name: [str]
-        :return:
+        :param database_name: [str] Name of database to disconnect from, or None (default) to disconnect the current one
 
         Alternative way:
         SELECT
@@ -96,6 +97,9 @@ class OSM:
 
     # Drop the specified database
     def drop(self, database_name=None):
+        """
+        :param database_name: [str] Name of database to disconnect from, or None (default) to disconnect the current one
+        """
         db_name = self.database_name if database_name is None else database_name
         self.disconnect(db_name)
         if confirmed("Confirmed to drop the database \"{}\"?".format(db_name)):
@@ -105,42 +109,70 @@ class OSM:
 
     # Create a new schema in the database being currently connected
     def create_schema(self, schema_name):
+        """
+        :param schema_name: [str] Schema name
+        """
         self.engine.execute('CREATE SCHEMA IF NOT EXISTS "{}";'.format(schema_name))
 
     # Drop a schema in the database being currently connected
     def drop_schema(self, schema_name):
+        """
+        :param schema_name: [str] Schema name (default layer name)
+        """
         self.engine.execute('DROP SCHEMA IF EXISTS "{}";'.format(schema_name))
 
     # Import data (as a pandas.DataFrame) into the database being currently connected
-    def import_data(self, data, table_name, schema_name='public', parsed=False):
+    def import_dat(self, dat, table_name, schema_name='public', parsed=False):
         """
-        :param data: [pandas.DataFrame]
+        :param dat: [pandas.DataFrame]
         :param table_name: [str]
         :param schema_name: [str] 'public' (default)
-        :param parsed: [bool] whether 'data' has been parsed; False (default)
-        :return:
+        :param parsed: [bool] Whether 'data' has been parsed; False (default)
         """
         schemas = Inspector.from_engine(self.engine)
         if schema_name not in schemas.get_table_names():
             self.create_schema(schema_name)
         if not parsed:
-            data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
-                        dtype={'geometry': types.JSON, 'properties': types.JSON})
+            dat.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
+                       dtype={'geometry': types.JSON, 'properties': types.JSON})
         else:  # There is an error. To be fixed...
-            data.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
-                        dtype={'other_tags': types.JSON, 'coordinates': types.ARRAY})
+            dat.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
+                       dtype={'other_tags': types.JSON, 'coordinates': types.ARRAY})
+
+    # Import all data of a given (sub)region
+    def import_data(self, subregion_data, table_name, parsed=False, subregion_name_as_table_name=True):
+        """
+        :param subregion_data: [pandas.DataFrame]
+        :param table_name: [str] (Recommended to be) 'subregion_name'
+        :param parsed: [bool] Whether 'data' has been parsed; False (default)
+        :param subregion_name_as_table_name: [bool] Whether to use subregion name as table name; True (default)
+        """
+        if subregion_name_as_table_name:
+            subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
+            table_name = extractOne(table_name, subregion_names, score_cutoff=10)[0]
+        for data_type, data in subregion_data.items():
+            self.import_dat(data, table_name=table_name, schema_name=data_type, parsed=parsed)
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
-    def read_table(self, subregion_name, *schemas):
+    def read_table(self, table_name, *schemas):
+        """
+        :param table_name: [str] Table name; 'subregion_name' is recommended to be used when importing the data
+        :param schemas: [iterable] Layer name, or a list of layer names, e.g. ['points', 'lines']
+        :return: [dict]
+        """
         geom_types = []
         layer_data = []
         for schema in schemas:
             geom_types.append(schema)
-            sql_query = 'SELECT * FROM {}."{}";'.format(schema, subregion_name)
+            sql_query = 'SELECT * FROM {}."{}";'.format(schema, table_name)
             layer_data.append(read_sql(sql=sql_query, con=self.engine))
         return dict(zip(geom_types, layer_data))
 
     # Remove tables from the database being currently connected
     def drop_table(self, schema_name, *table_names):
+        """
+        :param schema_name: [str] Schema name (default layer name)
+        :param table_names: [iterable] Table name, or a list of table names, e.g. a list of subregion names
+        """
         t_names = tuple(('{}.{}'.format(schema_name, t) for t in table_names))
         self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(t_names) - 1) + '%s;') % t_names)
