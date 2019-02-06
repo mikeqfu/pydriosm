@@ -1,5 +1,6 @@
 """ Geofabrik data extracts http://download.geofabrik.de/ """
 
+import copy
 import os
 import re
 import urllib.error
@@ -12,7 +13,8 @@ import numpy as np
 import pandas as pd
 import requests
 
-from pydriosm.utils import cd_dat, cd_dat_geofabrik, download, load_pickle, save_json, save_pickle
+from pydriosm.utils import cd_dat, cd_dat_geofabrik, download, load_json, load_pickle, save_json, save_pickle
+from pydriosm.utils import update_nested_dict
 
 
 # Get raw directory index (allowing us to see and download older files)
@@ -58,8 +60,7 @@ def get_subregion_table(url):
         subregion_table = None
     else:
         try:
-            subregion_table = pd.read_html(url, match=re.compile(r'(Special )?Sub[ \-]Regions?'), skiprows=[0, 1],
-                                           encoding='UTF-8')
+            subregion_table = pd.read_html(url, match=re.compile(r'(Special )?Sub[ \-]Regions?'), encoding='UTF-8')
             subregion_table = pd.DataFrame(pd.concat(subregion_table, axis=0, ignore_index=True))
 
             # Specify column names
@@ -107,7 +108,7 @@ def get_subregion_table(url):
 
 
 # Scan through the downloading pages to get a list of available subregion names
-def scrape_available_subregion_links():
+def explore_available_subregion_links():
     home_url = 'http://download.geofabrik.de/'
     try:
         source = requests.get(home_url)
@@ -122,20 +123,20 @@ def scrape_available_subregion_links():
 
         while subregion_url_tables:
 
-            subregion_url_tables_1 = []
+            subregion_url_tables_ = []
 
             for subregion_url_table in subregion_url_tables:
                 subregions = list(subregion_url_table.Subregion)
                 subregion_urls = list(subregion_url_table.SubregionURL)
                 subregion_url_tables_0 = [get_subregion_table(subregion_url) for subregion_url in subregion_urls]
-                subregion_url_tables_1 += [tbl for tbl in subregion_url_tables_0 if tbl is not None]
+                subregion_url_tables_ += [tbl for tbl in subregion_url_tables_0 if tbl is not None]
 
                 # (Note that 'Russian Federation' data is available in both 'Asia' and 'Europe')
                 avail_subregions += subregions
                 avail_subregion_urls += subregion_urls
-                avail_subregion_url_tables += subregion_url_tables_1
+                avail_subregion_url_tables += subregion_url_tables_
 
-            subregion_url_tables = list(subregion_url_tables_1)
+            subregion_url_tables = list(subregion_url_tables_)
 
         # Save a list of available subregions locally
         save_pickle(avail_subregions, cd_dat("GeoFabrik-subregion-name-list.pickle"))
@@ -176,22 +177,102 @@ def get_subregion_info_index(index_filename, file_format=".pickle", update=False
     available_fmt = [".pickle", ".json"]
     assert file_format in available_fmt, "'file_format' must be one of {}.".format(available_fmt)
 
-    indices_filename = ["GeoFabrik-subregion-name-list.pickle",
-                        "GeoFabrik-subregion-name-url-dictionary.pickle",
-                        "GeoFabrik-subregion-name-url-dictionary.json",
-                        "GeoFabrik-subregion-downloads-index.pickle",
-                        "GeoFabrik-subregion-downloads-index.json"]
-    paths_to_files_exist = [os.path.isfile(cd_dat(f)) for f in indices_filename]
-    path_to_info_index_file = cd_dat(index_filename + file_format)
-    if all(paths_to_files_exist) and not update:
-        index_file = load_pickle(path_to_info_index_file)
+    filename = index_filename + file_format
+
+    # indices_filename = ["GeoFabrik-subregion-name-list.pickle",
+    #                     "GeoFabrik-subregion-name-url-dictionary.pickle",
+    #                     "GeoFabrik-subregion-name-url-dictionary.json",
+    #                     "GeoFabrik-subregion-downloads-index.pickle",
+    #                     "GeoFabrik-subregion-downloads-index.json"]
+    # paths_to_files_exist = [os.path.isfile(cd_dat(f)) for f in indices_filename]
+    path_to_index_file = cd_dat(filename)
+    if os.path.isfile(path_to_index_file) and not update:  # all(paths_to_files_exist) and
+        index_file = load_pickle(path_to_index_file) if file_format == ".pickle" else load_json(path_to_index_file)
     else:
         try:
-            scrape_available_subregion_links()
-            index_file = load_pickle(path_to_info_index_file)
+            explore_available_subregion_links()
+            index_file = load_pickle(path_to_index_file) if file_format == ".pickle" else load_json(path_to_index_file)
         except Exception as e:
-            print("Failed to update. {}. \n...\nThe existing data file would be loaded instead.".format(e))
+            print("Failed to get the required information ... {}.".format(e))
             index_file = None
+    return index_file
+
+
+# Scrape all subregion_tables of continents
+def scrape_continent_subregion_tables():
+    home_link = 'https://download.geofabrik.de/'
+    #
+    source = requests.get(home_link)
+    soup = bs4.BeautifulSoup(source.text, 'lxml').find_all('td', {'class': 'subregion'})
+    continent_names = [td.a.text for td in soup]
+    continent_links = [urllib.parse.urljoin(home_link, td.a['href']) for td in soup]
+    subregion_tables = dict(zip(continent_names, [get_subregion_table(url) for url in continent_links]))
+    return subregion_tables
+
+
+# Find out the all regions and their subregions
+def scrape_region_subregion_index(subregion_tables):
+
+    having_subregions = copy.deepcopy(subregion_tables)
+    region_index_updated = copy.deepcopy(subregion_tables)
+
+    without_subregion = []
+    for k, v in subregion_tables.items():
+        if v is not None and isinstance(v, pd.DataFrame):
+            region_index_updated = update_nested_dict(subregion_tables, {k: set(v.Subregion)})
+        else:
+            without_subregion.append(k)
+
+    for x in without_subregion:
+        having_subregions.pop(x)
+
+    having_subregions_temp = copy.deepcopy(having_subregions)
+
+    while having_subregions_temp:
+
+        for region_name, subregion_table in having_subregions.items():
+            #
+            subregion_names, subregion_links = subregion_table.Subregion, subregion_table.SubregionURL
+            sub_subregion_tables = dict(zip(subregion_names, [get_subregion_table(link) for link in subregion_links]))
+
+            subregion_index, without_subregion_ = scrape_region_subregion_index(sub_subregion_tables)
+            without_subregion += without_subregion_
+
+            region_index_updated.update({region_name: subregion_index})
+
+            having_subregions_temp.pop(region_name)
+
+    return region_index_updated, without_subregion
+
+
+# Get region-subregion index, or all regions having no subregions
+def get_region_subregion_index(index_filename, file_format=".pickle", update=False):
+    available_index = ["GeoFabrik-region-subregion-index", "GeoFabrik-no-subregion-list"]
+    assert index_filename in available_index, "'index_filename' must be one of {}.".format(available_index)
+
+    available_fmt = [".pickle", ".json"]
+    assert file_format in available_fmt, "'file_format' must be one of {}.".format(available_fmt)
+
+    filename = index_filename + file_format
+
+    path_to_file = cd_dat(filename)
+    if os.path.isfile(path_to_file) and not update:
+        index_file = load_pickle(path_to_file) if file_format == ".pickle" else load_json(path_to_file)
+    else:
+        try:
+            subregion_tables = scrape_continent_subregion_tables()
+            region_subregion_index, no_subregions = scrape_region_subregion_index(subregion_tables)
+
+            save_pickle(region_subregion_index, cd_dat("GeoFabrik-region-subregion-index.pickle"))
+            save_json(region_subregion_index, cd_dat("GeoFabrik-region-subregion-index.json"))
+            save_pickle(no_subregions, cd_dat("GeoFabrik-no-subregion-list.pickle"))
+
+            index_file = no_subregions if index_filename == "GeoFabrik-no-subregion-list" else region_subregion_index
+
+        except Exception as e:
+            print("Failed to get \"{}\"... {}.".format(index_filename, e))
+            index_file = None
+
     return index_file
 
 
@@ -258,7 +339,6 @@ def download_subregion_osm_file(subregion_name, file_format=".osm.pbf", download
     :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
     :param download_path: [str] Full path to save the downloaded file, or None (default, i.e. using default path)
     :param update: [bool]
-    :return: None
     """
     # Get download URL
     subregion_name_, download_url = get_download_url(subregion_name, file_format, update=False)
@@ -285,7 +365,6 @@ def download_subregion_osm_file(subregion_name, file_format=".osm.pbf", download
 def remove_subregion_osm_file(subregion_file_path):
     """
     :param subregion_file_path: [str]
-    :return: None
     """
     assert any(subregion_file_path.endswith(ext) for ext in [".osm.pbf", ".shp.zip", ".osm.bz2"]), \
         "'subregion_file_path' is not valid."
