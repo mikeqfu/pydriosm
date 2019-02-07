@@ -1,6 +1,6 @@
 # pydirosm
 
-(Beta version 0.1.7)
+(Beta version 0.1.8)
 
 
 
