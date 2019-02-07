@@ -1,5 +1,7 @@
 """ Data storage with PostgreSQL """
 
+from getpass import getpass
+
 from fuzzywuzzy.process import extractOne
 from pandas import read_sql
 from sqlalchemy import create_engine, types
@@ -20,11 +22,11 @@ class OSM:
         Prior to create a customised database, it requires to connect "postgres" in the first instance.
         """
         self.database_info = {'drivername': 'postgresql+psycopg2',
-                              'username': str(input('PostgreSQL username: ')),
-                              'password': int(input('PostgreSQL password: ')),
-                              'host': 'localhost',
+                              'username': input('PostgreSQL username: '),
+                              'password': getpass('PostgreSQL password: '),
+                              'host': input('Host name: '),
                               'port': 5432,  # default by installation
-                              'database': 'postgres'}
+                              'database': input('Database name: ')}
 
         # The typical form of a database URL is: url = backend+driver://username:password@host:port/database_name
         self.url = URL(**self.database_info)
@@ -72,7 +74,8 @@ class OSM:
     # Kill the connection to the specified database
     def disconnect(self, database_name=None):
         """
-        :param database_name: [str] Name of database to disconnect from, or None (default) to disconnect the current one
+        :param database_name: [str] Name of database to disconnect from,
+                                or None (default) to disconnect the current one
 
         Alternative way:
         SELECT
