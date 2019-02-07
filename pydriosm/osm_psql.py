@@ -155,7 +155,7 @@ class OSM:
             table_name = extractOne(table_name, subregion_names, score_cutoff=10)[0]
         print("Importing \"{}\" ... ".format(table_name))
         for data_type, data in subregion_data.items():
-            print("\"{}\" ... ".format(data_type), end="")
+            print("          \"{}\" ... ".format(data_type), end="")
             try:
                 self.import_dat(data, table_name=table_name, schema_name=data_type, parsed=parsed)
                 print("Done.")
