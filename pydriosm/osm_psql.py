@@ -153,8 +153,13 @@ class OSM:
         if subregion_name_as_table_name:
             subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
             table_name = extractOne(table_name, subregion_names, score_cutoff=10)[0]
+        print("Importing \"{}\" ... ".format(table_name), end="")
         for data_type, data in subregion_data.items():
-            self.import_dat(data, table_name=table_name, schema_name=data_type, parsed=parsed)
+            try:
+                self.import_dat(data, table_name=table_name, schema_name=data_type, parsed=parsed)
+                print("Done.")
+            except Exception as e:
+                print("Failed. {}".format(e))
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
     def read_table(self, table_name, *schemas, subregion_name_as_table_name=True):
