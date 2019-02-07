@@ -29,12 +29,10 @@ def make_subregion_osm_data_available(region_name, file_format=".osm.pbf", updat
 #
 def import_osm_extracts(update=False):
 
-    subregions = get_region_subregion_index("GeoFabrik-no-subregion-list")
+    subregion_names = get_region_subregion_index("GeoFabrik-no-subregion-list")
 
     osmdb = OSM()
     osmdb.connect_db(database_name='osm_extracts')
-    for subregion in subregions:
-        subregion_osm_pbf = read_raw_osm_pbf(subregion, update=update)
-        for data_type, data in subregion_osm_pbf.items():
-            osmdb.create_schema(schema_name=data_type)
-            osmdb.import_dat(data, table_name=subregion, schema_name=data_type)
+    for subregion_name in subregion_names:
+        subregion_osm_pbf = read_raw_osm_pbf(subregion_name, update=update)
+        osmdb.import_data(subregion_osm_pbf, table_name=subregion_name)
