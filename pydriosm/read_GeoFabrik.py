@@ -3,7 +3,7 @@
 import errno
 import glob
 import itertools
-import json
+import rapidjson
 import os
 import re
 import shutil
@@ -363,17 +363,14 @@ def read_raw_osm_pbf(subregion, update=False, download_confirmation_required=Tru
                 for i in range(layer_count):
                     lyr = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
                     layer_names.append(lyr.GetName())  # Get the name of the i-th layer
-
-                    # Get features from the i-th layer
-                    feat, feat_data = lyr.GetNextFeature(), []
-                    while feat is not None:
-                        feat_dat = json.loads(feat.ExportToJson())
-                        feat_data.append(feat_dat)
-                        feat.Destroy()
-                        feat = lyr.GetNextFeature()
-
-                    layer_data.append(pd.DataFrame(feat_data))
-
+                    # # https://gdal.org/python/osgeo.ogr.Feature-class.html
+                    # feat, feat_data = lyr.GetNextFeature(), []  # Get features from the i-th layer
+                    # while feat is not None:
+                    #     feat_dat = rapidjson.loads(feat.ExportToJson())
+                    #     feat_data.append(feat_dat)
+                    #     feat.Destroy()
+                    #     feat = lyr.GetNextFeature()
+                    layer_data.append(pd.DataFrame(rapidjson.loads(feat.ExportToJson()) for _, feat in enumerate(lyr)))
                 raw_osm_pbf.Release()
 
                 # Make a dictionary, {layer_name: layer_DataFrame}
