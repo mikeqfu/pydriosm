@@ -1,7 +1,7 @@
 """ Utilities - Helper functions """
 
 import collections
-import json
+import rapidjson
 import os
 import pickle
 import re
@@ -132,7 +132,7 @@ def save_json(json_data, path_to_json):
     try:
         os.makedirs(os.path.dirname(path_to_json), exist_ok=True)
         json_out = open(path_to_json, 'w')
-        json.dump(json_data, json_out)
+        rapidjson.dump(json_data, json_out)
         json_out.close()
         print("Done.")
     except Exception as e:
@@ -146,7 +146,7 @@ def load_json(path_to_json):
     :return: the json data retrieved
     """
     json_in = open(path_to_json, 'r')
-    data = json.load(json_in)
+    data = rapidjson.load(json_in)
     json_in.close()
     return data
 
