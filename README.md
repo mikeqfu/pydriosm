@@ -1,6 +1,6 @@
 # pydirosm
 
-(Beta version 0.1.8)
+(Beta version 0.1.9)
 
 
 
@@ -18,7 +18,7 @@ Currently this package has been uploaded to [TestPyPI](https://test.pypi.org/pro
 
 Otherwise, use the command prompt to run:
 
-```python
+```
 pip install --extra-index-url https://test.pypi.org/simple/ pydriosm
 ```
 

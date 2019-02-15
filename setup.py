@@ -8,7 +8,7 @@ with open("README.md", 'r') as readme:
 setuptools.setup(
 
     name='pydriosm',
-    version='0.1.8',
+    version='0.1.9',
 
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
@@ -33,6 +33,7 @@ setuptools.setup(
         'psycopg2',
         'pyshp',
         'python-Levenshtein',
+        'python-rapidjson',
         'requests',
         'shapely',
         'sqlalchemy',
