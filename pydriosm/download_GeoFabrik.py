@@ -214,16 +214,16 @@ def scrape_continent_subregion_tables():
 def scrape_region_subregion_index(subregion_tables):
 
     having_subregions = copy.deepcopy(subregion_tables)
-    region_subregion_index = copy.deepcopy(subregion_tables)
+    region_index_updated = copy.deepcopy(subregion_tables)
 
-    no_subregions = []
+    without_subregion = []
     for k, v in subregion_tables.items():
         if v is not None and isinstance(v, pd.DataFrame):
-            region_subregion_index = update_nested_dict(subregion_tables, {k: set(v.Subregion)})
+            region_index_updated = update_nested_dict(subregion_tables, {k: set(v.Subregion)})
         else:
-            no_subregions.append(k)
+            without_subregion.append(k)
 
-    for x in no_subregions:
+    for x in without_subregion:
         having_subregions.pop(x)
 
     having_subregions_temp = copy.deepcopy(having_subregions)
@@ -236,17 +236,13 @@ def scrape_region_subregion_index(subregion_tables):
             sub_subregion_tables = dict(zip(subregion_names, [get_subregion_table(link) for link in subregion_links]))
 
             subregion_index, without_subregion_ = scrape_region_subregion_index(sub_subregion_tables)
-            no_subregions += without_subregion_
+            without_subregion += without_subregion_
 
-            region_subregion_index.update({region_name: subregion_index})
+            region_index_updated.update({region_name: subregion_index})
 
             having_subregions_temp.pop(region_name)
 
-    save_pickle(region_subregion_index, cd_dat("GeoFabrik-region-subregion-index.pickle"))
-    save_json(region_subregion_index, cd_dat("GeoFabrik-region-subregion-index.json"))
-    save_pickle(no_subregions, cd_dat("GeoFabrik-no-subregion-list.pickle"))
-
-    return region_subregion_index, no_subregions
+    return region_index_updated, without_subregion
 
 
 # Get region-subregion index, or all regions having no subregions
@@ -266,6 +262,10 @@ def get_region_subregion_index(index_filename, file_format=".pickle", update=Fal
         try:
             subregion_tables = scrape_continent_subregion_tables()
             region_subregion_index, no_subregions = scrape_region_subregion_index(subregion_tables)
+
+            save_pickle(region_subregion_index, cd_dat("GeoFabrik-region-subregion-index.pickle"))
+            save_json(region_subregion_index, cd_dat("GeoFabrik-region-subregion-index.json"))
+            save_pickle(no_subregions, cd_dat("GeoFabrik-no-subregion-list.pickle"))
 
             index_file = no_subregions if index_filename == "GeoFabrik-no-subregion-list" else region_subregion_index
 
