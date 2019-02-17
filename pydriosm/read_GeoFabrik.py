@@ -348,7 +348,7 @@ def read_raw_osm_pbf(subregion, update=False, download_confirmation_required=Tru
         if not os.path.isfile(path_to_osm_pbf) or update:
             if confirmed(prompt="To download \"{}\"?".format(subregion_filename),
                          resp=False, confirmation_required=download_confirmation_required):
-                dGF.download_subregion_osm_file(subregion_filename, download_path=path_to_osm_pbf, update=update)
+                dGF.download_subregion_osm_file(subregion, download_path=path_to_osm_pbf, update=update)
 
         if os.path.isfile(path_to_osm_pbf):
             print("\nParsing \"{}\" ... ".format(subregion_filename), end="")
