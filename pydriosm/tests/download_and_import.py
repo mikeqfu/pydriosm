@@ -1,5 +1,7 @@
 # Download a bunch of OSM data extracts and import them to local PostgreSQL
 
+import gc
+
 import fuzzywuzzy.process
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, get_region_subregion_index, \
@@ -11,7 +13,6 @@ from pydriosm.utils import get_all_subregions
 
 # Make OSM data available for a given region and (optional) all subregions of
 def make_subregion_osm_data_available(region_name, file_format=".osm.pbf", update=False):
-
     region_names = get_subregion_info_index('GeoFabrik-subregion-name-list', update=False)
     region_name_ = fuzzywuzzy.process.extractOne(region_name, region_names, score_cutoff=10)[0]
 
@@ -28,11 +29,13 @@ def make_subregion_osm_data_available(region_name, file_format=".osm.pbf", updat
 
 #
 def import_osm_extracts(update=False):
-
     subregion_names = get_region_subregion_index("GeoFabrik-no-subregion-list")
 
     osmdb = OSM()
     osmdb.connect_db(database_name='osm_extracts')
     for subregion_name in subregion_names:
-        subregion_osm_pbf = read_raw_osm_pbf(subregion_name, update=update)
+        subregion_osm_pbf = read_raw_osm_pbf(
+            subregion_name, update=update, download_confirmation_required=False, pickle_it=False, rm_raw_file=True)
         osmdb.import_data(subregion_osm_pbf, table_name=subregion_name)
+        del subregion_osm_pbf
+        gc.collect()
