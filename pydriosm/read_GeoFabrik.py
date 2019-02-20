@@ -3,8 +3,8 @@
 import errno
 import glob
 import itertools
-import rapidjson
 import os
+import rapidjson
 import re
 import shutil
 import zipfile
