@@ -7,7 +7,7 @@ import fuzzywuzzy.process
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, get_region_subregion_index, \
     get_subregion_info_index
 from pydriosm.osm_psql import OSM
-from pydriosm.read_GeoFabrik import read_raw_osm_pbf
+from pydriosm.read_GeoFabrik import read_osm_pbf
 from pydriosm.utils import get_all_subregions
 
 
@@ -34,7 +34,7 @@ def import_osm_extracts(update=False):
     osmdb = OSM()
     osmdb.connect_db(database_name='osm_extracts')
     for subregion_name in subregion_names:
-        subregion_osm_pbf = read_raw_osm_pbf(
+        subregion_osm_pbf = read_osm_pbf(
             subregion_name, update=update, download_confirmation_required=False, pickle_it=False, rm_raw_file=True)
         osmdb.import_data(subregion_osm_pbf, table_name=subregion_name)
         del subregion_osm_pbf

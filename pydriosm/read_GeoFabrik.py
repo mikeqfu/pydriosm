@@ -316,7 +316,7 @@ def get_osm_pbf_layer_idx_names(subregion, update=False, download_confirmation_r
 
 
 # Read '.osm.pbf' file roughly into pandas.DataFrames
-def read_raw_osm_pbf(subregion, update=False, download_confirmation_required=True, pickle_it=True, rm_raw_file=True):
+def read_osm_pbf(subregion, update=False, download_confirmation_required=True, pickle_it=True, rm_raw_file=True):
     """
     Reference: http://www.gdal.org/drv_osm.html
 
@@ -482,8 +482,8 @@ def read_parsed_osm_pbf(subregion, update_osm_pbf=False, download_confirmation_r
     if os.path.isfile(path_to_pickle) and not update:
         osm_pbf = load_pickle(path_to_pickle)
     else:
-        raw_osm_pbf_data = read_raw_osm_pbf(subregion, update_osm_pbf, download_confirmation_required,
-                                            pickle_it=True, rm_raw_file=True)
+        raw_osm_pbf_data = read_osm_pbf(subregion, update_osm_pbf, download_confirmation_required,
+                                        pickle_it=True, rm_raw_file=True)
 
         parsed_data, geom_types = [], []
         for geom_type, layer_data in raw_osm_pbf_data.items():
