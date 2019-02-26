@@ -369,7 +369,11 @@ def remove_subregion_osm_file(subregion_file_path):
     assert any(subregion_file_path.endswith(ext) for ext in [".osm.pbf", ".shp.zip", ".osm.bz2"]), \
         "'subregion_file_path' is not valid."
     if os.path.isfile(subregion_file_path):
-        os.remove(subregion_file_path)
-        print("\"{}\" has been removed.\n".format(os.path.basename(subregion_file_path)))
+        try:
+            os.remove(subregion_file_path)
+            print("\"{}\" has been removed from local disk.\n".format(os.path.basename(subregion_file_path)))
+        except Exception as e:
+            print(e)
+            pass
     else:
         print("\"{}\" does not exist at \"{}\".\n".format(*os.path.split(subregion_file_path)[::-1]))
