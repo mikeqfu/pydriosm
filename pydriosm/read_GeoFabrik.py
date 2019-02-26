@@ -316,7 +316,8 @@ def get_osm_pbf_layer_idx_names(subregion, update=False, download_confirmation_r
 
 
 # Read '.osm.pbf' file roughly into pandas.DataFrames
-def read_osm_pbf(subregion, update=False, download_confirmation_required=True, pickle_it=True, rm_raw_file=True):
+def read_osm_pbf(subregion, update=False, download_confirmation_required=True, file_size_limit=100, pickle_it=True,
+                 rm_raw_file=True):
     """
     Reference: http://www.gdal.org/drv_osm.html
 
@@ -329,11 +330,13 @@ def read_osm_pbf(subregion, update=False, download_confirmation_required=True, p
                                  and "way" features that are recognized as area
         'other_relations'   - 4: "relation" features that do not belong to the above 2 layers
 
+    Note that this function can require fairly high amount of physical memory to read large files e.g. > 200MB
 
     :param subregion: [str] Name of subregion or customised path of a .osm.pbf file
                         If 'subregion' is the name of the subregion, the default file path will be used.
     :param update: [bool]
     :param download_confirmation_required: [bool]
+    :param file_size_limit: [int] e.g. 50, or 100(default)
     :param pickle_it: [bool]
     :param rm_raw_file: [bool]
     :return: [dict] or None
@@ -350,38 +353,31 @@ def read_osm_pbf(subregion, update=False, download_confirmation_required=True, p
                          resp=False, confirmation_required=download_confirmation_required):
                 dGF.download_subregion_osm_file(subregion, download_path=path_to_osm_pbf, update=update)
 
-        if os.path.isfile(path_to_osm_pbf):
+        file_size_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2))
+
+        if file_size_mb <= file_size_limit:
+
             print("\nParsing \"{}\" ... ".format(subregion_filename), end="")
+
+            # Start parsing the '.osm.pbf' file
+            raw_osm_pbf = ogr.Open(path_to_osm_pbf)
+            # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
+            layer_count, layer_names, layer_data = raw_osm_pbf.GetLayerCount(), [], []
+
             try:
-                # Start parsing the '.osm.pbf' file
-                raw_osm_pbf = ogr.Open(path_to_osm_pbf)
-
-                # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
-                layer_count, layer_names, layer_data = raw_osm_pbf.GetLayerCount(), [], []
-
                 # Loop through all available layers
                 for i in range(layer_count):
                     lyr = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
                     layer_names.append(lyr.GetName())  # Get the name of the i-th layer
-                    # # https://gdal.org/python/osgeo.ogr.Feature-class.html
-                    # feat, feat_data = lyr.GetNextFeature(), []  # Get features from the i-th layer
-                    # while feat is not None:
-                    #     feat_dat = rapidjson.loads(feat.ExportToJson())
-                    #     feat_data.append(feat_dat)
-                    #     feat.Destroy()
-                    #     feat = lyr.GetNextFeature()
-                    layer_data.append(pd.DataFrame(rapidjson.loads(feat.ExportToJson()) for _, feat in enumerate(lyr)))
+                    layer_data.append(pd.DataFrame(rapidjson.loads(f.ExportToJson()) for _, f in enumerate(lyr)))
                 raw_osm_pbf.Release()
-
                 # Make a dictionary, {layer_name: layer_DataFrame}
                 raw_osm_pbf_data = dict(zip(layer_names, layer_data))
-
                 print("Successfully.\n")
 
             except Exception as e:
-                err_msg = e if os.path.isfile(path_to_osm_pbf) else os.strerror(errno.ENOENT)
-                print("Failed. {}.\n".format(err_msg))
-                raw_osm_pbf_data = None
+                raw_osm_pbf_data = dict(zip(layer_names, layer_data))
+                print("Failed. {}.\n".format(e if os.path.isfile(path_to_osm_pbf) else os.strerror(errno.ENOENT)))
 
             if pickle_it:
                 save_pickle(raw_osm_pbf_data, path_to_pickle)
@@ -390,7 +386,6 @@ def read_osm_pbf(subregion, update=False, download_confirmation_required=True, p
                 dGF.remove_subregion_osm_file(path_to_osm_pbf)
 
         else:
-            print("\"{}\" is not available.\n".format(os.path.basename(path_to_osm_pbf)))
             raw_osm_pbf_data = None
 
     return raw_osm_pbf_data
