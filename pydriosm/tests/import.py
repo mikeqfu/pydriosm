@@ -31,7 +31,7 @@ def make_subregion_osm_data_available(region_name, file_format=".osm.pbf", updat
         download_subregion_osm_file(region_name, file_format=file_format, update=update)
 
 
-#
+# Dump data extracts to PostgreSQL
 def psql_osm_extracts(update=False, rm_raw_file=True):
     """
     :param update: [bool]
