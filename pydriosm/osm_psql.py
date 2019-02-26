@@ -4,6 +4,7 @@ from getpass import getpass
 
 from fuzzywuzzy.process import extractOne
 from pandas import read_sql
+from psycopg2 import DatabaseError
 from sqlalchemy import create_engine, types
 from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
@@ -124,26 +125,43 @@ class OSM:
         """
         self.engine.execute('DROP SCHEMA IF EXISTS "{}";'.format(schema_name))
 
+    # Insert a value to database
+    def insert_dat(self, dat, table_name, col_name, schema_name='public'):
+        """ insert a new vendor into the vendors table """
+        schemas = Inspector.from_engine(self.engine)
+        if schema_name not in schemas.get_table_names():
+            self.create_schema(schema_name)
+        sql_command = "INSERT INTO %s(%s) VALUES(%s);"
+        try:
+            # execute the INSERT statement
+            self.engine.execute(sql_command, (table_name, col_name, dat))
+        except (Exception, DatabaseError) as e:
+            print(e)
+        finally:
+            if self.connection is not None:
+                self.connection.close()
+
     # Import data (as a pandas.DataFrame) into the database being currently connected
-    def import_dat(self, dat, table_name, schema_name='public', parsed=False):
+    def dump_layer_data(self, dat, table_name, schema_name='public', if_exists='replace', parsed=False):
         """
         :param dat: [pandas.DataFrame]
         :param table_name: [str]
         :param schema_name: [str] 'public' (default)
+        :param if_exists: [str] 'fail', 'replace', or 'append'; default 'fail'
         :param parsed: [bool] Whether 'data' has been parsed; False (default)
         """
         schemas = Inspector.from_engine(self.engine)
         if schema_name not in schemas.get_table_names():
             self.create_schema(schema_name)
         if not parsed:
-            dat.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
+            dat.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False,
                        dtype={'geometry': types.JSON, 'properties': types.JSON})
         else:  # There is an error. To be fixed...
-            dat.to_sql(table_name, self.engine, schema=schema_name, if_exists='replace', index=False,
+            dat.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False,
                        dtype={'other_tags': types.JSON, 'coordinates': types.ARRAY})
 
     # Import all data of a given (sub)region
-    def import_data(self, subregion_data, table_name, parsed=False, subregion_name_as_table_name=True):
+    def dump_data(self, subregion_data, table_name, parsed=False, subregion_name_as_table_name=True):
         """
         :param subregion_data: [pandas.DataFrame]
         :param table_name: [str] (Recommended to be) 'subregion_name'
@@ -157,7 +175,7 @@ class OSM:
         for data_type, data in subregion_data.items():
             print("          \"{}\" ... ".format(data_type), end="")
             try:
-                self.import_dat(data, table_name=table_name, schema_name=data_type, parsed=parsed)
+                self.dump_layer_data(data, table_name=table_name, schema_name=data_type, parsed=parsed)
                 print("Done.")
             except Exception as e:
                 print("Failed. {}".format(e))
