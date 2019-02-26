@@ -370,6 +370,6 @@ def remove_subregion_osm_file(subregion_file_path):
         "'subregion_file_path' is not valid."
     if os.path.isfile(subregion_file_path):
         os.remove(subregion_file_path)
-        print("'{}' has been removed.".format(os.path.basename(subregion_file_path)))
+        print("\"{}\" has been removed.\n".format(os.path.basename(subregion_file_path)))
     else:
         print("\"{}\" does not exist at \"{}\".\n".format(*os.path.split(subregion_file_path)[::-1]))
