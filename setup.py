@@ -8,7 +8,7 @@ with open("README.md", 'r') as readme:
 setuptools.setup(
 
     name='pydriosm',
-    version='0.2.3',
+    version='0.2.4',
 
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
@@ -60,4 +60,4 @@ setuptools.setup(
     ],
 )
 
-pydriosm.settings.gdal_configurations()
+pydriosm.settings.gdal_configurations(reset=False)

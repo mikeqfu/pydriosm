@@ -1,6 +1,6 @@
-# pydirosm
+# pydriosm
 
-(Beta version 0.2.3)
+(Beta version 0.2.4)
 
 
 
@@ -27,7 +27,7 @@ pip install --extra-index-url https://test.pypi.org/simple/ pydriosm
 #### Example
 
 ```python
-import pydirosm
+import pydriosm
 ```
 
 To download data for a region (or rather, a subregion) of which the OSM data extract is available, just simply provide the name of the (sub)region. Say if we need the data about 'West Midlands' of England:
@@ -99,7 +99,7 @@ osm_db.create_db(database_name='osm_extracts')
 Import the pre-parsed .osm.pbf data into the database named '**osm_extracts**':
 
 ```python
-osm_db.import_data(west_midlands, table_name=subregion_name)
+osm_db.dump_data(west_midlands, table_name=subregion_name)
 ```
 
 
