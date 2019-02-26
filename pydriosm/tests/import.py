@@ -32,10 +32,11 @@ def make_subregion_osm_data_available(region_name, file_format=".osm.pbf", updat
 
 
 # Dump data extracts to PostgreSQL
-def psql_osm_extracts(update=False, rm_raw_file=True):
+def psql_osm_extracts(update=False, file_size_limit=100, rm_raw_file=True):
     """
-    :param update: [bool]
-    :param rm_raw_file:
+    :param update: [bool] False (default)
+    :param file_size_limit: [int] 100 (default)
+    :param rm_raw_file: [bool] True (default)
     :return:
     """
     subregion_names = get_region_subregion_index("GeoFabrik-no-subregion-list")
@@ -47,8 +48,8 @@ def psql_osm_extracts(update=False, rm_raw_file=True):
         subregion_filename, path_to_osm_pbf = justify_subregion_input(subregion_name)
 
         subregion_osm_pbf = read_osm_pbf(
-            subregion_name, update=update, download_confirmation_required=False, file_size_limit=100, pickle_it=False,
-            rm_raw_file=False)
+            subregion_name, update=update, download_confirmation_required=False, file_size_limit=file_size_limit,
+            pickle_it=False, rm_raw_file=False)
 
         if subregion_osm_pbf is not None:
             osmdb.dump_data(subregion_osm_pbf, table_name=subregion_name)
@@ -74,9 +75,7 @@ def psql_osm_extracts(update=False, rm_raw_file=True):
                             osmdb.dump_layer_data(feat_data.T, subregion_name, layer_name, if_exists='replace')
                         else:
                             osmdb.dump_layer_data(feat_data.T, subregion_name, layer_name, if_exists='append')
-                        if counter == 10000:
-                            del feat_data
-                        # f.Destroy()
+                        del feat_data  # f.Destroy()
                         f = lyr.GetNextFeature()
                         counter += 1
                     print("Done. Total amount of features: {}".format(counter - 1))
@@ -84,7 +83,4 @@ def psql_osm_extracts(update=False, rm_raw_file=True):
                     print("Failed. {}".format(e))
 
         if rm_raw_file:
-            try:
-                remove_subregion_osm_file(path_to_osm_pbf)
-            except PermissionError:
-                pass
+            remove_subregion_osm_file(path_to_osm_pbf)
