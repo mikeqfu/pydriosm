@@ -8,7 +8,7 @@ import gdal
 
 
 # Set GDAL configurations
-def gdal_configurations(reset=False):
+def gdal_configurations(reset=False, max_tmpfile_size=2500):
     if not reset:
         # Whether to enable interleaved reading. Defaults to NO.
         gdal.SetConfigOption('OGR_INTERLEAVED_READING', 'YES')
@@ -17,7 +17,7 @@ def gdal_configurations(reset=False):
         # Whether to compress nodes in temporary DB. Defaults to NO.
         gdal.SetConfigOption('COMPRESS_NODES', 'YES')
         # Maximum size in MB of in-memory temporary file. If it exceeds that value, it will go to disk. Defaults to 100.
-        gdal.SetConfigOption('MAX_TMPFILE_SIZE', '2500')
+        gdal.SetConfigOption('MAX_TMPFILE_SIZE', str(max_tmpfile_size))
     else:
         gdal.SetConfigOption('OGR_INTERLEAVED_READING', 'NO')
         gdal.SetConfigOption('USE_CUSTOM_INDEXING', 'YES')
