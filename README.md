@@ -1,6 +1,6 @@
 # pydirosm
 
-(Beta version 0.2.1)
+(Beta version 0.2.2)
 
 
 
@@ -8,7 +8,7 @@
 
 This package contains functions for the convenience of researchers to download and parse the OSM data extracts (in **.osm.pbf** and **.shp.zip**, which are available at [Geofabrik's free download server](https://download.geofabrik.de/) and [BBBike.org](https://www.bbbike.org/)), and if appropriate, import the parsed data into PostgreSQL. 
 
-Note that this package is written in Python 3 (3.5 and above) on Windows operating system and may not be compatible with Python 2. 
+Note that this package is written in Python 3 on Windows operating system and may not be compatible with Python 2. 
 
 
 
