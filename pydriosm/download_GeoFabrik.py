@@ -14,7 +14,7 @@ import pandas as pd
 import requests
 
 from pydriosm.utils import cd_dat, cd_dat_geofabrik, download, load_json, load_pickle, save_json, save_pickle
-from pydriosm.utils import update_nested_dict
+from pydriosm.utils import get_all_subregions, update_nested_dict
 
 
 # Get raw directory index (allowing us to see and download older files)
@@ -359,6 +359,22 @@ def download_subregion_osm_file(subregion_name, file_format=".osm.pbf", download
                 filename, subregion_name_, path_to_file))
         except Exception as e:
             print("\nFailed to download \"{}\". {}.".format(filename, e))
+
+
+# Make OSM data available for a given region and (optional) all subregions of it
+def make_subregion_osm_data_available(region_name, file_format=".osm.pbf", update=False):
+    region_names = get_subregion_info_index('GeoFabrik-subregion-name-list', update=False)
+    region_name_ = fuzzywuzzy.process.extractOne(region_name, region_names, score_cutoff=10)[0]
+
+    region_subregion_index = get_region_subregion_index("GeoFabrik-region-subregion-index", update=False)
+    subregions = list(get_all_subregions(region_name_, region_subregion_index))[0]
+
+    if subregions:
+        subregions = list(subregions.keys())
+        for subregion in subregions:
+            download_subregion_osm_file(subregion, file_format=file_format, update=update)
+    else:
+        download_subregion_osm_file(region_name, file_format=file_format, update=update)
 
 
 # Remove the downloaded file
