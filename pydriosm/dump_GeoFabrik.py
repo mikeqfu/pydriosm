@@ -54,9 +54,9 @@ def psql_osm_extracts(update=False, file_size_limit=150, rm_raw_file=True):
                             feat = rapidjson.loads(f.ExportToJson())  # Get features from the i-th layer
                             feat_data = pd.DataFrame.from_dict(feat, orient='index')
                             if counter == 1:
-                                osmdb.dump_layer_data(feat_data.T, subregion_name, layer_name, if_exists='replace')
+                                osmdb.dump_layer_data(feat_data.T, layer_name, subregion_name, if_exists='replace')
                             else:
-                                osmdb.dump_layer_data(feat_data.T, subregion_name, layer_name, if_exists='append')
+                                osmdb.dump_layer_data(feat_data.T, layer_name, subregion_name, if_exists='append')
                             del feat_data  # f.Destroy()
                             f = lyr.GetNextFeature()
                             counter += 1

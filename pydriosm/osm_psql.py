@@ -125,8 +125,21 @@ class OSM:
         """
         self.engine.execute('DROP SCHEMA IF EXISTS "{}";'.format(schema_name))
 
+    # Check if a table exists
+    def table_exists(self, schema_name, table_name):
+        """
+        :param schema_name: [str] e.g. 'public'
+        :param table_name: [str] table name
+        :return: [bool]
+        """
+        res = self.engine.execute("SELECT EXISTS("
+                                  "SELECT * FROM information_schema.tables "
+                                  "WHERE table_schema='{}' "
+                                  "AND table_name='{}');".format(schema_name, table_name))
+        return res.fetchone()[0]
+
     # Insert a value to database
-    def insert_dat(self, dat, table_name, col_name, schema_name='public'):
+    def insert_dat(self, dat, schema_name, table_name, col_name):
         """ insert a new vendor into the vendors table """
         schemas = Inspector.from_engine(self.engine)
         if schema_name not in schemas.get_table_names():
@@ -142,11 +155,11 @@ class OSM:
                 self.connection.close()
 
     # Import data (as a pandas.DataFrame) into the database being currently connected
-    def dump_layer_data(self, dat, table_name, schema_name='public', if_exists='replace', parsed=False):
+    def dump_layer_data(self, dat, schema_name, table_name, if_exists='replace', parsed=False):
         """
         :param dat: [pandas.DataFrame]
-        :param table_name: [str]
-        :param schema_name: [str] 'public' (default)
+        :param schema_name: [str] e.g. 'public'
+        :param table_name: [str] table name
         :param if_exists: [str] 'fail', 'replace', or 'append'; default 'fail'
         :param parsed: [bool] Whether 'data' has been parsed; False (default)
         """
@@ -175,7 +188,10 @@ class OSM:
         for data_type, data in subregion_data.items():
             print("         {} ... ".format(data_type), end="")
             try:
-                self.dump_layer_data(data, table_name=table_name, schema_name=data_type, parsed=parsed)
+                if data.empty and self.table_exists(schema_name=data_type, table_name=table_name):
+                    pass
+                else:
+                    self.dump_layer_data(data, schema_name=data_type, table_name=table_name, parsed=parsed)
                 print("Done.")
             except Exception as e:
                 print("Failed. {}".format(e))
