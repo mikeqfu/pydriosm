@@ -181,11 +181,12 @@ class OSM:
                 print("Failed. {}".format(e))
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
-    def read_table(self, table_name, *schemas, subregion_name_as_table_name=True):
+    def read_table(self, table_name, *schemas, subregion_name_as_table_name=True, chunk_size=None):
         """
         :param table_name: [str] Table name; 'subregion_name' is recommended to be used when importing the data
         :param schemas: [iterable] Layer name, or a list of layer names, e.g. ['points', 'lines']
         :param subregion_name_as_table_name: [bool] Whether to use subregion name as table name; True (default)
+        :param chunk_size: [int] or None (default); number of rows to include in each chunk
         :return: [dict]
         """
         if subregion_name_as_table_name:
@@ -196,7 +197,7 @@ class OSM:
         for schema in schemas:
             geom_types.append(schema)
             sql_query = 'SELECT * FROM {}."{}";'.format(schema, table_name)
-            layer_data.append(read_sql(sql=sql_query, con=self.engine))
+            layer_data.append(read_sql(sql=sql_query, con=self.engine, chunksize=chunk_size))
         return dict(zip(geom_types, layer_data))
 
     # Remove tables from the database being currently connected
