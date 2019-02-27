@@ -13,7 +13,7 @@ from pydriosm.utils import confirmed
 
 
 # Dump data extracts to PostgreSQL
-def psql_osm_extracts(update=False, file_size_limit=100, rm_raw_file=True):
+def psql_osm_extracts(update=False, file_size_limit=150, rm_raw_file=True):
     """
     :param update: [bool] False (default)
     :param file_size_limit: [int] 100 (default)
@@ -63,6 +63,7 @@ def psql_osm_extracts(update=False, file_size_limit=100, rm_raw_file=True):
                         print("Done. Total amount of features: {}".format(counter - 1))
                     except Exception as e:
                         print("Failed. {}".format(e))
+                raw_osm_pbf.Release()
 
             if rm_raw_file:
                 remove_subregion_osm_file(path_to_osm_pbf)
