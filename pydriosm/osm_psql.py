@@ -189,6 +189,7 @@ class OSM:
             print("         {} ... ".format(data_type), end="")
             try:
                 if data.empty and self.table_exists(schema_name=data_type, table_name=table_name):
+                    print("The layer is empty. Table (probably empty) already exists in the database.")
                     pass
                 else:
                     self.dump_layer_data(data, schema_name=data_type, table_name=table_name, parsed=parsed)
