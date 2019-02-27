@@ -41,11 +41,11 @@ def psql_osm_extracts(update=False, file_size_limit=100, rm_raw_file=True):
             else:
                 raw_osm_pbf = ogr.Open(path_to_osm_pbf)
                 layer_count = raw_osm_pbf.GetLayerCount()
-                print("\nParsing and importing \"{}\" feature-wisely ... ".format(subregion_name))
+                print("\nParsing and importing \"{}\" feature-wisely to PostgreSQL ... ".format(subregion_name))
                 for i in range(layer_count):
                     lyr = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
                     layer_name = lyr.GetName()
-                    print("          \"{}\" ... ".format(layer_name), end="")
+                    print("                         {} ... ".format(layer_name), end="")
                     try:
                         # Reference: https://gdal.org/python/osgeo.ogr.Feature-class.html
                         f, counter = lyr.GetNextFeature(), 1
