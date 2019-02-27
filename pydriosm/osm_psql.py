@@ -193,7 +193,7 @@ class OSM:
                     pass
                 else:
                     self.dump_layer_data(data, schema_name=data_type, table_name=table_name, parsed=parsed)
-                print("Done.")
+                    print("Done.")
             except Exception as e:
                 print("Failed. {}".format(e))
 
