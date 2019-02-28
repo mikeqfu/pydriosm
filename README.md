@@ -1,6 +1,6 @@
 # pydriosm
 
-(Beta version 0.2.8)
+(Beta version 0.2.9)
 
 
 
