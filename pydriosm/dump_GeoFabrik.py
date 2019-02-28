@@ -74,3 +74,9 @@ def psql_osm_extracts(update=False, file_size_limit=150, rm_raw_file=True):
             except Exception as e:
                 print(e)
                 err_subregion_names.append(subregion_name)
+
+        if len(err_subregion_names) == 0:
+            print("\nMission accomplished.\n")
+        else:
+            print("Errors occurred when parsing data of the following subregion(s):")
+            print(*err_subregion_names, sep='\n')
