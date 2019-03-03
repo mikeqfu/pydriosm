@@ -13,7 +13,7 @@ from pydriosm.utils import confirmed
 
 
 # Dump data extracts to PostgreSQL
-def psql_osm_extracts(update=False, file_size_limit=150, rm_raw_file=True):
+def psql_osm_extracts(update=False, file_size_limit=120, rm_raw_file=True):
     """
     :param update: [bool] False (default)
     :param file_size_limit: [int] 100 (default)
@@ -60,13 +60,17 @@ def psql_osm_extracts(update=False, file_size_limit=150, rm_raw_file=True):
                                     osmdb.dump_layer_data(feat_data.T, layer_name, subregion_name, if_exists='replace')
                                 else:
                                     osmdb.dump_layer_data(feat_data.T, layer_name, subregion_name, if_exists='append')
-                                del feat_data  # f.Destroy()
+                                del feat, feat_data  # f.Destroy()
                                 f = lyr.GetNextFeature()
                                 counter += 1
+                            del f
                             print("Done. Total amount of features: {}".format(counter - 1))
                         except Exception as e:
                             print("Failed. {}".format(e))
+                        del lyr
                     raw_osm_pbf.Release()
+                    del raw_osm_pbf, layer_count
+                    gc.collect()
 
                 if rm_raw_file:
                     remove_subregion_osm_file(path_to_osm_pbf)
@@ -78,5 +82,5 @@ def psql_osm_extracts(update=False, file_size_limit=150, rm_raw_file=True):
         if len(err_subregion_names) == 0:
             print("\nMission accomplished.\n")
         else:
-            print("Errors occurred when parsing data of the following subregion(s):")
+            print("\nErrors occurred when parsing data of the following subregion(s):")
             print(*err_subregion_names, sep='\n')
