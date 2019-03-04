@@ -15,7 +15,7 @@ import tqdm
 # Type to confirm whether to proceed or not
 def confirmed(prompt=None, resp=False, confirmation_required=True):
     """
-    Reference: http://pydriosm.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
+    Reference: http://code.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
 
     :param prompt: [str] or None
     :param resp: [bool]
