@@ -162,8 +162,7 @@ class OSM:
         :param if_exists: [str] 'fail', 'replace', or 'append'; default 'fail'
         :param parsed: [bool] Whether 'data' has been parsed; False (default)
         """
-        schemas = Inspector.from_engine(self.engine)
-        if schema_name not in schemas.get_table_names():
+        if schema_name not in Inspector.from_engine(self.engine).get_schema_names():
             self.create_schema(schema_name)
         if not parsed:
             dat.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False,
@@ -197,10 +196,10 @@ class OSM:
                 print("Failed. {}".format(e))
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
-    def read_table(self, table_name, *schemas, subregion_name_as_table_name=True, chunk_size=None):
+    def read_table(self, table_name, *schema_names, subregion_name_as_table_name=True, chunk_size=None):
         """
         :param table_name: [str] Table name; 'subregion_name' is recommended to be used when importing the data
-        :param schemas: [iterable] Layer name, or a list of layer names, e.g. ['points', 'lines']
+        :param schema_names: [iterable] Layer name, or a list of layer names, e.g. ['points', 'lines']
         :param subregion_name_as_table_name: [bool] Whether to use subregion name as table name; True (default)
         :param chunk_size: [int] or None (default); number of rows to include in each chunk
         :return: [dict]
@@ -208,12 +207,18 @@ class OSM:
         if subregion_name_as_table_name:
             subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
             table_name = extractOne(table_name, subregion_names, score_cutoff=10)[0]
-        geom_types = []
+
+        if schema_names:
+            geom_types = [x for x in schema_names]
+        else:
+            geom_types = [x for x in Inspector.from_engine(self.engine).get_schema_names()
+                          if x != 'public' and x != 'information_schema']
+
         layer_data = []
-        for schema in schemas:
-            geom_types.append(schema)
-            sql_query = 'SELECT * FROM {}."{}";'.format(schema, table_name)
+        for schema_name in geom_types:
+            sql_query = 'SELECT * FROM {}."{}";'.format(schema_name, table_name)
             layer_data.append(read_sql(sql=sql_query, con=self.engine, chunksize=chunk_size))
+
         return dict(zip(geom_types, layer_data))
 
     # Remove tables from the database being currently connected
