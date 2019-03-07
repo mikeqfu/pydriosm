@@ -1,6 +1,6 @@
 # pydriosm
 
-(Version 1.0.0)
+(Version 1.0.1)
 
 
 
@@ -12,15 +12,15 @@ Note that this package is written in Python 3 on Windows operating system and ma
 
 
 
-#### Installation (Testing phase)
+#### Installation
 
-Currently this package has been uploaded to [TestPyPI](https://test.pypi.org/project/pydriosm/) only. The installation of the package requires a few supporting packages to ensure its complete functionality. However, some of the required packages, such as Fiona, GDAL and Shapely, may necessitate installing their Windows binaries available at [Unofficial Windows Binaries for Python Extension Packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/). 
-
-Otherwise, use the command prompt to run:
+This package has been available at [PyPI](https://pypi.org/project/pydriosm/). Use the command prompt to run:
 
 ```
-pip install --extra-index-url https://test.pypi.org/simple/ pydriosm
+pip install pydriosm
 ```
+
+The installation of the package requires a few supporting packages to ensure its complete functionality. However, some of the required packages, such as [Fiona](https://pypi.org/project/Fiona/), [GDAL](https://pypi.org/project/GDAL/) and [Shapely](https://pypi.org/project/Shapely/), may necessitate installing their Windows binaries which can be downloaded from [Unofficial Windows Binaries for Python Extension Packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/). Once those packages are ready, go ahead with the 'pip' command. 
 
 
 
