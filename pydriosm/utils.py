@@ -159,7 +159,7 @@ def load_json(path_to_json):
 def download(url, path_to_file):
     """
 
-    Ref: https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests
+    Reference: https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests
 
     :param url:
     :param path_to_file:
@@ -197,7 +197,7 @@ def osm_geom_types():
 # Get all subregions
 def get_all_subregions(region_name, region_subregion_index):
     """
-    Source:
+    Reference:
     https://gist.github.com/douglasmiranda/5127251
     https://stackoverflow.com/questions/9807634/find-all-occurrences-of-a-key-in-nested-python-dictionaries-and-lists
 
@@ -222,7 +222,7 @@ def get_all_subregions(region_name, region_subregion_index):
 # Update a nested dictionary or similar mapping.
 def update_nested_dict(source_dict, overrides):
     """
-    Source: https://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
+    Reference: https://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
 
     :param source_dict: [dict]
     :param overrides: [dict]

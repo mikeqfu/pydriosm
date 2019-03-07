@@ -75,8 +75,7 @@ class OSM:
     # Kill the connection to the specified database
     def disconnect(self, database_name=None):
         """
-        :param database_name: [str] Name of database to disconnect from,
-                                or None (default) to disconnect the current one
+        :param database_name: [str] Name of database to disconnect from； None (default) to disconnect the current one
 
         Alternative way:
         SELECT
