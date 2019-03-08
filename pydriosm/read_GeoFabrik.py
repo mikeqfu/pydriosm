@@ -402,54 +402,70 @@ def parse_layer_data(layer_data, geo_typ, parse_other_tags=True, fmt_single_geom
     :return:
     """
 
-    # Transform a 'other_tags' into a dictionary
+    # Start parsing 'geometry' column
+    dat_geometry = pd.DataFrame(x for x in layer_data.geometry).rename(columns={'type': 'geom_type'})
+
+    if geo_typ != 'other_relations':  # geo_type can be 'points', 'lines', 'multilinestrings', or 'multipolygons'
+
+        def format_single_geometry(geom_data):
+            """ Format the coordinates with shapely.geometry
+            :param geom_data:
+            :return:
+            """
+            geom_types_funcs, geom_type = osm_geom_types(), list(set(geom_data.geom_type))[0]
+            geom_type_func = geom_types_funcs[geom_type]
+            if geom_type == 'MultiPolygon':
+                sub_geom_type_func = geom_types_funcs['Polygon']
+                geom_coords = geom_data.coordinates.map(
+                    lambda x: geom_type_func(sub_geom_type_func(l) for ls in x for l in ls))
+            else:
+                geom_coords = geom_data.coordinates.map(lambda x: geom_type_func(x))
+            return geom_coords
+
+        if fmt_single_geom:
+            dat_geometry.coordinates = format_single_geometry(dat_geometry)
+
+    else:  # geo_typ == 'other_relations'
+
+        def format_multi_geometries(geom_collection):
+            """ Format geometry collections with shapely.geometry
+            :param geom_collection:
+            :return:
+            """
+            geom_types_funcs = osm_geom_types()
+            geom_types = [g['type'] for g in geom_collection]
+            coordinates = [gs['coordinates'] for gs in geom_collection]
+            geometry_collection = [geom_types_funcs[geom_type](coords)
+                                   if 'Polygon' not in geom_type
+                                   else geom_types_funcs[geom_type](pt for pts in coords for pt in pts)
+                                   for geom_type, coords in zip(geom_types, coordinates)]
+            return shapely.geometry.GeometryCollection(geometry_collection)
+
+        if fmt_multi_geom:
+            dat_geometry.geometries = dat_geometry.geometries.map(format_multi_geometries)
+            dat_geometry.rename(columns={'geometries': 'coordinates'}, inplace=True)
+
+    # Start parsing 'properties' column
+    dat_properties = pd.DataFrame(x for x in layer_data.properties)
+
     def parse_other_tags_column(x):
-        """
+        """ Transform a 'other_tags' into a dictionary
         :param x: [str] or None
         :return:
         """
         if x is not None:
             raw_other_tags = [re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', x)]
-            other_tags = {k: v.replace('<br>', ' ') for k, v in (each_tag.split('"=>"') for each_tag in raw_other_tags)}
+            other_tags = {k: v.replace('<br>', ' ') for k, v in
+                          (each_tag.split('"=>"') for each_tag in raw_other_tags)}
         else:
             other_tags = x
         return other_tags
 
-    # Format the coordinates with shapely.geometry
-    def format_single_geometry(geom_data):
-        geom_types_funcs, geom_type = osm_geom_types(), list(set(geom_data.geom_type))[0]
-        geom_type_func = geom_types_funcs[geom_type]
-        if geom_type == 'MultiPolygon':
-            sub_geom_type_func = geom_types_funcs[geom_type.lstrip('Multi')]
-            geom_coords = geom_data.coordinates.map(
-                lambda x: geom_type_func(sub_geom_type_func(l) for ls in x for l in ls))
-        else:
-            geom_coords = geom_data.coordinates.map(geom_type_func)
-        return geom_coords
-
-    # Format geometry collections with shapely.geometry
-    def format_multi_geometries(geometries):
-        geom_types, coordinates = [geom['type'] for geom in geometries], [geoms['coordinates'] for geoms in geometries]
-        geom_types_funcs = osm_geom_types()
-        geom_collection = [geom_types_funcs[geom_type](coords)
-                           if 'Polygon' not in geom_type
-                           else geom_types_funcs[geom_type](pt for pts in coords for pt in pts)
-                           for geom_type, coords in zip(geom_types, coordinates)]
-        return shapely.geometry.GeometryCollection(geom_collection)
-
-    dat_properties = pd.DataFrame(x for x in layer_data.properties)
-    dat_geometries = pd.DataFrame(x for x in layer_data.geometry).rename(columns={'type': 'geom_type'})
-    parsed_layer_data = dat_properties.join(dat_geometries)
-
     if parse_other_tags:
-        parsed_layer_data.other_tags = parsed_layer_data.other_tags.map(parse_other_tags_column)
+        dat_properties.other_tags = dat_properties.other_tags.map(parse_other_tags_column)
 
-    if geo_typ != 'other_relations':  # geo_type is any of 'points', 'lines', 'multilinestrings', and 'multipolygons'
-        if fmt_single_geom:
-            parsed_layer_data.coordinates = format_single_geometry(parsed_layer_data[['geom_type', 'coordinates']])
-    else:  # geo_typ == 'other_relations'
-        if fmt_multi_geom:
-            parsed_layer_data['coordinates'] = parsed_layer_data.geometries.map(format_multi_geometries)
+    parsed_layer_data = dat_geometry.join(dat_properties)
+    parsed_layer_data.drop(['geom_type'], axis=1, inplace=True)
 
     return parsed_layer_data
 
@@ -484,13 +500,12 @@ def read_parsed_osm_pbf(subregion, update_osm_pbf=False, download_confirmation_r
         for geom_type, layer_data in raw_osm_pbf_data.items():
             geom_types.append(geom_type)
             try:
-                parsed_lyr_dat = parse_layer_data(layer_data, geom_type,
-                                                  parse_other_tags, fmt_single_geom, fmt_multi_geom)
+                parsed_lyr_data = parse_layer_data(layer_data, geom_type,
+                                                   parse_other_tags, fmt_single_geom, fmt_multi_geom)
             except Exception as e:
                 print("Failed to parse \"{}\" for \"{}\". {}".format(geom_type, subregion, e))
-                parsed_lyr_dat = None
-
-            parsed_data.append(parsed_lyr_dat)
+                parsed_lyr_data = None
+            parsed_data.append(parsed_lyr_data)
 
         osm_pbf = dict(zip(geom_types, parsed_data))
 

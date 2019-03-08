@@ -37,7 +37,7 @@ def psql_osm_extracts(update=False, file_size_limit=120, rm_raw_file=True):
                     pickle_it=False, rm_raw_file=False)
 
                 if subregion_osm_pbf is not None:
-                    osmdb.dump_data(subregion_osm_pbf, table_name=subregion_name)
+                    osmdb.dump_osm_pbf_data(subregion_osm_pbf, table_name=subregion_name)
                     del subregion_osm_pbf
                     gc.collect()
 
@@ -57,9 +57,11 @@ def psql_osm_extracts(update=False, file_size_limit=120, rm_raw_file=True):
                                 feat = rapidjson.loads(f.ExportToJson())  # Get features from the i-th layer
                                 feat_data = pd.DataFrame.from_dict(feat, orient='index')
                                 if counter == 1:
-                                    osmdb.dump_layer_data(feat_data.T, layer_name, subregion_name, if_exists='replace')
+                                    osmdb.dump_osm_pbf_data_by_layer(feat_data.T, layer_name, subregion_name,
+                                                                     if_exists='replace')
                                 else:
-                                    osmdb.dump_layer_data(feat_data.T, layer_name, subregion_name, if_exists='append')
+                                    osmdb.dump_osm_pbf_data_by_layer(feat_data.T, layer_name, subregion_name,
+                                                                     if_exists='append')
                                 del feat, feat_data  # f.Destroy()
                                 f = lyr.GetNextFeature()
                                 counter += 1

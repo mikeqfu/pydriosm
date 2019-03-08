@@ -4,7 +4,7 @@ from getpass import getpass
 
 from fuzzywuzzy.process import extractOne
 from pandas import read_sql
-from psycopg2 import DatabaseError
+from shapely import wkt
 from sqlalchemy import create_engine, types
 from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
@@ -43,9 +43,9 @@ class OSM:
         self.connection = self.engine.connect()
 
     # Establish a connection to the specified database (named e.g. 'osm_extracts')
-    def connect_db(self, database_name='osm_extracts'):
+    def connect_db(self, database_name='osm_data_extracts'):
         """
-        :param database_name: [str] default as 'osm_extracts'; alternatives such as 'OpenStreetMap', ...
+        :param database_name: [str; 'osm_data_extracts'(default)] name of a database
         """
         self.database_name = database_name
         self.database_info['database'] = self.database_name
@@ -56,9 +56,9 @@ class OSM:
         self.connection = self.engine.connect()
 
     # An alternative to sqlalchemy_utils.create_database()
-    def create_db(self, database_name='osm_extracts'):
+    def create_db(self, database_name='osm_data_extracts'):
         """
-        :param database_name: [str] default as 'osm_extracts'; alternatives such as 'OpenStreetMap', ...
+        :param database_name: [str; 'osm_data_extracts'(default)] name of a database
 
         from psycopg2 import OperationalError
         try:
@@ -72,10 +72,16 @@ class OSM:
         self.engine.execute('CREATE DATABASE "{}";'.format(database_name))
         self.connect_db(database_name=database_name)
 
+    # Get size of a database
+    def get_db_size(self, database_name=None):
+        db_name = '\'{}\''.format(database_name) if database_name else 'current_database()'
+        db_size = self.engine.execute('SELECT pg_size_pretty(pg_database_size({})) AS size;'.format(db_name))
+        print(db_size.fetchone()[0])
+
     # Kill the connection to the specified database
     def disconnect(self, database_name=None):
         """
-        :param database_name: [str] Name of database to disconnect from； None (default) to disconnect the current one
+        :param database_name: [str; None(default)] name of database to disconnect from
 
         Alternative way:
         SELECT
@@ -101,34 +107,38 @@ class OSM:
     # Drop the specified database
     def drop(self, database_name=None):
         """
-        :param database_name: [str] Name of database to disconnect from, or None (default) to disconnect the current one
+        :param database_name: [str] name of database to disconnect from, or None (default) to disconnect the current one
         """
         db_name = self.database_name if database_name is None else database_name
-        self.disconnect(db_name)
         if confirmed("Confirmed to drop the database \"{}\"?".format(db_name)):
-            self.engine.execute('DROP DATABASE "{}"'.format(db_name))
-        else:
-            pass
+            self.disconnect(db_name)
+            self.engine.execute('DROP DATABASE IF EXISTS "{}"'.format(db_name))
 
     # Create a new schema in the database being currently connected
     def create_schema(self, schema_name):
         """
-        :param schema_name: [str] Schema name
+        :param schema_name: [str] name of a schema
         """
         self.engine.execute('CREATE SCHEMA IF NOT EXISTS "{}";'.format(schema_name))
 
     # Drop a schema in the database being currently connected
-    def drop_schema(self, schema_name):
+    def drop_schema(self, *schema_names):
         """
-        :param schema_name: [str] Schema name (default layer name)
+        :param schema_names: [str] name of one schema, or names of multiple schemas
         """
-        self.engine.execute('DROP SCHEMA IF EXISTS "{}";'.format(schema_name))
+        if schema_names:
+            schemas = tuple(schema_name for schema_name in schema_names)
+        else:
+            schemas = tuple(x for x in Inspector.from_engine(self.engine).get_schema_names()
+                            if x != 'public' and x != 'information_schema')
+        if confirmed("Confirmed to drop the schema(s): {}".format(schemas)):
+            self.engine.execute(('DROP SCHEMA IF EXISTS ' + '%s, '*(len(schemas) - 1) + '%s CASCADE;') % schemas)
 
     # Check if a table exists
-    def table_exists(self, schema_name, table_name):
+    def subregion_table_exists(self, schema_name, table_name):
         """
-        :param schema_name: [str] e.g. 'public'
-        :param table_name: [str] table name
+        :param schema_name: [str] name of a schema
+        :param table_name: [str] name of a table
         :return: [bool]
         """
         res = self.engine.execute("SELECT EXISTS("
@@ -137,47 +147,37 @@ class OSM:
                                   "AND table_name='{}');".format(schema_name, table_name))
         return res.fetchone()[0]
 
-    # Insert a value to database
-    def insert_dat(self, dat, schema_name, table_name, col_name):
-        """ insert a new vendor into the vendors table """
-        schemas = Inspector.from_engine(self.engine)
-        if schema_name not in schemas.get_table_names():
-            self.create_schema(schema_name)
-        sql_command = "INSERT INTO %s(%s) VALUES(%s);"
-        try:
-            # execute the INSERT statement
-            self.engine.execute(sql_command, (table_name, col_name, dat))
-        except (Exception, DatabaseError) as e:
-            print(e)
-        finally:
-            if self.connection is not None:
-                self.connection.close()
-
     # Import data (as a pandas.DataFrame) into the database being currently connected
-    def dump_layer_data(self, dat, schema_name, table_name, if_exists='replace', parsed=False):
+    def dump_osm_pbf_data_by_layer(self, layer_data, schema_name, table_name, parsed=True, if_exists='replace'):
         """
-        :param dat: [pandas.DataFrame]
-        :param schema_name: [str] e.g. 'public'
-        :param table_name: [str] table name
-        :param if_exists: [str] 'fail', 'replace', or 'append'; default 'fail'
-        :param parsed: [bool] Whether 'data' has been parsed; False (default)
+        :param layer_data: [pandas.DataFrame] data of one layer
+        :param schema_name: [str] name of the layer
+        :param table_name: [str] name of the targeted table
+        :param parsed: [bool; True(default)] whether 'layer_data' has been parsed
+        :param if_exists: [str] 'fail', 'replace', or 'append'; default 'replace'
         """
         if schema_name not in Inspector.from_engine(self.engine).get_schema_names():
             self.create_schema(schema_name)
+
         if not parsed:
-            dat.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False,
-                       dtype={'geometry': types.JSON, 'properties': types.JSON})
-        else:  # There is an error. To be fixed...
-            dat.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False,
-                       dtype={'other_tags': types.JSON, 'coordinates': types.ARRAY})
+            layer_data.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False,
+                              dtype={'geometry': types.JSON, 'properties': types.JSON})
+        else:
+            lyr_dat = layer_data.copy()
+            lyr_dat.coordinates = layer_data.coordinates.map(lambda x: x.wkt)
+            lyr_dat.other_tags = layer_data.other_tags.astype(str)
+            # dtype={'coordinates': types.TEXT, 'other_tags': types.TEXT}
+            lyr_dat.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False)
 
     # Import all data of a given (sub)region
-    def dump_data(self, subregion_data, table_name, parsed=False, subregion_name_as_table_name=True):
+    def dump_osm_pbf_data(self, subregion_data, table_name, parsed=True, if_exists='replace',
+                          subregion_name_as_table_name=True):
         """
-        :param subregion_data: [pandas.DataFrame]
-        :param table_name: [str] (Recommended to be) 'subregion_name'
-        :param parsed: [bool] Whether 'data' has been parsed; False (default)
-        :param subregion_name_as_table_name: [bool] Whether to use subregion name as table name; True (default)
+        :param subregion_data: [pandas.DataFrame] data of a subregion
+        :param table_name: [str] name of a table; e.g. name of the subregion (recommended)
+        :param parsed: [bool; True(default)] whether 'subregion_data' has been parsed
+        :param if_exists: [str; 'replace'(default)] 'fail', 'replace', or 'append'
+        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
         """
         if subregion_name_as_table_name:
             subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
@@ -185,24 +185,26 @@ class OSM:
         print("Dumping \"{}\" to PostgreSQL ... ".format(table_name))
         for data_type, data in subregion_data.items():
             print("         {} ... ".format(data_type), end="")
-            try:
-                if data.empty and self.table_exists(schema_name=data_type, table_name=table_name):
-                    print("The layer is empty. Table (probably empty) already exists in the database.")
-                    pass
-                else:
-                    self.dump_layer_data(data, schema_name=data_type, table_name=table_name, parsed=parsed)
+            if data.empty and self.subregion_table_exists(schema_name=data_type, table_name=table_name):
+                print("The layer is empty. An empty table already exists in the database.")
+                pass
+            else:
+                try:
+                    self.dump_osm_pbf_data_by_layer(data, data_type, table_name, parsed, if_exists)
                     print("Done.")
-            except Exception as e:
-                print("Failed. {}".format(e))
+                except Exception as e:
+                    print("Failed. {}".format(e))
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
-    def read_table(self, table_name, *schema_names, subregion_name_as_table_name=True, chunk_size=None):
+    def read_osm_pbf_data(self, table_name, *schema_names, parsed=True, subregion_name_as_table_name=True,
+                          chunk_size=None):
         """
-        :param table_name: [str] Table name; 'subregion_name' is recommended to be used when importing the data
-        :param schema_names: [iterable] Layer name, or a list of layer names, e.g. ['points', 'lines']
-        :param subregion_name_as_table_name: [bool] Whether to use subregion name as table name; True (default)
-        :param chunk_size: [int] or None (default); number of rows to include in each chunk
-        :return: [dict]
+        :param table_name: [str] name of a table name; 'subregion_name' is recommended when importing the data
+        :param schema_names: [str] one or multiple names of layers, e.g. 'points', 'lines'
+        :param parsed: [bool; True(default)] whether the table data was parsed before being imported
+        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as 'table_name'
+        :param chunk_size: [int or None(default)] number of rows to include in each chunk
+        :return: [dict] e.g. {layer_name_1: layer_data_1, ...}
         """
         if subregion_name_as_table_name:
             subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
@@ -216,16 +218,37 @@ class OSM:
 
         layer_data = []
         for schema_name in geom_types:
-            sql_query = 'SELECT * FROM {}."{}";'.format(schema_name, table_name)
-            layer_data.append(read_sql(sql=sql_query, con=self.engine, chunksize=chunk_size))
+            lyr_dat = read_sql(sql='SELECT * FROM {}."{}";'.format(schema_name, table_name),
+                               con=self.engine, chunksize=chunk_size)
+            if parsed:
+                lyr_dat.coordinates = lyr_dat.coordinates.map(wkt.loads)
+                lyr_dat.other_tags = lyr_dat.other_tags.map(eval)
+            layer_data.append(lyr_dat)
 
         return dict(zip(geom_types, layer_data))
 
+    # Remove subregion data from the database being currently connected
+    def drop_subregion_data_by_layer(self, table_name, *schema_names):
+        """
+        :param schema_names: [str] one or multiple names of schemas
+        :param table_name: [str] name of a subregion
+        """
+        if schema_names:
+            geom_types = [x for x in schema_names]
+        else:
+            geom_types = [x for x in Inspector.from_engine(self.engine).get_schema_names()
+                          if x != 'public' and x != 'information_schema']
+        t_name = extractOne(table_name, get_subregion_info_index('GeoFabrik-subregion-name-list'), score_cutoff=10)[0]
+        tables = tuple(('{}.\"{}\"'.format(schema_name, t_name) for schema_name in geom_types))
+        self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(tables) - 1) + '%s CASCADE;') % tables)
+
     # Remove tables from the database being currently connected
-    def drop_table(self, schema_name, *table_names):
+    def drop_layer_data_by_subregion(self, schema_name, *table_names):
         """
-        :param schema_name: [str] Schema name (default layer name)
-        :param table_names: [iterable] Table name, or a list of table names, e.g. a list of subregion names
+        :param schema_name: [str] name of a layer name
+        :param table_names: [str] one or multiple names of subregions
         """
-        t_names = tuple(('{}.{}'.format(schema_name, t) for t in table_names))
-        self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(t_names) - 1) + '%s;') % t_names)
+        subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
+        t_names = (extractOne(table_name, subregion_names, score_cutoff=10)[0] for table_name in table_names)
+        tables = tuple(('{}.\"{}\"'.format(schema_name, table_name) for table_name in t_names))
+        self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(tables) - 1) + '%s CASCADE;') % tables)
