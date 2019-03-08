@@ -1,5 +1,8 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
+
+.idea/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *$py.class
@@ -15,7 +18,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/

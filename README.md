@@ -1,6 +1,6 @@
 # pydriosm
 
-**(Version 1.0.2)**
+**(Version 1.0.3)**
 
 This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.osm.pbf** and **.shp.zip**) that are available at [Geofabrik's free download server](https://download.geofabrik.de/) and [BBBike.org](https://www.bbbike.org/). In addition, it also provides a convenient way of importing/dumping the parsed data to a PostgreSQL sever. (Note that the package is written in Python 3.x on Windows operating system and might not be compatible with Python 2.x.)
 
@@ -77,19 +77,21 @@ pydriosm.download_subregion_osm_file(subregion_name, download_path=download_path
 
 #### Reading/parsing data
 
-Pre-parse the **.osm.pbf** data, which relies mainly on [GDAL](https://pypi.org/project/GDAL/). Try:
+Pre-parsing the **.osm.pbf** data relies mainly on [GDAL](https://pypi.org/project/GDAL/):
 
 ```python
-greater_london = pydriosm.read_raw_osm_pbf(subregion_name, rm_raw_file=False)
+greater_london = pydriosm.read_osm_pbf(subregion_name, rm_raw_file=False)
 ```
 
-Note that `greater_london` is a `dict` with the keys being the name of five different layers: 'points', 'lines', 'multilinestrings', 'multipolygons', and 'other_relations'.
+Note that `greater_london` is a `dict` with its keys being the name of five different layers: 'points', 'lines', 'multilinestrings', 'multipolygons', and 'other_relations'.
 
-Or, fully parse the .osm.pbf data, which just further processes the pre-parsed data 
+To skip pre-parsing, we could go straight to fully parse the **.osm.pbf** data:
 
 ```python
 greater_london_parsed = pydriosm.read_parsed_osm_pbf(subregion_name)
 ```
+
+`read_parsed_osm_pbf()` also returns a `dict`.
 
 To make things easier, we can simply skip the download step and run the `read_...` functions directly. That is, if the targeted data is not available, either of the above `read_...` functions will download the data first. By default, a confirmation of downloading the data will be asked with the setting of `download_confirmation_required=True`. 
 
@@ -103,42 +105,40 @@ To make things easier, we can simply skip the download step and run the `read_..
 osmdb = pydriosm.OSM()
 ```
 
-For the class to establish a connection with the server, we need type in our username, password, host name/address and name of the database we intend to connect. For example, we may type in 'postgres' to connect the common database named, 'postgres'. Note that all quotation marks should be removed when typing in the name.
+For the class to establish a connection with the server, we need type in our username, password, host name/address and name of the database we intend to connect. For example, we may type in 'postgres' to connect the common database (i.e. 'postgres'). Note that all quotation marks should be removed when typing in the name.
 
 
 
-If we may want to connect to another database (which is already available), we could try:
+If we may want to connect to another database, we could try:
 
 ```python
-osmdb.connect_db(database_name='osm_extracts')
+osmdb.connect_db(database_name='osm_data_extracts')
 ```
 
-Otherwise, we need create a new one as we like:
+'osm_data_extracts' will be created automatically if it does not exist before the connection is established.
+
+Now we would want to dump the parsed **.osm.pbf** data to our server. To import `greater_london_parsed` into the database 'osm_data_extracts':
 
 ```python
-osmdb.create_db(database_name='osm_extracts')  
+osmdb.dump_osm_pbf_data(greater_london_parsed, table_name=subregion_name)
 ```
 
-Now we would probably want to dump the data to our server. To import the pre-parsed **.osm.pbf** data into the database named 'osm_extracts', try:
+Each element (i.e. layer) of `greater_london_parsed` data will be stored in a different schema. The schema is named as the name of a layer.
+
+To read the data from the server:
 
 ```python
-osmdb.dump_data(greater_london, table_name=subregion_name, parsed=False)
+greater_london_loaded = osmdb.read_osm_pbf_data(subregion_name)
 ```
 
-The `greater_london` data will be saved under five different schemas, each named as the name of a layer.
+Note that `greater_london_loaded` may not be exactly the same as `greater_london_parsed`. This is because the elements in `greater_london_parsed` is in the following order: 'points', 'lines', 'multilinestrings', 'multipolygons' and 'other_relations'; whereas when dumping `greater_london_parsed` to the server, the five different schemas are sorted alphabetically as follows: 'lines', 'multilinestrings', 'multipolygons', 'other_relations', and 'points', and so reading data from the server will be following this order. 
 
-Later, to load the data from the server, try:
-
-```python
-greater_london_retrieval = osmdb.read_table(subregion_name)
-```
-
-Note that `greater_london_retrieval` may not be exactly the same as `greater_london`. This is because the items in `greater_london` is in the following order: 'points', 'lines', 'multilinestrings', 'multipolygons' and 'other_relations'; whereas when dumping `greater_london` to the server, the five different schemas are sorted alphabetically as follows: 'lines', 'multilinestrings', 'multipolygons', 'other_relations', and 'points', and reading the data from the server follows this order. 
-
-If we want data of specific layer (or layers), or in a specific order of layers (schemas), try: 
+If we want data of specific layer (or layers), or in a specific order of layers (schemas): 
 
 ```python
-greater_london_points_lines = osmdb.read_table(subregion_name, 'points', 'lines')
+london_points_lines = osmdb.read_osm_pbf_data(subregion_name, 'points', 'lines')
+# Or
+# london_lines_mul = osmdb.read_osm_pbf_data(subregion_name, 'lines', 'multilinestrings')
 ```
 
 
