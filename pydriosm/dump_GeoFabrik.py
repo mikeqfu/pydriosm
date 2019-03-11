@@ -4,6 +4,7 @@ import gc
 import math
 import os
 import rapidjson
+import time
 
 import ogr
 import pandas as pd
@@ -74,14 +75,14 @@ def psql_subregion_osm_data_extracts(selected_subregions, update_osm_pbf=False, 
 
         err_subregion_names = []
         for subregion_name in subregion_names:
+            subregion_filename, path_to_osm_pbf = justify_subregion_input(subregion_name)
+
+            if not os.path.isfile(path_to_osm_pbf) or update_osm_pbf:
+                download_subregion_osm_file(subregion_name, download_path=path_to_osm_pbf, update=update_osm_pbf)
+
+            file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
+
             try:
-                subregion_filename, path_to_osm_pbf = justify_subregion_input(subregion_name)
-
-                if not os.path.isfile(path_to_osm_pbf) or update_osm_pbf:
-                    download_subregion_osm_file(subregion_name, download_path=path_to_osm_pbf, update=update_osm_pbf)
-
-                file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
-
                 if file_size_in_mb <= file_size_limit:
 
                     subregion_osm_pbf = read_osm_pbf(
@@ -141,6 +142,9 @@ def psql_subregion_osm_data_extracts(selected_subregions, update_osm_pbf=False, 
             except Exception as e:
                 print(e)
                 err_subregion_names.append(subregion_name)
+
+            if file_size_in_mb < 15:
+                time.sleep(300)
 
         if len(err_subregion_names) == 0:
             print("\nMission accomplished.\n")
