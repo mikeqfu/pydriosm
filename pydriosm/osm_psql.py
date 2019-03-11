@@ -1,6 +1,7 @@
 """ Data storage with PostgreSQL """
 
-from getpass import getpass
+import gc
+import getpass
 
 from fuzzywuzzy.process import extractOne
 from pandas import read_sql
@@ -24,7 +25,7 @@ class OSM:
         """
         self.database_info = {'drivername': 'postgresql+psycopg2',
                               'username': input('PostgreSQL username: '),
-                              'password': getpass('PostgreSQL password: '),
+                              'password': getpass.getpass('PostgreSQL password: '),
                               'host': input('Host name: '),
                               'port': 5432,  # default by installation
                               'database': input('Database name: ')}
@@ -148,52 +149,59 @@ class OSM:
         return res.fetchone()[0]
 
     # Import data (as a pandas.DataFrame) into the database being currently connected
-    def dump_osm_pbf_data_by_layer(self, layer_data, schema_name, table_name, parsed=True, if_exists='replace'):
+    def dump_osm_pbf_data_by_layer(self, layer_data, schema_name, table_name,
+                                   parsed=True, if_exists='replace', chunk_size=None):
         """
         :param layer_data: [pandas.DataFrame] data of one layer
         :param schema_name: [str] name of the layer
         :param table_name: [str] name of the targeted table
         :param parsed: [bool; True(default)] whether 'layer_data' has been parsed
         :param if_exists: [str] 'fail', 'replace', or 'append'; default 'replace'
+        :param chunk_size: [int; None]
         """
         if schema_name not in Inspector.from_engine(self.engine).get_schema_names():
             self.create_schema(schema_name)
 
         if not parsed:
-            layer_data.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False,
+            layer_data.to_sql(table_name, self.engine, schema=schema_name,
+                              if_exists=if_exists, index=False, chunksize=chunk_size,
                               dtype={'geometry': types.JSON, 'properties': types.JSON})
         else:
             lyr_dat = layer_data.copy()
             lyr_dat.coordinates = layer_data.coordinates.map(lambda x: x.wkt)
             lyr_dat.other_tags = layer_data.other_tags.astype(str)
             # dtype={'coordinates': types.TEXT, 'other_tags': types.TEXT}
-            lyr_dat.to_sql(table_name, self.engine, schema=schema_name, if_exists=if_exists, index=False)
+            lyr_dat.to_sql(table_name, self.engine, schema=schema_name,
+                           if_exists=if_exists, index=False, chunksize=chunk_size)
 
     # Import all data of a given (sub)region
-    def dump_osm_pbf_data(self, subregion_data, table_name, parsed=True, if_exists='replace',
+    def dump_osm_pbf_data(self, subregion_data, table_name, parsed=True, if_exists='replace', chunk_size=None,
                           subregion_name_as_table_name=True):
         """
         :param subregion_data: [pandas.DataFrame] data of a subregion
         :param table_name: [str] name of a table; e.g. name of the subregion (recommended)
         :param parsed: [bool; True(default)] whether 'subregion_data' has been parsed
         :param if_exists: [str; 'replace'(default)] 'fail', 'replace', or 'append'
+        :param chunk_size: [int; None]
         :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
         """
         if subregion_name_as_table_name:
             subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
             table_name = extractOne(table_name, subregion_names, score_cutoff=10)[0]
         print("Dumping \"{}\" to PostgreSQL ... ".format(table_name))
-        for data_type, data in subregion_data.items():
-            print("         {} ... ".format(data_type), end="")
-            if data.empty and self.subregion_table_exists(schema_name=data_type, table_name=table_name):
+        for geom_type, layer_data in subregion_data.items():
+            print("         {} ... ".format(geom_type), end="")
+            if layer_data.empty and self.subregion_table_exists(schema_name=geom_type, table_name=table_name):
                 print("The layer is empty. An empty table already exists in the database.")
                 pass
             else:
                 try:
-                    self.dump_osm_pbf_data_by_layer(data, data_type, table_name, parsed, if_exists)
-                    print("Done.")
+                    self.dump_osm_pbf_data_by_layer(layer_data, geom_type, table_name, parsed, if_exists, chunk_size)
+                    print("Done. Total amount of features: {}".format(len(layer_data)))
                 except Exception as e:
                     print("Failed. {}".format(e))
+            del layer_data
+            gc.collect()
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
     def read_osm_pbf_data(self, table_name, *schema_names, parsed=True, subregion_name_as_table_name=True,
