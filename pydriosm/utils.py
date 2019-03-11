@@ -1,9 +1,10 @@
 """ Utilities - Helper functions """
 
 import collections
-import rapidjson
+import math
 import os
 import pickle
+import rapidjson
 import re
 
 import pkg_resources
@@ -158,9 +159,7 @@ def load_json(path_to_json):
 # Download and show progress
 def download(url, path_to_file):
     """
-
     Reference: https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests
-
     :param url:
     :param path_to_file:
     :return:
@@ -237,3 +236,14 @@ def update_nested_dict(source_dict, overrides):
         else:
             source_dict[key] = overrides[key]
     return source_dict
+
+
+# Split a list into (evenly sized) chunks
+def split_list(lst, no_chunks):
+    """Yield successive n-sized chunks from a list
+    Reference: https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
+
+    """
+    chunk_size = math.ceil(len(lst) / no_chunks)
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
