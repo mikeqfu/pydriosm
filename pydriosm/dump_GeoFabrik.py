@@ -143,8 +143,8 @@ def psql_subregion_osm_data_extracts(selected_subregions, update_osm_pbf=False, 
                 print(e)
                 err_subregion_names.append(subregion_name)
 
-            if file_size_in_mb < 15:
-                time.sleep(300)
+            if file_size_in_mb < 5:
+                time.sleep(60)
 
         if len(err_subregion_names) == 0:
             print("\nMission accomplished.\n")
