@@ -1,8 +1,9 @@
 """ Parse/read OSM data """
 
-import errno
+import gc
 import glob
 import itertools
+import math
 import os
 import rapidjson
 import re
@@ -16,8 +17,9 @@ import pandas as pd
 import shapefile
 import shapely.geometry
 
-import pydriosm.download_GeoFabrik as dGF
-from pydriosm.utils import cd_dat_geofabrik, confirmed, download, load_pickle, osm_geom_types, save_pickle
+from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
+from pydriosm.download_GeoFabrik import get_download_url, get_subregion_info_index, make_default_file_path
+from pydriosm.utils import cd_dat_geofabrik, confirmed, download, load_pickle, osm_geom_types, save_pickle, split_list
 
 
 # Search the OSM data directory and its sub-directories to get the path to the file
@@ -33,7 +35,7 @@ def fetch_osm_file(subregion_name, layer, feature=None, file_format=".shp", upda
                 ['...\\dat_GeoFabrik\\Europe\\Great Britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp'],
                 if such a file exists, and [] otherwise.
     """
-    subregion_names = dGF.get_subregion_info_index("GeoFabrik-subregion-name-list", update=update)
+    subregion_names = get_subregion_info_index("GeoFabrik-subregion-name-list", update=update)
     subregion_name_ = fuzzywuzzy.process.extractOne(subregion_name, subregion_names, score_cutoff=10)[0]
     subregion = subregion_name_.lower().replace(" ", "-")
     osm_file_path = []
@@ -63,8 +65,8 @@ def get_local_file_path(subregion_name, file_format=".osm.pbf"):
     :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
     :return: [str] default local path to the file with the extension of the specified file_format
     """
-    subregion_name_, download_url = dGF.get_download_url(subregion_name, file_format, update=False)
-    _, file_path = dGF.make_default_file_path(subregion_name_, file_format)
+    subregion_name_, download_url = get_download_url(subregion_name, file_format, update=False)
+    _, file_path = make_default_file_path(subregion_name_, file_format)
     return file_path
 
 
@@ -113,9 +115,9 @@ def merge_shp_files(subregion_names, layer, update=False, download_confirmation_
 
     """
     # Make sure all the required shape files are ready
-    subregion_name_and_url = [dGF.get_download_url(subregion_name, ".shp.zip") for subregion_name in subregion_names]
+    subregion_name_and_url = [get_download_url(subregion_name, ".shp.zip") for subregion_name in subregion_names]
     # Download the requested OSM file
-    filename_and_path = [dGF.make_default_file_path(k, ".shp.zip") for k, _ in subregion_name_and_url]
+    filename_and_path = [make_default_file_path(k, ".shp.zip") for k, _ in subregion_name_and_url]
 
     info_list = [list(itertools.chain(*x)) for x in zip(subregion_name_and_url, filename_and_path)]
 
@@ -183,8 +185,8 @@ def read_shp_zip(subregion_name, layer, feature=None,
     :param pickle_it: [bool]
     :return: [GeoDataFrame]
     """
-    subregion_name_, _ = dGF.get_download_url(subregion_name, file_format=".shp.zip")
-    _, path_to_shp_zip = dGF.make_default_file_path(subregion_name_, file_format=".shp.zip")
+    subregion_name_, _ = get_download_url(subregion_name, file_format=".shp.zip")
+    _, path_to_shp_zip = make_default_file_path(subregion_name_, file_format=".shp.zip")
 
     extract_dir = os.path.splitext(path_to_shp_zip)[0]
 
@@ -214,7 +216,7 @@ def read_shp_zip(subregion_name, layer, feature=None,
                 # Download the requested OSM file urlretrieve(download_url, file_path)
                 if confirmed(prompt="To download {}?".format(os.path.basename(path_to_shp_zip)),
                              resp=False, confirmation_required=download_confirmation_required):
-                    dGF.download_subregion_osm_file(subregion_name, file_format='.shp.zip', update=update)
+                    download_subregion_osm_file(subregion_name, file_format='.shp.zip', update=update)
 
             with zipfile.ZipFile(path_to_shp_zip, 'r') as shp_zip:
                 members = [f.filename for f in shp_zip.filelist if layer in f.filename]
@@ -292,7 +294,7 @@ def get_osm_pbf_layer_idx_names(subregion, update=False, download_confirmation_r
     if not os.path.isfile(path_to_osm_pbf) or update:
         if confirmed(prompt="To download \"{}\"?".format(subregion_filename, resp=False),
                      resp=False, confirmation_required=download_confirmation_required):
-            dGF.download_subregion_osm_file(subregion_filename, download_path=path_to_osm_pbf, update=update)
+            download_subregion_osm_file(subregion_filename, download_path=path_to_osm_pbf, update=update)
 
     try:
         # Start parsing the '.osm.pbf' file
@@ -315,9 +317,86 @@ def get_osm_pbf_layer_idx_names(subregion, update=False, download_confirmation_r
     return layer_idx_names
 
 
-# Read '.osm.pbf' file roughly into pandas.DataFrames
-def read_osm_pbf(subregion, update=False, download_confirmation_required=True, file_size_limit=100, pickle_it=True,
-                 rm_raw_file=True):
+# Parse each layer's data
+def parse_layer_data(layer_data, geo_typ, fmt_other_tags, fmt_single_geom, fmt_multi_geom):
+    """
+    :param layer_data: [pandas.DataFrame]
+    :param geo_typ: [str]
+    :param fmt_other_tags: [bool]
+    :param fmt_single_geom: [bool]
+    :param fmt_multi_geom: [bool]
+    :return:
+    """
+
+    def reformat_single_geometry(geom_data):
+        """ Format the coordinates with shapely.geometry
+        :param geom_data:
+        :return:
+        """
+        geom_types_funcs, geom_type = osm_geom_types(), list(set(geom_data.geom_type))[0]
+        geom_type_func = geom_types_funcs[geom_type]
+        if geom_type == 'MultiPolygon':
+            sub_geom_type_func = geom_types_funcs['Polygon']
+            geom_coords = geom_data.coordinates.map(
+                lambda x: geom_type_func(sub_geom_type_func(l) for ls in x for l in ls))
+        else:
+            geom_coords = geom_data.coordinates.map(lambda x: geom_type_func(x))
+        return geom_coords
+
+    def reformat_multi_geometries(geom_collection):
+        """ Format geometry collections with shapely.geometry
+        :param geom_collection:
+        :return:
+        """
+        geom_types_funcs = osm_geom_types()
+        geom_types = [g['type'] for g in geom_collection]
+        coordinates = [gs['coordinates'] for gs in geom_collection]
+        geometry_collection = [geom_types_funcs[geom_type](coords)
+                               if 'Polygon' not in geom_type
+                               else geom_types_funcs[geom_type](pt for pts in coords for pt in pts)
+                               for geom_type, coords in zip(geom_types, coordinates)]
+        return shapely.geometry.GeometryCollection(geometry_collection)
+
+    def decompose_other_tags(other_tags_x):
+        """ Transform a 'other_tags' into a dictionary
+        :param other_tags_x: [str] or None
+        :return:
+        """
+        if other_tags_x:
+            raw_other_tags = [re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', other_tags_x)]
+            other_tags = {k: v.replace('<br>', ' ') for k, v in
+                          (each_tag.split('"=>"') for each_tag in raw_other_tags)}
+        else:  # e.g. other_tags_x is None
+            other_tags = other_tags_x
+        return other_tags
+
+    # Start parsing 'geometry' column
+    dat_geometry = pd.DataFrame(x for x in layer_data.geometry).rename(columns={'type': 'geom_type'})
+
+    if geo_typ != 'other_relations':  # geo_type can be 'points', 'lines', 'multilinestrings', or 'multipolygons'
+        if fmt_single_geom:
+            dat_geometry.coordinates = reformat_single_geometry(dat_geometry)
+    else:  # geo_typ == 'other_relations'
+        if fmt_multi_geom:
+            dat_geometry.geometries = dat_geometry.geometries.map(reformat_multi_geometries)
+            dat_geometry.rename(columns={'geometries': 'coordinates'}, inplace=True)
+
+    # Start parsing 'properties' column
+    dat_properties = pd.DataFrame(x for x in layer_data.properties)
+
+    if fmt_other_tags:
+        dat_properties.other_tags = dat_properties.other_tags.map(decompose_other_tags)
+
+    parsed_layer_data = layer_data[['id']].join(dat_geometry).join(dat_properties)
+    parsed_layer_data.drop(['geom_type'], axis=1, inplace=True)
+
+    del dat_geometry, dat_properties
+
+    return parsed_layer_data
+
+
+# Parse '.osm.pbf' file
+def parse_osm_pbf(path_to_osm_pbf, chunks_no, granulated, fmt_other_tags, fmt_single_geom, fmt_multi_geom):
     """
     Reference: http://www.gdal.org/drv_osm.html
 
@@ -331,185 +410,126 @@ def read_osm_pbf(subregion, update=False, download_confirmation_required=True, f
         'other_relations'   - 4: "relation" features that do not belong to the above 2 layers
 
     Note that this function can require fairly high amount of physical memory to read large files e.g. > 200MB
+    :param path_to_osm_pbf: [str]
+    :param chunks_no: [int; None]
+    :param granulated: [bool]
+    :param fmt_other_tags: [bool]
+    :param fmt_single_geom: [bool]
+    :param fmt_multi_geom: [bool]
+    :return: [dict]
+    """
+    raw_osm_pbf = ogr.Open(path_to_osm_pbf)
+    # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
+    layer_names, layer_data = [], []
+    # Parse the data feature by feature
+    layer_count = raw_osm_pbf.GetLayerCount()
+    # Loop through all available layers
+    for i in range(layer_count):
+        # Get the data and name of the i-th layer
+        lyr = raw_osm_pbf.GetLayerByIndex(i)
+        lyr_name = lyr.GetName()
 
-    :param subregion: [str] Name of subregion or customised path of a .osm.pbf file
-                        If 'subregion' is the name of the subregion, the default file path will be used.
+        if chunks_no:
+            lyr_feats = [feat for _, feat in enumerate(lyr)]
+            # no_chunk = file_size_in_mb / file_size_limit; chunk_size = len(lyr_feats) / no_chunk
+            chunked_lyr_feats = split_list(lyr_feats, chunks_no)
+
+            del lyr_feats
+            gc.collect()
+
+            lyr_dat = pd.DataFrame()
+            for lyr_chunk in chunked_lyr_feats:
+                lyr_chunk_feat = (feat.ExportToJson() for feat in lyr_chunk)
+                lyr_chunk_dat = pd.DataFrame(rapidjson.loads(feat) for feat in lyr_chunk_feat)
+                if granulated:
+                    lyr_chunk_dat = parse_layer_data(lyr_chunk_dat, lyr_name,
+                                                     fmt_other_tags, fmt_single_geom, fmt_multi_geom)
+                lyr_dat = lyr_dat.append(lyr_chunk_dat)
+
+                # feat_dat = pd.DataFrame.from_dict(rapidjson.loads(feat), orient='index').T
+                # Or, feat_dat = pd.read_json(feat, typ='series').to_frame().T
+                # feat_dat = parse_layer_data(feat_dat, lyr_name, fmt_other_tags, fmt_single_geom, fmt_multi_geom)
+                # lyr_dat = lyr_dat.append(feat_dat)
+
+                del lyr_chunk, lyr_chunk_dat
+                gc.collect()
+
+        else:
+            lyr_feats = (feat.ExportToJson() for _, feat in enumerate(lyr))
+            lyr_dat = pd.DataFrame(rapidjson.loads(feat) for feat in lyr_feats)  # Get the data
+            if granulated:
+                lyr_dat = parse_layer_data(lyr_dat, lyr_name, fmt_other_tags, fmt_single_geom, fmt_multi_geom)
+
+        layer_names.append(lyr_name)
+        layer_data.append(lyr_dat)
+
+        del lyr_dat
+        gc.collect()
+
+    raw_osm_pbf.Release()
+
+    del raw_osm_pbf
+    gc.collect()
+
+    # Make a dictionary, {layer_name: layer_DataFrame}
+    osm_pbf_data = dict(zip(layer_names, layer_data))
+
+    return osm_pbf_data
+
+
+# Read '.osm.pbf' file into pandas.DataFrames, either roughly or with a granularity for a given subregion
+def read_osm_pbf(subregion, update=False, download_confirmation_required=True,
+                 file_size_limit=60, granulated=True,
+                 fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
+                 pickle_it=True, rm_raw_file=True):
+    """
+    :param subregion: [str] name of subregion or customised path of a .osm.pbf file
     :param update: [bool]
     :param download_confirmation_required: [bool]
-    :param file_size_limit: [int] e.g. 50, or 100(default)
+    :param file_size_limit: [numbers.Number] limit of file size (in MB),  e.g. 50, or 100(default)
+    :param granulated: [bool]
+    :param fmt_other_tags: [bool]
+    :param fmt_single_geom: [bool]
+    :param fmt_multi_geom: [bool]
     :param pickle_it: [bool]
     :param rm_raw_file: [bool]
     :return: [dict] or None
+
+    If 'subregion' is the name of the subregion, the default file path will be used.
     """
+    assert isinstance(file_size_limit, int) or file_size_limit is None
+
     subregion_filename, path_to_osm_pbf = justify_subregion_input(subregion)
 
-    path_to_pickle = path_to_osm_pbf.replace(".osm.pbf", "-preprocessed.pickle")
+    path_to_pickle = path_to_osm_pbf.replace(".osm.pbf", ".pickle" if granulated else "-raw.pickle")
     if os.path.isfile(path_to_pickle) and not update:
-        raw_osm_pbf_data = load_pickle(path_to_pickle)
+        osm_pbf_data = load_pickle(path_to_pickle)
     else:
         # If the target file is not available, try downloading it first.
         if not os.path.isfile(path_to_osm_pbf) or update:
             if confirmed(prompt="To download \"{}\"?".format(subregion_filename),
                          resp=False, confirmation_required=download_confirmation_required):
-                dGF.download_subregion_osm_file(subregion, download_path=path_to_osm_pbf, update=update)
+                download_subregion_osm_file(subregion, download_path=path_to_osm_pbf, update=update)
 
-        file_size_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2))
+        file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
 
-        if file_size_mb <= file_size_limit:
-
-            print("\nParsing \"{}\" ... ".format(subregion_filename), end="")
-
-            # Start parsing the '.osm.pbf' file
-            raw_osm_pbf = ogr.Open(path_to_osm_pbf)
-            # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
-            layer_count, layer_names, layer_data = raw_osm_pbf.GetLayerCount(), [], []
-
-            try:
-                # Loop through all available layers
-                for i in range(layer_count):
-                    lyr = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
-                    layer_names.append(lyr.GetName())  # Get the name of the i-th layer
-                    layer_data.append(pd.DataFrame(rapidjson.loads(f.ExportToJson()) for _, f in enumerate(lyr)))
-                raw_osm_pbf.Release()
-                # Make a dictionary, {layer_name: layer_DataFrame}
-                raw_osm_pbf_data = dict(zip(layer_names, layer_data))
-                print("Successfully.\n")
-
-            except Exception as e:
-                raw_osm_pbf_data = dict(zip(layer_names, layer_data))
-                print("Failed. {}.\n".format(e if os.path.isfile(path_to_osm_pbf) else os.strerror(errno.ENOENT)))
-
-            if pickle_it:
-                save_pickle(raw_osm_pbf_data, path_to_pickle)
-
-            if rm_raw_file:
-                dGF.remove_subregion_osm_file(path_to_osm_pbf)
-
+        if file_size_limit and file_size_in_mb > file_size_limit:
+            chunks_no = math.ceil(file_size_in_mb / file_size_limit)  # Parsing the '.osm.pbf' file in a chunk-wise way
         else:
-            raw_osm_pbf_data = None
+            chunks_no = None
 
-    return raw_osm_pbf_data
-
-
-# Parse each layer's data
-def parse_layer_data(layer_data, geo_typ, parse_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True):
-    """
-    :param layer_data: [pandas.DataFrame]
-    :param geo_typ: [str]
-    :param parse_other_tags: [bool]
-    :param fmt_single_geom: [bool]
-    :param fmt_multi_geom: [bool]
-    :return:
-    """
-
-    # Start parsing 'geometry' column
-    dat_geometry = pd.DataFrame(x for x in layer_data.geometry).rename(columns={'type': 'geom_type'})
-
-    if geo_typ != 'other_relations':  # geo_type can be 'points', 'lines', 'multilinestrings', or 'multipolygons'
-
-        def format_single_geometry(geom_data):
-            """ Format the coordinates with shapely.geometry
-            :param geom_data:
-            :return:
-            """
-            geom_types_funcs, geom_type = osm_geom_types(), list(set(geom_data.geom_type))[0]
-            geom_type_func = geom_types_funcs[geom_type]
-            if geom_type == 'MultiPolygon':
-                sub_geom_type_func = geom_types_funcs['Polygon']
-                geom_coords = geom_data.coordinates.map(
-                    lambda x: geom_type_func(sub_geom_type_func(l) for ls in x for l in ls))
-            else:
-                geom_coords = geom_data.coordinates.map(lambda x: geom_type_func(x))
-            return geom_coords
-
-        if fmt_single_geom:
-            dat_geometry.coordinates = format_single_geometry(dat_geometry)
-
-    else:  # geo_typ == 'other_relations'
-
-        def format_multi_geometries(geom_collection):
-            """ Format geometry collections with shapely.geometry
-            :param geom_collection:
-            :return:
-            """
-            geom_types_funcs = osm_geom_types()
-            geom_types = [g['type'] for g in geom_collection]
-            coordinates = [gs['coordinates'] for gs in geom_collection]
-            geometry_collection = [geom_types_funcs[geom_type](coords)
-                                   if 'Polygon' not in geom_type
-                                   else geom_types_funcs[geom_type](pt for pts in coords for pt in pts)
-                                   for geom_type, coords in zip(geom_types, coordinates)]
-            return shapely.geometry.GeometryCollection(geometry_collection)
-
-        if fmt_multi_geom:
-            dat_geometry.geometries = dat_geometry.geometries.map(format_multi_geometries)
-            dat_geometry.rename(columns={'geometries': 'coordinates'}, inplace=True)
-
-    # Start parsing 'properties' column
-    dat_properties = pd.DataFrame(x for x in layer_data.properties)
-
-    def parse_other_tags_column(x):
-        """ Transform a 'other_tags' into a dictionary
-        :param x: [str] or None
-        :return:
-        """
-        if x is not None:
-            raw_other_tags = [re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', x)]
-            other_tags = {k: v.replace('<br>', ' ') for k, v in
-                          (each_tag.split('"=>"') for each_tag in raw_other_tags)}
-        else:
-            other_tags = x
-        return other_tags
-
-    if parse_other_tags:
-        dat_properties.other_tags = dat_properties.other_tags.map(parse_other_tags_column)
-
-    parsed_layer_data = dat_geometry.join(dat_properties)
-    parsed_layer_data.drop(['geom_type'], axis=1, inplace=True)
-
-    return parsed_layer_data
-
-
-# Read parsed .osm.pbf data for a specific subregion
-def read_parsed_osm_pbf(subregion, update_osm_pbf=False, download_confirmation_required=True,
-                        parse_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
-                        pickle_it=True, update=False):
-    """
-    :param subregion: [str] Name of subregion or customised path of a .osm.pbf file
-                        If 'subregion' is the name of the subregion, the default file path will be used.
-    :param update_osm_pbf: [bool]
-    :param download_confirmation_required: [bool]
-    :param parse_other_tags: [bool]
-    :param fmt_single_geom: [bool]
-    :param fmt_multi_geom: [bool]
-    :param pickle_it: [bool]
-    :param update: [bool]
-    :return:
-    """
-    subregion_filename, path_to_osm_pbf = justify_subregion_input(subregion)
-
-    path_to_pickle = path_to_osm_pbf.replace(".osm.pbf", "-parsed.pickle")
-
-    if os.path.isfile(path_to_pickle) and not update:
-        osm_pbf = load_pickle(path_to_pickle)
-    else:
-        raw_osm_pbf_data = read_osm_pbf(subregion, update_osm_pbf, download_confirmation_required,
-                                        pickle_it=True, rm_raw_file=True)
-
-        parsed_data, geom_types = [], []
-        for geom_type, layer_data in raw_osm_pbf_data.items():
-            geom_types.append(geom_type)
-            try:
-                parsed_lyr_data = parse_layer_data(layer_data, geom_type,
-                                                   parse_other_tags, fmt_single_geom, fmt_multi_geom)
-            except Exception as e:
-                print("Failed to parse \"{}\" for \"{}\". {}".format(geom_type, subregion, e))
-                parsed_lyr_data = None
-            parsed_data.append(parsed_lyr_data)
-
-        osm_pbf = dict(zip(geom_types, parsed_data))
+        print("\nParsing \"{}\" ... ".format(subregion_filename), end="")
+        try:
+            osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, chunks_no,
+                                         granulated, fmt_other_tags, fmt_single_geom, fmt_multi_geom)
+            print("Successfully.\n")
+        except Exception as e:
+            print("Failed. {}\n".format(e))
+            osm_pbf_data = None
 
         if pickle_it:
-            save_pickle(osm_pbf, path_to_pickle)
+            save_pickle(osm_pbf_data, path_to_pickle)
+        if rm_raw_file:
+            remove_subregion_osm_file(path_to_osm_pbf)
 
-    return osm_pbf
+    return osm_pbf_data
