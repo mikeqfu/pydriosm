@@ -143,13 +143,14 @@ def psql_subregion_osm_data_extracts(selected_subregions, update_osm_pbf=False, 
                 print(e)
                 err_subregion_names.append(subregion_name)
 
-            time.sleep(60)
+            if subregion_name != subregion_names[-1]:
+                time.sleep(60)
 
         if len(err_subregion_names) == 0:
             print("\nMission accomplished.\n")
         else:
             print("\nErrors occurred when parsing data of the following subregion(s):")
-            print(*err_subregion_names, sep='\n')
+            print(*err_subregion_names, sep=", ")
 
 
 # england_subregions = retrieve_subregions('England')
