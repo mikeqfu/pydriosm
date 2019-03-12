@@ -1,6 +1,6 @@
 # pydriosm
 
-**(Version 1.0.6)**
+**(Version 1.0.7)**
 
 This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.osm.pbf** and **.shp.zip**) which are available at [Geofabrik's free download server](https://download.geofabrik.de/) and [BBBike.org](https://www.bbbike.org/). In addition, it also provides a convenient way to import/dump the parsed data to, and load it from, a PostgreSQL sever. 
 
@@ -43,7 +43,7 @@ import pydriosm
 To play with the OSM data for a region (or rather, a subregion) of which the data extract is available, we just need to simply specify the name of the (sub)region. Let's say we would like to have data of the Greater London area:
 
 ```python
-subregion_name = 'greater london'  
+subregion_name = 'greater london'
 # or subregion_name = 'London'; case-insensitive and fuzzy (but not toooo... fuzzy)
 ```
 
