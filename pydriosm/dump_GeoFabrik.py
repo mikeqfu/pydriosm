@@ -86,7 +86,7 @@ def psql_subregion_osm_data_extracts(selected_subregions, update_osm_pbf=False, 
                 if file_size_in_mb <= file_size_limit:
 
                     subregion_osm_pbf = read_osm_pbf(
-                        subregion_name, update=update_osm_pbf, download_confirmation_required=False,
+                        subregion_name, download_confirmation_required=False,
                         file_size_limit=file_size_limit, granulated=granulated,
                         fmt_other_tags=fmt_other_tags, fmt_single_geom=fmt_single_geom, fmt_multi_geom=fmt_multi_geom,
                         pickle_it=False, rm_raw_file=rm_raw_file)
