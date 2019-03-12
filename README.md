@@ -99,6 +99,18 @@ Setting `pickle_it=True` is to save a local copy of the parsed data as a `pickle
 
 
 
+In comparison, reading **.shp.zip** data relies mainly on [GeoPandas](http://geopandas.org/). For the **.shp.zip** data, we could use `read_shp_zip()` as follows:
+
+```python
+greater_london_shp = pydriosm.read_shp_zip(subregion_name, layer, feature=None, 
+                                           update=False, download_confirmation_required=True, 
+                                           pickle_it=True, rm_extracts=False)
+```
+
+Note that `greater_london_shp` and `greater_london` are in different formats. 
+
+
+
 #### Importing data into, and retrieving data from, the PostgreSQL server
 
 *pydriosm* also provides a class, named 'OSM', which communicates with PostgreSQL server. 
