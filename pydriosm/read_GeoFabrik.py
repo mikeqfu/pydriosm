@@ -363,9 +363,9 @@ def parse_layer_data(layer_data, geo_typ, fmt_other_tags, fmt_single_geom, fmt_m
         :return:
         """
         if other_tags_x:
-            raw_other_tags = [re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', other_tags_x)]
+            raw_other_tags = (re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', other_tags_x))
             other_tags = {k: v.replace('<br>', ' ') for k, v in
-                          (each_tag.split('"=>"') for each_tag in raw_other_tags)}
+                          (re.split('"=>"?', each_tag) for each_tag in filter(None, raw_other_tags))}
         else:  # e.g. other_tags_x is None
             other_tags = other_tags_x
         return other_tags
