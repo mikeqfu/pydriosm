@@ -28,13 +28,10 @@ def retrieve_subregions(region_name):
     def find_subregions(reg_name, reg_sub_idx):
         for k, v in reg_sub_idx.items():
             if k == reg_name:
-                yield v
+                yield list(v.keys()) if isinstance(v, dict) else [reg_name] if isinstance(reg_name, str) else reg_name
             elif isinstance(v, dict):
-                for sub_v in find_subregions(reg_name, v):
-                    if isinstance(sub_v, dict):
-                        yield list(sub_v.keys())
-                    else:
-                        yield sub_v
+                for sub in find_subregions(reg_name, v):
+                    yield list(sub.keys()) if isinstance(sub, dict) else [sub] if isinstance(sub, str) else sub
 
     region_subregion_index = get_region_subregion_index("GeoFabrik-region-subregion-index", file_format=".pickle")
     result = list(find_subregions(region_name, region_subregion_index))[0]
