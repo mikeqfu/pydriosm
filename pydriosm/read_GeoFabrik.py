@@ -174,15 +174,15 @@ def merge_shp_files(subregion_names, layer, update=False, download_confirmation_
 
 # Read a .shp.zip file
 def read_shp_zip(subregion_name, layer, feature=None,
-                 update=False, download_confirmation_required=True, keep_extracts=True, pickle_it=True):
+                 update=False, download_confirmation_required=True, pickle_it=True, rm_extracts=False):
     """
     :param subregion_name: [str] name of a subregion, e.g. 'england', 'oxfordshire', or 'europe'; case-insensitive
     :param layer: [str] name of a OSM layer, e.g. 'railways'
     :param feature: [str] name of a feature, e.g. 'rail'; if None, all available features included; default None
     :param update: [bool] indicates whether to update the relevant file/information; default False
     :param download_confirmation_required: [bool]
-    :param keep_extracts: [bool] indicates whether to keep extracted files from the .shp.zip file; default True
     :param pickle_it: [bool]
+    :param rm_extracts: [bool] indicates whether to keep extracted files from the .shp.zip file; default True
     :return: [GeoDataFrame]
     """
     subregion_name_, _ = get_download_url(subregion_name, file_format=".shp.zip")
@@ -253,15 +253,14 @@ def read_shp_zip(subregion_name, layer, feature=None,
                 shp_data.crs = {'no_defs': True, 'ellps': 'WGS84', 'datum': 'WGS84', 'proj': 'longlat'}
                 shp_data.to_file(path_to_shp_feature, driver='ESRI Shapefile')
 
-        if not keep_extracts:
-            # import shutil
-            # shutil.rmtree(extract_dir)
+        if pickle_it:
+            save_pickle(shp_data, path_to_shp_pickle)
+
+        if rm_extracts:
+            # Alternatively, import shutil; shutil.rmtree(extract_dir)
             for f in glob.glob(os.path.join(extract_dir, "gis.osm*")):
                 # if layer not in f:
                 os.remove(f)
-
-        if pickle_it:
-            save_pickle(shp_data, path_to_shp_pickle)
 
     return shp_data
 
