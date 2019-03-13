@@ -107,7 +107,7 @@ def save_pickle(pickle_data, path_to_pickle):
         pickle_out.close()
         print("Done.")
     except Exception as e:
-        print("failed due to {}.".format(e))
+        print("Failed. {}.".format(e))
 
 
 # Load pickles
@@ -138,7 +138,7 @@ def save_json(json_data, path_to_json):
         json_out.close()
         print("Done.")
     except Exception as e:
-        print("failed due to {}.".format(e))
+        print("Failed. {}.".format(e))
 
 
 # Load JSON files
@@ -150,6 +150,8 @@ def load_json(path_to_json):
     json_in = open(path_to_json, 'r')
     data = rapidjson.load(json_in)
     json_in.close()
+    if isinstance(data, str):
+        data = rapidjson.loads(data)
     return data
 
 
@@ -202,31 +204,6 @@ def osm_geom_types():
                    'MultiPolygon': shapely.geometry.MultiPolygon,
                    'GeometryCollection': shapely.geometry.GeometryCollection}
     return shape_types
-
-
-# Get all subregions
-def get_all_subregions(region_name, region_subregion_index):
-    """
-    Reference:
-    https://gist.github.com/douglasmiranda/5127251
-    https://stackoverflow.com/questions/9807634/find-all-occurrences-of-a-key-in-nested-python-dictionaries-and-lists
-
-    :param region_name: [str]
-    :param region_subregion_index: [dict]
-    :return:
-    """
-    for k, v in region_subregion_index.items():
-        if k == region_name:
-            yield v
-        elif isinstance(v, dict):
-            for x in get_all_subregions(region_name, v):
-                yield x
-        elif isinstance(v, list):
-            for d in v:
-                for y in get_all_subregions(region_name, d):
-                    yield y
-        else:
-            pass
 
 
 # Update a nested dictionary or similar mapping.
