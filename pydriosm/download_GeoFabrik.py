@@ -225,7 +225,7 @@ def collect_subregion_tables_of_continents(confirmation_required=True):
         print("The information collection process was not activated. The existing local copy will be loaded instead.")
 
 
-#
+# Get a table of information for each continent
 def get_subregion_tables_of_continents(update=False):
     path_to_pickle = cd_dat("GeoFabrik-continents-subregion-tables.pickle")
 
@@ -307,10 +307,10 @@ def get_region_subregion_index(index_filename, file_format=".pickle", update=Fal
 
 
 # Get download URL
-def get_download_url(subregion_name, file_format=".osm.pbf", update=False):
+def get_download_url(subregion_name, file_format, update=False):
     """
     :param subregion_name: [str] case-insensitive, e.g. 'Greater London'
-    :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
+    :param file_format: [str] ".osm.pbf", ".shp.zip", or ".osm.bz2"
     :param update: [bool]
     :return: [tuple] of length=2
     """
@@ -339,7 +339,7 @@ def get_default_filename(subregion_name, file_format=".osm.pbf"):
 
 
 # Parse the download URL so as to specify a path for storing the downloaded file
-def make_default_file_path(subregion_name, file_format=".osm.pbf"):
+def make_default_path_to_osm_file(subregion_name, file_format=".osm.pbf"):
     """
     :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
     :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
@@ -403,11 +403,11 @@ def retrieve_subregion_names_from(*subregion_name):
 
 
 # Download data files
-def download_subregion_osm_file(*subregion_name, file_format=".osm.pbf", download_path=None,
+def download_subregion_osm_file(*subregion_name, file_format, download_path=None,
                                 download_confirmation_required=True, update=False):
     """
     :param subregion_name: [str] Name of (sub)region, or a local path where the (sub)region file will be saved
-    :param file_format: [str] ".osm.pbf" (default), ".shp.zip", or ".osm.bz2"
+    :param file_format: [str] ".osm.pbf", ".shp.zip", or ".osm.bz2"
     :param download_path: [str] Full path to save the downloaded file, or None (default, i.e. using default path)
     :param download_confirmation_required: [bool]
     :param update: [bool]
@@ -422,7 +422,7 @@ def download_subregion_osm_file(*subregion_name, file_format=".osm.pbf", downloa
             filename, path_to_file = os.path.basename(download_path), download_path
         else:
             # Download the requested OSM file
-            filename, path_to_file = make_default_file_path(subregion_name_, file_format)
+            filename, path_to_file = make_default_path_to_osm_file(subregion_name_, file_format)
 
         if os.path.isfile(path_to_file) and not update:
             print("\"{}\" is already available for \"{}\" at: \n{}.\n".format(filename, subregion_name_, path_to_file))
