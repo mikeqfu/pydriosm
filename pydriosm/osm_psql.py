@@ -3,7 +3,6 @@
 import gc
 import getpass
 
-from fuzzywuzzy.process import extractOne
 from pandas import read_sql
 from shapely import wkt
 from sqlalchemy import create_engine, types
@@ -11,7 +10,7 @@ from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
 from sqlalchemy_utils import create_database, database_exists
 
-from pydriosm.download_GeoFabrik import get_subregion_info_index
+from pydriosm.download_GeoFabrik import rectify_subregion_name
 from pydriosm.utils import confirmed
 
 
@@ -142,10 +141,11 @@ class OSM:
         :param table_name: [str] name of a table
         :return: [bool]
         """
+        table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
         res = self.engine.execute("SELECT EXISTS("
                                   "SELECT * FROM information_schema.tables "
                                   "WHERE table_schema='{}' "
-                                  "AND table_name='{}');".format(schema_name, table_name))
+                                  "AND table_name='{}');".format(schema_name, table_name_))
         return res.fetchone()[0]
 
     # Import data (as a pandas.DataFrame) into the database being currently connected
@@ -162,8 +162,10 @@ class OSM:
         if schema_name not in Inspector.from_engine(self.engine).get_schema_names():
             self.create_schema(schema_name)
 
+        table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
+
         if not parsed:
-            layer_data.to_sql(table_name, self.engine, schema=schema_name,
+            layer_data.to_sql(table_name_, self.engine, schema=schema_name,
                               if_exists=if_exists, index=False, chunksize=chunk_size,
                               dtype={'geometry': types.JSON, 'properties': types.JSON})
         else:
@@ -171,7 +173,7 @@ class OSM:
             lyr_dat.coordinates = layer_data.coordinates.map(lambda x: x.wkt)
             lyr_dat.other_tags = layer_data.other_tags.astype(str)
             # dtype={'coordinates': types.TEXT, 'other_tags': types.TEXT}
-            lyr_dat.to_sql(table_name, self.engine, schema=schema_name,
+            lyr_dat.to_sql(table_name_, self.engine, schema=schema_name,
                            if_exists=if_exists, index=False, chunksize=chunk_size)
 
     # Import all data of a given (sub)region
@@ -186,8 +188,8 @@ class OSM:
         :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
         """
         if subregion_name_as_table_name:
-            subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
-            table_name = extractOne(table_name, subregion_names, score_cutoff=10)[0]
+            table_name = rectify_subregion_name(table_name)
+
         print("Dumping \"{}\" to PostgreSQL ... ".format(table_name))
         for geom_type, layer_data in subregion_data.items():
             print("         {} ... ".format(geom_type), end="")
@@ -215,8 +217,8 @@ class OSM:
         :return: [dict] e.g. {layer_name_1: layer_data_1, ...}
         """
         if subregion_name_as_table_name:
-            subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
-            table_name = extractOne(table_name, subregion_names, score_cutoff=10)[0]
+            table_name = rectify_subregion_name(table_name)
+        table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
 
         if schema_names:
             geom_types = [x for x in schema_names]
@@ -226,7 +228,7 @@ class OSM:
 
         layer_data = []
         for schema_name in geom_types:
-            lyr_dat = read_sql(sql='SELECT * FROM {}."{}";'.format(schema_name, table_name),
+            lyr_dat = read_sql(sql='SELECT * FROM {}."{}";'.format(schema_name, table_name_),
                                con=self.engine, chunksize=chunk_size)
             if parsed:
                 lyr_dat.coordinates = lyr_dat.coordinates.map(wkt.loads)
@@ -246,8 +248,11 @@ class OSM:
         else:
             geom_types = [x for x in Inspector.from_engine(self.engine).get_schema_names()
                           if x != 'public' and x != 'information_schema']
-        t_name = extractOne(table_name, get_subregion_info_index('GeoFabrik-subregion-name-list'), score_cutoff=10)[0]
-        tables = tuple(('{}.\"{}\"'.format(schema_name, t_name) for schema_name in geom_types))
+
+        table_name = rectify_subregion_name(table_name)
+        table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
+
+        tables = tuple(('{}.\"{}\"'.format(schema_name, table_name_) for schema_name in geom_types))
         self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(tables) - 1) + '%s CASCADE;') % tables)
 
     # Remove tables from the database being currently connected
@@ -256,7 +261,7 @@ class OSM:
         :param schema_name: [str] name of a layer name
         :param table_names: [str] one or multiple names of subregions
         """
-        subregion_names = get_subregion_info_index('GeoFabrik-subregion-name-list')
-        t_names = (extractOne(table_name, subregion_names, score_cutoff=10)[0] for table_name in table_names)
-        tables = tuple(('{}.\"{}\"'.format(schema_name, table_name) for table_name in t_names))
+        table_names = (rectify_subregion_name(table_name) for table_name in table_names)
+        table_names_ = (table_name[:60] + '..' if len(table_name) >= 63 else table_name for table_name in table_names)
+        tables = tuple(('{}.\"{}\"'.format(schema_name, table_name) for table_name in table_names_))
         self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(tables) - 1) + '%s CASCADE;') % tables)

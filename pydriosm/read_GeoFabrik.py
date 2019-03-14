@@ -17,27 +17,44 @@ import pandas as pd
 import shapefile
 import shapely.geometry
 
-from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
-from pydriosm.download_GeoFabrik import get_download_url, get_subregion_info_index, make_default_file_path
+from pydriosm.download_GeoFabrik import download_subregion_osm_file, make_default_file_path
+from pydriosm.download_GeoFabrik import get_download_url, get_subregion_info_index
+from pydriosm.download_GeoFabrik import remove_subregion_osm_file
 from pydriosm.utils import cd_dat_geofabrik, confirmed, download, load_pickle, osm_geom_types, save_pickle, split_list
 
 
+# Justify the input, 'subregion', in the following functions
+def validate_osm_filename_input(subregion, file_format=".osm.pbf"):
+    """
+    :param subregion: [str] could be either the name a subregion or a path
+    :param file_format:
+    :return:
+    """
+    if os.path.isabs(subregion):
+        assert subregion.endswith(file_format), "The input 'subregion' is invalid."
+        path_to_osm_file = subregion
+    else:
+        path_to_osm_file = get_local_file_path(subregion, file_format)
+    subregion_filename = os.path.basename(path_to_osm_file)
+    return subregion_filename, path_to_osm_file
+
+
 # Search the OSM data directory and its sub-directories to get the path to the file
-def fetch_osm_file(subregion_name, layer, feature=None, file_format=".shp", update=False):
+def fetch_osm_file(subregion_name, layer, feature=None, file_format=".shp"):
     """
     :param subregion_name: [str] Name of a subregion, e.g. 'england', 'oxfordshire', or 'Europe'; case-insensitive
     :param layer: [str] Name of a OSM layer, e.g. 'railways'
     :param feature: [str] Name of a feature, e.g. 'rail'; if None, all available features included; default None
     :param file_format: [str] Extension of a file; e.g. ".shp" (default)
-    :param update: [bool] indicates whether to update the relevant file/information; default False
     :return: [list] a list of paths
                 fetch_osm_file('england', 'railways', feature=None, file_format=".shp", update=False) should return
                 ['...\\dat_GeoFabrik\\Europe\\Great Britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp'],
                 if such a file exists, and [] otherwise.
     """
-    subregion_names = get_subregion_info_index("GeoFabrik-subregion-name-list", update=update)
+    subregion_names = get_subregion_info_index("GeoFabrik-subregion-name-list")
     subregion_name_ = fuzzywuzzy.process.extractOne(subregion_name, subregion_names, score_cutoff=10)[0]
     subregion = subregion_name_.lower().replace(" ", "-")
+
     osm_file_path = []
 
     for dir_path, dir_names, filenames in os.walk(cd_dat_geofabrik()):
@@ -73,8 +90,8 @@ def get_local_file_path(subregion_name, file_format=".osm.pbf"):
 """ ================================================ .shp.zip files ============================================== """
 
 
-# (Alternative to, though not the same as, geopandas.read_file())
-def read_shp_file(path_to_shp):
+# (Alternative to, though not exactly the same as, geopandas.read_file())
+def read_shp(path_to_shp):
     """
     :param path_to_shp: [str] path to a .shp file
     :return: [DataFrame]
@@ -93,15 +110,14 @@ def read_shp_file(path_to_shp):
 
     # shp_data['name'] = shp_data.name.str.encode('utf-8').str.decode('utf-8')  # Clean data
     shape_info = pd.DataFrame([(s.points, s.shapeType) for s in shp_reader.iterShapes()],
-                              index=shp_data.index,
-                              columns=['coords', 'shape_type'])
+                              index=shp_data.index, columns=['coords', 'shape_type'])
     shp_data = shp_data.join(shape_info)
 
     return shp_data
 
 
 # Merge a set of .shp files (for a given layer)
-def merge_shp_files(subregion_names, layer, update=False, download_confirmation_required=True):
+def merge_multi_shp(subregion_names, layer, update=False, download_confirmation_required=True):
     """
     :param subregion_names: [list] a sequence of subregion names, e.g. ['cambridgeshire', 'oxfordshire']
     :param layer: [str] name of a OSM layer, e.g. 'railways'
@@ -155,6 +171,7 @@ def merge_shp_files(subregion_names, layer, update=False, download_confirmation_
 
     merged_shp_filename = os.path.join(layer_path, "_".join(["merged", layer]))
     w = shapefile.Writer(merged_shp_filename)
+    print("\nMerging shape files ... ", end="")
     try:
         for f in shp_file_paths:
             r = shapefile.Reader(f)
@@ -164,19 +181,19 @@ def merge_shp_files(subregion_names, layer, update=False, download_confirmation_
                 w.record(*shaperec.record)
                 w.shape(shaperec.shape)
         w.close()
-        print("\nMerging shape files ... Successfully. \nCheck \"{}\".".format(layer_path))
+        print("Successfully. \nCheck \"{}\".".format(layer_path))
     except Exception as e:
-        print("\nFailed to merge the shape files at {}: ".format(os.path.dirname(merged_shp_filename)))
+        print("Failed. Check \"{}\": ".format(os.path.dirname(merged_shp_filename)))
         for i in shp_file_paths:
             print(os.path.basename(i))
         print(e)
 
 
 # Read a .shp.zip file
-def read_shp_zip(subregion_name, layer, feature=None,
+def read_shp_zip(subregion, layer, feature=None,
                  update=False, download_confirmation_required=True, pickle_it=True, rm_extracts=False):
     """
-    :param subregion_name: [str] name of a subregion, e.g. 'england', 'oxfordshire', or 'europe'; case-insensitive
+    :param subregion: [str] name of a subregion, e.g. 'england', 'oxfordshire', or 'europe'; case-insensitive
     :param layer: [str] name of a OSM layer, e.g. 'railways'
     :param feature: [str] name of a feature, e.g. 'rail'; if None, all available features included; default None
     :param update: [bool] indicates whether to update the relevant file/information; default False
@@ -185,8 +202,7 @@ def read_shp_zip(subregion_name, layer, feature=None,
     :param rm_extracts: [bool] indicates whether to keep extracted files from the .shp.zip file; default True
     :return: [GeoDataFrame]
     """
-    subregion_name_, _ = get_download_url(subregion_name, file_format=".shp.zip")
-    _, path_to_shp_zip = make_default_file_path(subregion_name_, file_format=".shp.zip")
+    subregion_name, path_to_shp_zip = validate_osm_filename_input(subregion, file_format=".shp.zip")
 
     extract_dir = os.path.splitext(path_to_shp_zip)[0]
 
@@ -194,8 +210,8 @@ def read_shp_zip(subregion_name, layer, feature=None,
     def make_shp_pickle_file_path(extr_dir, lyr, feat, suffix='shp'):
         """
         :param extr_dir: [str] a directory for storing extracted files from the .shp.zip file
-        :param lyr: [str] ditto
-        :param feat: [str] ditto
+        :param lyr: [str]
+        :param feat: [str]
         :param suffix: [str] a suffix to the filename
         :return: [str] a path to save the pickle file eventually
         """
@@ -214,9 +230,8 @@ def read_shp_zip(subregion_name, layer, feature=None,
 
             if not os.path.isfile(path_to_shp_zip) or update:
                 # Download the requested OSM file urlretrieve(download_url, file_path)
-                if confirmed(prompt="To download {}?".format(os.path.basename(path_to_shp_zip)),
-                             resp=False, confirmation_required=download_confirmation_required):
-                    download_subregion_osm_file(subregion_name, file_format='.shp.zip', update=update)
+                download_subregion_osm_file(subregion_name, file_format='.shp.zip', update=update,
+                                            download_confirmation_required=download_confirmation_required)
 
             with zipfile.ZipFile(path_to_shp_zip, 'r') as shp_zip:
                 members = [f.filename for f in shp_zip.filelist if layer in f.filename]
@@ -268,17 +283,6 @@ def read_shp_zip(subregion_name, layer, feature=None,
 """ ================================================ .osm.pbf files ============================================== """
 
 
-# Justify the input, 'subregion', in the following functions
-def justify_subregion_input(subregion):
-    if os.path.isabs(subregion):
-        assert subregion.endswith(".osm.pbf"), "'subregion' is invalid."
-        path_to_osm_pbf = subregion
-    else:
-        path_to_osm_pbf = get_local_file_path(subregion)
-    subregion_filename = os.path.basename(path_to_osm_pbf)
-    return subregion_filename, path_to_osm_pbf
-
-
 # Get names of all layers contained in the .osm.pbf file for a given subregion
 def get_osm_pbf_layer_idx_names(subregion, update=False, download_confirmation_required=True):
     """
@@ -287,11 +291,11 @@ def get_osm_pbf_layer_idx_names(subregion, update=False, download_confirmation_r
     :param download_confirmation_required: [bool]
     :return: [dict] or None
     """
-    subregion_filename, path_to_osm_pbf = justify_subregion_input(subregion)
+    subregion_filename, path_to_osm_pbf = validate_osm_filename_input(subregion, file_format=".osm.pbf")
 
     # If the target file is not available, download it.
     if not os.path.isfile(path_to_osm_pbf) or update:
-        if confirmed(prompt="To download \"{}\"?".format(subregion_filename, resp=False),
+        if confirmed(prompt="To download \"{}\"?".format(subregion_filename),
                      resp=False, confirmation_required=download_confirmation_required):
             download_subregion_osm_file(subregion_filename, download_path=path_to_osm_pbf, update=update)
 
@@ -498,7 +502,7 @@ def read_osm_pbf(subregion, update=False, download_confirmation_required=True,
     """
     assert isinstance(file_size_limit, int) or file_size_limit is None
 
-    subregion_filename, path_to_osm_pbf = justify_subregion_input(subregion)
+    subregion_filename, path_to_osm_pbf = validate_osm_filename_input(subregion, file_format=".osm.pbf")
 
     path_to_pickle = path_to_osm_pbf.replace(".osm.pbf", ".pickle" if granulated else "-raw.pickle")
     if os.path.isfile(path_to_pickle) and not update:
@@ -506,9 +510,8 @@ def read_osm_pbf(subregion, update=False, download_confirmation_required=True,
     else:
         # If the target file is not available, try downloading it first.
         if not os.path.isfile(path_to_osm_pbf) or update:
-            if confirmed(prompt="To download \"{}\"?".format(subregion_filename),
-                         resp=False, confirmation_required=download_confirmation_required):
-                download_subregion_osm_file(subregion, download_path=path_to_osm_pbf, update=update)
+            download_subregion_osm_file(subregion, file_format=".osm.pbf", download_path=path_to_osm_pbf,
+                                        download_confirmation_required=download_confirmation_required, update=update)
 
         file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
 
