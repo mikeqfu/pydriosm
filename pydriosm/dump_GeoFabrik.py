@@ -36,7 +36,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, data_dir=None, update_osm_pbf=Fa
     :param rm_raw_file: [bool] True (default)
     """
     if not subregion_name:
-        subregion_names = fetch_region_subregion_tier("GeoFabrik-no-subregion-list")
+        subregion_names = fetch_region_subregion_tier("GeoFabrik-non-subregion-list")
         confirm_msg = "To dump GeoFabrik OSM data extracts of all subregions to PostgreSQL? "
     else:
         subregion_names = retrieve_subregion_names_from(*subregion_name)
