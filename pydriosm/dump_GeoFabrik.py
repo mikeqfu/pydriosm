@@ -10,20 +10,22 @@ import ogr
 import pandas as pd
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
-from pydriosm.download_GeoFabrik import get_region_subregion_index, retrieve_subregion_names_from
+from pydriosm.download_GeoFabrik import fetch_region_subregion_tier, retrieve_subregion_names_from
+from pydriosm.download_GeoFabrik import get_default_path_to_osm_file
 from pydriosm.osm_psql import OSM
-from pydriosm.read_GeoFabrik import parse_layer_data, read_osm_pbf, validate_input_subregion_name
-from pydriosm.utils import confirmed, split_list
+from pydriosm.read_GeoFabrik import parse_layer_data, read_osm_pbf
+from pydriosm.utils import confirmed, regulate_input_data_dir, split_list
 
 
 # Dump data extracts to PostgreSQL
-def psql_osm_pbf_data_extracts(subregion_name, update_osm_pbf=False, if_exists='replace', file_size_limit=50,
-                               parsed=True, fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
-                               rm_raw_file=False):
+def psql_osm_pbf_data_extracts(*subregion_name, data_dir=None, update_osm_pbf=False, if_exists='replace',
+                               file_size_limit=50, parsed=True, fmt_other_tags=True, fmt_single_geom=True,
+                               fmt_multi_geom=True, rm_raw_file=False):
     """
     Import data of selected or all (sub)regions, which do not have (sub-)subregions, into PostgreSQL server
 
     :param subregion_name: [str or None]
+    :param data_dir: [str or None]
     :param update_osm_pbf: [bool] False (default)
     :param if_exists: [str] 'replace' (default); 'append'; or 'fail'
     :param file_size_limit: [int] 100 (default)
@@ -32,39 +34,42 @@ def psql_osm_pbf_data_extracts(subregion_name, update_osm_pbf=False, if_exists='
     :param fmt_single_geom: [bool]
     :param fmt_multi_geom: [bool]
     :param rm_raw_file: [bool] True (default)
-    :return:
     """
-    if subregion_name:
-        subregion_names = retrieve_subregion_names_from(subregion_name)
+    if not subregion_name:
+        subregion_names = fetch_region_subregion_tier("GeoFabrik-no-subregion-list")
+        confirm_msg = "To dump GeoFabrik OSM data extracts of all subregions to PostgreSQL? "
+    else:
+        subregion_names = retrieve_subregion_names_from(*subregion_name)
         confirm_msg = "To dump GeoFabrik OSM data extracts of the following subregions to PostgreSQL? \n{}?\n".format(
             ", ".join(subregion_names))
-    else:
-        subregion_names = get_region_subregion_index("GeoFabrik-no-subregion-list")
-        confirm_msg = "To dump GeoFabrik OSM data extracts of all subregions to PostgreSQL? "
 
     if confirmed(confirm_msg):
 
         # Connect to PostgreSQL server
         osmdb = OSM()
-        osmdb.connect_db(database_name='osm_data_extracts')
+        osmdb.connect_db(database_name='osm_pbf_data_extracts')
 
         err_subregion_names = []
         for subregion_name_ in subregion_names:
-            subregion_filename, path_to_osm_pbf = validate_input_subregion_name(subregion_name_, file_format=".osm.pbf")
+            default_pbf_filename, default_path_to_pbf = get_default_path_to_osm_file(subregion_name_, ".osm.pbf")
+            if not data_dir:  # Go to default file path
+                path_to_osm_pbf = default_path_to_pbf
+            else:
+                osm_pbf_dir = regulate_input_data_dir(data_dir)
+                path_to_osm_pbf = os.path.join(osm_pbf_dir, default_pbf_filename)
 
-            download_subregion_osm_file(subregion_name_, file_format=".osm.pbf", download_path=path_to_osm_pbf,
-                                        download_confirmation_required=False, update=update_osm_pbf)
+            download_subregion_osm_file(subregion_name_, osm_file_format=".osm.pbf", download_dir=data_dir,
+                                        update=update_osm_pbf, download_confirmation_required=False)
 
             file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
 
             try:
                 if file_size_in_mb <= file_size_limit:
 
-                    subregion_osm_pbf = read_osm_pbf(
-                        subregion_name_, download_confirmation_required=False,
-                        file_size_limit=file_size_limit, parsed=parsed,
-                        fmt_other_tags=fmt_other_tags, fmt_single_geom=fmt_single_geom, fmt_multi_geom=fmt_multi_geom,
-                        pickle_it=False, rm_raw_file=rm_raw_file)
+                    subregion_osm_pbf = read_osm_pbf(subregion_name_, data_dir, parsed, file_size_limit,
+                                                     fmt_other_tags, fmt_single_geom, fmt_multi_geom,
+                                                     update_osm_pbf, download_confirmation_required=False,
+                                                     pickle_it=False, rm_raw_file=rm_raw_file)
 
                     if subregion_osm_pbf is not None:
                         osmdb.dump_osm_pbf_data(subregion_osm_pbf, table_name=subregion_name_, if_exists=if_exists)
@@ -128,3 +133,4 @@ def psql_osm_pbf_data_extracts(subregion_name, update_osm_pbf=False, if_exists='
             print(*err_subregion_names, sep=", ")
 
         osmdb.disconnect()
+        del osmdb

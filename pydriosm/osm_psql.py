@@ -10,7 +10,7 @@ from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.url import URL
 from sqlalchemy_utils import create_database, database_exists
 
-from pydriosm.download_GeoFabrik import rectify_subregion_name
+from pydriosm.download_GeoFabrik import regulate_input_subregion_name
 from pydriosm.utils import confirmed
 
 
@@ -188,7 +188,7 @@ class OSM:
         :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
         """
         if subregion_name_as_table_name:
-            table_name = rectify_subregion_name(table_name)
+            table_name = regulate_input_subregion_name(table_name)
 
         print("Dumping \"{}\" to PostgreSQL ... ".format(table_name))
         for geom_type, layer_data in subregion_data.items():
@@ -207,17 +207,18 @@ class OSM:
 
     # Read data for a given subregion and schema (geom type, e.g. points, lines, ...)
     def read_osm_pbf_data(self, table_name, *schema_names, parsed=True, subregion_name_as_table_name=True,
-                          chunk_size=None):
+                          chunk_size=None, id_sorted=True):
         """
         :param table_name: [str] name of a table name; 'subregion_name' is recommended when importing the data
         :param schema_names: [str] one or multiple names of layers, e.g. 'points', 'lines'
         :param parsed: [bool; True(default)] whether the table data was parsed before being imported
         :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as 'table_name'
         :param chunk_size: [int or None(default)] number of rows to include in each chunk
+        :param id_sorted: [bool; True(default)]
         :return: [dict] e.g. {layer_name_1: layer_data_1, ...}
         """
         if subregion_name_as_table_name:
-            table_name = rectify_subregion_name(table_name)
+            table_name = regulate_input_subregion_name(table_name)
         table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
 
         if schema_names:
@@ -228,8 +229,11 @@ class OSM:
 
         layer_data = []
         for schema_name in geom_types:
-            lyr_dat = read_sql(sql='SELECT * FROM {}."{}";'.format(schema_name, table_name_),
-                               con=self.engine, chunksize=chunk_size)
+            sql_query = 'SELECT * FROM {}."{}";'.format(schema_name, table_name_)
+            lyr_dat = read_sql(sql=sql_query, con=self.engine, chunksize=chunk_size)
+            if id_sorted:
+                lyr_dat.sort_values('id', inplace=True)
+                lyr_dat.index = range(len(lyr_dat))
             if parsed:
                 lyr_dat.coordinates = lyr_dat.coordinates.map(wkt.loads)
                 lyr_dat.other_tags = lyr_dat.other_tags.map(eval)
@@ -249,7 +253,7 @@ class OSM:
             geom_types = [x for x in Inspector.from_engine(self.engine).get_schema_names()
                           if x != 'public' and x != 'information_schema']
 
-        table_name = rectify_subregion_name(table_name)
+        table_name = regulate_input_subregion_name(table_name)
         table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
 
         tables = tuple(('{}.\"{}\"'.format(schema_name, table_name_) for schema_name in geom_types))
@@ -261,7 +265,7 @@ class OSM:
         :param schema_name: [str] name of a layer name
         :param table_names: [str] one or multiple names of subregions
         """
-        table_names = (rectify_subregion_name(table_name) for table_name in table_names)
+        table_names = (regulate_input_subregion_name(table_name) for table_name in table_names)
         table_names_ = (table_name[:60] + '..' if len(table_name) >= 63 else table_name for table_name in table_names)
         tables = tuple(('{}.\"{}\"'.format(schema_name, table_name) for table_name in table_names_))
         self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(tables) - 1) + '%s CASCADE;') % tables)
