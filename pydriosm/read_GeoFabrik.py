@@ -221,7 +221,8 @@ def read_shp_zip(subregion_name, layer, feature=None, data_dir=None, update=Fals
     else:
         # Download the requested OSM file urlretrieve(download_url, file_path)
         download_subregion_osm_file(shp_zip_filename, osm_file_format=".shp.zip", download_dir=data_dir,
-                                    update=update, download_confirmation_required=download_confirmation_required)
+                                    update=update, download_confirmation_required=download_confirmation_required,
+                                    verbose=False)
         extract_shp_zip(path_to_shp_zip, extract_dir, layer=layer)
 
         path_to_shp = glob.glob(os.path.join(extract_dir, "*{}*.shp".format(layer)))
@@ -494,7 +495,8 @@ def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
     else:
         # If the target file is not available, try downloading it first.
         download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf", download_dir=data_dir,
-                                    update=update, download_confirmation_required=download_confirmation_required)
+                                    update=update, download_confirmation_required=download_confirmation_required,
+                                    verbose=False)
 
         file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
 

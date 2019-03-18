@@ -439,13 +439,14 @@ def retrieve_subregion_names_from(*subregion_name):
 
 # Download OSM data files
 def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=None, update=False,
-                                download_confirmation_required=True):
+                                download_confirmation_required=True, verbose=True):
     """
     :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
     :param osm_file_format: [str] ".osm.pbf", ".shp.zip", or ".osm.bz2"
     :param download_dir: [str] directory to save the downloaded file(s), or None (using default directory)
     :param update: [bool] whether to update (i.e. re-download) data
     :param download_confirmation_required: [bool] whether to confirm before downloading
+    :param verbose: [bool]
     """
     for sub_reg_name in subregion_name:
 
@@ -461,15 +462,20 @@ def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=N
             path_to_file = os.path.join(regulated_dir, osm_filename)
 
         if os.path.isfile(path_to_file) and not update:
-            print("\"{}\" is already available for \"{}\" at: \n\"{}\".\n".format(
-                osm_filename, subregion_name_, path_to_file))
+            if verbose:
+                print("\n\"{}\" is already available for \"{}\" at: \n\"{}\".\n".format(
+                    osm_filename, subregion_name_, path_to_file))
+            else:
+                pass
         else:
             if confirmed("\nTo download {} data for {}".format(osm_file_format, subregion_name_),
                          confirmation_required=download_confirmation_required):
+
+                op = "Updating" if os.path.isfile(path_to_file) else "Downloading"
                 try:
                     download(download_url, path_to_file)
-                    print("\n\"{}\" has been downloaded for \"{}\", which is now available at \n\"{}\".\n".format(
-                        osm_filename, subregion_name_, path_to_file))
+                    print("\n{} \"{}\" for \"{}\" ... Done.".format(op, osm_filename, subregion_name_))
+                    print("Check out: \"{}\".".format(path_to_file))
                 except Exception as e:
                     print("\nFailed to download \"{}\". {}.".format(osm_filename, e))
             else:

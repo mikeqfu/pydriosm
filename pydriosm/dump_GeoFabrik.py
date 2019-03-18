@@ -68,7 +68,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, data_dir=None, update_osm_pbf=Fa
 
                     subregion_osm_pbf = read_osm_pbf(subregion_name_, data_dir, parsed, file_size_limit,
                                                      fmt_other_tags, fmt_single_geom, fmt_multi_geom,
-                                                     False, download_confirmation_required=False,
+                                                     update=False, download_confirmation_required=False,
                                                      pickle_it=False, rm_raw_file=rm_raw_file)
 
                     if subregion_osm_pbf is not None:
