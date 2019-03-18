@@ -87,6 +87,18 @@ def cd_dat(*directories):
     return path
 
 
+# Regulate the input data directory
+def regulate_input_data_dir(data_dir):
+    """
+    :param data_dir: [str] data directory as input
+    :return: [str] regulated data directory
+    """
+    assert isinstance(data_dir, str)
+    regulated_dir = os.path.realpath(data_dir.lstrip('.\\'))
+    assert os.path.isabs(regulated_dir), "'download_dir' is invalid."
+    return regulated_dir
+
+
 # ====================================================================================================================
 """ Save and Load files """
 
