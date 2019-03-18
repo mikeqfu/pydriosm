@@ -303,4 +303,3 @@ def download_bbbike_subregion_osm_all_files(subregion_name, download_dir=None, d
             subregion_name_, os.path.join(data_dir, subregion_name_)))
     else:
         print("The downloading process was not activated.")
-
