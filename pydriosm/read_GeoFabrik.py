@@ -346,27 +346,31 @@ def parse_layer_data(layer_data, geo_typ, fmt_other_tags, fmt_single_geom, fmt_m
             other_tags = other_tags_x
         return other_tags
 
-    # Start parsing 'geometry' column
-    dat_geometry = pd.DataFrame(x for x in layer_data.geometry).rename(columns={'type': 'geom_type'})
+    if not layer_data.empty:
+        # Start parsing 'geometry' column
+        dat_geometry = pd.DataFrame(x for x in layer_data.geometry).rename(columns={'type': 'geom_type'})
 
-    if geo_typ != 'other_relations':  # geo_type can be 'points', 'lines', 'multilinestrings', or 'multipolygons'
-        if fmt_single_geom:
-            dat_geometry.coordinates = reformat_single_geometry(dat_geometry)
-    else:  # geo_typ == 'other_relations'
-        if fmt_multi_geom:
-            dat_geometry.geometries = dat_geometry.geometries.map(reformat_multi_geometries)
-            dat_geometry.rename(columns={'geometries': 'coordinates'}, inplace=True)
+        if geo_typ != 'other_relations':  # geo_type can be 'points', 'lines', 'multilinestrings', or 'multipolygons'
+            if fmt_single_geom:
+                dat_geometry.coordinates = reformat_single_geometry(dat_geometry)
+        else:  # geo_typ == 'other_relations'
+            if fmt_multi_geom:
+                dat_geometry.geometries = dat_geometry.geometries.map(reformat_multi_geometries)
+                dat_geometry.rename(columns={'geometries': 'coordinates'}, inplace=True)
 
-    # Start parsing 'properties' column
-    dat_properties = pd.DataFrame(x for x in layer_data.properties)
+        # Start parsing 'properties' column
+        dat_properties = pd.DataFrame(x for x in layer_data.properties)
 
-    if fmt_other_tags:
-        dat_properties.other_tags = dat_properties.other_tags.map(decompose_other_tags)
+        if fmt_other_tags:
+            dat_properties.other_tags = dat_properties.other_tags.map(decompose_other_tags)
 
-    parsed_layer_data = layer_data[['id']].join(dat_geometry).join(dat_properties)
-    parsed_layer_data.drop(['geom_type'], axis=1, inplace=True)
+        parsed_layer_data = layer_data[['id']].join(dat_geometry).join(dat_properties)
+        parsed_layer_data.drop(['geom_type'], axis=1, inplace=True)
 
-    del dat_geometry, dat_properties
+        del dat_geometry, dat_properties
+
+    else:
+        parsed_layer_data = layer_data
 
     return parsed_layer_data
 

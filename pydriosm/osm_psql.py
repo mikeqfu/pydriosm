@@ -170,9 +170,10 @@ class OSM:
                               dtype={'geometry': types.JSON, 'properties': types.JSON})
         else:
             lyr_dat = layer_data.copy()
-            lyr_dat.coordinates = layer_data.coordinates.map(lambda x: x.wkt)
-            lyr_dat.other_tags = layer_data.other_tags.astype(str)
-            # dtype={'coordinates': types.TEXT, 'other_tags': types.TEXT}
+            if not layer_data.empty:
+                lyr_dat.coordinates = layer_data.coordinates.map(lambda x: x.wkt)
+                lyr_dat.other_tags = layer_data.other_tags.astype(str)
+                # dtype={'coordinates': types.TEXT, 'other_tags': types.TEXT}
             lyr_dat.to_sql(table_name_, self.engine, schema=schema_name,
                            if_exists=if_exists, index=False, chunksize=chunk_size)
 
