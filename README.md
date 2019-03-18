@@ -232,7 +232,7 @@ Setting `rm_raw_file=False` and `data_dir=None` will keep all raw **.osm.pbf** f
 If we would like to import all subregion data of 'Great Britain':
 
 ```python
-gb_subregions = retrieve_subregion_names_from('Great Britain')
+gb_subregions = dri.retrieve_subregion_names_from('Great Britain')
 ```
 
 Instead of returning `['England', 'Scotland', 'Wales']`, the list `gb_subregions` will include all subregions of 'England' (rather than 'England' as a single element), plus 'Scotland' and 'Wales'. 
