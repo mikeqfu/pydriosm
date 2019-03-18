@@ -209,8 +209,33 @@ If we need to query data of specific layer (or layers), or in a specific order o
 ```python
 london_points_lines = osmdb.read_osm_pbf_data(subregion_name, 'points', 'lines')
 # Another example:
-# london_lines_mul = osmdb.read_osm_pbf_data(subregion_name, 'lines', 'multilinestrings')
+# london_lines_mul = osmdb.read_osm_pbf_data('london', 'lines', 'multilinestrings')
 ```
+
+
+
+##### (3) Importing data of all subregions of a given (sub)region
+
+```python
+# Find all subregions (without smaller subregions) of a given subregion, e.g. 'England'
+subregions = dri.retrieve_subregion_names_from('England')
+
+# Import data of all contained in `subregions`
+dri.psql_osm_pbf_data_extracts(subregions, data_dir=None, update_osm_pbf=False, 
+                               file_size_limit=50, parsed=True, fmt_other_tags=True, 
+                               fmt_single_geom=True, fmt_multi_geom=True, 
+                               rm_raw_file=False)
+```
+
+Setting `rm_raw_file=False` and `data_dir=None` will keep all raw **.osm.pbf** files in default data folder.
+
+If we would like to import all subregion data of 'Great Britain':
+
+```python
+gb_subregions = retrieve_subregion_names_from('Great Britain')
+```
+
+Instead of returning `['England', 'Scotland', 'Wales']`, the list `gb_subregions` will include all subregions of 'England' (rather than 'England' as a single element), plus 'Scotland' and 'Wales'. 
 
 
 
