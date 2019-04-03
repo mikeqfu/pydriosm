@@ -384,7 +384,8 @@ def get_default_path_to_osm_file(subregion_name, osm_file_format, mkdir=False, u
     parsed_path = urllib.parse.urlparse(download_url).path.lstrip('/').split('/')
 
     subregion_names = fetch_subregion_info_catalogue("GeoFabrik-subregion-name-list")
-    directory = cd_dat_geofabrik(*[fuzzywuzzy.process.extractOne(x, subregion_names)[0] for x in parsed_path[0:-1]])
+    directory = cd_dat_geofabrik(*[fuzzywuzzy.process.extractOne(x, subregion_names)[0]
+                                   if x != 'us' else 'United States' for x in parsed_path[0:-1]])
 
     default_filename = parsed_path[-1]
 
