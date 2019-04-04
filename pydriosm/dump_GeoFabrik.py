@@ -18,16 +18,17 @@ from pydriosm.utils import confirmed, regulate_input_data_dir, split_list
 
 
 # Dump data extracts to PostgreSQL
-def psql_osm_pbf_data_extracts(*subregion_name, data_dir=None, update_osm_pbf=False, if_exists='replace',
-                               file_size_limit=50, parsed=True, fmt_other_tags=True, fmt_single_geom=True,
-                               fmt_multi_geom=True, rm_raw_file=False):
+def psql_osm_pbf_data_extracts(*subregion_name, database_name='osm_pbf_data_extracts', data_dir=None,
+                               update_osm_pbf=False, if_table_exists='replace', file_size_limit=50, parsed=True,
+                               fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True, rm_raw_file=False):
     """
     Import data of selected or all (sub)regions, which do not have (sub-)subregions, into PostgreSQL server
 
     :param subregion_name: [str or None]
     :param data_dir: [str or None]
     :param update_osm_pbf: [bool] False (default)
-    :param if_exists: [str] 'replace' (default); 'append'; or 'fail'
+    :param database_name: [str] default as 'osm_pbf_data_extracts'
+    :param if_table_exists: [str] 'replace' (default); 'append'; or 'fail'
     :param file_size_limit: [int] 100 (default)
     :param parsed: [bool]
     :param fmt_other_tags: [bool]
@@ -47,7 +48,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, data_dir=None, update_osm_pbf=Fa
 
         # Connect to PostgreSQL server
         osmdb = OSM()
-        osmdb.connect_db(database_name='osm_pbf_data_extracts')
+        osmdb.connect_db(database_name=database_name)
 
         err_subregion_names = []
         for subregion_name_ in subregion_names:
@@ -72,7 +73,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, data_dir=None, update_osm_pbf=Fa
                                                      pickle_it=False, rm_raw_file=rm_raw_file)
 
                     if subregion_osm_pbf is not None:
-                        osmdb.dump_osm_pbf_data(subregion_osm_pbf, table_name=subregion_name_, if_exists=if_exists)
+                        osmdb.dump_osm_pbf_data(subregion_osm_pbf, table_name=subregion_name_, if_exists=if_table_exists)
                         del subregion_osm_pbf
                         gc.collect()
 
@@ -93,7 +94,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, data_dir=None, update_osm_pbf=Fa
                             del lyr_feats
                             gc.collect()
 
-                            if osmdb.subregion_table_exists(lyr_name, subregion_name_) and if_exists == 'replace':
+                            if osmdb.subregion_table_exists(lyr_name, subregion_name_) and if_table_exists == 'replace':
                                 osmdb.drop_subregion_data_by_layer(subregion_name_, lyr_name)
 
                             # Loop through all available features
@@ -101,7 +102,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, data_dir=None, update_osm_pbf=Fa
                                 lyr_chunk_dat = pd.DataFrame(rapidjson.loads(f.ExportToJson()) for f in lyr_chunk)
                                 lyr_chunk_dat = parse_layer_data(lyr_chunk_dat, lyr_name,
                                                                  fmt_other_tags, fmt_single_geom, fmt_multi_geom)
-                                if_exists_ = if_exists if if_exists == 'fail' else 'append'
+                                if_exists_ = if_table_exists if if_table_exists == 'fail' else 'append'
                                 osmdb.dump_osm_pbf_data_by_layer(lyr_chunk_dat, if_exists=if_exists_,
                                                                  schema_name=lyr_name, table_name=subregion_name_)
                                 del lyr_chunk_dat
