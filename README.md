@@ -2,7 +2,7 @@
 
 **(Version 1.0.11)**
 
-This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.osm.pbf** and **.shp.zip**) which are available at the free download servers: [Geofabrik](https://download.geofabrik.de/) and [BBBike](https://www.bbbike.org/). In addition, it also provides a convenient way to import/dump the parsed data to, and load it from, a PostgreSQL sever. 
+This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.pbf** and **.shp.zip**) which are available at the free download servers: [Geofabrik](https://download.geofabrik.de/) and [BBBike](https://www.bbbike.org/). In addition, it also provides a convenient way to import/dump the parsed data to, and load it from, a PostgreSQL sever. 
 
 (Note that the package is written in Python 3.x and tested only on Windows operating system and might not be compatible with Python 2.x. or other operating systems)
 
@@ -20,7 +20,7 @@ If we are using some IDE, such as PyCharm, we should be able to find *pydriosm* 
 
 ##### Note:
 
-It is important to note that successful installation of *pydriosm* requires a few supporting packages which ensure its full functionality. However, using Python 3.x on Windows OS, `pip install` may fail to go through installation of some of the supporting packages, such as [Fiona](https://pypi.org/project/Fiona/), [GDAL](https://pypi.org/project/GDAL/) and [Shapely](https://pypi.org/project/Shapely/). Instead, we might have to resort to installing their binaries (e.g. **.whl**) which can be downloaded from [Unofficial Windows Binaries for Python Extension Packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/). Once those packages are all ready, we could go ahead with the `pip` command. 
+It is important to note that successful installation of *pydriosm* requires a few supporting packages which ensure its full functionality. However, using Python 3.x on Windows OS, `pip install` may fail to go through installation of some of the supporting packages, such as [Fiona](https://pypi.org/project/Fiona/), [GDAL](https://pypi.org/project/GDAL/) and [Shapely](https://pypi.org/project/Shapely/). Instead, we might have to resort to installing their binaries (e.g. **.whl**) which can be downloaded from the [Unofficial Windows Binaries for Python Extension Packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/). Once those packages are all ready, we could go ahead with the `pip` command. 
 
 ##### Supporting packages include:
 
@@ -32,7 +32,7 @@ It is important to note that successful installation of *pydriosm* requires a fe
 
 This is a brief introduction of some main functions this package can perform.
 
-### Example - DRI .osm.pbf data of the Greater London area
+### Example: to handle ".pbf" data of the Greater London area
 
 Here is an example to illustrate what we may do by using the package. 
 
@@ -60,7 +60,7 @@ subregion_name = 'Greater London'
 # or, subregion_name = 'london'; case-insensitive and fuzzy (but not toooo... fuzzy)
 ```
 
-Download **.osm.pbf** data of 'Greater London':
+Download **.pbf** data of 'Greater London':
 
 ```python
 dri.download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf", 
@@ -91,20 +91,20 @@ customised_data_dir = "test_data"
 # import os
 # customised_data_dir = os.path.join(os.getcwd(), "test_data")
 
-# Download .osm.pbf data of both 'London' and 'Kent' to the `customised_data_dir`
+# Download .pbf data of both 'London' and 'Kent' to the `customised_data_dir`
 dri.download_subregion_osm_file('London', 'Kent', 
                                 osm_file_format=".osm.pbf", update=False,
                                 download_dir=customised_data_dir, 
                                 download_confirmation_required=True)
 ```
 
-The **.osm.pbf** file will then be saved to the `download_dir` as specified.
+The **.pbf** file will then be saved to the `download_dir` as specified.
 
 
 
 #### Reading/parsing data
 
-Parsing the **.osm.pbf** data relies mainly on [GDAL/OGR](https://pypi.org/project/GDAL/), using `read_osm_pbf()` function.
+Parsing the **.pbf** data relies mainly on [GDAL/OGR](https://pypi.org/project/GDAL/), using `read_osm_pbf()` function.
 
 ```python
 greater_london = dri.read_osm_pbf(subregion_name, data_dir=None, parsed=True, 
@@ -181,7 +181,7 @@ osmdb.connect_db(database_name='osm_pbf_data_extracts')
 
 ##### (1) Importing data
 
-We could dump the parsed **.osm.pbf** data to a PostgreSQL server. To import `greater_london` into the database, 'osm_pbf_data_extracts':
+We could dump the parsed **.pbf** data to a PostgreSQL server. To import `greater_london` into the database, 'osm_pbf_data_extracts':
 
 ```python
 osmdb.dump_osm_pbf_data(greater_london, table_name=subregion_name, parsed=True, 
@@ -217,17 +217,19 @@ london_points_lines = osmdb.read_osm_pbf_data(subregion_name, 'points', 'lines')
 ##### (3) Importing data of all subregions of a given (sub)region
 
 ```python
-# Find all subregions (without smaller subregions) of a given subregion, e.g. 'England'
+# Find all subregions (without smaller subregions) of a subregion.
+# Take for example, to find all subregions of 'England':
 subregions = dri.retrieve_subregion_names_from('England')
 
 # Import data of all contained in `subregions`
-dri.psql_osm_pbf_data_extracts(subregions, data_dir=None, update_osm_pbf=False, 
+dri.psql_osm_pbf_data_extracts(subregions, database_name='osm_pbf_data_extracts', 
+                               data_dir=None, update_osm_pbf=False, 
                                file_size_limit=50, parsed=True, fmt_other_tags=True, 
                                fmt_single_geom=True, fmt_multi_geom=True, 
                                rm_raw_file=False)
 ```
 
-Setting `rm_raw_file=False` and `data_dir=None` will keep all raw **.osm.pbf** files in default data folder.
+Setting `rm_raw_file=False` and `data_dir=None` will keep all raw **.pbf** files in default data folder.
 
 If we would like to import all subregion data of 'Great Britain':
 
@@ -236,6 +238,8 @@ gb_subregions = dri.retrieve_subregion_names_from('Great Britain')
 ```
 
 Instead of returning `['England', 'Scotland', 'Wales']`, the list `gb_subregions` will include all subregions of 'England' (rather than 'England' as a single element), plus 'Scotland' and 'Wales'. 
+
+
 
 
 
