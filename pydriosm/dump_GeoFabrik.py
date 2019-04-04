@@ -1,13 +1,13 @@
 # Download a bunch of OSM data extracts and import them to local PostgreSQL
 
-import gc
-import math
 import os
-import rapidjson
 import time
 
+import gc
+import math
 import ogr
 import pandas as pd
+import rapidjson
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
 from pydriosm.download_GeoFabrik import fetch_region_subregion_tier, retrieve_subregion_names_from

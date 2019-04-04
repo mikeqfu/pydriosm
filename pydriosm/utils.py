@@ -1,14 +1,14 @@
 """ Utilities - Helper functions """
 
 import collections
-import math
 import os
 import pickle
-import rapidjson
 import re
 import time
 
+import math
 import pkg_resources
+import rapidjson
 import requests
 import shapely.geometry
 import tqdm

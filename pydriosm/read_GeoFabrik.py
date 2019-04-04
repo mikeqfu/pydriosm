@@ -1,17 +1,17 @@
 """ Parse/read OSM data """
 
-import gc
 import glob
-import math
 import os
-import rapidjson
 import re
 import shutil
 import zipfile
 
+import gc
 import geopandas as gpd
+import math
 import ogr
 import pandas as pd
+import rapidjson
 import shapefile
 import shapely.geometry
 
