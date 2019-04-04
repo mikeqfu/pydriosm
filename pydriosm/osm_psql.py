@@ -1,17 +1,30 @@
 """ Data storage with PostgreSQL """
 
-import gc
 import getpass
 
-from pandas import read_sql
-from shapely import wkt
-from sqlalchemy import create_engine, types
-from sqlalchemy.engine.reflection import Inspector
-from sqlalchemy.engine.url import URL
-from sqlalchemy_utils import create_database, database_exists
+import gc
+import pandas as pd
+import shapely.wkt
+import sqlalchemy
+import sqlalchemy.engine.reflection
+import sqlalchemy.engine.url
+import sqlalchemy_utils
 
 from pydriosm.download_GeoFabrik import regulate_input_subregion_name
 from pydriosm.utils import confirmed
+
+
+def regulate_table_name(table_name, subregion_name_as_table_name=True):
+    """
+    :param table_name:
+    :param subregion_name_as_table_name:
+    :return: [str]
+    """
+    if subregion_name_as_table_name:
+        table_name = regulate_input_subregion_name(table_name)
+    table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
+    table_name_ = table_name_.replace("'", "_")
+    return table_name_
 
 
 class OSM:
@@ -30,7 +43,7 @@ class OSM:
                               'database': input('Database name: ')}
 
         # The typical form of a database URL is: url = backend+driver://username:password@host:port/database_name
-        self.url = URL(**self.database_info)
+        self.url = sqlalchemy.engine.url.URL(**self.database_info)
         self.dialect = self.url.get_dialect()
         self.backend = self.url.get_backend_name()
         self.driver = self.url.get_driver_name()
@@ -39,7 +52,7 @@ class OSM:
         self.database_name = self.database_info['database']
 
         # Create a SQLAlchemy connectable
-        self.engine = create_engine(self.url, isolation_level='AUTOCOMMIT')
+        self.engine = sqlalchemy.create_engine(self.url, isolation_level='AUTOCOMMIT')
         self.connection = self.engine.connect()
 
     # Establish a connection to the specified database (named e.g. 'osm_extracts')
@@ -49,10 +62,10 @@ class OSM:
         """
         self.database_name = database_name
         self.database_info['database'] = self.database_name
-        self.url = URL(**self.database_info)
-        if not database_exists(self.url):
-            create_database(self.url)
-        self.engine = create_engine(self.url, isolation_level='AUTOCOMMIT')
+        self.url = sqlalchemy.engine.url.URL(**self.database_info)
+        if not sqlalchemy_utils.database_exists(self.url):
+            sqlalchemy_utils.create_database(self.url)
+        self.engine = sqlalchemy.create_engine(self.url, isolation_level='AUTOCOMMIT')
         self.connection = self.engine.connect()
 
     # An alternative to sqlalchemy_utils.create_database()
@@ -129,19 +142,21 @@ class OSM:
         if schema_names:
             schemas = tuple(schema_name for schema_name in schema_names)
         else:
-            schemas = tuple(x for x in Inspector.from_engine(self.engine).get_schema_names()
-                            if x != 'public' and x != 'information_schema')
+            schemas = tuple(
+                x for x in sqlalchemy.engine.reflection.Inspector.from_engine(self.engine).get_schema_names()
+                if x != 'public' and x != 'information_schema')
         if confirmed("Confirmed to drop the schema(s): {}".format(schemas)):
             self.engine.execute(('DROP SCHEMA IF EXISTS ' + '%s, '*(len(schemas) - 1) + '%s CASCADE;') % schemas)
 
     # Check if a table exists
-    def subregion_table_exists(self, schema_name, table_name):
+    def subregion_table_exists(self, schema_name, table_name, subregion_name_as_table_name=True):
         """
         :param schema_name: [str] name of a schema
         :param table_name: [str] name of a table
+        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
         :return: [bool]
         """
-        table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
+        table_name_ = regulate_table_name(table_name, subregion_name_as_table_name)
         res = self.engine.execute("SELECT EXISTS("
                                   "SELECT * FROM information_schema.tables "
                                   "WHERE table_schema='{}' "
@@ -149,25 +164,26 @@ class OSM:
         return res.fetchone()[0]
 
     # Import data (as a pandas.DataFrame) into the database being currently connected
-    def dump_osm_pbf_data_by_layer(self, layer_data, schema_name, table_name,
+    def dump_osm_pbf_data_by_layer(self, layer_data, schema_name, table_name, subregion_name_as_table_name=True,
                                    parsed=True, if_exists='replace', chunk_size=None):
         """
         :param layer_data: [pandas.DataFrame] data of one layer
         :param schema_name: [str] name of the layer
         :param table_name: [str] name of the targeted table
+        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
         :param parsed: [bool; True(default)] whether 'layer_data' has been parsed
         :param if_exists: [str] 'fail', 'replace', or 'append'; default 'replace'
         :param chunk_size: [int; None]
         """
-        if schema_name not in Inspector.from_engine(self.engine).get_schema_names():
+        if schema_name not in sqlalchemy.engine.reflection.Inspector.from_engine(self.engine).get_schema_names():
             self.create_schema(schema_name)
 
-        table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
+        table_name_ = regulate_table_name(table_name, subregion_name_as_table_name)
 
         if not parsed:
             layer_data.to_sql(table_name_, self.engine, schema=schema_name,
                               if_exists=if_exists, index=False, chunksize=chunk_size,
-                              dtype={'geometry': types.JSON, 'properties': types.JSON})
+                              dtype={'geometry': sqlalchemy.types.JSON, 'properties': sqlalchemy.types.JSON})
         else:
             lyr_dat = layer_data.copy()
             if not layer_data.empty:
@@ -194,12 +210,13 @@ class OSM:
         print("Dumping \"{}\" to PostgreSQL ... ".format(table_name))
         for geom_type, layer_data in subregion_data.items():
             print("         {} ... ".format(geom_type), end="")
-            if layer_data.empty and self.subregion_table_exists(schema_name=geom_type, table_name=table_name):
+            if layer_data.empty and self.subregion_table_exists(geom_type, table_name, subregion_name_as_table_name):
                 print("The layer is empty. An empty table already exists in the database.")
                 pass
             else:
                 try:
-                    self.dump_osm_pbf_data_by_layer(layer_data, geom_type, table_name, parsed, if_exists, chunk_size)
+                    self.dump_osm_pbf_data_by_layer(layer_data, geom_type, table_name, subregion_name_as_table_name,
+                                                    parsed, if_exists, chunk_size)
                     print("Done. Total amount of features: {}".format(len(layer_data)))
                 except Exception as e:
                     print("Failed. {}".format(e))
@@ -218,55 +235,53 @@ class OSM:
         :param id_sorted: [bool; True(default)]
         :return: [dict] e.g. {layer_name_1: layer_data_1, ...}
         """
-        if subregion_name_as_table_name:
-            table_name = regulate_input_subregion_name(table_name)
-        table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
+        table_name_ = regulate_table_name(table_name, subregion_name_as_table_name)
 
         if schema_names:
             geom_types = [x for x in schema_names]
         else:
-            geom_types = [x for x in Inspector.from_engine(self.engine).get_schema_names()
+            geom_types = [x for x in sqlalchemy.engine.reflection.Inspector.from_engine(self.engine).get_schema_names()
                           if x != 'public' and x != 'information_schema']
 
         layer_data = []
         for schema_name in geom_types:
             sql_query = 'SELECT * FROM {}."{}";'.format(schema_name, table_name_)
-            lyr_dat = read_sql(sql=sql_query, con=self.engine, chunksize=chunk_size)
+            lyr_dat = pd.read_sql(sql=sql_query, con=self.engine, chunksize=chunk_size)
             if id_sorted:
                 lyr_dat.sort_values('id', inplace=True)
                 lyr_dat.index = range(len(lyr_dat))
             if parsed:
-                lyr_dat.coordinates = lyr_dat.coordinates.map(wkt.loads)
+                lyr_dat.coordinates = lyr_dat.coordinates.map(shapely.wkt.loads)
                 lyr_dat.other_tags = lyr_dat.other_tags.map(eval)
             layer_data.append(lyr_dat)
 
         return dict(zip(geom_types, layer_data))
 
     # Remove subregion data from the database being currently connected
-    def drop_subregion_data_by_layer(self, table_name, *schema_names):
+    def drop_subregion_data_by_layer(self, table_name, subregion_name_as_table_name=True, *schema_names):
         """
-        :param schema_names: [str] one or multiple names of schemas
         :param table_name: [str] name of a subregion
+        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as 'table_name'
+        :param schema_names: [str] one or multiple names of schemas
         """
         if schema_names:
             geom_types = [x for x in schema_names]
         else:
-            geom_types = [x for x in Inspector.from_engine(self.engine).get_schema_names()
+            geom_types = [x for x in sqlalchemy.engine.reflection.Inspector.from_engine(self.engine).get_schema_names()
                           if x != 'public' and x != 'information_schema']
 
-        table_name = regulate_input_subregion_name(table_name)
-        table_name_ = table_name[:60] + '..' if len(table_name) >= 63 else table_name
+        table_name_ = regulate_table_name(table_name, subregion_name_as_table_name)
 
         tables = tuple(('{}.\"{}\"'.format(schema_name, table_name_) for schema_name in geom_types))
         self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(tables) - 1) + '%s CASCADE;') % tables)
 
     # Remove tables from the database being currently connected
-    def drop_layer_data_by_subregion(self, schema_name, *table_names):
+    def drop_layer_data_by_subregion(self, schema_name, subregion_name_as_table_name=True, *table_names):
         """
         :param schema_name: [str] name of a layer name
+        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as 'table_name'
         :param table_names: [str] one or multiple names of subregions
         """
-        table_names = (regulate_input_subregion_name(table_name) for table_name in table_names)
-        table_names_ = (table_name[:60] + '..' if len(table_name) >= 63 else table_name for table_name in table_names)
+        table_names_ = (regulate_table_name(table_name, subregion_name_as_table_name) for table_name in table_names)
         tables = tuple(('{}.\"{}\"'.format(schema_name, table_name) for table_name in table_names_))
         self.engine.execute(('DROP TABLE IF EXISTS ' + '%s, '*(len(tables) - 1) + '%s CASCADE;') % tables)
