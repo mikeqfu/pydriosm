@@ -10,6 +10,7 @@ import urllib.parse
 import bs4
 import fuzzywuzzy.process
 import humanfriendly
+import more_itertools
 import numpy as np
 import pandas as pd
 import requests
@@ -282,6 +283,8 @@ def collect_region_subregion_tier(confirmation_required=True):
 
                 having_subregions_temp.pop(region_name)
 
+        # Russian Federation in both pages of Asia and Europe, so that there are duplicates in non_subregions_list
+        non_subregions_list = list(more_itertools.unique_everseen(non_subregions_list))
         return region_subregion_tiers, non_subregions_list
 
     if confirmed("To compile a region-subregion tier? (Note that it may take a few minutes.) ",
@@ -333,7 +336,7 @@ def regulate_input_subregion_name(subregion_name):
     assert isinstance(subregion_name, str)
     # Get a list of available
     subregion_names = fetch_subregion_info_catalogue('GeoFabrik-subregion-name-list')
-    subregion_name_, _ = fuzzywuzzy.process.extractOne(subregion_name, subregion_names, score_cutoff=50)
+    subregion_name_, _ = fuzzywuzzy.process.extractOne(subregion_name, subregion_names)
     return subregion_name_
 
 
@@ -380,8 +383,11 @@ def get_default_path_to_osm_file(subregion_name, osm_file_format, mkdir=False, u
     :param update: [bool] whether to update source data
     :return: [tuple] (of length 2), including filename of the subregion, and path to the file
     """
-    _, download_url = get_subregion_download_url(subregion_name, osm_file_format, update=update)
+    subregion_name_, download_url = get_subregion_download_url(subregion_name, osm_file_format, update=update)
     parsed_path = urllib.parse.urlparse(download_url).path.lstrip('/').split('/')
+
+    if len(parsed_path) == 1:
+        parsed_path = [subregion_name_] + parsed_path
 
     subregion_names = fetch_subregion_info_catalogue("GeoFabrik-subregion-name-list")
     directory = cd_dat_geofabrik(*[fuzzywuzzy.process.extractOne(x, subregion_names)[0]
