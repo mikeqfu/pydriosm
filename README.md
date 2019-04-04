@@ -224,7 +224,8 @@ subregions = dri.retrieve_subregion_names_from('England')
 # Import data of all contained in `subregions`
 dri.psql_osm_pbf_data_extracts(subregions, database_name='osm_pbf_data_extracts', 
                                data_dir=None, update_osm_pbf=False, 
-                               file_size_limit=50, parsed=True, fmt_other_tags=True, 
+                               if_table_exists='replace', file_size_limit=50,
+                               parsed=True, fmt_other_tags=True, 
                                fmt_single_geom=True, fmt_multi_geom=True, 
                                rm_raw_file=False)
 ```

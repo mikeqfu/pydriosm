@@ -28,6 +28,7 @@ setuptools.setup(
         'html5lib',
         'humanfriendly',
         'lxml',
+        'more-itertools',
         'numpy',
         'pandas',
         'psycopg2',
