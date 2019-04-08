@@ -18,7 +18,7 @@ from pydriosm.utils import confirmed, regulate_input_data_dir, split_list
 
 
 # Dump data extracts to PostgreSQL
-def psql_osm_pbf_data_extracts(*subregion_name, database_name='osm_pbf_data_extracts', data_dir=None,
+def psql_osm_pbf_data_extracts(*subregion_name, database_name='OSM Data Extracts', data_dir=None,
                                update_osm_pbf=False, if_table_exists='replace', file_size_limit=50, parsed=True,
                                fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True, rm_raw_file=False):
     """
@@ -27,7 +27,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, database_name='osm_pbf_data_extr
     :param subregion_name: [str or None]
     :param data_dir: [str or None]
     :param update_osm_pbf: [bool] False (default)
-    :param database_name: [str] default as 'osm_pbf_data_extracts'
+    :param database_name: [str] default as 'OpenStreetMap'
     :param if_table_exists: [str] 'replace' (default); 'append'; or 'fail'
     :param file_size_limit: [int] 100 (default)
     :param parsed: [bool]
@@ -73,7 +73,8 @@ def psql_osm_pbf_data_extracts(*subregion_name, database_name='osm_pbf_data_extr
                                                      pickle_it=False, rm_raw_file=rm_raw_file)
 
                     if subregion_osm_pbf is not None:
-                        osmdb.dump_osm_pbf_data(subregion_osm_pbf, table_name=subregion_name_, if_exists=if_table_exists)
+                        osmdb.dump_osm_pbf_data(subregion_osm_pbf, table_name=subregion_name_,
+                                                if_exists=if_table_exists)
                         del subregion_osm_pbf
                         gc.collect()
 
