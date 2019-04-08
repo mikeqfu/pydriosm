@@ -39,7 +39,7 @@ class OSM:
                               'username': input('PostgreSQL username: '),
                               'password': getpass.getpass('PostgreSQL password: '),
                               'host': input('Host name: '),
-                              'port': 5432,  # default by installation
+                              'port': 5432,  # Default by installation. This can differ in customised cases.
                               'database': input('Database name: ')}
 
         # The typical form of a database URL is: url = backend+driver://username:password@host:port/database_name
@@ -56,9 +56,9 @@ class OSM:
         self.connection = self.engine.connect()
 
     # Establish a connection to the specified database (named e.g. 'osm_extracts')
-    def connect_db(self, database_name='osm_data_extracts'):
+    def connect_db(self, database_name='OSM Data Extracts'):
         """
-        :param database_name: [str; 'osm_data_extracts'(default)] name of a database
+        :param database_name: [str; 'OSM Data Extracts'(default)] name of a database
         """
         self.database_name = database_name
         self.database_info['database'] = self.database_name
@@ -68,10 +68,17 @@ class OSM:
         self.engine = sqlalchemy.create_engine(self.url, isolation_level='AUTOCOMMIT')
         self.connection = self.engine.connect()
 
+    # Check if a database exists
+    def db_exists(self, database_name):
+        result = self.engine.execute("SELECT EXISTS("
+                                     "SELECT datname FROM pg_catalog.pg_database "
+                                     "WHERE datname='{}');".format(database_name))
+        return result.fetchone()[0]
+
     # An alternative to sqlalchemy_utils.create_database()
-    def create_db(self, database_name='osm_data_extracts'):
+    def create_db(self, database_name='OSM Data Extracts'):
         """
-        :param database_name: [str; 'osm_data_extracts'(default)] name of a database
+        :param database_name: [str; 'OSM Data Extracts'(default)] name of a database
 
         from psycopg2 import OperationalError
         try:
@@ -81,9 +88,12 @@ class OSM:
                 'SELECT *, pg_terminate_backend(pid) FROM pg_stat_activity WHERE username=\'postgres\';')
             self.engine.execute('CREATE DATABASE "{}"'.format(database_name))
         """
-        self.disconnect()
-        self.engine.execute('CREATE DATABASE "{}";'.format(database_name))
-        self.connect_db(database_name=database_name)
+        if not self.db_exists(database_name):
+            self.disconnect()
+            self.engine.execute('CREATE DATABASE "{}";'.format(database_name))
+            self.connect_db(database_name=database_name)
+        else:
+            print("The database already exists.")
 
     # Get size of a database
     def get_db_size(self, database_name=None):
