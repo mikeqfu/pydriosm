@@ -55,35 +55,35 @@ def confirmed(prompt=None, resp=False, confirmation_required=True):
 
 
 # Change directory and sub-directories
-def cd(*directories):
+def cd(*sub_dir):
     # Current working directory
     path = os.getcwd()
-    for directory in directories:
-        path = os.path.join(path, directory)
+    for x in sub_dir:
+        path = os.path.join(path, x)
     return path
 
 
 # Change directory to "dat_GeoFabrik" and sub-directories
-def cd_dat_geofabrik(*directories):
+def cd_dat_geofabrik(*sub_dir):
     path = cd("dat_GeoFabrik")
-    for directory in directories:
-        path = os.path.join(path, directory)
+    for x in sub_dir:
+        path = os.path.join(path, x)
     return path
 
 
 # Change directory to "dat_BBBike" and sub-directories
-def cd_dat_bbbike(*directories):
+def cd_dat_bbbike(*sub_dir):
     path = cd("dat_BBBike")
-    for directory in directories:
-        path = os.path.join(path, directory)
+    for x in sub_dir:
+        path = os.path.join(path, x)
     return path
 
 
 # Change directory to "dat" and sub-directories
-def cd_dat(*directories):
+def cd_dat(*sub_dir):
     path = pkg_resources.resource_filename(__name__, 'dat/')
-    for directory in directories:
-        path = os.path.join(path, directory)
+    for x in sub_dir:
+        path = os.path.join(path, x)
     return path
 
 
@@ -103,7 +103,7 @@ def regulate_input_data_dir(data_dir):
 """ Save and Load files """
 
 
-# Save pickles
+# Save data as a pickle file
 def save_pickle(pickle_data, path_to_pickle):
     """
     :param pickle_data: any object that could be dumped by the 'pickle' package
@@ -122,7 +122,7 @@ def save_pickle(pickle_data, path_to_pickle):
         print("Failed. {}.".format(e))
 
 
-# Load pickles
+# Load a pickle file
 def load_pickle(path_to_pickle):
     """
     :param path_to_pickle: [str] local file path
@@ -134,7 +134,7 @@ def load_pickle(path_to_pickle):
     return data
 
 
-# Save JSON files
+# Save data as a JSON file
 def save_json(json_data, path_to_json):
     """
     :param json_data: any object that could be dumped by the 'json' package
@@ -153,7 +153,7 @@ def save_json(json_data, path_to_json):
         print("Failed. {}.".format(e))
 
 
-# Load JSON files
+# Load a JSON file
 def load_json(path_to_json):
     """
     :param path_to_json: [str] local file path
