@@ -8,7 +8,7 @@ with open("README.md", 'r') as readme:
 setuptools.setup(
 
     name='pydriosm',
-    version='1.0.11',
+    version='1.0.12',
 
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
@@ -20,26 +20,23 @@ setuptools.setup(
     url='https://github.com/mikeqfu/pydriosm',
 
     install_requires=[
-        'beautifulsoup4',
         'Fiona',
         'fuzzywuzzy',
-        'gdal',
+        'gdal==2.4.1',
         'geopandas',
-        'html5lib',
         'humanfriendly',
-        'lxml',
         'more-itertools',
         'numpy',
         'pandas',
         'psycopg2',
+        'pyhelpers',
         'pyshp',
         'python-Levenshtein',
         'python-rapidjson',
         'requests',
         'shapely',
         'sqlalchemy',
-        'sqlalchemy-utils',
-        'tqdm'
+        'sqlalchemy-utils'
     ],
 
     packages=setuptools.find_packages(exclude=["*.tests", "tests.*", "tests"]),
