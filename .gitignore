@@ -1,8 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
 
-.idea/
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *$py.class
@@ -105,5 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# Misc
+.idea/
 misc/osm-data-in-gis-formats-free.pdf
 misc/osm-layer-features.vsdx
+dat_BBBike/
+dat_GeoFabrik/
