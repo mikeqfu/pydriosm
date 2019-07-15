@@ -14,9 +14,12 @@ import more_itertools
 import numpy as np
 import pandas as pd
 import requests
+from pyhelpers.dir import regulate_input_data_dir
+from pyhelpers.download import download
+from pyhelpers.misc import confirmed, update_nested_dict
+from pyhelpers.store import load_json, load_pickle, save_json, save_pickle
 
-from pydriosm.utils import cd_dat, cd_dat_geofabrik, download, load_json, load_pickle, save_json, save_pickle
-from pydriosm.utils import confirmed, regulate_input_data_dir, update_nested_dict
+from pydriosm.utils import cd_dat, cd_dat_geofabrik
 
 
 # Get raw directory table (allowing us to check logs of older files and their and download links)

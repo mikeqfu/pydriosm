@@ -9,9 +9,9 @@ import sqlalchemy
 import sqlalchemy.engine.reflection
 import sqlalchemy.engine.url
 import sqlalchemy_utils
+from pyhelpers.misc import confirmed
 
 from pydriosm.download_GeoFabrik import regulate_input_subregion_name
-from pydriosm.utils import confirmed
 
 
 def regulate_table_name(table_name, subregion_name_as_table_name=True):

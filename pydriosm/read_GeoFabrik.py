@@ -14,10 +14,12 @@ import pandas as pd
 import rapidjson
 import shapefile
 import shapely.geometry
+from pyhelpers.dir import regulate_input_data_dir
+from pyhelpers.store import load_pickle, save_pickle
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
 from pydriosm.download_GeoFabrik import get_default_path_to_osm_file, regulate_input_subregion_name
-from pydriosm.utils import load_pickle, osm_geom_types, regulate_input_data_dir, save_pickle, split_list
+from pydriosm.utils import osm_geom_types, split_list
 
 
 # Search the OSM data directory and its sub-directories to get the path to the file
@@ -192,7 +194,7 @@ def read_shp(path_to_shp):
 
 # Read a .shp.zip file
 def read_shp_zip(subregion_name, layer, feature=None, data_dir=None, update=False, download_confirmation_required=True,
-                 pickle_it=True, rm_extracts=False):
+                 pickle_it=False, rm_extracts=False, rm_shp_zip=False):
     """
     :param subregion_name: [str] e.g. 'england', 'oxfordshire', or 'europe'; case-insensitive
     :param layer: [str] e.g. 'railways'
@@ -200,17 +202,18 @@ def read_shp_zip(subregion_name, layer, feature=None, data_dir=None, update=Fals
     :param data_dir: [str or None]
     :param update: [bool] whether to update the relevant file/information; default False
     :param download_confirmation_required: [bool]
-    :param pickle_it: [bool]
-    :param rm_extracts: [bool] whether to keep extracted files from the .shp.zip file; default True
+    :param pickle_it: [bool] default False
+    :param rm_extracts: [bool] whether to delete extracted files from the .shp.zip file; default False
+    :param rm_shp_zip: [bool] whether to delete the downloaded .shp.zip file; default False
     :return: [GeoDataFrame]
     """
 
     shp_zip_filename, path_to_shp_zip = get_default_path_to_osm_file(subregion_name, ".shp.zip", mkdir=False)
     extract_dir = os.path.splitext(path_to_shp_zip)[0]
     if data_dir:
-        osm_pbf_dir = regulate_input_data_dir(data_dir)
-        path_to_shp_zip = os.path.join(osm_pbf_dir, shp_zip_filename)
-        extract_dir = os.path.join(osm_pbf_dir, os.path.basename(extract_dir))
+        shp_zip_dir = regulate_input_data_dir(data_dir)
+        path_to_shp_zip = os.path.join(shp_zip_dir, shp_zip_filename)
+        extract_dir = os.path.join(shp_zip_dir, os.path.basename(extract_dir))
 
     # Make a local path for saving a pickle file for .shp data
     sub_name = "-".join(x for x in [shp_zip_filename.replace("-latest-free.shp.zip", ""), layer, feature] if x)
@@ -262,6 +265,9 @@ def read_shp_zip(subregion_name, layer, feature=None, data_dir=None, update=Fals
             for f in glob.glob(os.path.join(extract_dir, "gis_osm*")):
                 # if layer not in f:
                 os.remove(f)
+
+        if rm_shp_zip:
+            remove_subregion_osm_file(path_to_shp_zip)
 
     return shp_data
 
@@ -461,7 +467,7 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
 # Read .osm.pbf file into pandas.DataFrames, either roughly or with a granularity for a given subregion
 def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
                  fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
-                 update=False, download_confirmation_required=True, pickle_it=True, rm_raw_file=True):
+                 update=False, download_confirmation_required=True, pickle_it=False, rm_osm_pbf=True):
     """
     :param subregion_name: [str] e.g. 'london'
     :param data_dir: [str or None] customised path of a .osm.pbf file
@@ -473,7 +479,7 @@ def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
     :param update: [bool]
     :param download_confirmation_required: [bool]
     :param pickle_it: [bool]
-    :param rm_raw_file: [bool]
+    :param rm_osm_pbf: [bool]
     :return: [dict] or None
 
     If 'subregion' is the name of the subregion, the default file path will be used.
@@ -516,7 +522,7 @@ def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
 
         if pickle_it:
             save_pickle(osm_pbf_data, path_to_pickle)
-        if rm_raw_file:
+        if rm_osm_pbf:
             remove_subregion_osm_file(path_to_osm_pbf)
 
     return osm_pbf_data

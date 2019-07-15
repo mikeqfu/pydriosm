@@ -9,9 +9,12 @@ import urllib.request
 import bs4
 import fuzzywuzzy.process
 import pandas as pd
+from pyhelpers.dir import regulate_input_data_dir
+from pyhelpers.download import download
+from pyhelpers.misc import confirmed
+from pyhelpers.store import load_pickle, save_pickle
 
-from pydriosm.utils import cd_dat, cd_dat_bbbike, load_pickle, save_pickle
-from pydriosm.utils import confirmed, download, regulate_input_data_dir
+from pydriosm.utils import cd_dat, cd_dat_bbbike
 
 
 #

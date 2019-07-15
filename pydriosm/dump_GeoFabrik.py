@@ -8,13 +8,15 @@ import math
 import ogr
 import pandas as pd
 import rapidjson
+from pyhelpers.dir import regulate_input_data_dir
+from pyhelpers.misc import confirmed
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
 from pydriosm.download_GeoFabrik import fetch_region_subregion_tier, retrieve_subregion_names_from
 from pydriosm.download_GeoFabrik import get_default_path_to_osm_file
 from pydriosm.osm_psql import OSM
 from pydriosm.read_GeoFabrik import parse_layer_data, read_osm_pbf
-from pydriosm.utils import confirmed, regulate_input_data_dir, split_list
+from pydriosm.utils import split_list
 
 
 # Dump data extracts to PostgreSQL
@@ -70,7 +72,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, database_name='OSM Data Extracts
                     subregion_osm_pbf = read_osm_pbf(subregion_name_, data_dir, parsed, file_size_limit,
                                                      fmt_other_tags, fmt_single_geom, fmt_multi_geom,
                                                      update=False, download_confirmation_required=False,
-                                                     pickle_it=False, rm_raw_file=rm_raw_file)
+                                                     pickle_it=False, rm_osm_pbf=rm_raw_file)
 
                     if subregion_osm_pbf is not None:
                         osmdb.dump_osm_pbf_data(subregion_osm_pbf, table_name=subregion_name_,
