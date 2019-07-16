@@ -14,7 +14,7 @@ import pandas as pd
 import rapidjson
 import shapefile
 import shapely.geometry
-from pyhelpers.dir import regulate_input_data_dir
+from pyhelpers.dir import cd, regulate_input_data_dir
 from pyhelpers.store import load_pickle, save_pickle
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
@@ -71,12 +71,14 @@ def find_osm_pbf_file(subregion_name, data_dir=None):
 
 
 # Extract only the specified layer
-def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r'):
+def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r', clustered=False, verbose=False):
     """
     :param path_to_shp_zip: [str]
     :param extract_dir: [str or None]
     :param layer: [str or None]
     :param mode: [str] 'r' (default)
+    :param clustered: [bool]
+    :param verbose: [bool]
     """
     extract_dir_ = extract_dir if extract_dir else os.path.splitext(path_to_shp_zip)[0]
     if layer:
@@ -91,6 +93,22 @@ def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r'):
             members = selected_files if selected_files else None
             shp_zip.extractall(extract_dir_, members=members)
         shp_zip.close()
+        if clustered:
+            file_list = os.listdir(extract_dir_)
+            if 'README' in file_list:
+                file_list.remove('README')
+            filenames, exts = [os.path.splitext(x)[0] for x in file_list], [os.path.splitext(x)[1] for x in file_list]
+            layer_names = [re.search(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)', f).group(0) for f in list(set(filenames))]
+            layer_names = [x.strip('_a') for x in layer_names]
+            for l, f in zip(layer_names, list(set(filenames))):
+                os.makedirs(cd(extract_dir_, l), exist_ok=True)
+                for e in list(set(exts)):
+                    filename = f + e
+                    print("{} ... ".format(filename), end="") if verbose else None
+                    orig, dest = cd(extract_dir_, filename), cd(extract_dir_, l, filename)
+                    shutil.copyfile(orig, dest)
+                    os.remove(orig)
+                    print("Done.") if verbose else None
         print("\nDone.")
     except Exception as e:
         print("\nFailed. {}".format(e))
@@ -99,7 +117,6 @@ def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r'):
 # Merge a set of .shp files (for a given layer)
 def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confirmation_required=True, output_dir=None):
     """
-
     :param subregion_names: [iterable] a list of subregion names, e.g. ['london', 'essex']
     :param layer: [str] name of a OSM layer, e.g. 'railways'
     :param update_shp_zip: [bool] indicates whether to update the relevant file/information; default False
@@ -165,9 +182,11 @@ def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confi
 
 
 # (Alternative to, though may not exactly be the same as, geopandas.read_file())
-def read_shp(path_to_shp):
+def read_shp(path_to_shp, mode='geopandas', bbox=None):
     """
     :param path_to_shp: [str] path to a .shp file
+    :param mode: [str]
+    :param bbox: [str] tuple; GeoDataFrame or GeoSeries, default None
     :return: [DataFrame]
 
     len(shp.records()) == shp.numRecords
@@ -175,19 +194,22 @@ def read_shp(path_to_shp):
     shp.bbox  # boundaries
 
     """
-    # Read .shp file using shapefile.Reader()
-    shp_reader = shapefile.Reader(path_to_shp)
+    if mode == 'geopandas':  # default
+        shp_data = gpd.read_file(path_to_shp, bbox)
+    else:
+        # Read .shp file using shapefile.Reader()
+        shp_reader = shapefile.Reader(path_to_shp)
 
-    # Transform the data to a DataFrame
-    filed_names = [field[0] for field in shp_reader.fields[1:]]
-    shp_data = pd.DataFrame(shp_reader.records(), columns=filed_names)
+        # Transform the data to a DataFrame
+        filed_names = [field[0] for field in shp_reader.fields[1:]]
+        shp_data = pd.DataFrame(shp_reader.records(), columns=filed_names)
 
-    # shp_data['name'] = shp_data.name.str.encode('utf-8').str.decode('utf-8')  # Clean data
-    shape_info = pd.DataFrame(((s.points, s.shapeType) for s in shp_reader.iterShapes()),
-                              index=shp_data.index, columns=['coords', 'shape_type'])
-    shp_data = shp_data.join(shape_info)
+        # shp_data['name'] = shp_data.name.str.encode('utf-8').str.decode('utf-8')  # Clean data
+        shape_info = pd.DataFrame(((s.points, s.shapeType) for s in shp_reader.iterShapes()),
+                                  index=shp_data.index, columns=['coords', 'shape_type'])
+        shp_data = shp_data.join(shape_info)
 
-    shp_reader.close()
+        shp_reader.close()
 
     return shp_data
 
@@ -223,13 +245,15 @@ def read_shp_zip(subregion_name, layer, feature=None, data_dir=None, update=Fals
         shp_data = load_pickle(path_to_shp_pickle)
     else:
         # Download the requested OSM file urlretrieve(download_url, file_path)
-        download_subregion_osm_file(shp_zip_filename, osm_file_format=".shp.zip", download_dir=data_dir,
-                                    update=update, download_confirmation_required=download_confirmation_required,
-                                    verbose=False)
-        extract_shp_zip(path_to_shp_zip, extract_dir, layer=layer)
+        if not os.path.exists(extract_dir):
+            download_subregion_osm_file(shp_zip_filename, osm_file_format=".shp.zip", download_dir=data_dir,
+                                        update=update, download_confirmation_required=download_confirmation_required,
+                                        verbose=False)
+        if os.path.isfile(path_to_shp_zip):
+            extract_shp_zip(path_to_shp_zip, extract_dir, layer=layer)
 
         path_to_shp = glob.glob(os.path.join(extract_dir, "*{}*.shp".format(layer)))
-        if not path_to_shp:
+        if len(path_to_shp) == 0:
             shp_data = None
         elif len(path_to_shp) == 1:
             shp_data = gpd.read_file(path_to_shp[0])  # gpd.GeoDataFrame(read_shp_file(path_to_shp))
@@ -260,13 +284,13 @@ def read_shp_zip(subregion_name, layer, feature=None, data_dir=None, update=Fals
         if pickle_it:
             save_pickle(shp_data, path_to_shp_pickle)
 
-        if rm_extracts:
+        if os.path.exists(extract_dir) and rm_extracts:
             # import shutil; shutil.rmtree(extract_dir)
             for f in glob.glob(os.path.join(extract_dir, "gis_osm*")):
                 # if layer not in f:
                 os.remove(f)
 
-        if rm_shp_zip:
+        if os.path.isfile(path_to_shp_zip) and rm_shp_zip:
             remove_subregion_osm_file(path_to_shp_zip)
 
     return shp_data
