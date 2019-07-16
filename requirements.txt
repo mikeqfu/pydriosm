@@ -23,6 +23,7 @@ pyproj==2.2.1
 pyreadline==2.1
 pyshp==2.1.0
 python-dateutil==2.8.0
+python-Levenshtein==0.12.0
 python-rapidjson==0.7.2
 pytz==2019.1
 requests==2.22.0
