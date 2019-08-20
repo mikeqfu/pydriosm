@@ -1,10 +1,32 @@
 # pydriosm
 
-**(Version 1.0.14)**
+**Author**: Qian Fu [![Twitter Follow](https://img.shields.io/twitter/follow/Qian_Fu?label=Follow&style=social)](https://twitter.com/Qian_Fu)
+
+[![PyPI](https://img.shields.io/pypi/v/pydriosm)](https://pypi.org/project/pydriosm/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pydriosm)
+[![PyPI - License](https://img.shields.io/pypi/l/pydriosm)](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE)
+![GitHub repo size](https://img.shields.io/github/repo-size/mikeqfu/pydriosm?color=yellowgreen)
+
+[![Website](https://img.shields.io/website/https/download.geofabrik.de?down_color=lightgrey&down_message=offline&label=download.geofabrik.de&up_color=9cf&up_message=online)](https://download.geofabrik.de/) [![Website](https://img.shields.io/website/https/download.bbbike.org/osm?down_color=lightgrey&down_message=offline&label=ownload.bbbike.org&up_color=9cf&up_message=online)](https://download.bbbike.org/osm/)
+
+
 
 This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.pbf** and **.shp.zip**) which are available at the free download servers: [Geofabrik](https://download.geofabrik.de/) and [BBBike](https://www.bbbike.org/). In addition, it also provides a convenient way to import/dump the parsed data to, and load it from, a PostgreSQL sever. 
 
 (Note that the package is written in Python 3.x and tested only on Windows operating system and might not be compatible with Python 2.x. or other operating systems)
+
+
+
+## Contents
+
+* [Installation](#installation)
+* [Quick start - Example: to handle ".pbf" data of the Greater London area](#quick-start)
+  * [Downloading data](#downloading-data)
+  * [Reading/parsing data](#reading-parsing-data)
+  * [Importing data into, and retrieving data from, the PostgreSQL server](#importing-retrieving-data)
+* [Footnote](#footnote)
+
+
 
 
 
@@ -51,7 +73,7 @@ print(subregion_list)
 
 
 
-#### Downloading data
+#### Downloading data <a name="downloading-data"></a>
 
 To download the OSM data for a region (or rather, a subregion) of which the data extract is available, we just need to simply specify the name of the (sub)region. Let's say we would like to have data of the Greater London area:
 
@@ -102,7 +124,7 @@ The **.pbf** file will then be saved to the `download_dir` as specified.
 
 
 
-#### Reading/parsing data
+#### Reading/parsing data <a name="reading-parsing-data"></a>
 
 Parsing the **.pbf** data relies mainly on [GDAL/OGR](https://pypi.org/project/GDAL/), using `read_osm_pbf()` function.
 
@@ -159,7 +181,7 @@ Similarly, if we could also set `data_dir=customised_data_dir` to save the downl
 
 
 
-#### Importing data into, and retrieving data from, the PostgreSQL server
+#### Importing data into, and retrieving data from, the PostgreSQL server <a name="importing-retrieving-data"></a>
 
 *pydriosm* also provides a class, named 'OSM', which communicates with PostgreSQL server. 
 
@@ -242,10 +264,8 @@ Instead of returning `['England', 'Scotland', 'Wales']`, the list `gb_subregions
 
 
 
-
-
 ---
 
-Data/Map data &copy; [Geofabrik GmbH](http://www.geofabrik.de/) and [OpenStreetMap Contributors](http://www.openstreetmap.org/) 
+Data/Map data &copy; [Geofabrik GmbH](http://www.geofabrik.de/) and [OpenStreetMap Contributors](http://www.openstreetmap.org/) <a name="footnote"></a>
 
 All data from the [OpenStreetMap](https://www.openstreetmap.org) is licensed under the [OpenStreetMap License](https://www.openstreetmap.org/copyright). 
