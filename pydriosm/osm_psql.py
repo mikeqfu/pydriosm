@@ -1,8 +1,8 @@
 """ Data storage with PostgreSQL """
 
+import gc
 import getpass
 
-import gc
 import pandas as pd
 import shapely.wkt
 import sqlalchemy
@@ -56,7 +56,7 @@ class OSM:
         self.connection = self.engine.connect()
 
     # Establish a connection to the specified database (named e.g. 'osm_extracts')
-    def connect_db(self, database_name='OSM Data Extracts'):
+    def connect_db(self, database_name='OSM_data_extracts'):
         """
         :param database_name: [str; 'OSM Data Extracts'(default)] name of a database
         """
@@ -76,7 +76,7 @@ class OSM:
         return result.fetchone()[0]
 
     # An alternative to sqlalchemy_utils.create_database()
-    def create_db(self, database_name='OSM Data Extracts'):
+    def create_db(self, database_name='OSM_data_extracts'):
         """
         :param database_name: [str; 'OSM Data Extracts'(default)] name of a database
 
