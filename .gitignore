@@ -103,8 +103,10 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# Misc
+# PyCharm
 .idea/
+
+# Misc
 misc/osm-data-in-gis-formats-free.pdf
 misc/osm-layer-features.vsdx
 dat_BBBike/
