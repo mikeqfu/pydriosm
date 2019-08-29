@@ -20,9 +20,12 @@ This package provides helpful utilities for researchers to easily download and r
 
 * [Installation](#installation)
 * [Quick start - Example: to handle ".pbf" data of the Greater London area](#quick-start)
-  * [Downloading data](#downloading-data)
-  * [Reading/parsing data](#reading-parsing-data)
-  * [Importing data into, and retrieving data from, the PostgreSQL server](#importing-retrieving-data)
+  * [Download data](#download-data)
+  * [Read/parse data](#read-parse-data)
+  * [Import and retrieve data with a PostgreSQL server](#import-retrieve-data)
+    * [Import the data to the database](#import-the-data-to-the-database)
+    * [Retrieve data from the database](#retrieve-data-from-the-database)
+    * [Import data of all subregions of a given (sub)region to the database](#import-data-of-all-subregions)
 * [Footnote](#footnote)
 
 ---
@@ -64,7 +67,7 @@ Below is an example of using **.pbf** data of the "Greater London" area to demon
 
 
 
-### Download data <a name="downloading-data"></a>
+### Download data <a name="download-data"></a>
 
 To download the OSM data for a region (or rather, a subregion) of which the data extract is available, you  need to specify the name of the region (e.g. "Greater London"):
 
@@ -115,7 +118,7 @@ The **.pbf** data file will then be saved to the `download_dir` as specified.
 
 
 
-### Read/parse data <a name="reading-parsing-data"></a>
+### Read/parse data <a name="read-parse-data"></a>
 
 Parsing the **.pbf** data relies mainly on [GDAL/OGR](https://pypi.org/project/GDAL/), using `read_osm_pbf()` function.
 
@@ -174,7 +177,7 @@ You could also set `data_dir=customised_data_dir` to save the downloaded **.shp.
 
 
 
-### Import and retrieve data with a PostgreSQL server <a name="importing-retrieving-data"></a>
+### Import and retrieve data with a PostgreSQL server <a name="import-retrieve-data"></a>
 
 **Pydriosm** also provides a class, named "OSM", which communicates with [PostgreSQL](https://www.postgresql.org/) server. 
 
@@ -196,7 +199,7 @@ Then, a database named "**osm_pbf_data_extracts**" will be created automatically
 
 
 
-#### (1) Import the data to the database
+#### (1) Import the data to the database <a name="import-the-data-to-the-database"></a>
 
 To import `greater_london` (i.e. the parsed **.pbf** data of "Greater London") to the database, "**osm_pbf_data_extracts**":
 
@@ -210,7 +213,7 @@ Each element (i.e. layer) of `greater_london` data will be stored in a different
 
 
 
-#### (2) Retrieve data from the database
+#### (2) Retrieve data from the database <a name="retrieve-data-from-the-database"></a>
 
 To retrieve the dumped data:
 
@@ -233,7 +236,7 @@ london_points_lines = osmdb.read_osm_pbf_data(subregion_name, 'points', 'lines')
 
 
 
-#### (3) Import data of all subregions of a given (sub)region to the database
+#### (3) Import data of all subregions of a given (sub)region to the database <a name="import-data-of-all-subregions"></a>
 
 ```python
 # Find all subregions (without smaller subregions) of a subregion.
