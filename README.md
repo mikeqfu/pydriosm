@@ -10,8 +10,6 @@
 
 This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.pbf** and **.shp.zip**) which are available at the free download servers: [Geofabrik](https://download.geofabrik.de/) and [BBBike](https://www.bbbike.org/). In addition, it also provides a convenient way to import/dump the parsed data to, and retrieve it from, a [PostgreSQL](https://www.postgresql.org/) sever. 
 
-(Note that the package is written in Python 3.x and tested only on Windows OS and might not be compatible with Python 2.x. or other operating systems)
-
 
 
 ---
@@ -19,7 +17,7 @@ This package provides helpful utilities for researchers to easily download and r
 **<span style="font-size:larger;">Contents</span>**
 
 * [Installation](#installation)
-* [Quick start - Example: to handle ".pbf" data of the Greater London area](#quick-start)
+* [Quick start - A brief example of processing .pbf data of the Greater London](#quick-start)
   * [Download data](#download-data)
   * [Read/parse data](#read-parse-data)
   * [Import and retrieve data with a PostgreSQL server](#import-retrieve-data)
