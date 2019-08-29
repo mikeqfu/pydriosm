@@ -1,23 +1,22 @@
 # pydriosm
 
-**Author**: Qian Fu [![Twitter Follow](https://img.shields.io/twitter/follow/Qian_Fu?label=Follow&style=social)](https://twitter.com/Qian_Fu)
+**Author**: Qian Fu [![Twitter URL](https://img.shields.io/twitter/url/https/twitter.com/Qian_Fu?label=Follow&style=social)](https://twitter.com/Qian_Fu)
 
-[![PyPI](https://img.shields.io/pypi/v/pydriosm)](https://pypi.org/project/pydriosm/)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pydriosm)
-[![PyPI - License](https://img.shields.io/pypi/l/pydriosm)](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE)
-![GitHub repo size](https://img.shields.io/github/repo-size/mikeqfu/pydriosm?color=yellowgreen)
+[![PyPI](https://img.shields.io/pypi/v/pydriosm?label=PyPI&color=important)](https://pypi.org/project/pydriosm/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pydriosm?label=Python)](https://www.python.org/downloads/windows/)
+[![PyPI - License](https://img.shields.io/pypi/l/pydriosm?color=green&label=License)](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/mikeqfu/pydriosm?color=yellowgreen&label=Code%20size)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads)
 
-[![Website](https://img.shields.io/website/https/download.geofabrik.de?down_color=lightgrey&down_message=offline&label=download.geofabrik.de&up_color=9cf&up_message=online)](https://download.geofabrik.de/) [![Website](https://img.shields.io/website/https/download.bbbike.org/osm?down_color=lightgrey&down_message=offline&label=ownload.bbbike.org&up_color=9cf&up_message=online)](https://download.bbbike.org/osm/)
+This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.pbf** and **.shp.zip**) which are available at the free download servers: [Geofabrik](https://download.geofabrik.de/) and [BBBike](https://www.bbbike.org/). In addition, it also provides a convenient way to import/dump the parsed data to, and retrieve it from, a [PostgreSQL](https://www.postgresql.org/) sever. 
 
-
-
-This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.pbf** and **.shp.zip**) which are available at the free download servers: [Geofabrik](https://download.geofabrik.de/) and [BBBike](https://www.bbbike.org/). In addition, it also provides a convenient way to import/dump the parsed data to, and load it from, a PostgreSQL sever. 
-
-(Note that the package is written in Python 3.x and tested only on Windows operating system and might not be compatible with Python 2.x. or other operating systems)
+(Note that the package is written in Python 3.x and tested only on Windows OS and might not be compatible with Python 2.x. or other operating systems)
 
 
 
-## Contents
+---
+
+**<span style="font-size:larger;">Contents</span>**
 
 * [Installation](#installation)
 * [Quick start - Example: to handle ".pbf" data of the Greater London area](#quick-start)
@@ -26,37 +25,27 @@ This package provides helpful utilities for researchers to easily download and r
   * [Importing data into, and retrieving data from, the PostgreSQL server](#importing-retrieving-data)
 * [Footnote](#footnote)
 
-
+---
 
 
 
 ## Installation
 
-On Windows, use the command prompt to run:
+Windows OS users may the "pip install" command in Command Prompt:
 
 ```
-pip install pydriosm
+pip install --upgrade pydriosm
 ```
 
-If we are using some IDE, such as PyCharm, we should be able to find *pydriosm* in the PyPI repository. (For example, if we are using PyCharm, we can find *pydriosm* in "Project Interpreter" of "Settings". To install it, just simply select *pydriosm* and click "Install Package".)
+If you are using some IDE, such as PyCharm, you should be able to find **pydriosm** in the PyPI repository. (In PyCharm, go to "Settings" and find **pydriosm** in "Project Interpreter"; to install it, select **pydriosm** and then click "Install Package".)
 
 ##### Note:
 
-It is important to note that successful installation of *pydriosm* requires a few supporting packages which ensure its full functionality. However, using Python 3.x on Windows OS, `pip install` may fail to go through installation of some of the supporting packages, such as [Fiona](https://pypi.org/project/Fiona/), [GDAL](https://pypi.org/project/GDAL/) and [Shapely](https://pypi.org/project/Shapely/). Instead, we might have to resort to installing their binaries (e.g. **.whl**) which can be downloaded from the [Unofficial Windows Binaries for Python Extension Packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/). Once those packages are all ready, we could go ahead with the `pip` command. 
-
-##### Supporting packages include:
-
-*beautifulsoup4*, *Fiona*, *fuzzywuzzy*, *gdal*, *geopandas*, *html5lib*, *humanfriendly*, *lxml*, *numpy+mkl*, *pandas*, *psycopg2*, *pyshp*, *python-Levenshtein*, *python-rapidjson*, *requests*, *shapely*, *sqlalchemy*, *sqlalchemy-utils*, *tqdm*. 
+- Successful installation of `pydriosm` (and ensuring its full functionality) requires a few dependencies. On Windows OS, however, `pip install` may fail to go through the installation of some supporting packages, such as [python-Levenshtein](https://pypi.org/project/python-Levenshtein/), [Fiona](https://pypi.org/project/Fiona/), [GDAL](https://pypi.org/project/GDAL/) and [Shapely](https://pypi.org/project/Shapely/). In that case, you might have to resort to installing their **.whl** files, which can be downloaded from the [Unofficial Windows Binaries for Python Extension Packages](https://www.lfd.uci.edu/~gohlke/pythonlibs/). Once those packages are all ready, we could go ahead with the `pip` command. 
 
 
 
 ## Quick start
-
-This is a brief introduction of some main functions this package can perform.
-
-### Example: to handle ".pbf" data of the Greater London area
-
-Here is an example to illustrate what we may do by using the package. 
 
 Firstly, we import the package: 
 
@@ -64,25 +53,27 @@ Firstly, we import the package:
 import pydriosm as dri
 ```
 
-Note that we can only get the subregion data that is available. To get a full list of subregion names, we can use
+The current version of the package deals only with subregion data files provided on the free server. To get a full list of subregion names that are available, you can use
 
 ```python
 subregion_list = dri.fetch_subregion_info_catalogue("GeoFabrik-subregion-name-list")
 print(subregion_list)
 ```
 
+Below is an example of using **.pbf** data of the "Greater London" area to demonstrate briefly some main functions this package can do. 
 
 
-#### Downloading data <a name="downloading-data"></a>
 
-To download the OSM data for a region (or rather, a subregion) of which the data extract is available, we just need to simply specify the name of the (sub)region. Let's say we would like to have data of the Greater London area:
+### Download data <a name="downloading-data"></a>
+
+To download the OSM data for a region (or rather, a subregion) of which the data extract is available, you  need to specify the name of the region (e.g. "Greater London"):
 
 ```python
 subregion_name = 'Greater London'
 # or, subregion_name = 'london'; case-insensitive and fuzzy (but not toooo... fuzzy)
 ```
 
-Download **.pbf** data of 'Greater London':
+Download **.pbf** data of "Greater London":
 
 ```python
 dri.download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf", 
@@ -90,7 +81,7 @@ dri.download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf",
                                 download_confirmation_required=True)
 ```
 
-The parameter`download_dir` is `None` by default. In that case, a default file path will be created and the downloaded file will be saved there. 
+Note that `download_dir` is `None` by default. In that case, a default file path will be created and the downloaded file will be saved there. 
 
 Check the default file path and name:
 
@@ -102,7 +93,7 @@ print("Default filename: {}".format(default_fn))
 print("Default file path: {}".format(default_fp))
 ```
 
-However, we may also set this parameter to be any other valid directory, especially when downloading data of multiple subregions. For example, 
+However, you may also set `download_dir` to be any other valid directory, especially when downloading data of multiple subregions. For example, 
 
 ```python
 # Specify the our own data directory
@@ -120,11 +111,11 @@ dri.download_subregion_osm_file('London', 'Kent',
                                 download_confirmation_required=True)
 ```
 
-The **.pbf** file will then be saved to the `download_dir` as specified.
+The **.pbf** data file will then be saved to the `download_dir` as specified.
 
 
 
-#### Reading/parsing data <a name="reading-parsing-data"></a>
+### Read/parse data <a name="reading-parsing-data"></a>
 
 Parsing the **.pbf** data relies mainly on [GDAL/OGR](https://pypi.org/project/GDAL/), using `read_osm_pbf()` function.
 
@@ -138,9 +129,9 @@ greater_london = dri.read_osm_pbf(subregion_name, data_dir=None, parsed=True,
 
 The parsing process may take a few minutes or even longer if the data file is too large. If the file size is greater than the given `file_size_limit` (default: 50 MB), the data will be parsed in a chunk-wise manner. 
 
-Note that `greater_london` is a `dict` with its keys being the name of five different layers: 'points', 'lines', 'multilinestrings', 'multipolygons', and 'other_relations'. 
+Note that `greater_london` is a `dict` with its keys being the name of five different layers: "points", "lines", "multilinestrings", "multipolygons" and "other_relations". 
 
-If only the name of a subregion is given, i.e. `read_osm_pbf(subregion_name, ...)`, the function will go look for the data file from the default file path. Otherwise, the function requires a specific data directory. For example, to read/parse the data in `customised_data_dir`, i.e. "test_data" folder, we just need to set `data_dir=customised_data_dir`:
+If only the name of a subregion is given, i.e. `read_osm_pbf(subregion_name, ...)`, the function will go to look for the data file from the default file path. Otherwise, the function requires a specific data directory. For example, to read/parse the data in `customised_data_dir`, i.e. "test_data" folder, you need to set `data_dir=customised_data_dir` as follows:
 
 ```python
 greater_london_test = dri.read_osm_pbf(subregion_name, data_dir=customised_data_dir)
@@ -148,13 +139,13 @@ greater_london_test = dri.read_osm_pbf(subregion_name, data_dir=customised_data_
 
 `greater_london` and `greater_london_test` should be the same. 
 
-To make things easier, we can simply skip the download step and run `read_osm_pbf()` directly. That is, if the targeted data is not available, `read_osm_pbf()` will download the data first. By default, a confirmation of downloading the data will be asked with the setting of `download_confirmation_required=True`. 
+To make life easier, you can simply skip the download step and use `read_osm_pbf()` directly. That is, if the targeted data is not available, `read_osm_pbf()` will download the data file first. By default, a confirmation of downloading the data will be prompted, given that `download_confirmation_required=True`. 
 
-Setting `pickle_it=True` is to save a local copy of the parsed data as a `pickle` file. As long as `update=False`, when we run `read_osm_pbf(subregion_name)` again, the function will load the `pickle` file directly. If `update=True`, the function will try to download the latest version of the data file and parse it again.
+Setting `pickle_it=True` is to save a local copy of the parsed data as a `pickle` file. If `update=False`, when you run `read_osm_pbf(subregion_name)` again, the function will load the `pickle` file directly. If `update=True`, the function will try to download the latest version of the data file and parse it again.
 
 
 
-In comparison, reading **.shp.zip** data relies mainly on [GeoPandas](http://geopandas.org/). For the **.shp.zip** data, we could use `read_shp_zip()` as follows:
+In comparison, you can use `read_shp_zip()`, which relies mainly on [GeoPandas](http://geopandas.org/), to read **.shp.zip** data files:
 
 ```python
 # We need to specify a layer, e.g. 'railways'
@@ -168,7 +159,9 @@ greater_london_shp = dri.read_shp_zip(subregion_name, layer=layer_name,
 
 Note that `greater_london_shp` and `greater_london` are different. 
 
-For **.shp.zip** data, if we would like to get information about more than one subregion, we could also merge .shp files of specific layers from those subregions. For example, to merge 'railways' layer of two subregions: Greater London and Essex, we could do as follows.
+
+
+To get information about more than one subregion, you can also merge **.shp** files of specific layers from those subregions. For example, to merge the "railways" layer of two subregions: "Greater London" and "Essex", we could do as follows.
 
 ```python
 subregion_names=['Greater London', 'Kent']
@@ -177,33 +170,35 @@ dri.merge_multi_shp(subregion_names, layer=layer_name, update_shp_zip=False,
                    download_confirmation_required=True, output_dir=None)
 ```
 
-Similarly, if we could also set `data_dir=customised_data_dir` to save the downloaded **.shp.zip**; or `output_dir=customised_data_dir` to make the merged **.shp** file available at the `customised_data_dir`.
+You could also set `data_dir=customised_data_dir` to save the downloaded **.shp.zip** files; or `output_dir=customised_data_dir` to make the merged **.shp** file available into `customised_data_dir`.
 
 
 
-#### Importing data into, and retrieving data from, the PostgreSQL server <a name="importing-retrieving-data"></a>
+### Import and retrieve data with a PostgreSQL server <a name="importing-retrieving-data"></a>
 
-*pydriosm* also provides a class, named 'OSM', which communicates with PostgreSQL server. 
+**Pydriosm** also provides a class, named "OSM", which communicates with [PostgreSQL](https://www.postgresql.org/) server. 
 
 ```python
 osmdb = dri.OSM()
 ```
 
-To establish a connection with the server, we will be asked to type in our username, password, host name/address and name of the database we intend to connect. For example, we may type in 'postgres' to connect the common database (i.e. 'postgres'). Note that all quotation marks should be removed when typing in the name.
+To establish a connection with the server, you will be asked to type in your username, password, host name/address and name of the database you intend to connect. 
 
-If we may want to connect to another database (instead of the default 'postgres'), we use
+For example, you may type in "postgres" to connect the default database. (Note that the quotation marks should be removed when typing in the name.)
+
+If you would like to connect to another database (instead of the default "postgres"), run 
 
 ```python
 osmdb.connect_db(database_name='osm_pbf_data_extracts')
 ```
 
-'osm_data_extracts' will be created automatically if it does not exist before the connection is established.
+Then, a database named "**osm_pbf_data_extracts**" will be created automatically if it does not exist before the connection is established.
 
 
 
-##### (1) Importing data
+#### (1) Import the data to the database
 
-We could dump the parsed **.pbf** data to a PostgreSQL server. To import `greater_london` into the database, 'osm_pbf_data_extracts':
+To import `greater_london` (i.e. the parsed **.pbf** data of "Greater London") to the database, "**osm_pbf_data_extracts**":
 
 ```python
 osmdb.dump_osm_pbf_data(greater_london, table_name=subregion_name, parsed=True, 
@@ -213,9 +208,11 @@ osmdb.dump_osm_pbf_data(greater_london, table_name=subregion_name, parsed=True,
 
 Each element (i.e. layer) of `greater_london` data will be stored in a different schema. The schema is named as the name of each layer.
 
-##### (2) Retrieving data from the server
 
-To read the dumped data:
+
+#### (2) Retrieve data from the database
+
+To retrieve the dumped data:
 
 ```python
 greater_london_retrieval = osmdb.read_osm_pbf_data(table_name=subregion_name, 
@@ -224,9 +221,9 @@ greater_london_retrieval = osmdb.read_osm_pbf_data(table_name=subregion_name,
                                                    chunk_size=None, id_sorted=True)
 ```
 
-Note that `greater_london_retrieval` may not be exactly 'the same' as `greater_london`. This is because the keys of the elements in `greater_london` are in the following order: 'points', 'lines', 'multilinestrings', 'multipolygons' and 'other_relations'; whereas when dumping `greater_london` to the server, the five different schemas are sorted alphabetically as follows: 'lines', 'multilinestrings', 'multipolygons', 'other_relations', and 'points', and so retrieving data from the server will be in the latter order. However, the data contained in both `greater_london` and `greater_london_retrieval` is consistent. 
+Note that `greater_london_retrieval` may not be exactly the same as `greater_london`. This is because the keys of the elements in `greater_london` are in the following order: 'points', 'lines', 'multilinestrings', 'multipolygons' and 'other_relations'; whereas when dumping `greater_london` to the database, the five different schemas are sorted alphabetically as follows: 'lines', 'multilinestrings', 'multipolygons', 'other_relations', and 'points', and so retrieving data from the server will be in the latter order. Despite that, the data contained in both `greater_london` and `greater_london_retrieval` is consistent. 
 
-If we need to query data of specific layer (or layers), or in a specific order of layers (schemas): 
+If you need to query data of a specific layer (or several layers), or in a specific order of layers (schemas): 
 
 ```python
 london_points_lines = osmdb.read_osm_pbf_data(subregion_name, 'points', 'lines')
@@ -236,7 +233,7 @@ london_points_lines = osmdb.read_osm_pbf_data(subregion_name, 'points', 'lines')
 
 
 
-##### (3) Importing data of all subregions of a given (sub)region
+#### (3) Import data of all subregions of a given (sub)region to the database
 
 ```python
 # Find all subregions (without smaller subregions) of a subregion.
@@ -252,19 +249,22 @@ dri.psql_osm_pbf_data_extracts(subregions, database_name='osm_pbf_data_extracts'
                                rm_raw_file=False)
 ```
 
-Setting `rm_raw_file=False` and `data_dir=None` will keep all raw **.pbf** files in default data folder.
+Setting `rm_raw_file=False` and `data_dir=None` will keep all raw **.pbf** data files in the default data folder.
 
-If we would like to import all subregion data of 'Great Britain':
+If you would like to import all subregion data of "Great Britain":
 
 ```python
 gb_subregions = dri.retrieve_subregion_names_from('Great Britain')
 ```
 
-Instead of returning `['England', 'Scotland', 'Wales']`, the list `gb_subregions` will include all subregions of 'England' (rather than 'England' as a single element), plus 'Scotland' and 'Wales'. 
+Instead of returning `['England', 'Scotland', 'Wales']`, the list `gb_subregions` will include all subregions of "England" (rather than "England" as a single element), "Scotland" and "Wales". 
 
 
 
 ---
+
+[![Website](https://img.shields.io/website/https/download.geofabrik.de?label=Data%20source&up_color=9cf&up_message=http%3A%2F%2Fdownload.geofabrik.de)](https://download.geofabrik.de/)
+[![Website](https://img.shields.io/website/https/download.bbbike.org/osm?label=Data%20source&up_color=9cf&up_message=http%3A%2F%2Fdownload.bbbike.org%2Fosm)](https://download.bbbike.org/osm/)
 
 Data/Map data &copy; [Geofabrik GmbH](http://www.geofabrik.de/) and [OpenStreetMap Contributors](http://www.openstreetmap.org/) <a name="footnote"></a>
 
