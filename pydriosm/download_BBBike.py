@@ -12,15 +12,21 @@ import pandas as pd
 from pyhelpers.dir import regulate_input_data_dir
 from pyhelpers.download import download
 from pyhelpers.misc import confirmed
-from pyhelpers.store import load_pickle, save_pickle
+from pyhelpers.store import load_pickle
 
-from pydriosm.utils import cd_dat, cd_dat_bbbike
+from pydriosm.utils import cd_dat, cd_dat_bbbike, save_pickle
 
 
 #
-def collect_bbbike_subregion_catalogue(confirmation_required=True):
+def collect_bbbike_subregion_catalogue(confirmation_required=True, verbose=False):
     """
-    :param confirmation_required:
+    :param confirmation_required: [bool] (default: True)
+    :param verbose: [bool] (default: False)
+
+    Testing e.g.
+        confirmation_required = True
+        verbose               = True
+        collect_bbbike_subregion_catalogue(confirmation_required, verbose)
     """
     if confirmed("To collect BBBike subregion catalogue? ", confirmation_required=confirmation_required):
         try:
@@ -28,10 +34,10 @@ def collect_bbbike_subregion_catalogue(confirmation_required=True):
             bbbike_subregion_catalogue = pd.read_html(home_url, header=0, parse_dates=['Last Modified'])[0].drop(0)
             bbbike_subregion_catalogue.Name = bbbike_subregion_catalogue.Name.map(lambda x: x.strip('/'))
 
-            save_pickle(bbbike_subregion_catalogue, cd_dat("BBBike-subregion-catalogue.pickle"))
+            save_pickle(bbbike_subregion_catalogue, cd_dat("BBBike-subregion-catalogue.pickle"), verbose=verbose)
 
             bbbike_subregion_names = bbbike_subregion_catalogue.Name.tolist()
-            save_pickle(bbbike_subregion_names, cd_dat("BBBike-subregion-name-list.pickle"))
+            save_pickle(bbbike_subregion_names, cd_dat("BBBike-subregion-name-list.pickle"), verbose=verbose)
 
         except Exception as e:
             print("Failed to get the required information ... {}.".format(e))
@@ -40,11 +46,20 @@ def collect_bbbike_subregion_catalogue(confirmation_required=True):
 
 
 #
-def fetch_bbbike_subregion_catalogue(catalogue_name, update=False):
+def fetch_bbbike_subregion_catalogue(catalogue_name, update=False, verbose=False):
     """
-    :param catalogue_name: [str]
-    :param update: [bool]
-    :return: [pandas.DataFrame]
+    :param catalogue_name: [str] "BBBike-subregion-catalogue"; "BBBike-subregion-name-list"
+    :param update: [bool] (default: False)
+    :param verbose: [bool] (default: False)
+    :return: [pd.DataFrame; list]
+
+    Testing e.g.
+        update         = False
+        verbose        = True
+        catalogue_name = "BBBike-subregion-catalogue"
+        fetch_bbbike_subregion_catalogue(catalogue_name, update, verbose)
+        catalogue_name = "BBBike-subregion-name-list"
+        fetch_bbbike_subregion_catalogue(catalogue_name, update, verbose)
     """
     available_catalogue = ("BBBike-subregion-catalogue", "BBBike-subregion-name-list")
     assert catalogue_name in available_catalogue, \
@@ -54,7 +69,7 @@ def fetch_bbbike_subregion_catalogue(catalogue_name, update=False):
     if not os.path.isfile(path_to_pickle) or update:
         collect_bbbike_subregion_catalogue(confirmation_required=False)
     try:
-        bbbike_subregion_catalogue = load_pickle(path_to_pickle)
+        bbbike_subregion_catalogue = load_pickle(path_to_pickle, verbose=verbose)
         return bbbike_subregion_catalogue
     except Exception as e:
         print(e)
@@ -65,6 +80,10 @@ def regulate_bbbike_input_subregion_name(subregion_name):
     """
     :param subregion_name: [str]
     :return: [str]
+
+    Testing e.g.
+        subregion_name = 'leeds'
+        regulate_bbbike_input_subregion_name(subregion_name)  # 'Leeds'
     """
     assert isinstance(subregion_name, str)
     bbbike_subregion_names = fetch_bbbike_subregion_catalogue("BBBike-subregion-name-list")
@@ -73,7 +92,18 @@ def regulate_bbbike_input_subregion_name(subregion_name):
 
 
 #
-def collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_required=True):
+def collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_required=True, verbose=False):
+    """
+    :param subregion_name: [str]
+    :param confirmation_required: [bool] (default: True)
+    :param verbose: [bool] (default: False)
+
+    Testing e.g.
+        subregion_name        = 'leeds'
+        confirmation_required = True
+        verbose               = True
+        collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_required, verbose)
+    """
 
     def parse_dlc(dlc):
         dlc_href = dlc.get('href')  # URL
@@ -94,7 +124,6 @@ def collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_req
     #
     if confirmed("To collect BBBike download catalogue for \"{}\"? ".format(subregion_name_),
                  confirmation_required=confirmation_required):
-
         try:
             url = 'https://download.bbbike.org/osm/bbbike/{}/'.format(subregion_name_)
 
@@ -106,7 +135,7 @@ def collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_req
             subregion_downloads_catalogue.columns = ['Filename', 'URL', 'DataType', 'Size', 'LastUpdate']
 
             path_to_file = cd_dat_bbbike(subregion_name_, subregion_name_ + "-download-catalogue.pickle")
-            save_pickle(subregion_downloads_catalogue, path_to_file)
+            save_pickle(subregion_downloads_catalogue, path_to_file, verbose=verbose)
 
         except Exception as e:
             print("Failed to collect download catalogue for \"{}\". {}".format(subregion_name_, e))
@@ -115,28 +144,43 @@ def collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_req
 
 
 #
-def fetch_bbbike_subregion_download_catalogue(subregion_name, update=False, confirmation_required=True):
+def fetch_bbbike_subregion_download_catalogue(subregion_name, update=False, confirmation_required=True, verbose=False):
     """
     :param subregion_name: [str]
-    :param update: [bool]
-    :param confirmation_required: [bool]
-    :return: [pandas.DataFrame] or null
+    :param update: [bool] (default: False)
+    :param confirmation_required: [bool] (default: True)
+    :param verbose: [bool] (default: False)
+    :return: [pd.DataFrame]
+
+    Testing e.g.
+        subregion_name        = 'leeds'
+        update                = False
+        confirmation_required = True
+        verbose               = True
+        fetch_bbbike_subregion_download_catalogue(subregion_name, update, confirmation_required, verbose)
     """
     subregion_name_ = regulate_bbbike_input_subregion_name(subregion_name)
     path_to_file = cd_dat_bbbike(subregion_name_, subregion_name_ + "-download-catalogue.pickle")
     if not os.path.isfile(path_to_file) or update:
-        collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_required=confirmation_required)
+        collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_required=confirmation_required,
+                                                    verbose=verbose)
     try:
-        subregion_download_catalogue = load_pickle(path_to_file)
+        subregion_download_catalogue = load_pickle(path_to_file, verbose=verbose)
         return subregion_download_catalogue
     except Exception as e:
         print(e)
 
 
 #
-def collect_bbbike_download_catalogue(confirmation_required=True):
+def collect_bbbike_download_catalogue(confirmation_required=True, verbose=False):
     """
-    :param confirmation_required: [bool]
+    :param confirmation_required: [bool] (default: True)
+    :param verbose: [bool] (default: False)
+
+    Testing e.g.
+        confirmation_required = True
+        verbose               = True
+        collect_bbbike_download_catalogue(confirmation_required, verbose)
     """
     if confirmed("To collect BBBike download dictionary? ", confirmation_required=confirmation_required):
         try:
@@ -150,16 +194,16 @@ def collect_bbbike_download_catalogue(confirmation_required=True):
             # Available file formats
             file_fmt = [re.sub('{}|CHECKSUM'.format(subregion_name), '', f)
                         for f in subregion_download_catalogue.Filename]
-            save_pickle(file_fmt[:-2], cd_dat("BBBike-osm-file-formats.pickle"))
+            save_pickle(file_fmt[:-2], cd_dat("BBBike-osm-file-formats.pickle"), verbose=verbose)
 
             # Available data types
             data_typ = subregion_download_catalogue.DataType.tolist()
-            save_pickle(data_typ[:-2], cd_dat("BBBike-osm-data-types.pickle"))
+            save_pickle(data_typ[:-2], cd_dat("BBBike-osm-data-types.pickle"), verbose=verbose)
 
             # available_file_formats = dict(zip(file_fmt, file_ext))
 
             downloads_dictionary = dict(zip(bbbike_subregion_names, download_catalogue))
-            save_pickle(downloads_dictionary, cd_dat("BBBike-download-catalogue.pickle"))
+            save_pickle(downloads_dictionary, cd_dat("BBBike-download-catalogue.pickle"), verbose=verbose)
         except Exception as e:
             print("Failed to collect BBBike download dictionary. {}".format(e))
     else:
@@ -167,11 +211,21 @@ def collect_bbbike_download_catalogue(confirmation_required=True):
 
 
 #
-def fetch_bbbike_download_catalogue(catalogue_name, update=False):
+def fetch_bbbike_download_catalogue(catalogue_name, update=False, verbose=False):
     """
-    :param catalogue_name [str]
-    :param update: [bool]
-    :return: [dict] or null
+    :param catalogue_name [str] "BBBike-download-catalogue"; "BBBike-osm-file-formats"; "BBBike-osm-data-types"
+    :param update: [bool] (default: False)
+    :param verbose: [bool] (default: False)
+    :return: [dict; list]
+
+    Testing e.g.
+        verbose = True
+        catalogue_name = "BBBike-download-catalogue"
+        fetch_bbbike_download_catalogue(catalogue_name, update, verbose)  # dict
+        catalogue_name = "BBBike-osm-file-formats"
+        fetch_bbbike_download_catalogue(catalogue_name, update, verbose)  # list
+        catalogue_name = "BBBike-osm-data-types"
+        fetch_bbbike_download_catalogue(catalogue_name, update, verbose)  # list
     """
     available_catalogue = ("BBBike-download-catalogue", "BBBike-osm-file-formats", "BBBike-osm-data-types")
     assert catalogue_name in available_catalogue, \
@@ -179,9 +233,9 @@ def fetch_bbbike_download_catalogue(catalogue_name, update=False):
 
     path_to_file = cd_dat(catalogue_name + ".pickle")
     if not os.path.isfile(path_to_file) or update:
-        collect_bbbike_download_catalogue(confirmation_required=True)
+        collect_bbbike_download_catalogue(confirmation_required=True, verbose=verbose)
     try:
-        bbbike_downloads_dictionary = load_pickle(path_to_file)
+        bbbike_downloads_dictionary = load_pickle(path_to_file, verbose=verbose)
         return bbbike_downloads_dictionary
     except Exception as e:
         print(e)
@@ -190,7 +244,11 @@ def fetch_bbbike_download_catalogue(catalogue_name, update=False):
 def regulate_bbbike_input_osm_file_format(osm_file_format):
     """
     :param osm_file_format: [str]
-    :return: [str]
+    :return: [str] one of the formats in fetch_bbbike_download_catalogue("BBBike-osm-file-formats")
+
+    Testing e.g.
+        osm_file_format = 'pbf'
+        regulate_bbbike_input_osm_file_format(osm_file_format)
     """
     assert isinstance(osm_file_format, str)
     bbbike_osm_file_formats = fetch_bbbike_download_catalogue("BBBike-osm-file-formats")
@@ -211,6 +269,11 @@ def get_bbbike_subregion_download_url(subregion_name, osm_file_format):
     :param subregion_name: [str]
     :param osm_file_format: [str]
     :return: [tuple] ([str], [str])
+
+    Testing e.g.
+        subregion_name  = 'leeds'
+        osm_file_format = 'pbf'
+        get_bbbike_subregion_download_url(subregion_name, osm_file_format)
     """
     subregion_name_ = regulate_bbbike_input_subregion_name(subregion_name)
     osm_file_format_ = regulate_bbbike_input_osm_file_format(osm_file_format)
@@ -224,12 +287,18 @@ def get_bbbike_subregion_download_url(subregion_name, osm_file_format):
 
 
 #
-def validate_bbbike_download_info(subregion_name, osm_file_format, download_dir):
+def validate_bbbike_download_info(subregion_name, osm_file_format, download_dir=None):
     """
     :param subregion_name: [str]
     :param osm_file_format: [str]
-    :param download_dir: [str or None]
+    :param download_dir: [str; None (default)]
     :return: [tuple] of length 4 ([str], [str], [str], [str]) subregion name, filename, download url and file path
+
+    Testing e.g.
+        subregion_name  = 'leeds'
+        osm_file_format = 'pbf'
+        download_dir    = None
+        validate_bbbike_download_info(subregion_name, osm_file_format, download_dir)
     """
     subregion_name_, download_url = get_bbbike_subregion_download_url(subregion_name, osm_file_format)
     osm_filename = os.path.basename(download_url)
@@ -247,19 +316,27 @@ def download_bbbike_subregion_osm(*subregion_name, osm_file_format, download_dir
     """
     :param subregion_name: [str]
     :param osm_file_format: [str]
-    :param download_dir: [str or None]
-    :param update: [bool]
-    :param download_confirmation_required: [bool]
-    :return:
+    :param download_dir: [str; None (default)]
+    :param update: [bool] (default: False)
+    :param download_confirmation_required: [bool] (default: True)
+
+    Testing e.g.
+        subregion_name                 = 'leeds'
+        osm_file_format                = 'pbf'
+        download_dir                   = None
+        update                         = False
+        download_confirmation_required = True
+        download_bbbike_subregion_osm(subregion_name, osm_file_format=osm_file_format, download_dir=download_dir,
+                                      update=update, download_confirmation_required=download_confirmation_required)
     """
     for sub_reg_name in subregion_name:
-
         subregion_name_, osm_filename, download_url, path_to_file = validate_bbbike_download_info(
             sub_reg_name, osm_file_format, download_dir)
 
         if os.path.isfile(path_to_file) and not update:
             print("\"{}\" is already available for \"{}\" at: \n\"{}\".\n".format(
                 osm_filename, subregion_name_, path_to_file))
+
         else:
             if confirmed("\nTo download {} data for {}".format(osm_file_format, subregion_name_),
                          confirmation_required=download_confirmation_required):
@@ -283,6 +360,12 @@ def download_bbbike_subregion_osm_all_files(subregion_name, download_dir=None, d
     :param subregion_name: [str]
     :param download_dir: [str or None]
     :param download_confirmation_required: [bool]
+
+    Testing e.g.
+        subregion_name                 = 'leeds'
+        download_dir                   = None
+        download_confirmation_required = True
+        download_bbbike_subregion_osm_all_files(subregion_name, download_dir, download_confirmation_required)
     """
     subregion_name_ = regulate_bbbike_input_subregion_name(subregion_name)
     bbbike_download_dictionary = fetch_bbbike_download_catalogue("BBBike-download-catalogue")
@@ -296,7 +379,8 @@ def download_bbbike_subregion_osm_all_files(subregion_name, download_dir=None, d
         for download_url, osm_filename in zip(sub_download_catalogue.URL, sub_download_catalogue.Filename):
             print("\n\n\"{}\" (below): ".format(osm_filename))
             try:
-                path_to_file = os.path.join(data_dir, subregion_name_, osm_filename)
+                path_to_file = os.path.join(data_dir, osm_filename) if not download_dir \
+                    else os.path.join(data_dir, subregion_name_, osm_filename)
                 download(download_url, path_to_file)
                 # if os.path.getsize(path_to_file) / (1024 ** 2) <= 5:
                 #     time.sleep(5)
