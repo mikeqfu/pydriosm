@@ -6,7 +6,7 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pydriosm?label=Python)](https://www.python.org/downloads/windows/)
 [![PyPI - License](https://img.shields.io/pypi/l/pydriosm?color=green&label=License)](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/mikeqfu/pydriosm?color=yellowgreen&label=Code%20size)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads)](https://pypistats.org/packages/pydriosm)
 
 This package provides helpful utilities for researchers to easily download and read/parse the OpenStreetMap data extracts (in **.pbf** and **.shp.zip**) which are available at the free download servers: [Geofabrik](https://download.geofabrik.de/) and [BBBike](https://www.bbbike.org/). In addition, it also provides a convenient way to import/dump the parsed data to, and retrieve it from, a [PostgreSQL](https://www.postgresql.org/) sever. 
 
@@ -46,7 +46,7 @@ If you are using some IDE, such as PyCharm, you should be able to find **pydrios
 
 
 
-## Quick start
+## Quick start <a name="quick-start"></a>
 
 Firstly, we import the package: 
 
