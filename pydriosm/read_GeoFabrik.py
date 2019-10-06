@@ -1,39 +1,47 @@
 """ Parse/read OSM data """
 
+import gc
 import glob
+import math
 import os
 import re
 import shutil
 import zipfile
 
-import gc
 import geopandas as gpd
-import math
 import ogr
 import pandas as pd
 import rapidjson
 import shapefile
 import shapely.geometry
 from pyhelpers.dir import cd, regulate_input_data_dir
-from pyhelpers.store import load_pickle, save_pickle
+from pyhelpers.store import load_pickle
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
 from pydriosm.download_GeoFabrik import get_default_path_to_osm_file, regulate_input_subregion_name
-from pydriosm.utils import osm_geom_types, split_list
+from pydriosm.utils import osm_geom_types, save_pickle, split_list
 
 
 # Search the OSM data directory and its sub-directories to get the path to the file
 def find_osm_shp_file(subregion_name, layer=None, feature=None, data_dir=None, file_ext=".shp"):
     """
     :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
-    :param data_dir: [str or None(default)] directory in which the function go to; if None, use default directory
-    :param layer: [str] name of a .shp layer, e.g. 'railways'
+    :param layer: [str; None (default)] name of a .shp layer, e.g. 'railways'
     :param feature: [str or None(default)] feature name, e.g. 'rail'; if None, all available features included
-    :param file_ext: [str] file extension, e.g. ".shp" (default)
+    :param data_dir: [str; None (default)] directory in which the function go to; if None, use default directory
+    :param file_ext: [str] (default: ".shp") file extension, e.g. ".shp" (default)
     :return: [list] a list of paths
                 fetch_osm_file('england', 'railways', feature=None, file_format=".shp", update=False) should return
                 ['...\\Europe\\Great Britain\\england-latest-free.shp\\gis.osm_railways_free_1.shp'],
                 if such a file exists, and [] otherwise.
+
+    Testing e.g.
+        subregion_name = 'london'
+        layer          = None
+        feature        = None
+        data_dir       = None
+        file_ext       = ".shp"
+        find_osm_shp_file(subregion_name, layer, feature, data_dir, file_ext)
     """
     if not data_dir:  # Go to default file path
         _, path_to_shp_zip = get_default_path_to_osm_file(subregion_name, osm_file_format=".shp.zip", mkdir=False)
@@ -55,8 +63,13 @@ def find_osm_shp_file(subregion_name, layer=None, feature=None, data_dir=None, f
 def find_osm_pbf_file(subregion_name, data_dir=None):
     """
     :param subregion_name: [str]
-    :param data_dir: [str or None]
-    :return: [str] path to .osm.pbf file
+    :param data_dir: [str; None (default)]
+    :return: [str; None] path to .osm.pbf file
+
+    Testing e.g.
+        subregion_name = 'london'
+        data_dir       = None
+        find_osm_pbf_file(subregion_name, data_dir)
     """
     osm_pbf_filename, path_to_osm_pbf = get_default_path_to_osm_file(subregion_name, ".osm.pbf", mkdir=False)
     if not data_dir:  # Go to default file path
@@ -74,18 +87,27 @@ def find_osm_pbf_file(subregion_name, data_dir=None):
 def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r', clustered=False, verbose=False):
     """
     :param path_to_shp_zip: [str]
-    :param extract_dir: [str or None]
-    :param layer: [str or None]
-    :param mode: [str] 'r' (default)
-    :param clustered: [bool]
-    :param verbose: [bool]
+    :param extract_dir: [str; None (default)]
+    :param layer: [str; None (default)]
+    :param mode: [str] (default: 'r')
+    :param clustered: [bool] (default: False)
+    :param verbose: [bool] (default: False)
+
+    Testing e.g.
+        path_to_shp_zip =
+        extract_dir     = None
+        layer           = None
+        mode            = 'r'
+        clustered       = False
+        verbose         = False
     """
     extract_dir_ = extract_dir if extract_dir else os.path.splitext(path_to_shp_zip)[0]
     if layer:
         msg = "\nExtracting \"{}\" layer of \"{}\" to \n\"{}\" ... ".format(
             layer, os.path.basename(path_to_shp_zip), extract_dir_)  # ".." + "\\".join(extract_dir_.split("\\")[-2:])
     else:
-        msg = "\nExtracting all \"{}\" to \n\"{}\" ... ".format(os.path.basename(path_to_shp_zip), extract_dir_)
+        msg = "\nExtracting all \"{}\" to \n\"{}\" ... ".format(os.path.basename(path_to_shp_zip), extract_dir_) \
+            if verbose else None
     print(msg, end="")
     try:
         with zipfile.ZipFile(path_to_shp_zip, mode) as shp_zip:
@@ -109,25 +131,31 @@ def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r', clu
                     shutil.copyfile(orig, dest)
                     os.remove(orig)
                     print("Done.") if verbose else None
-        print("\nDone.")
+        print("\nDone.") if verbose else None
     except Exception as e:
-        print("\nFailed. {}".format(e))
+        print("\nFailed. {}".format(e)) if verbose else None
 
 
 # Merge a set of .shp files (for a given layer)
 def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confirmation_required=True, output_dir=None):
     """
-    :param subregion_names: [iterable] a list of subregion names, e.g. ['london', 'essex']
+    :param subregion_names: [list] a list of subregion names, e.g. ['london', 'essex']
     :param layer: [str] name of a OSM layer, e.g. 'railways'
-    :param update_shp_zip: [bool] indicates whether to update the relevant file/information; default False
-    :param download_confirmation_required: [bool]
-    :param output_dir: [str]
+    :param update_shp_zip: [bool] (default: False) indicates whether to update the relevant file/information
+    :param download_confirmation_required: [bool] (default: True)
+    :param output_dir: [str; None]
 
     Layers include 'buildings', 'landuse', 'natural', 'places', 'points', 'railways', 'roads' and 'waterways'
 
     Note that this function does not create projection (.prj) for the merged map.
     Reference: http://geospatialpython.com/2011/02/create-prj-projection-file-for.html for creating a .prj file.
 
+    Testing e.g.
+        subregion_names                = ['london', 'essex']
+        layer                          = 'railways'
+        update_shp_zip                 = False
+        download_confirmation_required = True
+        output_dir                     = None
     """
     # Make sure all the required shape files are ready
     subregion_names_, file_format = [regulate_input_subregion_name(x) for x in subregion_names], ".shp.zip"
@@ -185,17 +213,23 @@ def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confi
 def read_shp(path_to_shp, mode='geopandas', bbox=None):
     """
     :param path_to_shp: [str] path to a .shp file
-    :param mode: [str]
-    :param bbox: [str] tuple; GeoDataFrame or GeoSeries, default None
-    :return: [DataFrame]
+    :param mode: [str] (default: 'geopandas')
+    :param bbox: [tuple; GeoDataFrame or GeoSeries; None (default)]
+    :return: [pd.DataFrame]
 
     len(shp.records()) == shp.numRecords
     len(shp.shapes()) == shp.numRecords
     shp.bbox  # boundaries
 
+    Testing e.g.
+        path_to_shp =
+        mode        = 'geopandas'
+        bbox        = None
+        read_shp(path_to_shp, mode, bbox)
     """
     if mode == 'geopandas':  # default
         shp_data = gpd.read_file(path_to_shp, bbox)
+
     else:
         # Read .shp file using shapefile.Reader()
         shp_reader = shapefile.Reader(path_to_shp)
@@ -220,16 +254,28 @@ def read_shp_zip(subregion_name, layer, feature=None, data_dir=None, update=Fals
     """
     :param subregion_name: [str] e.g. 'england', 'oxfordshire', or 'europe'; case-insensitive
     :param layer: [str] e.g. 'railways'
-    :param feature: [str] e.g. 'rail'; if None, all available features included; default None
-    :param data_dir: [str or None]
-    :param update: [bool] whether to update the relevant file/information; default False
-    :param download_confirmation_required: [bool]
-    :param pickle_it: [bool] default False
-    :param rm_extracts: [bool] whether to delete extracted files from the .shp.zip file; default False
-    :param rm_shp_zip: [bool] whether to delete the downloaded .shp.zip file; default False
-    :return: [GeoDataFrame]
-    """
+    :param feature: [str; None (default)] e.g. 'rail'; if None, all available features included
+    :param data_dir: [str; None (default)]
+    :param update: [bool] (default: False) whether to update the relevant file/information
+    :param download_confirmation_required: [bool] (default: False)
+    :param pickle_it: [bool] (default: False)
+    :param rm_extracts: [bool] (default: False) whether to delete extracted files from the .shp.zip file
+    :param rm_shp_zip: [bool] (default: False) whether to delete the downloaded .shp.zip file
+    :return: [gpd.GeoDataFrame]
 
+    Testing e.g.
+        subregion_name                 = 'oxfordshire'
+        layer                          = 'railways'
+        feature                        = None
+        data_dir                       = None
+        update                         = False
+        download_confirmation_required = True
+        pickle_it                      = False
+        rm_extracts                    = False
+        rm_shp_zip                     = False
+        read_shp_zip(subregion_name, layer, feature, data_dir, update, download_confirmation_required, pickle_it,
+                     rm_extracts, rm_shp_zip)
+    """
     shp_zip_filename, path_to_shp_zip = get_default_path_to_osm_file(subregion_name, ".shp.zip", mkdir=False)
     extract_dir = os.path.splitext(path_to_shp_zip)[0]
     if data_dir:
@@ -303,7 +349,11 @@ def read_shp_zip(subregion_name, layer, feature=None, data_dir=None, update=Fals
 def get_osm_pbf_layer_idx_names(path_to_osm_pbf):
     """
     :param path_to_osm_pbf: [str] path to .osm.pbf file
-    :return: [dict] or null
+    :return: [dict]
+
+    Testing e.g.
+        path_to_osm_pbf =
+        get_osm_pbf_layer_idx_names(path_to_osm_pbf)
     """
     try:
         # Start parsing the '.osm.pbf' file
@@ -327,16 +377,24 @@ def get_osm_pbf_layer_idx_names(path_to_osm_pbf):
 # Parse each layer's data
 def parse_layer_data(layer_data, geo_typ, fmt_other_tags, fmt_single_geom, fmt_multi_geom):
     """
-    :param layer_data: [pandas.DataFrame]
+    :param layer_data: [pd.DataFrame]
     :param geo_typ: [str]
     :param fmt_other_tags: [bool]
     :param fmt_single_geom: [bool]
     :param fmt_multi_geom: [bool]
-    :return: [pandas.DataFrame]
+    :return: [pd.DataFrame]
+
+    Testing e.g.
+        layer_data      =
+        geo_typ         =
+        fmt_other_tags  = True
+        fmt_single_geom = True
+        fmt_multi_geom  = True
+        parse_layer_data(layer_data, geo_typ, fmt_other_tags, fmt_single_geom, fmt_multi_geom)
     """
 
     def reformat_single_geometry(geom_data):
-        """ Format the coordinates with shapely.geometry
+        """ Re-format the coordinates with shapely.geometry
         :param geom_data:
         :return:
         """
@@ -351,7 +409,7 @@ def parse_layer_data(layer_data, geo_typ, fmt_other_tags, fmt_single_geom, fmt_m
         return geom_coords
 
     def reformat_multi_geometries(geom_collection):
-        """ Format geometry collections with shapely.geometry
+        """ Re-format geometry collections with shapely.geometry
         :param geom_collection:
         :return:
         """
@@ -364,10 +422,9 @@ def parse_layer_data(layer_data, geo_typ, fmt_other_tags, fmt_single_geom, fmt_m
                                for geom_type, coords in zip(geom_types, coordinates)]
         return shapely.geometry.GeometryCollection(geometry_collection)
 
-    def decompose_other_tags(other_tags_x):
-        """ Transform a 'other_tags' into a dictionary
-        :param other_tags_x: [str] or None
-        :return:
+    def decompose_other_tags(other_tags_x: (str, None)):
+        """
+        Transform a 'other_tags' into a dictionary
         """
         if other_tags_x:
             raw_other_tags = (re.sub('^"|"$', '', each_tag) for each_tag in re.split('(?<="),(?=")', other_tags_x))
@@ -409,7 +466,13 @@ def parse_layer_data(layer_data, geo_typ, fmt_other_tags, fmt_single_geom, fmt_m
 # Parse .osm.pbf file
 def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single_geom, fmt_multi_geom):
     """
-    Reference: http://www.gdal.org/drv_osm.html
+    :param path_to_osm_pbf: [str]
+    :param chunks_no: [int; None]
+    :param parsed: [bool]
+    :param fmt_other_tags: [bool]
+    :param fmt_single_geom: [bool]
+    :param fmt_multi_geom: [bool]
+    :return: [dict]
 
     OpenStreetMap XML and PBF (GDAL/OGR >= 1.10.0)
     The driver will categorize features into 5 layers :
@@ -421,13 +484,17 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
         'other_relations'   - 4: "relation" features that do not belong to the above 2 layers
 
     Note that this function can require fairly high amount of physical memory to read large files e.g. > 200MB
-    :param path_to_osm_pbf: [str]
-    :param chunks_no: [int; None]
-    :param parsed: [bool]
-    :param fmt_other_tags: [bool]
-    :param fmt_single_geom: [bool]
-    :param fmt_multi_geom: [bool]
-    :return: [dict]
+
+    Reference: http://www.gdal.org/drv_osm.html
+
+    Testing e.g.
+        path_to_osm_pbf =
+        chunks_no       = 50
+        parsed          = True
+        fmt_other_tags  = True
+        fmt_single_geom = True
+        fmt_multi_geom  = True
+        parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single_geom, fmt_multi_geom)
     """
     raw_osm_pbf = ogr.Open(path_to_osm_pbf)
     # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
@@ -488,25 +555,42 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
     return osm_pbf_data
 
 
-# Read .osm.pbf file into pandas.DataFrames, either roughly or with a granularity for a given subregion
+# Read .osm.pbf file into pd.DataFrames, either roughly or with a granularity for a given subregion
 def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
                  fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
-                 update=False, download_confirmation_required=True, pickle_it=False, rm_osm_pbf=True):
+                 update=False, download_confirmation_required=True, pickle_it=False, rm_osm_pbf=True, verbose=False):
     """
     :param subregion_name: [str] e.g. 'london'
-    :param data_dir: [str or None] customised path of a .osm.pbf file
-    :param parsed: [bool]
-    :param file_size_limit: [numbers.Number] limit of file size (in MB),  e.g. 50, or 100(default)
-    :param fmt_other_tags: [bool]
-    :param fmt_single_geom: [bool]
-    :param fmt_multi_geom: [bool]
-    :param update: [bool]
-    :param download_confirmation_required: [bool]
-    :param pickle_it: [bool]
-    :param rm_osm_pbf: [bool]
+    :param data_dir: [str; None (default)] customised path of a .osm.pbf file
+    :param parsed: [bool] (default: True)
+    :param file_size_limit: [numbers.Number] (default: 50) limit of file size (in MB),  e.g. 50, or 100
+    :param fmt_other_tags: [bool] (default: True)
+    :param fmt_single_geom: [bool] (default: True)
+    :param fmt_multi_geom: [bool] (default: True)
+    :param update: [bool] (default: False)
+    :param download_confirmation_required: [bool] (default: True)
+    :param pickle_it: [bool] (default: False)
+    :param rm_osm_pbf: [bool] (default: True)
+    :param verbose: [bool] (default: False)
     :return: [dict] or None
 
     If 'subregion' is the name of the subregion, the default file path will be used.
+
+    Testing e.g.
+        subregion_name                 = 'london'
+        data_dir                       = None
+        parsed                         = True
+        file_size_limit                = 50
+        fmt_other_tags                 = True
+        fmt_single_geom                = True
+        fmt_multi_geom                 = True
+        update                         = False
+        download_confirmation_required = True
+        pickle_it                      = False
+        rm_osm_pbf                     = True
+        verbose                        = False
+        read_osm_pbf(subregion_name, data_dir, parsed, file_size_limit, fmt_other_tags, fmt_single_geom, fmt_multi_geom,
+                     update, download_confirmation_required, pickle_it, rm_osm_pbf, verbose)
     """
     assert isinstance(file_size_limit, int) or file_size_limit is None
 
@@ -521,7 +605,7 @@ def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
 
     path_to_pickle = path_to_osm_pbf.replace(".osm.pbf", ".pickle" if parsed else "-raw.pickle")
     if os.path.isfile(path_to_pickle) and not update:
-        osm_pbf_data = load_pickle(path_to_pickle)
+        osm_pbf_data = load_pickle(path_to_pickle, verbose=verbose)
     else:
         # If the target file is not available, try downloading it first.
         download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf", download_dir=data_dir,
@@ -535,18 +619,18 @@ def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
         else:
             chunks_no = None
 
-        print("\nParsing \"{}\" ... ".format(subregion_filename), end="")
+        print("\nParsing \"{}\" ... ".format(subregion_filename), end="") if verbose else None
         try:
             osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed,
                                          fmt_other_tags, fmt_single_geom, fmt_multi_geom)
-            print("Successfully.\n")
+            print("Successfully.\n") if verbose else None
         except Exception as e:
-            print("Failed. {}\n".format(e))
+            print("Failed. {}\n".format(e)) if verbose else None
             osm_pbf_data = None
 
         if pickle_it:
-            save_pickle(osm_pbf_data, path_to_pickle)
+            save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
         if rm_osm_pbf:
-            remove_subregion_osm_file(path_to_osm_pbf)
+            remove_subregion_osm_file(path_to_osm_pbf, verbose=verbose)
 
     return osm_pbf_data
