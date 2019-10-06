@@ -5,10 +5,14 @@ import pydriosm.settings
 with open("README.md", 'r') as readme:
     long_description = readme.read()
 
+with open('requirements.txt') as f:
+    requirements = f.readlines()
+requirements_ = [r.strip() for r in requirements]
+
 setuptools.setup(
 
     name='pydriosm',
-    version='1.0.15',
+    version='1.0.16',
 
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
@@ -19,25 +23,7 @@ setuptools.setup(
 
     url='https://github.com/mikeqfu/pydriosm',
 
-    install_requires=[
-        'Fiona',
-        'fuzzywuzzy',
-        'gdal==2.4.1',
-        'geopandas',
-        'humanfriendly',
-        'more-itertools',
-        'numpy',
-        'pandas',
-        'psycopg2',
-        'pyhelpers',
-        'pyshp',
-        'python-Levenshtein',
-        'python-rapidjson',
-        'requests',
-        'shapely',
-        'sqlalchemy',
-        'sqlalchemy-utils'
-    ],
+    install_requires=requirements_,
 
     packages=setuptools.find_packages(exclude=["*.tests", "tests.*", "tests"]),
 
