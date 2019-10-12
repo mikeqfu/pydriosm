@@ -174,6 +174,16 @@ dri.merge_multi_shp(subregion_names, layer=layer_name, update_shp_zip=False,
 You could also set `data_dir=customised_data_dir` to save the downloaded **.shp.zip** files; or `output_dir=customised_data_dir` to make the merged **.shp** file available into `customised_data_dir`.
 
 
+### Stream data using a generator 
+
+For large files it is often not ideal to store the parsed data in-memory. You can stream the parsed data from a `*.osm.pbf` file by doing the following: 
+
+```python
+stream_data = stream_osm_pbf('/algeria.osm.pbf', 'lines') #pass the path to your *.osm.pbf file, and the layer that you want to parse/stream
+    
+for row in stream_data: 
+    do_something(row)
+```
 
 ### Import and retrieve data with a PostgreSQL server <a name="import-retrieve-data"></a>
 
