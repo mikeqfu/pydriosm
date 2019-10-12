@@ -12,10 +12,12 @@ import geopandas as gpd
 import ogr
 import pandas as pd
 import rapidjson
+import json
 import shapefile
 import shapely.geometry
 from pyhelpers.dir import cd, regulate_input_data_dir
 from pyhelpers.store import load_pickle
+from flatten_json import flatten
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
 from pydriosm.download_GeoFabrik import get_default_path_to_osm_file, regulate_input_subregion_name
@@ -554,6 +556,34 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
 
     return osm_pbf_data
 
+def stream_osm_pbf(path_to_osm_pbf, layer_name): 
+    '''
+    Generator that returns an iterator that can be used to stream parsed OSM data. 
+    
+    :type path_to_osm_pbf: str 
+    :param path_to_osm_pbf: Path to the *.osm.pbf file you wish to parse and stream 
+    
+    :type layer_data: str 
+    :param layer_data: The layer of the *.osm.pbf file that you wish to parse and stream. 
+                       Options include: points, lines, multilinestrings, multipolygons, & other_relations
+                       
+    :rtype: Iterator 
+    :return: An iterator object that can be used to stream the parsed data from the corresponding layer in the *.osm.pbf file
+    
+    -------
+    Example
+    -------
+    
+    stream_data = stream_osm_pbf('/algeria.osm.pbf', 'lines')
+    
+    for row in stream_data: 
+        print(row)
+    '''
+    
+    raw_data = ogr.Open(path_to_osm_pbf)
+    layer = raw_data.GetLayer(layer_name)
+    for feature in layer: 
+        yield flatten(json.loads(feat.ExportToJson()))
 
 # Read .osm.pbf file into pd.DataFrames, either roughly or with a granularity for a given subregion
 def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,

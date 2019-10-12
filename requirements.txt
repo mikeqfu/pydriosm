@@ -23,3 +23,4 @@ SQLAlchemy-Utils>=0.34.1
 tqdm>=4.32.2
 xlrd>=1.2.0
 XlsxWriter>=1.1.8
+flatten_json>=0.1.7
