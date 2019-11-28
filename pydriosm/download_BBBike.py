@@ -6,12 +6,11 @@ import time
 import urllib.parse
 import urllib.request
 
-import bs4
 import fuzzywuzzy.process
 import pandas as pd
 from pyhelpers.dir import regulate_input_data_dir
 from pyhelpers.download import download
-from pyhelpers.misc import confirmed
+from pyhelpers.ops import confirmed
 from pyhelpers.store import load_pickle
 
 from pydriosm.utils import cd_dat, cd_dat_bbbike, save_pickle
@@ -23,7 +22,7 @@ def collect_bbbike_subregion_catalogue(confirmation_required=True, verbose=False
     :param confirmation_required: [bool] (default: True)
     :param verbose: [bool] (default: False)
 
-    Testing e.g.
+    Example:
         confirmation_required = True
         verbose               = True
         collect_bbbike_subregion_catalogue(confirmation_required, verbose)
@@ -53,7 +52,7 @@ def fetch_bbbike_subregion_catalogue(catalogue_name, update=False, verbose=False
     :param verbose: [bool] (default: False)
     :return: [pd.DataFrame; list]
 
-    Testing e.g.
+    Examples:
         update         = False
         verbose        = True
         catalogue_name = "BBBike-subregion-catalogue"
@@ -81,7 +80,7 @@ def regulate_bbbike_input_subregion_name(subregion_name):
     :param subregion_name: [str]
     :return: [str]
 
-    Testing e.g.
+    Example:
         subregion_name = 'leeds'
         regulate_bbbike_input_subregion_name(subregion_name)  # 'Leeds'
     """
@@ -98,7 +97,7 @@ def collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_req
     :param confirmation_required: [bool] (default: True)
     :param verbose: [bool] (default: False)
 
-    Testing e.g.
+    Example:
         subregion_name        = 'leeds'
         confirmation_required = True
         verbose               = True
@@ -128,6 +127,8 @@ def collect_bbbike_subregion_download_catalogue(subregion_name, confirmation_req
             url = 'https://download.bbbike.org/osm/bbbike/{}/'.format(subregion_name_)
 
             source = urllib.request.urlopen(url)
+
+            import bs4
             source_soup = bs4.BeautifulSoup(source, 'lxml')
             download_links_class = source_soup.find_all(name='a', attrs={'class': ['download_link', 'small']})
 
@@ -152,7 +153,7 @@ def fetch_bbbike_subregion_download_catalogue(subregion_name, update=False, conf
     :param verbose: [bool] (default: False)
     :return: [pd.DataFrame]
 
-    Testing e.g.
+    Example:
         subregion_name        = 'leeds'
         update                = False
         confirmation_required = True
@@ -177,7 +178,7 @@ def collect_bbbike_download_catalogue(confirmation_required=True, verbose=False)
     :param confirmation_required: [bool] (default: True)
     :param verbose: [bool] (default: False)
 
-    Testing e.g.
+    Example:
         confirmation_required = True
         verbose               = True
         collect_bbbike_download_catalogue(confirmation_required, verbose)
@@ -218,7 +219,7 @@ def fetch_bbbike_download_catalogue(catalogue_name, update=False, verbose=False)
     :param verbose: [bool] (default: False)
     :return: [dict; list]
 
-    Testing e.g.
+    Examples:
         verbose = True
         catalogue_name = "BBBike-download-catalogue"
         fetch_bbbike_download_catalogue(catalogue_name, update, verbose)  # dict
@@ -246,7 +247,7 @@ def regulate_bbbike_input_osm_file_format(osm_file_format):
     :param osm_file_format: [str]
     :return: [str] one of the formats in fetch_bbbike_download_catalogue("BBBike-osm-file-formats")
 
-    Testing e.g.
+    Example:
         osm_file_format = 'pbf'
         regulate_bbbike_input_osm_file_format(osm_file_format)
     """
@@ -270,7 +271,7 @@ def get_bbbike_subregion_download_url(subregion_name, osm_file_format):
     :param osm_file_format: [str]
     :return: [tuple] ([str], [str])
 
-    Testing e.g.
+    Example:
         subregion_name  = 'leeds'
         osm_file_format = 'pbf'
         get_bbbike_subregion_download_url(subregion_name, osm_file_format)
@@ -294,7 +295,7 @@ def validate_bbbike_download_info(subregion_name, osm_file_format, download_dir=
     :param download_dir: [str; None (default)]
     :return: [tuple] of length 4 ([str], [str], [str], [str]) subregion name, filename, download url and file path
 
-    Testing e.g.
+    Example:
         subregion_name  = 'leeds'
         osm_file_format = 'pbf'
         download_dir    = None
@@ -320,7 +321,7 @@ def download_bbbike_subregion_osm(*subregion_name, osm_file_format, download_dir
     :param update: [bool] (default: False)
     :param download_confirmation_required: [bool] (default: True)
 
-    Testing e.g.
+    Example:
         subregion_name                 = 'leeds'
         osm_file_format                = 'pbf'
         download_dir                   = None
@@ -361,7 +362,7 @@ def download_bbbike_subregion_osm_all_files(subregion_name, download_dir=None, d
     :param download_dir: [str or None]
     :param download_confirmation_required: [bool]
 
-    Testing e.g.
+    Example:
         subregion_name                 = 'leeds'
         download_dir                   = None
         download_confirmation_required = True
