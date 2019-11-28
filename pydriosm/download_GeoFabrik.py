@@ -9,16 +9,12 @@ import urllib.parse
 
 import bs4
 import fuzzywuzzy.process
-import humanfriendly
-import more_itertools
 import numpy as np
 import pandas as pd
 import requests
 from pyhelpers.dir import regulate_input_data_dir
-from pyhelpers.download import download
-from pyhelpers.misc import confirmed, update_nested_dict
+from pyhelpers.ops import confirmed, update_nested_dict
 from pyhelpers.store import load_json, load_pickle
-from pyhelpers.text import find_similar_str
 
 from pydriosm.utils import cd_dat, cd_dat_geofabrik, save_json, save_pickle
 
@@ -29,7 +25,7 @@ def get_raw_directory_table(url):
     :param url: [str] URL
     :return: [pd.DataFrame] raw directory index table
     
-    Testing e.g.
+    Example:
         url = 'https://download.geofabrik.de/europe/great-britain.html'
         get_raw_directory_table(url)
     """
@@ -44,6 +40,7 @@ def get_raw_directory_table(url):
             raw_directory_index.columns = [c.title() for c in raw_directory_index.columns]
 
             # Clean the DataFrame
+            import humanfriendly
             raw_directory_index.Size = raw_directory_index.Size.apply(humanfriendly.format_size)
             raw_directory_index.sort_values('Date', ascending=False, inplace=True)
             raw_directory_index.index = range(len(raw_directory_index))
@@ -65,7 +62,7 @@ def get_subregion_table(url, verbose=False):
     :param verbose: [bool] (default: False)
     :return: [pd.DataFrame] a table of all available subregions' URLs
 
-    Testing e.g.
+    Example:
         url = 'https://download.geofabrik.de/europe/great-britain.html'
         get_subregion_table(url)
     """
@@ -128,7 +125,7 @@ def collect_subregion_info_catalogue(confirmation_required=True, verbose=False):
     :param confirmation_required: [bool] (default: False) whether to confirm before starting to collect information
     :param verbose: [bool] (default: False)
 
-    Testing e.g.
+    Example:
         confirmation_required = True
         verbose               = True
         collect_subregion_info_catalogue(confirmation_required, verbose)
@@ -142,7 +139,7 @@ def collect_subregion_info_catalogue(confirmation_required=True, verbose=False):
             source = requests.get(home_url)
             soup = bs4.BeautifulSoup(source.text, 'lxml')
             source.close()
-            avail_subregions = [td.a.text for td in soup.find_all('td', {'class': 'subregion'})]
+            # avail_subregions = [td.a.text for td in soup.find_all('td', {'class': 'subregion'})]
             avail_subregion_urls = [urllib.parse.urljoin(home_url, td.a['href']) for td in
                                     soup.find_all('td', {'class': 'subregion'})]
             avail_subregion_url_tables = [get_subregion_table(sub_url, verbose) for sub_url in avail_subregion_urls]
@@ -155,33 +152,36 @@ def collect_subregion_info_catalogue(confirmation_required=True, verbose=False):
                 subregion_url_tables_ = []
 
                 for subregion_url_table in subregion_url_tables:
-                    subregions = list(subregion_url_table.Subregion)
+                    # subregions = list(subregion_url_table.Subregion)
                     subregion_urls = list(subregion_url_table.SubregionURL)
                     subregion_url_tables_0 = [get_subregion_table(subregion_url, verbose)
                                               for subregion_url in subregion_urls]
                     subregion_url_tables_ += [tbl for tbl in subregion_url_tables_0 if tbl is not None]
 
                     # (Note that 'Russian Federation' data is available in both 'Asia' and 'Europe')
-                    avail_subregions += subregions
-                    avail_subregion_urls += subregion_urls
+                    # avail_subregions += subregions
+                    # avail_subregion_urls += subregion_urls
                     avail_subregion_url_tables += subregion_url_tables_
 
                 subregion_url_tables = list(subregion_url_tables_)
-
-            # Save a list of available subregions locally
-            save_pickle(avail_subregions, cd_dat("GeoFabrik-subregion-name-list.pickle"), verbose=verbose)
-
-            # Subregion index - {Subregion: URL}
-            subregion_url_index = dict(zip(avail_subregions, avail_subregion_urls))
-            # Save subregion_index to local disk
-            save_pickle(subregion_url_index, cd_dat("GeoFabrik-subregion-name-url-dictionary.pickle"), verbose=verbose)
-            save_json(subregion_url_index, cd_dat("GeoFabrik-subregion-name-url-dictionary.json"), verbose=verbose)
 
             # All available URLs for downloading
             home_subregion_url_table = get_subregion_table(home_url)
             avail_subregion_url_tables.append(home_subregion_url_table)
             subregion_downloads_index = pd.DataFrame(pd.concat(avail_subregion_url_tables, ignore_index=True))
             subregion_downloads_index.drop_duplicates(inplace=True)
+
+            duplicated = subregion_downloads_index[subregion_downloads_index.Subregion.duplicated(keep=False)]
+            if not duplicated.empty:
+                import humanfriendly
+                for i in range(0, 2, len(duplicated)):
+                    temp = duplicated.iloc[i:i+2]
+                    size = temp['.osm.pbf_Size'].map(
+                        lambda x: humanfriendly.parse_size(x.strip('(').strip(')').replace('\xa0', ' ')))
+                    idx = size[size == size.min()].index
+                    subregion_downloads_index.drop(idx, inplace=True)
+                subregion_downloads_index.index = range(len(subregion_downloads_index))
+
             subregion_downloads_index_json = subregion_downloads_index.set_index('Subregion').to_json()
 
             # Save subregion_index_downloads to local disk
@@ -189,6 +189,18 @@ def collect_subregion_info_catalogue(confirmation_required=True, verbose=False):
                         verbose=verbose)
             save_json(subregion_downloads_index_json, cd_dat("GeoFabrik-subregion-downloads-catalogue.json"),
                       verbose=verbose)
+
+            avail_subregions = list(subregion_downloads_index.Subregion)
+            avail_subregion_urls = list(subregion_downloads_index.SubregionURL)
+
+            # Subregion index - {Subregion: URL}
+            subregion_url_index = dict(zip(avail_subregions, avail_subregion_urls))
+
+            # Save a list of available subregions locally
+            save_pickle(avail_subregions, cd_dat("GeoFabrik-subregion-name-list.pickle"), verbose=verbose)
+            # Save subregion_index to local disk
+            save_pickle(subregion_url_index, cd_dat("GeoFabrik-subregion-name-url-dictionary.pickle"), verbose=verbose)
+            save_json(subregion_url_index, cd_dat("GeoFabrik-subregion-name-url-dictionary.json"), verbose=verbose)
 
         except Exception as e:
             print("Failed to get the required information ... {}.".format(e))
@@ -206,7 +218,7 @@ def fetch_subregion_info_catalogue(catalogue_name, file_format=".pickle", update
     :param verbose: [bool] (default: False)
     :return: [list; dict; pd.DataFrame]
 
-    Testing e.g.
+    Example:
         file_format     = ".pickle"
         update          = False
         verbose         = True
@@ -239,7 +251,7 @@ def collect_continents_subregion_tables(confirmation_required=True, verbose=Fals
     :param confirmation_required: [bool] (default: True) whether to confirm before starting to collect the information
     :param verbose: [bool] (default: False)
 
-    Testing e.g.
+    Example:
         confirmation_required = True
         verbose               = True
         collect_continents_subregion_tables(confirmation_required, verbose)
@@ -268,7 +280,7 @@ def fetch_continents_subregion_tables(update=False, verbose=False):
     :param verbose: [bool] (default: False)
     :return: [pd.DataFrame]
 
-    Testing e.g.
+    Example:
         update  = False
         verbose = True
         fetch_continents_subregion_tables(update, verbose)
@@ -289,7 +301,7 @@ def collect_region_subregion_tier(confirmation_required=True, verbose=False):
     :param confirmation_required: [bool] (default: True) whether to confirm before collecting region-subregion tier
     :param verbose: [bool] (default: False)
 
-    Testing e.g.
+    Example:
         confirmation_required = True
         verbose               = True
         collect_region_subregion_tier(confirmation_required, verbose)
@@ -331,6 +343,7 @@ def collect_region_subregion_tier(confirmation_required=True, verbose=False):
                 having_subregions_temp.pop(region_name)
 
         # Russian Federation in both pages of Asia and Europe, so that there are duplicates in non_subregions_list
+        import more_itertools
         non_subregions_list = list(more_itertools.unique_everseen(non_subregions_list))
         return region_subregion_tiers, non_subregions_list
 
@@ -357,7 +370,7 @@ def fetch_region_subregion_tier(catalogue_name, file_format=".pickle", update=Fa
     :param verbose: [bool] (default: False)
     :return: [dict; list]
 
-    Testing e.g.
+    Example:
         file_format    = ".pickle"
         update         = False
         verbose        = True
@@ -390,6 +403,10 @@ def regulate_input_subregion_name(subregion_name):
     """
     :param subregion_name: [str] subregion name, e.g. 'London'
     :return: [str] default subregion name that matches, or is the most similar to, the input 'subregion_name'
+
+    Example:
+        subregion_name = 'london'
+        regulate_input_subregion_name(subregion_name)
     """
     assert isinstance(subregion_name, str)
     # Get a list of available
@@ -407,7 +424,7 @@ def get_subregion_download_url(subregion_name, osm_file_format, update=False, ve
     :param verbose: [bool] (default: False)
     :return: [tuple] of length=2
 
-    Testing e.g.
+    Example:
         subregion_name  = 'London'
         osm_file_format = '.pbf'
         update          = False
@@ -415,6 +432,8 @@ def get_subregion_download_url(subregion_name, osm_file_format, update=False, ve
         get_subregion_download_url(subregion_name, osm_file_format, update, verbose)
     """
     available_fmt = [".osm.pbf", ".shp.zip", ".osm.bz2"]
+
+    from pyhelpers.text import find_similar_str
     file_format_ = find_similar_str(osm_file_format, available_fmt)
     assert file_format_ in available_fmt, "'file_format' must be one of {}.".format(available_fmt)
 
@@ -440,7 +459,7 @@ def get_default_osm_filename(subregion_name, osm_file_format, update=False):
     :param update: [bool] (default: False) whether to update source data
     :return: [str] default OSM filename of the 'subregion_name'
 
-    Testing e.g.
+    Example:
         subregion_name  = 'london'
         osm_file_format = ".osm.pbf"
         update          = False
@@ -460,7 +479,7 @@ def get_default_path_to_osm_file(subregion_name, osm_file_format, mkdir=False, u
     :param update: [bool] (default: False) whether to update source data
     :return: [tuple] (of length 2), including filename of the subregion, and path to the file
 
-    Testing e.g.
+    Example:
         subregion_name  = 'london'
         osm_file_format = ".osm.pbf"
         mkdir           = False
@@ -468,22 +487,28 @@ def get_default_path_to_osm_file(subregion_name, osm_file_format, mkdir=False, u
         get_default_path_to_osm_file(subregion_name, osm_file_format, mkdir, update)
     """
     subregion_name_, download_url = get_subregion_download_url(subregion_name, osm_file_format, update=update)
-    parsed_path = urllib.parse.urlparse(download_url).path.lstrip('/').split('/')
 
-    if len(parsed_path) == 1:
-        parsed_path = [subregion_name_] + parsed_path
+    if pd.isna(download_url):
+        print("{} file is not available for \"{}\"".format(osm_file_format, subregion_name_))
+        return None, None
 
-    subregion_names = fetch_subregion_info_catalogue("GeoFabrik-subregion-name-list")
-    directory = cd_dat_geofabrik(*[fuzzywuzzy.process.extractOne(x, subregion_names)[0]
-                                   if x != 'us' else 'United States' for x in parsed_path[0:-1]])
+    else:
+        parsed_path = urllib.parse.urlparse(download_url).path.lstrip('/').split('/')
 
-    default_filename = parsed_path[-1]
+        if len(parsed_path) == 1:
+            parsed_path = [subregion_name_] + parsed_path
 
-    if not os.path.exists(directory) and mkdir:
-        os.makedirs(directory)
-    default_file_path = os.path.join(directory, default_filename)
+        subregion_names = fetch_subregion_info_catalogue("GeoFabrik-subregion-name-list")
+        directory = cd_dat_geofabrik(*[fuzzywuzzy.process.extractOne(x, subregion_names)[0]
+                                       if x != 'us' else 'United States' for x in parsed_path[0:-1]])
 
-    return default_filename, default_file_path
+        default_filename = parsed_path[-1]
+
+        if not os.path.exists(directory) and mkdir:
+            os.makedirs(directory)
+        default_file_path = os.path.join(directory, default_filename)
+
+        return default_filename, default_file_path
 
 
 # Retrieve names of all subregions (if available) from the catalogue of region-subregion tier
@@ -492,11 +517,11 @@ def retrieve_names_of_subregions_of(*subregion_name):
     :param subregion_name: [str] or empty
     :return: [list] (list of) subregions if available; if subregion_name=None, all regions that do have subregions
 
-    Testing e.g.
+    Reference: https://stackoverflow.com/questions/9807634/
+
+    Example:
         retrieve_names_of_subregions_of(None)
         retrieve_names_of_subregions_of('england', 'north america')
-
-    Reference: https://stackoverflow.com/questions/9807634/
     """
 
     def find_subregions(reg_name, reg_sub_idx):
@@ -546,16 +571,19 @@ def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=N
     :param download_confirmation_required: [bool] (default: True) whether to confirm before downloading
     :param verbose: [bool] (default: True)
 
-    subregion_name                 = 'london'
-    osm_file_format                = ".osm.pbf"
-    download_dir                   = None
-    update                         = False
-    download_confirmation_required = True
-    verbose                        = True
-    download_subregion_osm_file(subregion_name, osm_file_format=osm_file_format, download_dir=download_dir,
-                                update=update, download_confirmation_required=download_confirmation_required,
-                                verbose=verbose)
+    Example:
+        subregion_name                 = 'london'
+        osm_file_format                = ".osm.pbf"
+        download_dir                   = None
+        update                         = False
+        download_confirmation_required = True
+        verbose                        = True
+        download_subregion_osm_file(subregion_name, osm_file_format=osm_file_format, download_dir=download_dir,
+                                    update=update, download_confirmation_required=download_confirmation_required,
+                                    verbose=verbose)
     """
+    from pyhelpers.download import download
+
     for sub_reg_name in subregion_name:
 
         # Get download URL
@@ -576,7 +604,7 @@ def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=N
             else:
                 pass
         else:
-            if confirmed("\nTo download {} data for {}".format(osm_file_format, subregion_name_),
+            if confirmed("\nTo download {} data for \"{}\"".format(osm_file_format, subregion_name_),
                          confirmation_required=download_confirmation_required):
 
                 op = "Updating" if os.path.isfile(path_to_file) else "Downloading"
@@ -601,18 +629,19 @@ def download_sub_subregion_osm_file(*subregion_name, osm_file_format, download_d
     :param download_confirmation_required: [bool] (default: True) whether to confirm before downloading
     :param interval_sec: [int; None] (default: 5) interval (in sec) between downloading two subregions
 
-    subregion_name_1               = 'bedfordshire'
-    subregion_name_2               = 'rutland'
-    osm_file_format                = ".osm.pbf"
-    download_dir                   = None
-    update                         = False
-    download_confirmation_required = True
-    verbose                        = True
-    interval_sec                   = 5
-    download_sub_subregion_osm_file(subregion_name_1, subregion_name_2, osm_file_format=osm_file_format,
-                                    download_dir=download_dir, update=update,
-                                    download_confirmation_required=download_confirmation_required,
-                                    interval_sec=interval_sec)
+    Example:
+        subregion_name_1               = 'bedfordshire'
+        subregion_name_2               = 'rutland'
+        osm_file_format                = ".osm.pbf"
+        download_dir                   = None
+        update                         = False
+        download_confirmation_required = True
+        verbose                        = True
+        interval_sec                   = 5
+        download_sub_subregion_osm_file(subregion_name_1, subregion_name_2, osm_file_format=osm_file_format,
+                                        download_dir=download_dir, update=update,
+                                        download_confirmation_required=download_confirmation_required,
+                                        interval_sec=interval_sec)
     """
     subregions = retrieve_names_of_subregions_of(*subregion_name)
     if confirmed("\nTo download {} data for all the following subregions: \n{}?\n".format(
@@ -629,7 +658,7 @@ def remove_subregion_osm_file(path_to_osm_file, verbose=True):
     :param path_to_osm_file: [str]
     :param verbose: [bool] (default: True)
 
-    Testing e.g.
+    Example:
         subregion_name = 'london'
         _, path_to_osm_file = get_default_path_to_osm_file(subregion_name, ".osm.pbf")
         remove_subregion_osm_file(path_to_osm_file)
