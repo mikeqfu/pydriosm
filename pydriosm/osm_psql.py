@@ -9,15 +9,15 @@ import sqlalchemy
 import sqlalchemy.engine.reflection
 import sqlalchemy.engine.url
 import sqlalchemy_utils
-from pyhelpers.misc import confirmed
+from pyhelpers.ops import confirmed
 
 from pydriosm.download_GeoFabrik import regulate_input_subregion_name
 
 
 def regulate_table_name(table_name, subregion_name_as_table_name=True):
     """
-    :param table_name:
-    :param subregion_name_as_table_name:
+    :param table_name: [str]
+    :param subregion_name_as_table_name: [bool] (default: True)
     :return: [str]
     """
     if subregion_name_as_table_name:
@@ -28,7 +28,7 @@ def regulate_table_name(table_name, subregion_name_as_table_name=True):
 
 
 class OSM:
-    def __init__(self):
+    def __init__(self, username='postgres', password=None, host='localhost', port=5432, database_name='postgres'):
         """
         It requires to be connected to the database server so as to execute the "CREATE DATABASE" command.
         A default database named "postgres" exists already, which is created by the "initdb" command when the data
@@ -36,11 +36,11 @@ class OSM:
         Prior to create a customised database, it requires to connect "postgres" in the first instance.
         """
         self.database_info = {'drivername': 'postgresql+psycopg2',
-                              'username': input('PostgreSQL username: '),
-                              'password': getpass.getpass('PostgreSQL password: '),
-                              'host': input('Host name: '),
-                              'port': 5432,  # Default by installation. This can differ in customised cases.
-                              'database': input('Database name: ')}
+                              'username': username,  # postgres
+                              'password': password if password else getpass.getpass('PostgreSQL password: '),
+                              'host': host,  # default: localhost
+                              'port': port,  # 5432 (default by installation).
+                              'database': database_name}
 
         # The typical form of a database URL is: url = backend+driver://username:password@host:port/database_name
         self.url = sqlalchemy.engine.url.URL(**self.database_info)
@@ -58,7 +58,7 @@ class OSM:
     # Establish a connection to the specified database (named e.g. 'osm_extracts')
     def connect_db(self, database_name='OSM_data_extracts'):
         """
-        :param database_name: [str; 'OSM Data Extracts'(default)] name of a database
+        :param database_name: [str] (default: 'OSM_data_extracts') name of a database
         """
         self.database_name = database_name
         self.database_info['database'] = self.database_name
@@ -78,7 +78,7 @@ class OSM:
     # An alternative to sqlalchemy_utils.create_database()
     def create_db(self, database_name='OSM_data_extracts'):
         """
-        :param database_name: [str; 'OSM Data Extracts'(default)] name of a database
+        :param database_name: [str] (default: 'OSM_data_extracts') name of a database
 
         from psycopg2 import OperationalError
         try:
@@ -104,7 +104,7 @@ class OSM:
     # Kill the connection to the specified database
     def disconnect(self, database_name=None):
         """
-        :param database_name: [str; None(default)] name of database to disconnect from
+        :param database_name: [str; None (default)] name of database to disconnect from
 
         Alternative way:
         SELECT
@@ -130,7 +130,7 @@ class OSM:
     # Drop the specified database
     def drop(self, database_name=None):
         """
-        :param database_name: [str] name of database to disconnect from, or None (default) to disconnect the current one
+        :param database_name: [str; None (default)] database to be disconnected; None to disconnect the current one
         """
         db_name = self.database_name if database_name is None else database_name
         if confirmed("Confirmed to drop the database \"{}\"?".format(db_name)):
@@ -163,7 +163,7 @@ class OSM:
         """
         :param schema_name: [str] name of a schema
         :param table_name: [str] name of a table
-        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
+        :param subregion_name_as_table_name: [bool] (default: True) whether to use subregion name as table name
         :return: [bool]
         """
         table_name_ = regulate_table_name(table_name, subregion_name_as_table_name)
@@ -180,10 +180,10 @@ class OSM:
         :param layer_data: [pandas.DataFrame] data of one layer
         :param schema_name: [str] name of the layer
         :param table_name: [str] name of the targeted table
-        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
-        :param parsed: [bool; True(default)] whether 'layer_data' has been parsed
-        :param if_exists: [str] 'fail', 'replace', or 'append'; default 'replace'
-        :param chunk_size: [int; None]
+        :param subregion_name_as_table_name: [bool] (default: True) whether to use subregion name as table name
+        :param parsed: [bool] (default: True) whether 'layer_data' has been parsed
+        :param if_exists: [str] 'fail', 'replace' (default), 'append'
+        :param chunk_size: [int; None (default)]
         """
         if schema_name not in sqlalchemy.engine.reflection.Inspector.from_engine(self.engine).get_schema_names():
             self.create_schema(schema_name)
@@ -207,12 +207,12 @@ class OSM:
     def dump_osm_pbf_data(self, subregion_data, table_name, parsed=True, if_exists='replace', chunk_size=None,
                           subregion_name_as_table_name=True):
         """
-        :param subregion_data: [pandas.DataFrame] data of a subregion
+        :param subregion_data: [pd.DataFrame] data of a subregion
         :param table_name: [str] name of a table; e.g. name of the subregion (recommended)
-        :param parsed: [bool; True(default)] whether 'subregion_data' has been parsed
-        :param if_exists: [str; 'replace'(default)] 'fail', 'replace', or 'append'
-        :param chunk_size: [int; None]
-        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as table name
+        :param parsed: [bool] (default: True) whether 'subregion_data' has been parsed
+        :param if_exists: [str] 'fail', 'replace' (default), or 'append'
+        :param chunk_size: [int; None (default)]
+        :param subregion_name_as_table_name: [bool] (default: True) whether to use subregion name as table name
         """
         if subregion_name_as_table_name:
             table_name = regulate_input_subregion_name(table_name)
@@ -239,10 +239,10 @@ class OSM:
         """
         :param table_name: [str] name of a table name; 'subregion_name' is recommended when importing the data
         :param schema_names: [str] one or multiple names of layers, e.g. 'points', 'lines'
-        :param parsed: [bool; True(default)] whether the table data was parsed before being imported
-        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as 'table_name'
-        :param chunk_size: [int or None(default)] number of rows to include in each chunk
-        :param id_sorted: [bool; True(default)]
+        :param parsed: [bool] (default: True) whether the table data was parsed before being imported
+        :param subregion_name_as_table_name: [bool] (default: True) whether to use subregion name as 'table_name'
+        :param chunk_size: [int; None (default)] number of rows to include in each chunk
+        :param id_sorted: [bool] (default: True)
         :return: [dict] e.g. {layer_name_1: layer_data_1, ...}
         """
         table_name_ = regulate_table_name(table_name, subregion_name_as_table_name)
@@ -271,7 +271,7 @@ class OSM:
     def drop_subregion_data_by_layer(self, table_name, subregion_name_as_table_name=True, *schema_names):
         """
         :param table_name: [str] name of a subregion
-        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as 'table_name'
+        :param subregion_name_as_table_name: [bool] (default: True) whether to use subregion name as 'table_name'
         :param schema_names: [str] one or multiple names of schemas
         """
         if schema_names:
@@ -289,7 +289,7 @@ class OSM:
     def drop_layer_data_by_subregion(self, schema_name, subregion_name_as_table_name=True, *table_names):
         """
         :param schema_name: [str] name of a layer name
-        :param subregion_name_as_table_name: [bool; True(default)] whether to use subregion name as 'table_name'
+        :param subregion_name_as_table_name: [bool] (default: True) whether to use subregion name as 'table_name'
         :param table_names: [str] one or multiple names of subregions
         """
         table_names_ = (regulate_table_name(table_name, subregion_name_as_table_name) for table_name in table_names)
