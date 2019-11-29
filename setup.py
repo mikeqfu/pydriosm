@@ -12,7 +12,7 @@ requirements_ = [r.strip() for r in requirements]
 setuptools.setup(
 
     name='pydriosm',
-    version='1.0.16',
+    version='1.0.17',
 
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
@@ -36,6 +36,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX :: Linux'
     ],
 )
 
