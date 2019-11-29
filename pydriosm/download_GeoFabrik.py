@@ -562,7 +562,7 @@ def retrieve_names_of_subregions_of(*subregion_name):
 
 # Download OSM data files
 def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=None, update=False,
-                                download_confirmation_required=True, verbose=True):
+                                download_confirmation_required=True, verbose=False):
     """
     :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
     :param osm_file_format: [str] ".osm.pbf", ".shp.zip", or ".osm.bz2"
@@ -601,8 +601,6 @@ def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=N
             if verbose:
                 print("\n\"{}\" is already available for \"{}\" at: \n\"{}\".\n".format(
                     osm_filename, subregion_name_, path_to_file))
-            else:
-                pass
         else:
             if confirmed("\nTo download {} data for \"{}\"".format(osm_file_format, subregion_name_),
                          confirmation_required=download_confirmation_required):
@@ -610,17 +608,18 @@ def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=N
                 op = "Updating" if os.path.isfile(path_to_file) else "Downloading"
                 try:
                     download(download_url, path_to_file)
-                    print("\n{} \"{}\" for \"{}\" ... Done.".format(op, osm_filename, subregion_name_))
-                    print("Check out: \"{}\".".format(path_to_file))
+                    if verbose:
+                        print("\n{} \"{}\" for \"{}\" ... Done.".format(op, osm_filename, subregion_name_))
+                        print("Check out: \"{}\".".format(path_to_file))
                 except Exception as e:
-                    print("\nFailed to download \"{}\". {}.".format(osm_filename, e))
+                    print("\nFailed to download \"{}\". {}.".format(osm_filename, e)) if verbose else ""
             else:
-                print("The downloading process was not activated.")
+                print("The downloading process was not activated.") if verbose else ""
 
 
 # Make OSM data available for a given region and (optional) all subregions of it
 def download_sub_subregion_osm_file(*subregion_name, osm_file_format, download_dir=None, update=False,
-                                    download_confirmation_required=True, interval_sec=5):
+                                    download_confirmation_required=True, interval_sec=5, verbose=False):
     """
     :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
     :param osm_file_format: [str] ".osm.pbf", ".shp.zip", or ".osm.bz2"
@@ -628,6 +627,7 @@ def download_sub_subregion_osm_file(*subregion_name, osm_file_format, download_d
     :param update: [bool] (default: False) whether to update (i.e. re-download) data
     :param download_confirmation_required: [bool] (default: True) whether to confirm before downloading
     :param interval_sec: [int; None] (default: 5) interval (in sec) between downloading two subregions
+    :param verbose: [bool] (default: True)
 
     Example:
         subregion_name_1               = 'bedfordshire'
@@ -638,16 +638,17 @@ def download_sub_subregion_osm_file(*subregion_name, osm_file_format, download_d
         download_confirmation_required = True
         verbose                        = True
         interval_sec                   = 5
+        verbose                        = False
         download_sub_subregion_osm_file(subregion_name_1, subregion_name_2, osm_file_format=osm_file_format,
                                         download_dir=download_dir, update=update,
                                         download_confirmation_required=download_confirmation_required,
-                                        interval_sec=interval_sec)
+                                        interval_sec=interval_sec, verbose=verbose)
     """
     subregions = retrieve_names_of_subregions_of(*subregion_name)
     if confirmed("\nTo download {} data for all the following subregions: \n{}?\n".format(
             osm_file_format, ", ".join(subregions)), confirmation_required=download_confirmation_required):
         download_subregion_osm_file(*subregions, osm_file_format=osm_file_format, download_dir=download_dir,
-                                    update=update, download_confirmation_required=False)
+                                    update=update, download_confirmation_required=False, verbose=verbose)
         if interval_sec:
             time.sleep(interval_sec)
 
