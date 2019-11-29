@@ -7,7 +7,6 @@ import pickle
 import pkg_resources
 import pyhelpers.dir
 import rapidjson
-import shapely.geometry
 
 # ====================================================================================================================
 """ Change directory """
@@ -97,6 +96,7 @@ def save_json(json_data, path_to_json, verbose=True):
 
 # Make a dictionary with keys and values being shape_type (in OSM .shp file) and shapely.geometry, respectively
 def osm_geom_types():
+    import shapely.geometry
     shape_types = {'Point': shapely.geometry.Point,
                    'LineString': shapely.geometry.LineString,
                    'LinearRing': shapely.geometry.LinearRing,
@@ -107,11 +107,13 @@ def osm_geom_types():
     return shape_types
 
 
-# Split a list into (evenly sized) chunks
+# Split a list into (evenly sized) chunks (Yield successive n-sized chunks from a list)
 def split_list(lst, no_chunks):
-    """Yield successive n-sized chunks from a list
-    Reference: https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
+    """
+    :param lst: [list]
+    :param no_chunks: [int]
 
+    Reference: https://stackoverflow.com/questions/312443/
     """
     chunk_size = math.ceil(len(lst) / no_chunks)
     for i in range(0, len(lst), chunk_size):
