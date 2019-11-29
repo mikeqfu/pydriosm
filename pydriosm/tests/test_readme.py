@@ -22,7 +22,7 @@ subregion_name = 'London'
 
 dri.download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf",
                                 download_dir=None, update=False,
-                                download_confirmation_required=True)
+                                download_confirmation_required=True, verbose=True)
 
 # Check the default file path and name
 default_fn, default_fp = dri.get_default_path_to_osm_file(subregion_name,
@@ -37,17 +37,17 @@ customised_data_dir = "tests\\test_data"
 # Download .pbf data of both 'London' and 'Kent' to the `customised_data_dir`
 dri.download_subregion_osm_file('London', 'Kent', osm_file_format=".osm.pbf",
                                 download_dir=customised_data_dir, update=False,
-                                download_confirmation_required=True)
+                                download_confirmation_required=True, verbose=True)
 
 # Read the .osm.pbf data (downloaded to the default directory `default_fp`)
 greater_london = dri.read_osm_pbf(subregion_name, data_dir=None, parsed=True,
                                   file_size_limit=50, fmt_other_tags=True,
                                   fmt_single_geom=True, fmt_multi_geom=True,
                                   update=False, download_confirmation_required=True,
-                                  pickle_it=True, rm_osm_pbf=False)
+                                  pickle_it=True, rm_osm_pbf=False, verbose=True)
 
 
-greater_london_alt = dri.read_osm_pbf(subregion_name, data_dir=customised_data_dir)
+greater_london_test = dri.read_osm_pbf(subregion_name, data_dir=customised_data_dir, verbose=True)
 
 
 # Read .shp.zip file
@@ -57,12 +57,12 @@ greater_london_shp = dri.read_shp_zip(subregion_name, layer=layer_name,
                                       feature=None, data_dir=None, update=False,
                                       download_confirmation_required=True,
                                       pickle_it=True, rm_extracts=False,
-                                      rm_shp_zip=True)
+                                      rm_shp_zip=True, verbose=True)
 
 # Merge *.shp files of specific layers of multiple subregions
 subregion_names = ['Greater London', 'Kent']
 dri.merge_multi_shp(subregion_names, layer=layer_name, update_shp_zip=False,
-                    download_confirmation_required=True, output_dir=None)
+                    download_confirmation_required=True, data_dir=None, verbose=True)
 
 # Importing .osm.pbf data
 osmdb = dri.OSM(username='postgres', host='localhost', port=5432, database_name='postgres')
@@ -90,11 +90,11 @@ london_lines_mul = osmdb.read_osm_pbf_data('london', 'lines', 'multilinestrings'
 subregions = dri.retrieve_names_of_subregions_of('England')
 
 # Import data of all contained in `subregions`
-dri.psql_osm_pbf_data_extracts(subregions, database_name='osm_pbf_data_extracts',
+dri.psql_osm_pbf_data_extracts(*subregions, database_name='osm_pbf_data_extracts',
                                data_dir=customised_data_dir, update_osm_pbf=False,
                                if_table_exists='replace', file_size_limit=50,
                                parsed=True, fmt_other_tags=True,
                                fmt_single_geom=True, fmt_multi_geom=True,
-                               rm_raw_file=True)
+                               rm_raw_file=True, verbose=True)
 
 gb_subregions = dri.retrieve_names_of_subregions_of('Great Britain')
