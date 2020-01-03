@@ -12,7 +12,7 @@ import fuzzywuzzy.process
 import numpy as np
 import pandas as pd
 import requests
-from pyhelpers.dir import regulate_input_data_dir
+from pyhelpers.dir import cd, regulate_input_data_dir
 from pyhelpers.ops import confirmed, update_nested_dict
 from pyhelpers.store import load_json, load_pickle
 
@@ -466,7 +466,10 @@ def get_default_osm_filename(subregion_name, osm_file_format, update=False):
         get_default_osm_filename(subregion_name, osm_file_format, update)
     """
     _, download_url = get_subregion_download_url(subregion_name, osm_file_format, update=update)
-    subregion_filename = os.path.split(download_url)[-1]
+    if pd.isna(download_url):
+        subregion_filename = subregion_name.replace(" ", "-").lower() + osm_file_format
+    else:
+        subregion_filename = os.path.split(download_url)[-1]
     return subregion_filename
 
 
@@ -512,9 +515,10 @@ def get_default_path_to_osm_file(subregion_name, osm_file_format, mkdir=False, u
 
 
 # Retrieve names of all subregions (if available) from the catalogue of region-subregion tier
-def retrieve_names_of_subregions_of(*subregion_name):
+def retrieve_names_of_subregions_of(*subregion_name, deep=False):
     """
     :param subregion_name: [str] or empty
+    :param deep: [bool] (default: False)
     :return: [list] (list of) subregions if available; if subregion_name=None, all regions that do have subregions
 
     Reference: https://stackoverflow.com/questions/9807634/
@@ -524,51 +528,59 @@ def retrieve_names_of_subregions_of(*subregion_name):
         retrieve_names_of_subregions_of('england', 'north america')
     """
 
-    def find_subregions(reg_name, reg_sub_idx):
-        for k, v in reg_sub_idx.items():
-            if reg_name == k:
-                if isinstance(v, dict):
-                    yield list(v.keys())
-                else:
-                    yield [reg_name] if isinstance(reg_name, str) else reg_name
-            elif isinstance(v, dict):
-                for sub in find_subregions(reg_name, v):
-                    if isinstance(sub, dict):
-                        yield list(sub.keys())
-                    else:
-                        yield [sub] if isinstance(sub, str) else sub
-
     no_subregion_list = fetch_region_subregion_tier("GeoFabrik-non-subregion-list")
 
     if not subregion_name:
         result = no_subregion_list
 
     else:
+
+        def find_subregions(reg_name, reg_sub_idx):
+            for k, v in reg_sub_idx.items():
+                if reg_name == k:
+                    if isinstance(v, dict):
+                        yield list(v.keys())
+                    else:
+                        yield [reg_name] if isinstance(reg_name, str) else reg_name
+                elif isinstance(v, dict):
+                    for sub in find_subregions(reg_name, v):
+                        if isinstance(sub, dict):
+                            yield list(sub.keys())
+                        else:
+                            yield [sub] if isinstance(sub, str) else sub
+
         region_subregion_index = fetch_region_subregion_tier("GeoFabrik-region-subregion-tier")
         res = []
         for region in subregion_name:
             res += list(find_subregions(regulate_input_subregion_name(region), region_subregion_index))[0]
-        check_list = [x for x in res if x not in no_subregion_list]
-        if check_list:
-            result = list(set(res) - set(check_list))
-            for region in check_list:
-                result += retrieve_names_of_subregions_of(region)
-        else:
-            result = res
-        del no_subregion_list, region_subregion_index, check_list
 
-    return list(dict.fromkeys(result))
+        if not deep:
+            result = res
+        else:
+            check_list = [x for x in res if x not in no_subregion_list]
+            if check_list:
+                res_ = list(set(res) - set(check_list))
+                for region in check_list:
+                    res_ += retrieve_names_of_subregions_of(region)
+            else:
+                res_ = res
+            del no_subregion_list, region_subregion_index, check_list
+
+            result = list(dict.fromkeys(res_))
+
+    return result
 
 
 # Download OSM data files
 def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=None, update=False,
-                                download_confirmation_required=True, verbose=False):
+                                download_confirmation_required=True, deep_retry=False, verbose=False):
     """
     :param subregion_name: [str] case-insensitive, e.g. 'greater London', 'london'
     :param osm_file_format: [str] ".osm.pbf", ".shp.zip", or ".osm.bz2"
     :param download_dir: [str; None (default)] directory to save the downloaded file(s); None (using default directory)
     :param update: [bool] (default: False) whether to update (i.e. re-download) data
     :param download_confirmation_required: [bool] (default: True) whether to confirm before downloading
+    :param deep_retry: [bool] (default: False)
     :param verbose: [bool] (default: True)
 
     Example:
@@ -582,39 +594,47 @@ def download_subregion_osm_file(*subregion_name, osm_file_format, download_dir=N
                                     update=update, download_confirmation_required=download_confirmation_required,
                                     verbose=verbose)
     """
-    from pyhelpers.download import download
-
     for sub_reg_name in subregion_name:
 
         # Get download URL
         subregion_name_, download_url = get_subregion_download_url(sub_reg_name, osm_file_format, update=False)
 
-        if not download_dir:
-            # Download the requested OSM file to default directory
-            osm_filename, path_to_file = get_default_path_to_osm_file(subregion_name_, osm_file_format, mkdir=True)
-        else:
-            regulated_dir = regulate_input_data_dir(download_dir)
-            osm_filename = get_default_osm_filename(subregion_name_, osm_file_format=osm_file_format)
-            path_to_file = os.path.join(regulated_dir, osm_filename)
-
-        if os.path.isfile(path_to_file) and not update:
+        if pd.isna(download_url):
             if verbose:
-                print("\n\"{}\" is already available for \"{}\" at: \n\"{}\".\n".format(
-                    osm_filename, subregion_name_, path_to_file))
+                print("\"{}\" data is not available for \"{}\" from the server. "
+                      "Try to download the data of its subregions instead. ".format(osm_file_format, subregion_name_))
+            sub_subregions = retrieve_names_of_subregions_of(subregion_name_, deep=deep_retry)
+            download_dir_ = cd(download_dir,
+                               subregion_name_.replace(" ", "-").lower() + os.path.splitext(osm_file_format)[0])
+            download_subregion_osm_file(*sub_subregions, osm_file_format=osm_file_format, download_dir=download_dir_,
+                                        update=update, download_confirmation_required=download_confirmation_required,
+                                        verbose=verbose)
         else:
-            if confirmed("\nTo download {} data for \"{}\"".format(osm_file_format, subregion_name_),
-                         confirmation_required=download_confirmation_required):
-
-                op = "Updating" if os.path.isfile(path_to_file) else "Downloading"
-                try:
-                    download(download_url, path_to_file)
-                    if verbose:
-                        print("\n{} \"{}\" for \"{}\" ... Done.".format(op, osm_filename, subregion_name_))
-                        print("Check out: \"{}\".".format(path_to_file))
-                except Exception as e:
-                    print("\nFailed to download \"{}\". {}.".format(osm_filename, e)) if verbose else ""
+            if not download_dir:
+                # Download the requested OSM file to default directory
+                osm_filename, path_to_file = get_default_path_to_osm_file(subregion_name_, osm_file_format, mkdir=True)
             else:
-                print("The downloading process was not activated.") if verbose else ""
+                regulated_dir = regulate_input_data_dir(download_dir)
+                osm_filename = get_default_osm_filename(subregion_name_, osm_file_format=osm_file_format)
+                path_to_file = os.path.join(regulated_dir, osm_filename)
+
+            if os.path.isfile(path_to_file) and not update:
+                print("\n\"{}\" for \"{}\" is already available: \"{}\".".format(
+                    osm_filename, subregion_name_, path_to_file)) if verbose else ""
+            else:
+                op = "Updating" if os.path.isfile(path_to_file) else "Downloading"
+                if confirmed("To download the {} data of \"{}\", saved as \"{}\"\n".format(
+                        osm_file_format, subregion_name_, path_to_file),
+                        confirmation_required=download_confirmation_required):
+                    try:
+                        from pyhelpers.download import download
+                        download(download_url, path_to_file)
+                        if verbose:
+                            print("{} \"{}\" for \"{}\" ... Done.".format(op, osm_filename, subregion_name_))
+                    except Exception as e:
+                        print("Failed to download \"{}\". {}.\n".format(osm_filename, e)) if verbose else ""
+                else:
+                    print("The {} of \"{}\" was cancelled.\n".format(op.lower(), osm_filename)) if verbose else ""
 
 
 # Make OSM data available for a given region and (optional) all subregions of it
