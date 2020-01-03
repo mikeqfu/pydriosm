@@ -50,7 +50,8 @@ def find_osm_shp_file(subregion_name, layer=None, feature=None, data_dir=None, f
     if not layer:
         osm_file_paths = glob.glob(shp_dir + "\\*" + file_ext)
     else:
-        pat = re.compile("{}(_a)?_free".format(layer)) if not feature else re.compile("{}_{}".format(layer, feature))
+        pat = re.compile(r"{}(_a)?(_free)?(_1)?".format(layer)) if not feature \
+            else re.compile(r"{}_*_{}".format(layer, feature))
         osm_file_paths = [f for f in glob.glob(shp_dir + "\\*" + file_ext) if re.search(pat, f)]
 
     # if not osm_file_paths: print("The required file may not exist.")
@@ -121,12 +122,12 @@ def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r', clu
             filenames, exts = [os.path.splitext(x)[0] for x in file_list], [os.path.splitext(x)[1] for x in file_list]
             layer_names = [re.search(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)', f).group(0) for f in list(set(filenames))]
             layer_names = [x.strip('_a') for x in layer_names]
-            for l, f in zip(layer_names, list(set(filenames))):
-                os.makedirs(cd(extract_dir_, l), exist_ok=True)
+            for x, f in zip(layer_names, list(set(filenames))):
+                os.makedirs(cd(extract_dir_, x), exist_ok=True)
                 for e in list(set(exts)):
                     filename = f + e
                     print("{} ... ".format(filename), end="") if verbose else None
-                    orig, dest = cd(extract_dir_, filename), cd(extract_dir_, l, filename)
+                    orig, dest = cd(extract_dir_, filename), cd(extract_dir_, x, filename)
                     shutil.copyfile(orig, dest)
                     os.remove(orig)
                     print("Done.") if verbose else ""
@@ -137,13 +138,18 @@ def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r', clu
 
 # Merge a set of .shp files (for a given layer)
 def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confirmation_required=True, data_dir=None,
-                    verbose=False):
+                    prefix="gis_osm", rm_zip_extracts=False, rm_shp_parts=False, merged_shp_dir=None, verbose=False):
     """
     :param subregion_names: [list] a list of subregion names, e.g. ['rutland', 'essex']
     :param layer: [str] name of a OSM layer, e.g. 'railways'
     :param update_shp_zip: [bool] (default: False) indicates whether to update the relevant file/information
     :param download_confirmation_required: [bool] (default: True)
     :param data_dir: [str; None]
+    :param prefix: [str] (default: "gis_osm")
+    :param rm_zip_extracts: [bool] (default: False)
+    :param rm_shp_parts: [bool] (default: False)
+    :param merged_shp_dir: [str; None (default)] if None, use the layer name as the name of the folder where the merged
+                                                shp files will be saved
     :param verbose: [bool] (default: False)
 
     Layers include 'buildings', 'landuse', 'natural', 'places', 'points', 'railways', 'roads' and 'waterways'
@@ -157,6 +163,10 @@ def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confi
         update_shp_zip                 = False
         download_confirmation_required = True
         data_dir                       = cd("test_read_GeoFabrik")
+        prefix                         = "gis_osm"
+        rm_zip_extracts                = False
+        rm_shp_parts                   = False
+        merged_shp_dir                 = None
         verbose                        = True
         merge_multi_shp(subregion_names, layer, update_shp_zip, download_confirmation_required, output_dir)
     """
@@ -176,7 +186,7 @@ def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confi
     extract_info = [(p, os.path.splitext(p)[0]) for p in file_paths]
     extract_dirs = []
     for file_path, extract_dir in extract_info:
-        extract_shp_zip(file_path, extract_dir, verbose=verbose)
+        extract_shp_zip(file_path, extract_dir, layer=layer, verbose=verbose)
         extract_dirs.append(extract_dir)
 
     # Specify a directory that stores files for the specific layer
@@ -192,12 +202,18 @@ def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confi
     for subregion, p in zip(subregion_names, extract_dirs):
         for original_filename in glob.glob1(p, "*{}*".format(layer)):
             dest = os.path.join(path_to_merged, "{}_{}".format(subregion.lower().replace(' ', '-'), original_filename))
-            shutil.copyfile(os.path.join(p, original_filename), dest)
+            if rm_zip_extracts:
+                shutil.move(os.path.join(p, original_filename), dest)
+                shutil.rmtree(p)
+            else:
+                shutil.copyfile(os.path.join(p, original_filename), dest)
 
     # Resource: https://github.com/GeospatialPython/pyshp
-    shp_file_paths = glob.glob(os.path.join(path_to_merged, '*.shp'))
+    shp_file_paths = [x for x in glob.glob(os.path.join(path_to_merged, "*.shp"))
+                      if not os.path.basename(x).startswith("merged_")]
 
-    w = shapefile.Writer(os.path.join(path_to_merged, "merged_" + layer))
+    path_to_merged_shp_file = cd(path_to_merged, "merged_" + prefix + "_" + layer)
+    w = shapefile.Writer(path_to_merged_shp_file)
     if verbose:
         print("\nMerging the following shape files:\n    {}".format(
             "\n    ".join(os.path.basename(f) for f in shp_file_paths)))
@@ -212,10 +228,22 @@ def merge_multi_shp(subregion_names, layer, update_shp_zip=False, download_confi
                 w.shape(shaperec.shape)
             r.close()
         w.close()
+        merged_shp_data = gpd.read_file(path_to_merged_shp_file + ".shp")
+        merged_shp_data.crs = {'no_defs': True, 'ellps': 'WGS84', 'datum': 'WGS84', 'proj': 'longlat'}
+        merged_shp_data.to_file(filename=path_to_merged_shp_file, driver="ESRI Shapefile")
         print("Successfully.") if verbose else ""
     except Exception as e:
         print("Failed. {}".format(e)) if verbose else ""
-    print("\nCheck out \"{}\".\n".format(path_to_merged)) if verbose else ""
+    print("The output .shp file is saved in \"{}\".".format(path_to_merged)) if verbose else ""
+
+    if rm_shp_parts:
+        if merged_shp_dir:
+            new_shp_dir = cd(regulate_input_data_dir(merged_shp_dir), mkdir=True)
+        else:
+            new_shp_dir = cd(data_dir, layer, mkdir=True)
+        for x in glob.glob(cd(path_to_merged, "merged_*")):
+            shutil.move(x, cd(new_shp_dir, os.path.basename(x).replace("merged_", "", 1)))
+        shutil.rmtree(path_to_merged)
 
 
 # (Alternative to, though may not exactly be the same as, geopandas.read_file())
@@ -419,7 +447,7 @@ def parse_osm_pbf_layer_data(pbf_layer_data, geo_typ, fmt_other_tags, fmt_single
         if geom_type == 'MultiPolygon':
             sub_geom_type_func = geom_types_funcs['Polygon']
             geom_coords = geom_data.coordinates.map(
-                lambda x: geom_type_func(sub_geom_type_func(l) for ls in x for l in ls))
+                lambda x: geom_type_func(sub_geom_type_func(y) for ls in x for y in ls))
         else:
             geom_coords = geom_data.coordinates.map(lambda x: geom_type_func(x))
         return geom_coords
