@@ -205,7 +205,7 @@ class OSM:
 
     # Import all data of a given (sub)region
     def dump_osm_pbf_data(self, subregion_data, table_name, parsed=True, if_exists='replace', chunk_size=None,
-                          subregion_name_as_table_name=True):
+                          subregion_name_as_table_name=True, verbose=True):
         """
         :param subregion_data: [pd.DataFrame] data of a subregion
         :param table_name: [str] name of a table; e.g. name of the subregion (recommended)
@@ -213,13 +213,14 @@ class OSM:
         :param if_exists: [str] 'fail', 'replace' (default), or 'append'
         :param chunk_size: [int; None (default)]
         :param subregion_name_as_table_name: [bool] (default: True) whether to use subregion name as table name
+        :param verbose: [bool] (default: True)
         """
         if subregion_name_as_table_name:
             table_name = regulate_input_subregion_name(table_name)
 
-        print("Dumping \"{}\" to PostgreSQL ... ".format(table_name))
+        print("Dumping \"{}\" to PostgreSQL ... ".format(table_name)) if verbose else ""
         for geom_type, layer_data in subregion_data.items():
-            print("         {} ... ".format(geom_type), end="")
+            print("         {} ... ".format(geom_type), end="") if verbose else ""
             if layer_data.empty and self.subregion_table_exists(geom_type, table_name, subregion_name_as_table_name):
                 print("The layer is empty. An empty table already exists in the database.")
                 pass
@@ -227,9 +228,9 @@ class OSM:
                 try:
                     self.dump_osm_pbf_data_by_layer(layer_data, geom_type, table_name, subregion_name_as_table_name,
                                                     parsed, if_exists, chunk_size)
-                    print("Done. Total amount of features: {}".format(len(layer_data)))
+                    print("Done. Total amount of features: {}".format(len(layer_data))) if verbose else ""
                 except Exception as e:
-                    print("Failed. {}".format(e))
+                    print("Failed. {}".format(e)) if verbose else ""
             del layer_data
             gc.collect()
 
