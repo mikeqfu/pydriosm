@@ -99,7 +99,7 @@ def get_subregion_table(url, verbose=False):
                 subregion_table.loc[subregion_table[file_type].notnull(), file_type] = urls
 
             try:
-                subregion_urls = [urllib.parse.urljoin(url, soup.find('a', text=text)['href']) for text in
+                subregion_urls = [urllib.parse.urljoin(url, soup.find('a', text=text).get('href')) for text in
                                   subregion_table.Subregion]
             except TypeError:
                 subregion_urls = [kml['onmouseover'] for kml in soup.find_all('tr', onmouseover=True)]
