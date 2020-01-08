@@ -9,7 +9,7 @@ from pydriosm.download_GeoFabrik import collect_region_subregion_tier
 from pydriosm.download_GeoFabrik import collect_subregion_info_catalogue
 
 
-def update_pkg_metadata(confirmation_required=False, verbose=False):
+def update_pkg_metadata(confirmation_required=True, verbose=True):
 
     if confirmed("To update package metadata? (Note that it may take a few minutes.)"):
 
