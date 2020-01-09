@@ -89,7 +89,7 @@ def get_subregion_table(url, verbose=False):
 
             # Get the URLs
             source = requests.get(url)
-            soup = bs4.BeautifulSoup(source.text, 'lxml')
+            soup = bs4.BeautifulSoup(source.content, 'lxml')
             source.close()
 
             for file_type in file_types:
@@ -101,7 +101,7 @@ def get_subregion_table(url, verbose=False):
             try:
                 subregion_urls = [urllib.parse.urljoin(url, soup.find('a', text=text).get('href')) for text in
                                   subregion_table.Subregion]
-            except TypeError:
+            except (AttributeError, TypeError):
                 subregion_urls = [kml['onmouseover'] for kml in soup.find_all('tr', onmouseover=True)]
                 subregion_urls = [s[s.find('(') + 1:s.find(')')][1:-1].replace('kml', 'html') for s in subregion_urls]
                 subregion_urls = [urllib.parse.urljoin(url, sub_url) for sub_url in subregion_urls]
@@ -140,10 +140,10 @@ def collect_subregion_info_catalogue(confirmation_required=True, verbose=False):
             soup = bs4.BeautifulSoup(source.text, 'lxml')
             source.close()
             # avail_subregions = [td.a.text for td in soup.find_all('td', {'class': 'subregion'})]
-            avail_subregion_urls = [urllib.parse.urljoin(home_url, td.a['href']) for td in
-                                    soup.find_all('td', {'class': 'subregion'})]
-            avail_subregion_url_tables = [get_subregion_table(sub_url, verbose) for sub_url in avail_subregion_urls]
-            avail_subregion_url_tables = [tbl for tbl in avail_subregion_url_tables if tbl is not None]
+            subregion_href = soup.find_all('td', {'class': 'subregion'})
+            avail_subregion_urls = (urllib.parse.urljoin(home_url, td.a['href']) for td in subregion_href)
+            avail_subregion_url_tables_0 = (get_subregion_table(sub_url, verbose) for sub_url in avail_subregion_urls)
+            avail_subregion_url_tables = [tbl for tbl in avail_subregion_url_tables_0 if tbl is not None]
 
             subregion_url_tables = list(avail_subregion_url_tables)
 
@@ -154,8 +154,7 @@ def collect_subregion_info_catalogue(confirmation_required=True, verbose=False):
                 for subregion_url_table in subregion_url_tables:
                     # subregions = list(subregion_url_table.Subregion)
                     subregion_urls = list(subregion_url_table.SubregionURL)
-                    subregion_url_tables_0 = [get_subregion_table(subregion_url, verbose)
-                                              for subregion_url in subregion_urls]
+                    subregion_url_tables_0 = [get_subregion_table(sr_url, verbose) for sr_url in subregion_urls]
                     subregion_url_tables_ += [tbl for tbl in subregion_url_tables_0 if tbl is not None]
 
                     # (Note that 'Russian Federation' data is available in both 'Asia' and 'Europe')
@@ -274,20 +273,22 @@ def collect_continents_subregion_tables(confirmation_required=True, verbose=Fals
 
 
 # Fetch a data frame with subregion information for each continent
-def fetch_continents_subregion_tables(update=False, verbose=False):
+def fetch_continents_subregion_tables(update=False, confirmation_required=True, verbose=False):
     """
     :param update: [bool] (default: False) whether to update (i.e. re-collect) all subregion tables for each continent
+    :param confirmation_required: [bool] (default: True)
     :param verbose: [bool] (default: False)
     :return: [pd.DataFrame]
 
     Example:
-        update  = False
-        verbose = True
-        fetch_continents_subregion_tables(update, verbose)
+        update                = False
+        confirmation_required = True
+        verbose               = True
+        fetch_continents_subregion_tables(update, confirmation_required, verbose)
     """
     path_to_pickle = cd_dat("GeoFabrik-continents-subregion-tables.pickle")
     if not os.path.isfile(path_to_pickle) or update:
-        collect_continents_subregion_tables(confirmation_required=True, verbose=verbose)
+        collect_continents_subregion_tables(confirmation_required=confirmation_required, verbose=verbose)
     try:
         subregion_tables = load_pickle(path_to_pickle, verbose=verbose)
         return subregion_tables
@@ -296,15 +297,17 @@ def fetch_continents_subregion_tables(update=False, verbose=False):
 
 
 # Scan through the downloading pages to collect a catalogue of region-subregion tier
-def collect_region_subregion_tier(confirmation_required=True, verbose=False):
+def collect_region_subregion_tier(confirmation_required=True, update=False, verbose=False):
     """
     :param confirmation_required: [bool] (default: True) whether to confirm before collecting region-subregion tier
+    :param update: [bool] (default: False)
     :param verbose: [bool] (default: False)
 
     Example:
         confirmation_required = True
+        update                = False
         verbose               = True
-        collect_region_subregion_tier(confirmation_required, verbose)
+        collect_region_subregion_tier(confirmation_required, update, verbose)
     """
     # Find out the all regions and their subregions
     def compile_region_subregion_tier(sub_reg_tbls):
@@ -349,16 +352,16 @@ def collect_region_subregion_tier(confirmation_required=True, verbose=False):
 
     if confirmed("To compile a region-subregion tier? (Note that it may take a few minutes.) ",
                  confirmation_required=confirmation_required):
+        print("Compiling a region-subregion tier ... ", end="") if verbose else ""
         try:
-            subregion_tables = fetch_continents_subregion_tables(update=True)
+            subregion_tables = fetch_continents_subregion_tables(update=update)
             region_subregion_tier, non_subregions = compile_region_subregion_tier(subregion_tables)
+            print("Done. ") if verbose else ""
             save_pickle(region_subregion_tier, cd_dat("GeoFabrik-region-subregion-tier.pickle"), verbose=verbose)
             save_json(region_subregion_tier, cd_dat("GeoFabrik-region-subregion-tier.json"), verbose=verbose)
             save_pickle(non_subregions, cd_dat("GeoFabrik-non-subregion-list.pickle"), verbose=verbose)
         except Exception as e:
-            print("Failed to get the required information ... {}.".format(e))
-    else:
-        print("The information collection process was not activated.")
+            print("Failed to get the required information ... {}.".format(e)) if verbose else ""
 
 
 # Fetch a catalogue of region-subregion tier, or all regions having no subregions
