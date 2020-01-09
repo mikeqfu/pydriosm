@@ -13,6 +13,10 @@ pip install Fiona-1.8.13-cp38-cp38-win_amd64.whl
 pip install Shapely-1.6.4.post2-cp38-cp38-win_amd64.whl
 
 pip install --upgrade --extra-index-url https://test.pypi.org/simple/ pydriosm
+
+# Upload the tested distributions to PyPI
+twine upload dist/*
+
 """
 
 # Setting preference for pandas
@@ -67,7 +71,7 @@ greater_london = dri.read_osm_pbf(subregion_name, data_dir=None, parsed=True,
                                   pickle_it=True, rm_osm_pbf=False, verbose=True)
 
 greater_london_test = dri.read_osm_pbf(subregion_name, data_dir=customised_data_dir,
-                                       verbose=True)
+                                       rm_osm_pbf=False, verbose=True)
 
 # 2.2  .shp.zip / **.shp** data
 layer_name = 'railways'  # We must specify a layer
@@ -147,3 +151,9 @@ print(gb_subregions_deep)
 
 # To drop the database 'osm_pbf_data_extracts'
 osmdb.drop()
+
+# To remove the files generated from the above
+from pyhelpers.dir import rm_dir
+
+rm_dir(dri.cd_dat_geofabrik())
+rm_dir(dri.regulate_input_data_dir(customised_data_dir))
