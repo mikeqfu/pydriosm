@@ -11,6 +11,7 @@ import zipfile
 import geopandas as gpd
 import ogr
 import pandas as pd
+import rapidjson
 import shapefile
 from pyhelpers.dir import cd, regulate_input_data_dir
 from pyhelpers.store import load_pickle
@@ -430,7 +431,7 @@ def parse_osm_pbf_layer_data(pbf_layer_data, geo_typ, fmt_other_tags, fmt_single
     :return: [pd.DataFrame]
 
     Example:
-        layer_data      # See parse_osm_pbf()
+        pbf_layer_data  # See parse_osm_pbf()
         geo_typ         = 'points'
         fmt_other_tags  = True
         fmt_single_geom = True
@@ -540,8 +541,6 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
         fmt_multi_geom  = True
         parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single_geom, fmt_multi_geom)
     """
-    import rapidjson
-
     raw_osm_pbf = ogr.Open(path_to_osm_pbf)
     # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
     layer_names, layer_data = [], []
@@ -561,7 +560,7 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
             del lyr_feats
             gc.collect()
 
-            lyr_dat = pd.DataFrame()
+            lyr_dat_list = []
             for lyr_chunk in chunked_lyr_feats:
                 lyr_chunk_feat = (feat.ExportToJson() for feat in lyr_chunk)
 
@@ -569,7 +568,7 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
                 if parsed:
                     lyr_chunk_dat = parse_osm_pbf_layer_data(lyr_chunk_dat, lyr_name,
                                                              fmt_other_tags, fmt_single_geom, fmt_multi_geom)
-                lyr_dat = lyr_dat.append(lyr_chunk_dat)
+                lyr_dat_list.append(lyr_chunk_dat)
 
                 # feat_dat = pd.DataFrame.from_dict(rapidjson.loads(feat), orient='index').T
                 # Or, feat_dat = pd.read_json(feat, typ='series').to_frame().T
@@ -578,6 +577,8 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
 
                 del lyr_chunk, lyr_chunk_dat
                 gc.collect()
+
+            lyr_dat = pd.concat(lyr_dat_list, ignore_index=True, sort=False)
 
         else:
             lyr_feats = (feat.ExportToJson() for _, feat in enumerate(lyr))
