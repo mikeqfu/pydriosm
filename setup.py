@@ -12,7 +12,7 @@ requirements_ = [r.strip() for r in requirements]
 setuptools.setup(
 
     name='pydriosm',
-    version='1.0.17',
+    version='1.0.18',
 
     author='Qian Fu',
     author_email='qian.fu@outlook.com',
@@ -32,9 +32,7 @@ setuptools.setup(
 
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-        'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux'
     ],
