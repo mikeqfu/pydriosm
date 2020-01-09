@@ -18,14 +18,14 @@ This package provides helpful utilities for researchers to easily download and r
 
 * [Installation](#installation)
 * [Quick start - A brief example of processing data of the "Greater London"](#quick-start)
-  * [*1.* Download data](#download-data)
-  * [*2.* Read/parse data](#read-parse-data)
-    * [*2.1* .osm.pbf](#pbf-data)
-    * [*2.2* .shp.zip / .shp](#shp-zip-data)
-  * [*3.* Import and retrieve data with a PostgreSQL server](#import-retrieve-data)
-    * [*3.1* Import the data to the database](#import-the-data-to-the-database)
-    * [*3.2* Retrieve data from the database](#retrieve-data-from-the-database)
-    * [*3.3* Import data of all subregions of a given (sub)region to the database](#import-data-of-all-subregions)
+  * [1. Download data](#download-data)
+  * [2. Read/parse data](#read-parse-data)
+    * [2.1 .osm.pbf](#pbf-data)
+    * [2.2 .shp.zip / .shp](#shp-zip-data)
+  * [3. Import and retrieve data with a PostgreSQL server](#import-retrieve-data)
+    * [3.1 Import the data to the database](#import-the-data-to-the-database)
+    * [3.2 Retrieve data from the database](#retrieve-data-from-the-database)
+    * [3.3 Import data of all subregions of a given (sub)region to the database](#import-data-of-all-subregions)
 * [Copyright & License](#footnote)
 
 ---
@@ -72,7 +72,7 @@ For a quick start, some examples are provided below, which demonstrate a few cor
 
 
 
-### *1.* Download data <a name="download-data"></a>
+### 1. Download data <a name="download-data"></a>
 
 To download the OSM data for a region (or rather, a subregion) of which the data extract is available, you  need to specify the name of the region (e.g. "Greater London"):
 
@@ -124,13 +124,13 @@ The *.pbf* data file will then be saved to the `download_dir` as specified.
 
 
 
-### *2.* Read/parse data <a name="read-parse-data"></a>
+### 2. Read/parse data <a name="read-parse-data"></a>
 
 The package can read/parse the OSM data extracts in both *.pbf* and *.shp.zip* (and *.shp*). 
 
 
 
-#### *2.1*  .osm.pbf data <a name="pbf-data"></a>
+#### 2.1  .osm.pbf data <a name="pbf-data"></a>
 
 Parsing the *.pbf* data relies mainly on [GDAL/OGR](https://pypi.org/project/GDAL/), using `read_osm_pbf()` function.
 
@@ -169,7 +169,7 @@ If `update=False`, when you run `read_osm_pbf(subregion_name)` again, the functi
 
 
 
-#### *2.2*  .shp.zip / **.shp** data <a name="shp-zip-data"></a>
+#### 2.2  .shp.zip / **.shp** data <a name="shp-zip-data"></a>
 
 You can read the *.shp.zip* and *.shp* file of the above `subregion_name` (i.e. 'London') by using `read_shp_zip()`, which relies mainly on [GeoPandas](http://geopandas.org/):
 
@@ -219,7 +219,7 @@ print(default_fp_)
 
 
 
-### *3.* Import and retrieve data with a PostgreSQL server <a name="import-retrieve-data"></a>
+### 3. Import and retrieve data with a PostgreSQL server <a name="import-retrieve-data"></a>
 
 The package provides a class, named "OSM", which communicates with [PostgreSQL](https://www.postgresql.org/) server. 
 
@@ -243,7 +243,7 @@ If the database "osm_pbf_data_extracts" does not exist before the connection is 
 
 
 
-#### *3.1*  Import the data to the database <a name="import-the-data-to-the-database"></a>
+#### 3.1  Import the data to the database <a name="import-the-data-to-the-database"></a>
 
 To import `greater_london` (i.e. the parsed .pbf data of "London") to the database, "osm_pbf_data_extracts":
 
@@ -257,7 +257,7 @@ Each element (i.e. layer) of `greater_london` will be stored in a different sche
 
 
 
-#### *3.2*  Retrieve data from the database <a name="retrieve-data-from-the-database"></a>
+#### 3.2  Retrieve data from the database <a name="retrieve-data-from-the-database"></a>
 
 To retrieve the dumped data:
 
@@ -291,7 +291,7 @@ london_lines_mul = osmdb.read_osm_pbf_data('london', 'lines', 'multilinestrings'
 
 
 
-#### *3.3*  Import data of all subregions of a given (sub)region to the database <a name="import-data-of-all-subregions"></a>
+#### 3.3  Import data of all subregions of a given (sub)region to the database <a name="import-data-of-all-subregions"></a>
 
 Find all subregions (without sub-subregions) of a (sub)region. For example, to find [all subregions](https://download.geofabrik.de/central-america.html) of "Central America":
 
