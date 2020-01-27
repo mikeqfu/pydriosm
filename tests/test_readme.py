@@ -68,10 +68,10 @@ greater_london = dri.read_osm_pbf(subregion_name, data_dir=None, parsed=True,
                                   file_size_limit=50, fmt_other_tags=True,
                                   fmt_single_geom=True, fmt_multi_geom=True,
                                   update=False, download_confirmation_required=True,
-                                  pickle_it=True, rm_osm_pbf=False, verbose=True)
+                                  pickle_it=False, rm_osm_pbf=False, verbose=True)
 
 greater_london_test = dri.read_osm_pbf(subregion_name, data_dir=customised_data_dir,
-                                       rm_osm_pbf=False, verbose=True)
+                                       verbose=True)
 
 # 2.2  .shp.zip / **.shp** data
 layer_name = 'railways'  # We must specify a layer
@@ -85,7 +85,8 @@ greater_london_shp = dri.read_shp_zip(subregion_name, layer=layer_name,
 
 greater_london_shp_rail = dri.read_shp_zip(subregion_name, layer=layer_name,
                                            feature='rail')
-greater_london_shp_rail.equals(greater_london_shp[greater_london_shp.fclass == 'rail'])  # True
+rail = greater_london_shp[greater_london_shp.fclass == 'rail']
+greater_london_shp_rail.equals(rail)  # True
 
 # To merge .shp files of multiple subregions on a specific layer
 subregion_names = ['London', 'Kent']
@@ -102,10 +103,9 @@ print(default_fp_)
 """ 3. Import and retrieve data with a PostgreSQL server ========================================================= """
 
 osmdb = dri.OSM(username='postgres', password=None, host='localhost', port=5432,
-                database_name='postgres')
-# Or simply, osmdb = dri.OSM()
-
-osmdb.connect_db(database_name='osm_pbf_data_extracts')
+                database_name='test_osmdb')
+# Or simply,
+# osmdb = dri.OSM(database_name='test_osmdb')
 
 
 # 3.1  Import the data to the database
@@ -118,7 +118,7 @@ osmdb.dump_osm_pbf_data(greater_london, table_name=subregion_name, parsed=True,
 greater_london_retrieval = osmdb.read_osm_pbf_data(table_name=subregion_name,
                                                    parsed=True,
                                                    subregion_name_as_table_name=True,
-                                                   chunk_size=None, id_sorted=True)
+                                                   chunk_size=None, sorted_by_id=True)
 
 greater_london['points'].equals(greater_london_retrieval['points'])  # True
 
@@ -131,17 +131,17 @@ london_lines_mul = osmdb.read_osm_pbf_data('london', 'lines', 'multilinestrings'
 subregions = dri.retrieve_names_of_subregions_of('Central America', deep=False)
 
 # To import data of all contained in `subregions`:
-dri.psql_osm_pbf_data_extracts(*subregions, confirmation_required=True,
+dri.psql_osm_pbf_data_extracts(*subregions,
                                username='postgres', password=None,
                                host='localhost', port=5432,
-                               database_name='osm_pbf_data_extracts',
+                               database_name='test_osmdb',
                                data_dir=customised_data_dir,
                                update_osm_pbf=False, if_table_exists='replace',
                                file_size_limit=50, parsed=True,
                                fmt_other_tags=True, fmt_single_geom=True,
                                fmt_multi_geom=True,
-                               pickle_raw_file=False,
-                               rm_raw_file=True, verbose=True)
+                               pickle_raw_file=False, rm_raw_file=False,
+                               confirmation_required=True, verbose=True)
 
 # To import all subregion data of "Great Britain", find its all subregions
 gb_subregions_shallow = dri.retrieve_names_of_subregions_of('Great Britain', deep=False)
@@ -155,5 +155,5 @@ osmdb.drop()
 # To remove the files generated from the above
 from pyhelpers.dir import rm_dir
 
-rm_dir(dri.cd_dat_geofabrik())
+rm_dir(dri.cd_dat_geofabrik("Europe"))
 rm_dir(dri.regulate_input_data_dir(customised_data_dir))
