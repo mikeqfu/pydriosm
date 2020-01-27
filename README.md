@@ -20,8 +20,8 @@ This package provides helpful utilities for researchers to easily download and r
 * [Quick start - A brief example of processing data of the "Greater London"](#quick-start)
   * [1. Download data](#download-data)
   * [2. Read/parse data](#read-parse-data)
-    * [2.1 .osm.pbf](#pbf-data)
-    * [2.2 .shp.zip / .shp](#shp-zip-data)
+    * [2.1 *.osm.pbf*](#pbf-data)
+    * [2.2 *.shp.zip* / *.shp*](#shp-zip-data)
   * [3. Import and retrieve data with a PostgreSQL server](#import-retrieve-data)
     * [3.1 Import the data to the database](#import-the-data-to-the-database)
     * [3.2 Retrieve data from the database](#retrieve-data-from-the-database)
@@ -130,7 +130,7 @@ The package can read/parse the OSM data extracts in both *.pbf* and *.shp.zip* (
 
 
 
-#### 2.1  .osm.pbf data <a name="pbf-data"></a>
+#### 2.1  *.osm.pbf* data <a name="pbf-data"></a>
 
 Parsing the *.pbf* data relies mainly on [GDAL/OGR](https://pypi.org/project/GDAL/), using `read_osm_pbf()` function.
 
@@ -139,7 +139,7 @@ greater_london = dri.read_osm_pbf(subregion_name, data_dir=None, parsed=True,
                                   file_size_limit=50, fmt_other_tags=True,
                                   fmt_single_geom=True, fmt_multi_geom=True,
                                   update=False, download_confirmation_required=True,
-                                  pickle_it=True, rm_osm_pbf=False, verbose=True)
+                                  pickle_it=False, rm_osm_pbf=False, verbose=True)
 ```
 
 **Note that** `dri.read_osm_pbf()` **may take a few minutes or even longer if the data file is too large.** If the file size is greater than the given `file_size_limit` (default: 50 MB), the data will be parsed in a chunk-wise manner. 
@@ -163,13 +163,13 @@ In the above, `greater_london` and `greater_london_test` should be the same.
 
 To make life easier, you can simply skip the download step and use `read_osm_pbf()` directly. That is, if the targeted data is not available, `read_osm_pbf()` will download the data file first. By default, a confirmation of downloading the data will be prompted, given that `download_confirmation_required=True`. 
 
-Setting `pickle_it=True` is to save a local copy of the parsed data as a `pickle` file. 
+If `pickle_it=True`, the parsed data will be saved as a `pickle` file to the `data_dir`.
 
 If `update=False`, when you run `read_osm_pbf(subregion_name)` again, the function will load the `pickle` file directly; if `update=True`, the function will try to download the latest version of the data file and parse it again. 
 
 
 
-#### 2.2  .shp.zip / **.shp** data <a name="shp-zip-data"></a>
+#### 2.2  *.shp.zip* / ***.shp*** data <a name="shp-zip-data"></a>
 
 You can read the *.shp.zip* and *.shp* file of the above `subregion_name` (i.e. 'London') by using `read_shp_zip()`, which relies mainly on [GeoPandas](http://geopandas.org/):
 
@@ -181,7 +181,7 @@ layer_name = 'railways'
 greater_london_shp = dri.read_shp_zip(subregion_name, layer=layer_name,
                                       feature=None, data_dir=None, update=False,
                                       download_confirmation_required=True,
-                                      pickle_it=True, rm_extracts=False,
+                                      pickle_it=False, rm_extracts=False,
                                       rm_shp_zip=False, verbose=True)
 ```
 
@@ -190,7 +190,8 @@ The parameter `feature` is related to 'fclass' in `greater_london_shp`. You may 
 ```python
 greater_london_shp_rail = dri.read_shp_zip(subregion_name, layer=layer_name, 
                                            feature='rail')
-# greater_london_shp_rail.equals(greater_london_shp[greater_london_shp.fclass == 'rail'])
+# rail = greater_london_shp[greater_london_shp.fclass == 'rail']
+# greater_london_shp_rail.equals(rail)
 # >>> True
 ```
 
@@ -227,25 +228,19 @@ To establish a connection with the server, you need to specify your username (de
 
 ```python
 osmdb = dri.OSM(username='postgres', password=None, host='localhost', port=5432, 
-                database_name='postgres')
-# Or simply, osmdb = dri.OSM()
+                database_name='test_osmdb')
+# Or simply, osmdb = dri.OSM(database_name='test_osmdb')
 ```
 
 If `password=None`, you will then be asked to type in your password.
 
-Now you can connect your database, e.g. "osm_pbf_data_extracts": 
-
-```python
-osmdb.connect_db(database_name='osm_pbf_data_extracts')
-```
-
-If the database "osm_pbf_data_extracts" does not exist before the connection is established, the method `connect_db()` will just create it. 
+Now you are connected to the database, 'test_osmdb'.
 
 
 
 #### 3.1  Import the data to the database <a name="import-the-data-to-the-database"></a>
 
-To import `greater_london` (i.e. the parsed .pbf data of "London") to the database, "osm_pbf_data_extracts":
+To import `greater_london` (i.e. the parsed *.pbf* data of "London") to the database, 'test_osmdb':
 
 ```python
 osmdb.dump_osm_pbf_data(greater_london, table_name=subregion_name, parsed=True,
@@ -265,7 +260,7 @@ To retrieve the dumped data:
 greater_london_retrieval = osmdb.read_osm_pbf_data(table_name=subregion_name, 
                                                    parsed=True, 
                                                    subregion_name_as_table_name=True,
-                                                   chunk_size=None, id_sorted=True)
+                                                   chunk_size=None, sorted_by_id=True)
 ```
 
 Note that `greater_london_retrieval` may not be exactly the same as `greater_london`. This is because the "keys" of the elements in `greater_london` are in the following order: `'points'`, `'lines'`, `'multilinestrings'`, `'multipolygons'` and `'other_relations'`. 
@@ -299,24 +294,24 @@ Find all subregions (without sub-subregions) of a (sub)region. For example, to f
 subregions = dri.retrieve_names_of_subregions_of('Central America')
 ```
 
-To import the **.pbf** data of `subregions`:
+To import the *.pbf* data of `subregions`:
 
 ```python
 # Note that this example may take quite a long time!!
-dri.psql_osm_pbf_data_extracts(*subregions, confirmation_required=True,
+dri.psql_osm_pbf_data_extracts(*subregions, 
                                username='postgres', password=None, 
                                host='localhost', port=5432,
-                               database_name='osm_pbf_data_extracts',
+                               database_name='test_osmdb',
                                data_dir=customised_data_dir,
                                update_osm_pbf=False, if_table_exists='replace',
                                file_size_limit=50, parsed=True,
                                fmt_other_tags=True, fmt_single_geom=True,
                                fmt_multi_geom=True,
-                               pickle_raw_file=False,
-                               rm_raw_file=True, verbose=True)
+                               pickle_raw_file=False, rm_raw_file=False, 
+                               confirmation_required=True, verbose=True)
 ```
 
-Setting `rm_raw_file=False` and `data_dir=None` will keep all the raw **.pbf** data files in the default data folder. 
+Setting `rm_raw_file=False` and `data_dir=None` will keep all the raw *.pbf* data files in the default data folder. 
 
 If you would like to import [all subregion]((https://download.geofabrik.de/europe/great-britain.html)) data of "Great Britain", try two ways of finding its all subregions:
 
