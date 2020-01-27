@@ -11,14 +11,14 @@ import zipfile
 import geopandas as gpd
 import ogr
 import pandas as pd
-import rapidjson
 import shapefile
 from pyhelpers.dir import cd, regulate_input_data_dir
+from pyhelpers.ops import split_list
 from pyhelpers.store import load_pickle
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
 from pydriosm.download_GeoFabrik import get_default_path_to_osm_file, regulate_input_subregion_name
-from pydriosm.utils import osm_geom_types, save_pickle, split_list
+from pydriosm.utils import osm_geom_types, save_pickle
 
 
 # Search the OSM data directory and its sub-directories to get the path to the file
@@ -543,53 +543,52 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
     """
     raw_osm_pbf = ogr.Open(path_to_osm_pbf)
     # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
-    layer_names, layer_data = [], []
+    layer_names, all_layer_data = [], []
     # Parse the data feature by feature
     layer_count = raw_osm_pbf.GetLayerCount()
+
     # Loop through all available layers
     for i in range(layer_count):
         # Get the data and name of the i-th layer
-        lyr = raw_osm_pbf.GetLayerByIndex(i)
-        lyr_name = lyr.GetName()
+        layer = raw_osm_pbf.GetLayerByIndex(i)
+        layer_name = layer.GetName()
+
+        layer_names.append(layer_name)
 
         if chunks_no:
-            lyr_feats = [feat for _, feat in enumerate(lyr)]
-            # no_chunk = file_size_in_mb / file_size_limit; chunk_size = len(lyr_feats) / no_chunk
-            chunked_lyr_feats = split_list(lyr_feats, chunks_no)
+            features = [feature for _, feature in enumerate(layer)]
+            # chunks_no = file_size_in_mb / file_size_limit; chunk_size = len(features) / chunks_no
+            feats = split_list(features, chunks_no)
 
-            del lyr_feats
+            del features
             gc.collect()
 
-            lyr_dat_list = []
-            for lyr_chunk in chunked_lyr_feats:
-                lyr_chunk_feat = (feat.ExportToJson() for feat in lyr_chunk)
-
-                lyr_chunk_dat = pd.DataFrame(rapidjson.loads(feat) for feat in lyr_chunk_feat)
-                if parsed:
-                    lyr_chunk_dat = parse_osm_pbf_layer_data(lyr_chunk_dat, lyr_name,
-                                                             fmt_other_tags, fmt_single_geom, fmt_multi_geom)
-                lyr_dat_list.append(lyr_chunk_dat)
-
-                # feat_dat = pd.DataFrame.from_dict(rapidjson.loads(feat), orient='index').T
-                # Or, feat_dat = pd.read_json(feat, typ='series').to_frame().T
-                # feat_dat = parse_layer_data(feat_dat, lyr_name, fmt_other_tags, fmt_single_geom, fmt_multi_geom)
-                # lyr_dat = lyr_dat.append(feat_dat)
-
-                del lyr_chunk, lyr_chunk_dat
+            all_lyr_dat = []
+            for feat in feats:
+                if not parsed:
+                    lyr_dat = pd.DataFrame(f.ExportToJson() for f in feat)
+                else:
+                    lyr_dat = pd.DataFrame(f.ExportToJson(as_object=True) for f in feat)
+                    lyr_dat = parse_osm_pbf_layer_data(lyr_dat, layer_name,
+                                                       fmt_other_tags, fmt_single_geom, fmt_multi_geom)
+                all_lyr_dat.append(lyr_dat)
+                del feat, lyr_dat
                 gc.collect()
 
-            lyr_dat = pd.concat(lyr_dat_list, ignore_index=True, sort=False)
+            layer_data = pd.concat(all_lyr_dat, ignore_index=True, sort=False)
 
         else:
-            lyr_feats = (feat.ExportToJson() for _, feat in enumerate(lyr))
-            lyr_dat = pd.DataFrame(rapidjson.loads(feat) for feat in lyr_feats)  # Get the data
-            if parsed:
-                lyr_dat = parse_osm_pbf_layer_data(lyr_dat, lyr_name, fmt_other_tags, fmt_single_geom, fmt_multi_geom)
+            if not parsed:
+                layer_data = pd.DataFrame(feature.ExportToJson() for _, feature in enumerate(layer))
+                layer_data.columns = ['{}_data'.format(layer_name)]
+            else:
+                layer_data = pd.DataFrame(feature.ExportToJson(as_object=True) for _, feature in enumerate(layer))
+                layer_data = parse_osm_pbf_layer_data(layer_data, layer_name,
+                                                      fmt_other_tags, fmt_single_geom, fmt_multi_geom)
 
-        layer_names.append(lyr_name)
-        layer_data.append(lyr_dat)
+        all_layer_data.append(layer_data)
 
-        del lyr_dat
+        del layer_data
         gc.collect()
 
     raw_osm_pbf.Release()
@@ -598,7 +597,7 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
     gc.collect()
 
     # Make a dictionary, {layer_name: layer_DataFrame}
-    osm_pbf_data = dict(zip(layer_names, layer_data))
+    osm_pbf_data = dict(zip(layer_names, all_layer_data))
 
     return osm_pbf_data
 
@@ -606,7 +605,8 @@ def parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_other_tags, fmt_single
 # Read .osm.pbf file into pd.DataFrames, either roughly or with a granularity for a given subregion
 def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
                  fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
-                 update=False, download_confirmation_required=True, pickle_it=False, rm_osm_pbf=True, verbose=False):
+                 update=False, download_confirmation_required=True, pickle_it=False, rm_osm_pbf=False,
+                 verbose=False):
     """
     :param subregion_name: [str] e.g. 'rutland'
     :param data_dir: [str; None (default)] customised path of a .osm.pbf file
@@ -618,7 +618,7 @@ def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
     :param update: [bool] (default: False)
     :param download_confirmation_required: [bool] (default: True)
     :param pickle_it: [bool] (default: False)
-    :param rm_osm_pbf: [bool] (default: True)
+    :param rm_osm_pbf: [bool] (default: False)
     :param verbose: [bool] (default: False)
     :return: [dict; None]
 
@@ -657,13 +657,15 @@ def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
             osm_pbf_data = load_pickle(path_to_pickle, verbose=verbose)
         else:
             # If the target file is not available, try downloading it first.
-            download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf", download_dir=data_dir,
-                                        update=update, download_confirmation_required=download_confirmation_required,
-                                        verbose=False)
-
-            if not os.path.isfile(path_to_osm_pbf):
-                print("Cancelled reading data.")
+            if not os.path.isfile(path_to_osm_pbf) or update:
+                try:
+                    download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf", download_dir=data_dir,
+                                                download_confirmation_required=download_confirmation_required,
+                                                update=update, verbose=False)
+                except Exception as e:
+                    print("Cancelled reading data. CAUSE: {}".format(e))
                 osm_pbf_data = None
+
             else:
                 file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
 
@@ -678,13 +680,16 @@ def read_osm_pbf(subregion_name, data_dir=None, parsed=True, file_size_limit=50,
                     osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed,
                                                  fmt_other_tags, fmt_single_geom, fmt_multi_geom)
                     print("Successfully.\n") if verbose else ""
+                    if pickle_it:
+                        save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
                 except Exception as e:
-                    print("Failed. {}\n".format(e)) if verbose else ""
+                    print("Failed. CAUSE: \"{}\"\n".format(e))
                     osm_pbf_data = None
 
-                if pickle_it:
-                    save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
                 if rm_osm_pbf:
                     remove_subregion_osm_file(path_to_osm_pbf, verbose=verbose)
 
         return osm_pbf_data
+
+    else:
+        print("Errors occur. Maybe check with the input \"subregion_name\" first.")
