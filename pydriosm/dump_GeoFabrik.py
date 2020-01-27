@@ -9,26 +9,24 @@ import ogr
 import pandas as pd
 import rapidjson
 from pyhelpers.dir import regulate_input_data_dir
-from pyhelpers.ops import confirmed
+from pyhelpers.ops import confirmed, split_list
 
 from pydriosm.download_GeoFabrik import download_subregion_osm_file, remove_subregion_osm_file
 from pydriosm.download_GeoFabrik import fetch_region_subregion_tier, retrieve_names_of_subregions_of
 from pydriosm.download_GeoFabrik import get_default_path_to_osm_file
 from pydriosm.osm_psql import OSM
 from pydriosm.read_GeoFabrik import parse_osm_pbf_layer_data, read_osm_pbf
-from pydriosm.utils import split_list
 
 
 # Import data of selected or all (sub)regions, which do not have (sub-)subregions, into PostgreSQL server
-def psql_osm_pbf_data_extracts(*subregion_name, confirmation_required=True,
+def psql_osm_pbf_data_extracts(*subregion_name,
                                username='postgres', password=None, host='localhost', port=5432,
-                               database_name='geofabrik_osm_pbf', data_dir=None,
+                               database_name='OSM_Geofabrik_PBF', data_dir=None,
                                update_osm_pbf=False, if_table_exists='replace', file_size_limit=50, parsed=True,
                                fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True, pickle_raw_file=False,
-                               rm_raw_file=False, verbose=False):
+                               rm_raw_file=False, confirmation_required=True, verbose=False):
     """
     :param subregion_name: [str]
-    :param confirmation_required: [bool] (default: True)
     :param username: [str] (default: 'postgres')
     :param password: [None (default); anything as input]
     :param host: [str] (default: 'localhost')
@@ -44,6 +42,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, confirmation_required=True,
     :param fmt_multi_geom: [bool] (default: True)
     :param pickle_raw_file: [bool] (default: False)
     :param rm_raw_file: [bool] (default: False)
+    :param confirmation_required: [bool] (default: True)
     :param verbose: [bool] (default: False)
 
     Example:
@@ -81,8 +80,7 @@ def psql_osm_pbf_data_extracts(*subregion_name, confirmation_required=True,
     if confirmed(confirm_msg, confirmation_required=confirmation_required):
 
         # Connect to PostgreSQL server
-        osmdb = OSM(username, password, host, port, database_name='postgres')
-        osmdb.connect_db(database_name=database_name)
+        osmdb = OSM(username, password, host, port, database_name=database_name)
 
         err_subregion_names = []
         for subregion_name_ in subregion_names:
@@ -119,35 +117,36 @@ def psql_osm_pbf_data_extracts(*subregion_name, confirmation_required=True,
                     raw_osm_pbf = ogr.Open(path_to_osm_pbf)
                     layer_count = raw_osm_pbf.GetLayerCount()
                     for i in range(layer_count):
-                        lyr = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
-                        lyr_name = lyr.GetName()
-                        print("                       {} ... ".format(lyr_name), end="") if verbose else ""
+                        layer = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
+                        layer_name = layer.GetName()
+                        print("                       {} ... ".format(layer_name), end="") if verbose else ""
                         try:
-                            lyr_feats = [feat for _, feat in enumerate(lyr)]
-                            feats_no, chunks_no = len(lyr_feats), math.ceil(file_size_in_mb / file_size_limit)
-                            chunked_lyr_feats = split_list(lyr_feats, chunks_no)
+                            features = [feature for _, feature in enumerate(layer)]
+                            feats_no, chunks_no = len(features), math.ceil(file_size_in_mb / file_size_limit)
+                            feats = split_list(features, chunks_no)
 
-                            del lyr_feats
+                            del features
                             gc.collect()
 
-                            if osmdb.subregion_table_exists(lyr_name, subregion_name_) and if_table_exists == 'replace':
-                                osmdb.drop_subregion_data_by_layer(subregion_name_, lyr_name)
+                            if osmdb.subregion_table_exists(layer_name, subregion_name_) and \
+                                    if_table_exists == 'replace':
+                                osmdb.drop_subregion_data_by_layer(subregion_name_, layer_name)
 
                             # Loop through all available features
-                            for lyr_chunk in chunked_lyr_feats:
-                                lyr_chunk_dat = pd.DataFrame(rapidjson.loads(f.ExportToJson()) for f in lyr_chunk)
-                                lyr_chunk_dat = parse_osm_pbf_layer_data(lyr_chunk_dat, lyr_name, fmt_other_tags,
-                                                                         fmt_single_geom, fmt_multi_geom)
+                            for feat in feats:
+                                lyr_dat = pd.DataFrame(rapidjson.loads(f.ExportToJson()) for f in feat)
+                                lyr_dat = parse_osm_pbf_layer_data(lyr_dat, layer_name, fmt_other_tags, fmt_single_geom,
+                                                                   fmt_multi_geom)
                                 if_exists_ = if_table_exists if if_table_exists == 'fail' else 'append'
-                                osmdb.dump_osm_pbf_data_by_layer(lyr_chunk_dat, if_exists=if_exists_,
-                                                                 schema_name=lyr_name, table_name=subregion_name_)
-                                del lyr_chunk_dat
+                                osmdb.dump_osm_pbf_data_by_layer(lyr_dat, layer_name, subregion_name_,
+                                                                 if_exists=if_exists_)
+                                del lyr_dat
                                 gc.collect()
 
                             print("Done. Total amount of features: {}".format(feats_no)) if verbose else ""
 
                         except Exception as e:
-                            print("Failed. {}".format(e)) if verbose else ""
+                            print("Failed. {}".format(e))
 
                     raw_osm_pbf.Release()
                     del raw_osm_pbf
@@ -166,8 +165,8 @@ def psql_osm_pbf_data_extracts(*subregion_name, confirmation_required=True,
         if len(err_subregion_names) == 0:
             print("Mission accomplished.\n") if verbose else ""
         else:
-            print("Errors occurred when parsing data of the following subregion(s):") if verbose else ""
-            print(*err_subregion_names, sep=", ") if verbose else ""
+            print("Errors occurred when parsing data of the following subregion(s):")
+            print(*err_subregion_names, sep=", ")
 
         osmdb.disconnect()
         del osmdb
