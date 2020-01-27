@@ -11,7 +11,7 @@ from pydriosm.download_GeoFabrik import collect_subregion_info_catalogue
 
 def update_pkg_metadata(confirmation_required=True, verbose=True):
 
-    if confirmed("To update package metadata? (Note that it may take a few minutes.)"):
+    if confirmed("Updating package metadata may take a few minutes. Continue?"):
 
         collect_subregion_info_catalogue(confirmation_required=confirmation_required, verbose=verbose)
 
@@ -34,4 +34,4 @@ def update_pkg_metadata(confirmation_required=True, verbose=True):
         if verbose:
             print("\nUpdate finished.")
 
-# update_pkg_metadata(verbose=True)
+# update_pkg_metadata(confirmation_required=True, verbose=True)
