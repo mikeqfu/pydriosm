@@ -402,9 +402,10 @@ def fetch_region_subregion_tier(catalogue_name, file_format=".pickle", update=Fa
 
 
 # Rectify the input subregion name in order to make it match the available subregion name
-def regulate_input_subregion_name(subregion_name):
+def regulate_input_subregion_name(subregion_name, score_cutoff=90):
     """
     :param subregion_name: [str] subregion name, e.g. 'London'
+    :param score_cutoff: [int] (default: 90)
     :return: [str] default subregion name that matches, or is the most similar to, the input 'subregion_name'
 
     Example:
@@ -414,7 +415,11 @@ def regulate_input_subregion_name(subregion_name):
     assert isinstance(subregion_name, str)
     # Get a list of available
     subregion_names = fetch_subregion_info_catalogue('GeoFabrik-subregion-name-list')
-    subregion_name_, _ = fuzzywuzzy.process.extractOne(subregion_name, subregion_names, score_cutoff=90)
+    if os.path.isdir(os.path.dirname(subregion_name)):
+        subregion_name_, _ = fuzzywuzzy.process.extractOne(os.path.basename(subregion_name), subregion_names,
+                                                           score_cutoff=score_cutoff)
+    else:
+        subregion_name_, _ = fuzzywuzzy.process.extractOne(subregion_name, subregion_names, score_cutoff=score_cutoff)
     return subregion_name_
 
 
