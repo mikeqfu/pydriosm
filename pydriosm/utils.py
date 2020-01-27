@@ -1,6 +1,5 @@
 """ Utilities - Helper functions """
 
-import math
 import os
 import pickle
 
@@ -105,16 +104,3 @@ def osm_geom_types():
                    'MultiPolygon': shapely.geometry.MultiPolygon,
                    'GeometryCollection': shapely.geometry.GeometryCollection}
     return shape_types
-
-
-# Split a list into (evenly sized) chunks (Yield successive n-sized chunks from a list)
-def split_list(lst, no_chunks):
-    """
-    :param lst: [list]
-    :param no_chunks: [int]
-
-    Reference: https://stackoverflow.com/questions/312443/
-    """
-    chunk_size = math.ceil(len(lst) / no_chunks)
-    for i in range(0, len(lst), chunk_size):
-        yield lst[i:i + chunk_size]
