@@ -1,15 +1,20 @@
-""" Settings
-
-Reference: https://www.gdal.org/drv_osm.html
-
-"""
+""" Settings """
 
 import gdal
 import pandas
 
 
-# Set GDAL configurations
-def gdal_configurations(reset=False, max_tmpfile_size=2500):
+def gdal_configurations(reset=False, max_tmpfile_size=5000):
+    """
+    Set GDAL configurations. See also [`GC-1 <https://www.gdal.org/drv_osm.html>`_]
+
+    :param reset: reset to default settings, defaults to ``False``
+    :type reset: bool
+    :param max_tmpfile_size: maximum size of the temporary file, defaults to ``5000``
+    :type max_tmpfile_size: int
+    :return:
+    """
+
     if not reset:
         # Whether to enable interleaved reading. Defaults to NO.
         gdal.SetConfigOption('OGR_INTERLEAVED_READING', 'YES')
@@ -26,8 +31,14 @@ def gdal_configurations(reset=False, max_tmpfile_size=2500):
         gdal.SetConfigOption('MAX_TMPFILE_SIZE', '100')
 
 
-# Set preferences for displaying results
 def pd_preferences(reset=False):
+    """
+    Set preferences for displaying results.
+
+    :param reset: reset to default settings, defaults to ``False``
+    :type reset: bool
+    """
+
     if not reset:
         pandas.set_option('display.precision', 2)
         pandas.set_option('expand_frame_repr', False)  # Set the representation of DataFrame NOT to wrap
