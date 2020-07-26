@@ -92,7 +92,7 @@ latex_engine = 'pdflatex'
 latex_documents = [
     ('index',  # source start file
      'pydriosm.tex',  # target name
-     'PyRCS Documentation',  # title
+     'PyDriosm Documentation',  # title
      'Qian Fu',  # author
      'manual',  # document class ['howto', 'manual', or own class]
      1  # toctree only
@@ -133,7 +133,7 @@ latex_theme = 'manual'
 man_pages = [
     ('index',  # startdocname
      'pydriosm',  # name
-     'PyRCS Documentation',  # description
+     'PyDriosm Documentation',  # description
      ['Qian Fu'],  # authors
      1  # section
      )
@@ -145,9 +145,9 @@ man_pages = [
 texinfo_documents = [
     (master_doc,  # source start file
      'pydriosm',  # target name
-     'PyRCS Documentation',  # title
+     'PyDriosm Documentation',  # title
      'Qian Fu',  # author
-     'PyRCS',  # dir menu entry
+     'PyDriosm',  # dir menu entry
      'A toolkit for facilitating data manipulation using Python.',  # description
      'Data manipulation tools',  # category
      1  # toctree only
