@@ -41,7 +41,7 @@ class BBBike:
 
         **Example**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
@@ -93,7 +93,7 @@ class BBBike:
 
         **Example**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
@@ -119,7 +119,7 @@ class BBBike:
 
         **Example**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
@@ -192,7 +192,7 @@ class BBBike:
 
         **Examples**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
@@ -252,7 +252,7 @@ class BBBike:
 
             else:
                 if verbose:
-                    print("No data of \"{}\" is available.".format(filename))
+                    print("No data of \"{}\" is available.".format(self.DownloadDictName))
                 downloads_dictionary = None
 
         return downloads_dictionary
@@ -266,7 +266,7 @@ class BBBike:
 
         **Example**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
@@ -305,7 +305,7 @@ class BBBike:
 
         **Examples**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
@@ -347,7 +347,7 @@ class BBBike:
 
         **Examples**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
@@ -400,7 +400,7 @@ class BBBike:
 
         **Examples**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
@@ -462,7 +462,7 @@ class BBBike:
 
         **Example**::
 
-            from download_BBBike import BBBike
+            from download.bbbike import BBBike
 
             bbbike = BBBike()
 
