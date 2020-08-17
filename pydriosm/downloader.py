@@ -27,7 +27,7 @@ from pyhelpers.text import find_similar_str
 from pydriosm.utils import cd_dat, cd_dat_bbbike, cd_dat_geofabrik
 
 
-class GeoFabrik:
+class GeoFabrikDownloader:
 
     def __init__(self):
         self.Name = 'OpenStreetMap Data Extracts'
@@ -54,14 +54,15 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             verbose = True
             url = 'https://download.geofabrik.de/europe/great-britain.html'
 
-            subregion_table = geofabrik.get_subregion_table(url, verbose)
+            subregion_table = geofabrik_downloader.get_subregion_table(url, verbose)
+
             print(subregion_table)
         """
 
@@ -131,18 +132,18 @@ class GeoFabrik:
 
         **Examples**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             verbose = True
 
             url = 'https://download.geofabrik.de/europe/great-britain.html'
-            raw_directory_index = geofabrik.get_raw_directory_index(url, verbose)
+            raw_directory_index = geofabrik_downloader.get_raw_directory_index(url, verbose)
             print(raw_directory_index)
 
             url = 'http://download.geofabrik.de/'
-            raw_directory_index = geofabrik.get_raw_directory_index(url, verbose)
+            raw_directory_index = geofabrik_downloader.get_raw_directory_index(url, verbose)
             # The web page does not have a raw directory index.
         """
 
@@ -181,15 +182,15 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             update = False
             confirmation_required = True
             verbose = False
 
-            download_index = geofabrik.get_index_of_all_downloads()
+            download_index = geofabrik_downloader.get_index_of_all_downloads()
             print(download_index)
         """
 
@@ -242,15 +243,15 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             update = False
             confirmation_required = True
             verbose = False
 
-            subregion_tables = geofabrik.get_continents_subregion_tables()
+            subregion_tables = geofabrik_downloader.get_continents_subregion_tables()
             print(subregion_tables)
             # {'Africa': <data>,
             #  'Antarctica': None,
@@ -314,17 +315,19 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             update = False
             confirmation_required = True
             verbose = False
 
-            region_subregion_tier, non_subregions_list = geofabrik.get_region_subregion_tier()
+            region_subregion_tier, non_subregions_list = geofabrik_downloader.get_region_subregion_tier()
+
             print(region_subregion_tier)
             # <dict of region-subregion tier>
+
             print(non_subregions_list)
             # <list of all that have no subregions>
         """
@@ -345,7 +348,7 @@ class GeoFabrik:
                 :return: a dictionary of region-subregion, and a list of (sub)regions without subregions
                 :rtype: dict
 
-                **Example**::
+                **Test**::
 
                     sub_reg_tbls = subregion_tables.copy()
                 """
@@ -422,15 +425,16 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             update = False
             confirmation_required = True
             verbose = False
 
-            subregion_downloads_catalogue = geofabrik.get_subregion_downloads_catalogue()
+            subregion_downloads_catalogue = geofabrik_downloader.get_subregion_downloads_catalogue()
+
             print(subregion_downloads_catalogue)
         """
 
@@ -521,15 +525,16 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             update = False
             confirmation_required = True
             verbose = False
 
-            subregion_name_list = geofabrik.get_subregion_name_list()
+            subregion_name_list = geofabrik_downloader.get_subregion_name_list()
+
             print(subregion_name_list)
         """
 
@@ -564,17 +569,21 @@ class GeoFabrik:
 
         **Examples**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             subregion_name = 'london'
-            subregion_name_ = geofabrik.regulate_input_subregion_name(subregion_name)
-            print(subregion_name_)  # Greater London
+            subregion_name_ = geofabrik_downloader.regulate_input_subregion_name(subregion_name)
+
+            print(subregion_name_)
+            # Greater London
 
             subregion_name = 'https://download.geofabrik.de/europe/great-britain.html'
-            subregion_name_ = geofabrik.regulate_input_subregion_name(subregion_name)
-            print(subregion_name_)  # Great Britain
+            subregion_name_ = geofabrik_downloader.regulate_input_subregion_name(subregion_name)
+
+            print(subregion_name_)
+            # Great Britain
         """
 
         assert isinstance(subregion_name, str)
@@ -603,28 +612,32 @@ class GeoFabrik:
 
         **Examples**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             update = False
             verbose = False
 
             subregion_name  = 'london'
             osm_file_format = '.pbf'
-            subregion_name_, download_url = geofabrik.get_subregion_download_url(
+            subregion_name_, download_url = geofabrik_downloader.get_subregion_download_url(
                 subregion_name, osm_file_format)
+
             print(subregion_name_)
             # Greater London
+
             print(download_url)
             # http://download.geofabrik.de/europe/great-britain/england/greater-london-latest.osm.pbf
 
             subregion_name  = 'Great Britain'
             osm_file_format = '.shp'
-            subregion_name_, download_url = geofabrik.get_subregion_download_url(subregion_name,
-                                                                                 osm_file_format)
+            subregion_name_, download_url = geofabrik_downloader.get_subregion_download_url(
+                subregion_name, osm_file_format)
+
             print(subregion_name_)
             # Greater London
+
             print(download_url)
             # None
         """
@@ -659,23 +672,26 @@ class GeoFabrik:
 
         **Examples**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             update = False
             verbose = False
 
             subregion_name = 'london'
             osm_file_format = ".osm.pbf"
-            subregion_filename = geofabrik.get_default_osm_filename(subregion_name, osm_file_format)
+            subregion_filename = geofabrik_downloader.get_default_osm_filename(subregion_name,
+                                                                               osm_file_format)
             print(subregion_filename)
             # greater-london-latest.osm.pbf
 
             subregion_name = 'great britain'
             osm_file_format = ".shp.zip"
-            subregion_filename = geofabrik.get_default_osm_filename(subregion_name, osm_file_format)
+            subregion_filename = geofabrik_downloader.get_default_osm_filename(subregion_name,
+                                                                               osm_file_format)
             # UserWarning: No data of "great-britain.shp.zip" is available for download.
+
             print(subregion_filename)
             # great-britain.shp.zip
         """
@@ -710,9 +726,9 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             mkdir = False
             update = False
@@ -721,11 +737,12 @@ class GeoFabrik:
             subregion_name = 'london'
             osm_file_format = ".osm.pbf"
 
-            default_filename, default_file_path = geofabrik.get_default_path_to_osm_file(subregion_name,
-                                                                                         osm_file_format)
+            default_filename, default_file_path = geofabrik_downloader.get_default_path_to_osm_file(
+                subregion_name, osm_file_format)
 
             print(default_filename)
             # greater-london-latest.osm.pbf
+
             print(default_file_path)
             # <pkg dir>\\dat_GeoFabrik\\Europe\\Great Britain\\England\\greater-london-latest.osm.pbf
             """
@@ -768,18 +785,22 @@ class GeoFabrik:
 
         **Examples**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
-            subregion_names = geofabrik.retrieve_names_of_subregions_of()
+            subregion_names = geofabrik_downloader.retrieve_names_of_subregions_of()
             print(subregion_names)
 
-            subregion_names = geofabrik.retrieve_names_of_subregions_of('great britain', 'north america')
+            subregion_names = geofabrik_downloader.retrieve_names_of_subregions_of(
+                'great britain', 'north america')
+
             print(subregion_names)
 
             deep = True
-            subregion_names = geofabrik.retrieve_names_of_subregions_of('great britain', deep=deep)
+            subregion_names = geofabrik_downloader.retrieve_names_of_subregions_of(
+                'great britain', deep=deep)
+
             print(subregion_names)
         """
 
@@ -799,7 +820,7 @@ class GeoFabrik:
                 :return:
                 :rtype: generator object
 
-                **Example**::
+                **Test**::
 
                     reg_name = region
                     reg_sub_idx = region_subregion_tier
@@ -852,17 +873,17 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             subregion_name = 'great britain'
             osm_file_format = ".shp.zip"
             download_dir = None
 
-            default_download_dir = geofabrik.make_default_sub_subregion_download_dir(subregion_name,
-                                                                                     osm_file_format,
-                                                                                     download_dir)
+            default_download_dir = geofabrik_downloader.make_default_sub_subregion_download_dir(
+                subregion_name, osm_file_format, download_dir)
+
             print(default_download_dir)
             # <cwd>\\dat_GeoFabrik\\Europe\\great-britain.shp
         """
@@ -903,9 +924,9 @@ class GeoFabrik:
 
         **Examples**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             download_dir = None
             update = False
@@ -916,19 +937,22 @@ class GeoFabrik:
 
             subregion_name = 'rutland'
             osm_file_format = ".osm.pbf"
-            geofabrik.download_subregion_osm_file(subregion_name, osm_file_format=osm_file_format,
-                                                  verbose=verbose)
+            geofabrik_downloader.download_subregion_osm_file(subregion_name, 
+                                                             osm_file_format=osm_file_format,
+                                                             verbose=verbose)
 
             subregion_name = 'great britain'
             osm_file_format = ".shp.zip"
             # (Note this may take a few minutes)
-            geofabrik.download_subregion_osm_file(subregion_name, osm_file_format=osm_file_format,
-                                                  verbose=verbose)
+            geofabrik_downloader.download_subregion_osm_file(subregion_name, 
+                                                             osm_file_format=osm_file_format,
+                                                             verbose=verbose)
 
             subregion_name = 'guernsey-jersey'
             osm_file_format = ".shp.zip"
-            geofabrik.download_subregion_osm_file(subregion_name, osm_file_format=osm_file_format,
-                                                  verbose=verbose)
+            geofabrik_downloader.download_subregion_osm_file(subregion_name, 
+                                                             osm_file_format=osm_file_format,
+                                                             verbose=verbose)
         """
 
         for sub_reg_name in subregion_name:
@@ -1014,9 +1038,9 @@ class GeoFabrik:
 
         **Example**::
 
-            from download import GeoFabrik
+            from downloader import GeoFabrikDownloader
 
-            geofabrik = GeoFabrik()
+            geofabrik_downloader = GeoFabrikDownloader
 
             download_dir = None
             update = False
@@ -1024,11 +1048,10 @@ class GeoFabrik:
             verbose = True
 
             osm_file_format = ".osm.pbf"
-            geofabrik.download_sub_subregion_osm_file('bedfordshire', 'rutland',
-                                                      osm_file_format=osm_file_format,
-                                                      download_dir=download_dir, update=update,
-                                                      confirmation_required=confirmation_required,
-                                                      verbose=verbose)
+
+            geofabrik_downloader.download_sub_subregion_osm_file(
+                'bedfordshire', 'rutland', osm_file_format=osm_file_format, download_dir=download_dir, 
+                update=update, confirmation_required=confirmation_required, verbose=verbose)
         """
 
         subregions = self.retrieve_names_of_subregions_of(*subregion_name)
@@ -1039,7 +1062,7 @@ class GeoFabrik:
                                              update=update, confirmation_required=False, verbose=verbose)
 
 
-class BBBike:
+class BBBikeDownloader:
 
     def __init__(self):
         self.Name = 'BBBike'
@@ -1063,15 +1086,16 @@ class BBBike:
 
         **Example**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             update = False
             confirmation_required = True
             verbose = True
 
-            subregion_catalogue = bbbike.get_subregion_catalogue(update, confirmation_required, verbose)
+            subregion_catalogue = bbbike_downloader.get_subregion_catalogue(
+                update, confirmation_required, verbose)
 
             print(subregion_catalogue)
         """
@@ -1116,15 +1140,16 @@ class BBBike:
 
         **Example**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             update = False
             confirmation_required = True
             verbose = False
 
-            bbbike_subregion_names = bbbike.get_subregion_name_list()
+            bbbike_subregion_names = bbbike_downloader.get_subregion_name_list()
+
             print(bbbike_subregion_names)
         """
 
@@ -1159,13 +1184,14 @@ class BBBike:
 
         **Example**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             subregion_name = 'leeds'
 
-            subregion_name_ = bbbike.regulate_input_subregion_name(subregion_name)
+            subregion_name_ = bbbike_downloader.regulate_input_subregion_name(subregion_name)
+
             print(subregion_name_)
             # Leeds
         """
@@ -1186,15 +1212,17 @@ class BBBike:
 
         **Example**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             confirmation_required = True
             verbose = True
 
             subregion_name = 'leeds'
-            leeds_download_catalogue = bbbike.get_subregion_download_catalogue(subregion_name, verbose=verbose)
+            leeds_download_catalogue = bbbike_downloader.get_subregion_download_catalogue(
+                subregion_name, verbose=verbose)
+
             # To collect the download catalogue for "Leeds" [No]|Yes: >? yes
             #     "Leeds" ... Done.
 
@@ -1258,15 +1286,16 @@ class BBBike:
 
         **Examples**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             update = False
             confirmation_required = True
             verbose = True
 
-            downloads_dictionary = bbbike.get_download_dictionary(update, confirmation_required, verbose)
+            downloads_dictionary = bbbike_downloader.get_download_dictionary(
+                update, confirmation_required, verbose)
 
             print(downloads_dictionary)
             # {'FileFormat': <list of available formats>,
@@ -1329,13 +1358,13 @@ class BBBike:
 
         **Example**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             osm_file_format = 'pbf'
 
-            osm_file_format_ = bbbike.regulate_input_osm_file_format(osm_file_format)
+            osm_file_format_ = bbbike_downloader.regulate_input_osm_file_format(osm_file_format)
 
             print(osm_file_format_)
             # .osm.pbf
@@ -1368,23 +1397,27 @@ class BBBike:
 
         **Examples**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             subregion_name = 'leeds'
 
             osm_file_format = 'pbf'
-            subregion_name_, url = bbbike.get_download_url(subregion_name, osm_file_format)
+            subregion_name_, url = bbbike_downloader.get_download_url(subregion_name, osm_file_format)
+
             print(subregion_name_)
             # Leeds
+
             print(url)
             # http://download.bbbike.org/osm/bbbike/Leeds/Leeds.osm.pbf
 
             osm_file_format = 'csv.xz'
-            subregion_name_, url = bbbike.get_download_url(subregion_name, osm_file_format)
+            subregion_name_, url = bbbike_downloader.get_download_url(subregion_name, osm_file_format)
+
             print(subregion_name_)
             # Leeds
+
             print(url)
             # http://download.bbbike.org/osm/bbbike/Leeds/Leeds.osm.csv.xz
         """
@@ -1410,16 +1443,16 @@ class BBBike:
 
         **Examples**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             subregion_name = 'leeds'
             osm_file_format = 'pbf'
             download_dir = None
 
-            subregion_name_, osm_filename, download_url, path_to_file = bbbike.validate_download_info(
-                subregion_name, osm_file_format, download_dir)
+            subregion_name_, osm_filename, download_url, path_to_file = \
+                bbbike_downloader.validate_download_info(subregion_name, osm_file_format, download_dir)
 
             print(subregion_name_)
             # Leeds
@@ -1463,9 +1496,9 @@ class BBBike:
 
         **Examples**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             osm_file_format = 'pbf'
             download_dir = None
@@ -1473,11 +1506,12 @@ class BBBike:
             confirmation_required = True
             verbose = True
 
-            bbbike.download_osm('leeds', osm_file_format=osm_file_format, verbose=verbose)
+            bbbike_downloader.download_osm('leeds', osm_file_format=osm_file_format, verbose=verbose)
             # To download pbf data of Leeds [No]|Yes: >? yes
             # Done.
 
-            bbbike.download_osm('leeds', 'birmingham', osm_file_format=osm_file_format, verbose=verbose)
+            bbbike_downloader.download_osm('leeds', 'birmingham', osm_file_format=osm_file_format,
+                                           verbose=verbose)
             # The requested data is already available at dat_BBBike\\Leeds\\Leeds.osm.pbf.
             # To download pbf data of Birmingham [No]|Yes: >? yes
             # Done.
@@ -1526,16 +1560,17 @@ class BBBike:
 
         **Example**::
 
-            from download import BBBike
+            from downloader import BBBikeDownloader
 
-            bbbike = BBBike()
+            bbbike_downloader = BBBikeDownloader()
 
             subregion_name = 'leeds'
             download_dir = None
             confirmation_required = True
             verbose = True
 
-            bbbike.download_subregion_data(subregion_name, download_dir, confirmation_required, verbose)
+            bbbike_downloader.download_subregion_data(subregion_name, download_dir,
+                                                      confirmation_required, verbose)
             # To download all available BBBike data for "Leeds"? [No]|Yes: >? yes
             # Downloading BBBike OSM data for "Leeds" ...
             #   ...
