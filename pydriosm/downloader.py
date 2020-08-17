@@ -54,7 +54,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -132,7 +132,7 @@ class GeoFabrikDownloader:
 
         **Examples**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -182,7 +182,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -243,7 +243,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -315,7 +315,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -425,7 +425,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -525,7 +525,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -569,7 +569,7 @@ class GeoFabrikDownloader:
 
         **Examples**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -612,7 +612,7 @@ class GeoFabrikDownloader:
 
         **Examples**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -672,7 +672,7 @@ class GeoFabrikDownloader:
 
         **Examples**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -726,7 +726,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -785,7 +785,7 @@ class GeoFabrikDownloader:
 
         **Examples**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -873,7 +873,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -924,7 +924,7 @@ class GeoFabrikDownloader:
 
         **Examples**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -1038,7 +1038,7 @@ class GeoFabrikDownloader:
 
         **Example**::
 
-            from downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader
 
@@ -1086,7 +1086,7 @@ class BBBikeDownloader:
 
         **Example**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1140,7 +1140,7 @@ class BBBikeDownloader:
 
         **Example**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1184,7 +1184,7 @@ class BBBikeDownloader:
 
         **Example**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1212,7 +1212,7 @@ class BBBikeDownloader:
 
         **Example**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1286,7 +1286,7 @@ class BBBikeDownloader:
 
         **Examples**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1358,7 +1358,7 @@ class BBBikeDownloader:
 
         **Example**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1397,7 +1397,7 @@ class BBBikeDownloader:
 
         **Examples**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1443,7 +1443,7 @@ class BBBikeDownloader:
 
         **Examples**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1496,7 +1496,7 @@ class BBBikeDownloader:
 
         **Examples**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1560,7 +1560,7 @@ class BBBikeDownloader:
 
         **Example**::
 
-            from downloader import BBBikeDownloader
+            from pydriosm.downloader import BBBikeDownloader
 
             bbbike_downloader = BBBikeDownloader()
 
