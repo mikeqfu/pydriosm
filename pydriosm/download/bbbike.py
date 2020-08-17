@@ -24,6 +24,7 @@ class BBBike:
         self.Name = 'BBBike'
         self.URL = 'http://download.bbbike.org/osm/bbbike/'
         self.CatalogueName = 'BBBike subregion catalogue'
+        self.SubregionNameList = 'BBBike subregion name list'
         self.DownloadDictName = 'BBBike download dictionary'
 
     def get_subregion_catalogue(self, update=False, confirmation_required=True, verbose=False):
@@ -45,25 +46,24 @@ class BBBike:
 
             bbbike = BBBike()
 
-            update                = True
+            update = True
             confirmation_required = True
-            verbose               = True
+            verbose = False
 
             subregion_catalogue = bbbike.get_subregion_catalogue(update, confirmation_required, verbose)
-            # To collect BBBike subregion catalogue?  [No]|Yes:
+            # To collect BBBike subregion catalogue? [No]|Yes:
             # >? yes
 
             print(subregion_catalogue)
         """
 
-        filename = self.CatalogueName.replace(" ", "-")
-        path_to_pickle = cd_dat(filename.lower() + ".pickle")
+        path_to_pickle = cd_dat(self.CatalogueName.replace(" ", "-") + ".pickle")
 
         if os.path.isfile(path_to_pickle) and not update:
             subregion_catalogue = load_pickle(path_to_pickle)
 
         else:
-            if confirmed("To collect {}?".format(filename), confirmation_required=confirmation_required):
+            if confirmed("To collect {}?".format(self.CatalogueName), confirmation_required=confirmation_required):
 
                 try:
                     bbbike_subregion_catalogue_ = pd.read_html(self.URL, header=0, parse_dates=['Last Modified'])
@@ -77,10 +77,57 @@ class BBBike:
                     subregion_catalogue = None
 
             else:
-                print("No data of \"{}\" is available.".format(filename)) if verbose else ""
+                print("No data of \"{}\" is available.".format(self.CatalogueName)) if verbose else ""
                 subregion_catalogue = None
 
         return subregion_catalogue
+
+    def get_subregion_name_list(self, update=False, confirmation_required=True, verbose=False):
+        """
+        Get all region/subregion names.
+
+        :param update: whether to check on update and proceed to update the package data, defaults to ``False``
+        :type update: bool
+        :param confirmation_required: whether to prompt a message for confirmation to proceed, defaults to ``True``
+        :type confirmation_required: bool
+        :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
+        :type verbose: bool, int
+        :return: region/subregion names
+        :rtype: list
+
+        **Example**::
+
+            from download.bbbike import BBBike
+
+            bbbike = BBBike()
+
+            update = False
+            confirmation_required = True
+            verbose = True
+
+            bbbike_subregion_names = bbbike.get_subregion_name_list()
+            print(bbbike_subregion_names)
+        """
+
+        path_to_name_list = cd_dat(self.SubregionNameList.replace(" ", "-") + ".pickle")
+
+        if os.path.isfile(path_to_name_list) and not update:
+            bbbike_subregion_names = load_pickle(path_to_name_list)
+
+        else:
+            if confirmed("To get {}?".format(self.SubregionNameList), confirmation_required=confirmation_required):
+
+                subregion_catalogue = self.get_subregion_catalogue(update, confirmation_required=False, verbose=verbose)
+
+                bbbike_subregion_names = subregion_catalogue.Name.to_list()
+
+                save_pickle(bbbike_subregion_names, path_to_name_list, verbose=verbose)
+
+            else:
+                bbbike_subregion_names = []
+                print("No data of {} is available.".format(self.SubregionNameList)) if verbose else ""
+
+        return bbbike_subregion_names
 
     def regulate_input_subregion_name(self, subregion_name):
         """
@@ -98,17 +145,18 @@ class BBBike:
             bbbike = BBBike()
 
             subregion_name = 'leeds'
+
             subregion_name_ = bbbike.regulate_input_subregion_name(subregion_name)
             print(subregion_name_)
-            # 'Leeds'
+            # Leeds
         """
 
         assert isinstance(subregion_name, str)
-        bbbike_subregion_names = self.get_subregion_catalogue().Name.to_list()
+        bbbike_subregion_names = self.get_subregion_name_list()
         subregion_name_ = find_similar_str(subregion_name, bbbike_subregion_names)
         return subregion_name_
 
-    def collect_subregion_download_catalogue(self, subregion_name, confirmation_required=True, verbose=False):
+    def get_subregion_download_catalogue(self, subregion_name, confirmation_required=True, verbose=False):
         """
         :param subregion_name: name of a region/subregion
         :type subregion_name: str
@@ -124,11 +172,10 @@ class BBBike:
             bbbike = BBBike()
 
             confirmation_required = True
-            verbose = True
+            verbose = False
 
             subregion_name = 'leeds'
-            leeds_download_catalogue = bbbike.collect_subregion_download_catalogue(
-                subregion_name, confirmation_required, verbose)
+            leeds_download_catalogue = bbbike.get_subregion_download_catalogue(subregion_name)
             # To collect the download catalogue for "Leeds" [No]|Yes:
             # >? yes
 
@@ -210,8 +257,7 @@ class BBBike:
             #  'Catalogue': <dictionary of download catalogue>}
         """
 
-        filename = self.DownloadDictName.replace(" ", "-")
-        path_to_pickle = cd_dat(filename + ".pickle")
+        path_to_pickle = cd_dat(self.DownloadDictName.replace(" ", "-") + ".pickle")
 
         if os.path.isfile(path_to_pickle) and not update:
             downloads_dictionary = load_pickle(path_to_pickle)
@@ -223,11 +269,11 @@ class BBBike:
                 try:
                     bbbike_subregion_names = self.get_subregion_catalogue(verbose=verbose).Name.to_list()
 
-                    print("Collecting {}".format(self.DownloadDictName), end=" ... ") if verbose else ""
+                    print("Collecting {} ... ".format(self.DownloadDictName)) if verbose else ""
 
                     download_catalogue = [
-                        self.collect_subregion_download_catalogue(subregion_name, confirmation_required=False,
-                                                                  verbose=verbose)
+                        self.get_subregion_download_catalogue(subregion_name, confirmation_required=False,
+                                                              verbose=verbose)
                         for subregion_name in bbbike_subregion_names]
 
                     sr_name, sr_download_catalogue = bbbike_subregion_names[0], download_catalogue[0]
@@ -309,7 +355,7 @@ class BBBike:
 
             bbbike = BBBike()
 
-            subregion_name  = 'leeds'
+            subregion_name = 'leeds'
 
             osm_file_format = 'pbf'
             subregion_name_, url = bbbike.get_download_url(subregion_name, osm_file_format)
@@ -351,9 +397,9 @@ class BBBike:
 
             bbbike = BBBike()
 
-            subregion_name  = 'leeds'
+            subregion_name = 'leeds'
             osm_file_format = 'pbf'
-            download_dir    = None
+            download_dir = None
 
             subregion_name_, osm_filename, download_url, path_to_file = bbbike.validate_download_info(
                 subregion_name, osm_file_format, download_dir)
@@ -415,7 +461,8 @@ class BBBike:
             # >? yes
 
             bbbike.download_osm('leeds', 'birmingham', osm_file_format=osm_file_format, verbose=verbose)
-            # To download pbf data of Leeds [No]|Yes:
+            # The requested data is already available at dat_BBBike\\Leeds\\Leeds.osm.pbf.
+            # To download pbf data of Birmingham [No]|Yes: >? yes
             # >? yes
         """
 
@@ -474,6 +521,9 @@ class BBBike:
             bbbike.download_subregion_data(subregion_name, download_dir, confirmation_required, verbose)
             # To download all available BBBike data for "Leeds"? [No]|Yes:
             # >? yes
+            # Downloading BBBike OSM data for "Leeds" ...
+            # ...
+            # Finished. Check out the downloaded OSM data at dat_BBBike\\Leeds.
         """
 
         subregion_name_ = self.regulate_input_subregion_name(subregion_name)
