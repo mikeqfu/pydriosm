@@ -35,10 +35,10 @@ class GeoFabrik:
         self.DownloadIndexURL = urllib.parse.urljoin(self.URL, 'index-v1.json')
         self.ValidFileFormats = [".osm.pbf", ".shp.zip", ".osm.bz2"]
         self.DownloadIndexName = 'GeoFabrik index of all downloads'
-        self.SubregionNameList = 'GeoFabrik subregion name list'
         self.ContinentSubregionTableName = 'GeoFabrik continent subregions'
         self.RegionSubregionTier = 'GeoFabrik region-subregion tier'
         self.DownloadCatalogue = 'GeoFabrik downloads catalogue'
+        self.SubregionNameList = 'GeoFabrik subregion name list'
 
     @staticmethod
     def get_subregion_table(url, verbose=False):
