@@ -22,9 +22,9 @@ from pydriosm.downloader import BBBikeDownloader, GeoFabrikDownloader
 from pydriosm.utils import osm_geom_types, remove_subregion_osm_file
 
 
-def extract_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r', clustered=False, verbose=False):
+def unzip_shp_zip(path_to_shp_zip, extract_dir=None, layer=None, mode='r', clustered=False, verbose=False):
     """
-    Extract only the specified layer.
+    Extract a .shp.zip file.
 
     :param path_to_shp_zip: [str]
     :type path_to_shp_zip: str
@@ -112,7 +112,7 @@ def read_shp(path_to_shp, method='geopandas', **kwargs):
     **Examples**::
 
         from pydriosm.downloader import GeoFabrikDownloader
-        from pydriosm.reader import extract_shp_zip, read_shp
+        from pydriosm.reader import unzip_shp_zip, read_shp
 
         geofabrik_downloader = GeoFabrikDownloader()
 
@@ -127,7 +127,7 @@ def read_shp(path_to_shp, method='geopandas', **kwargs):
         shp_zip_filename = geofabrik_downloader.get_default_osm_filename(subregion_name, osm_file_format)
 
         # Extract the downloaded data file
-        extract_shp_zip(cd("tests", shp_zip_filename), verbose=True)
+        unzip_shp_zip(cd("tests", shp_zip_filename), verbose=True)
 
         # Specify the path to a .shp file
         path_to_shp = cd("tests\\rutland-latest-free.shp\\gis_osm_railways_free_1.shp")
@@ -562,7 +562,7 @@ class GeoFabrikReader:
         extract_info = [(p, os.path.splitext(p)[0]) for p in file_paths]
         extract_dirs = []
         for file_path, extract_dir in extract_info:
-            extract_shp_zip(file_path, extract_dir, layer=layer, verbose=verbose)
+            unzip_shp_zip(file_path, extract_dir, layer=layer, verbose=verbose)
             extract_dirs.append(extract_dir)
 
         # Specify a directory that stores files for the specific layer
@@ -687,7 +687,7 @@ class GeoFabrikReader:
                                                                 verbose=verbose)
 
                 if os.path.isfile(path_to_shp_zip):
-                    extract_shp_zip(path_to_shp_zip, extract_dir, layer=layer, verbose=verbose)
+                    unzip_shp_zip(path_to_shp_zip, extract_dir, layer=layer, verbose=verbose)
 
                 path_to_shp = glob.glob(os.path.join(extract_dir, "*{}*.shp".format(layer)))
                 if len(path_to_shp) == 0:
