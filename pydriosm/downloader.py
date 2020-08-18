@@ -56,7 +56,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             verbose = True
             url = 'https://download.geofabrik.de/europe/great-britain.html'
@@ -134,7 +134,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             verbose = True
 
@@ -184,7 +184,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             update = False
             confirmation_required = True
@@ -245,7 +245,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             update = False
             confirmation_required = True
@@ -317,7 +317,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             update = False
             confirmation_required = True
@@ -427,7 +427,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             update = False
             confirmation_required = True
@@ -527,7 +527,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             update = False
             confirmation_required = True
@@ -571,7 +571,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             subregion_name = 'london'
             subregion_name_ = geofabrik_downloader.regulate_input_subregion_name(subregion_name)
@@ -614,7 +614,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             update = False
             verbose = False
@@ -674,7 +674,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             update = False
             verbose = False
@@ -728,7 +728,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             mkdir = False
             update = False
@@ -787,7 +787,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             subregion_names = geofabrik_downloader.retrieve_names_of_subregions_of()
             print(subregion_names)
@@ -875,7 +875,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             subregion_name = 'great britain'
             osm_file_format = ".shp.zip"
@@ -926,7 +926,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             download_dir = None
             update = False
@@ -1040,7 +1040,7 @@ class GeoFabrikDownloader:
 
             from pydriosm.downloader import GeoFabrikDownloader
 
-            geofabrik_downloader = GeoFabrikDownloader
+            geofabrik_downloader = GeoFabrikDownloader()
 
             download_dir = None
             update = False
