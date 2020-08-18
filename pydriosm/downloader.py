@@ -562,7 +562,7 @@ class GeoFabrikDownloader:
         """
         Rectify the input subregion name in order to make it match the available subregion name.
 
-        :param subregion_name: subregion name
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :return: default subregion name that matches, or is the most similar to, the input ``subregion_name``
         :rtype: str
@@ -599,7 +599,7 @@ class GeoFabrikDownloader:
         """
         Get download URL of a subregion.
 
-        :param subregion_name: name of a subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: file format; valid values include ``".osm.pbf"``, ``".shp.zip"`` and ``".osm.bz2"``
         :type osm_file_format: str
@@ -661,7 +661,7 @@ class GeoFabrikDownloader:
         """
         Parse the download URL to get default filename for the given subregion name.
 
-        :param subregion_name: name of a subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: file format; valid values include ``".osm.pbf"``, ``".shp.zip"`` and ``".osm.bz2"``
         :type osm_file_format: str
@@ -711,7 +711,7 @@ class GeoFabrikDownloader:
         """
         Parse the download URL to specify a path for storing the downloaded file.
 
-        :param subregion_name: name of a subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: file format; valid values include ``".osm.pbf"``, ``".shp.zip"`` and ``".osm.bz2"``
         :type osm_file_format: str
@@ -776,7 +776,7 @@ class GeoFabrikDownloader:
         Retrieve names of all subregions (if available) from the catalogue of region-subregion tier.
         See also [`RNS-1 <https://stackoverflow.com/questions/9807634/>`_].
 
-        :param subregion_name: name of a subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str, None
         :param deep: whether to get subregion names of the subregions, defaults to ``False``
         :type deep: bool
@@ -862,7 +862,7 @@ class GeoFabrikDownloader:
         """
         Make a default download directory if the requested data file is not available.
 
-        :param subregion_name: name of a subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: file format; valid values include ``".osm.pbf"``, ``".shp.zip"`` and ``".osm.bz2"``
         :type osm_file_format: str
@@ -905,7 +905,7 @@ class GeoFabrikDownloader:
         """
         Download OSM data files.
 
-        :param subregion_name: name of a subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: file format; valid values include ``".osm.pbf"``, ``".shp.zip"`` and ``".osm.bz2"``
         :type osm_file_format: str
@@ -1023,7 +1023,7 @@ class GeoFabrikDownloader:
         """
         Download OSM data of one (or a sequence of) regions and all its (or their) subregions.
 
-        :param subregion_name: name of a subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: file format; valid values include ``".osm.pbf"``, ``".shp.zip"`` and ``".osm.bz2"``
         :type osm_file_format: str
@@ -1177,7 +1177,7 @@ class BBBikeDownloader:
         """
         Regulate input of any ``subregion_name``.
 
-        :param subregion_name: name of a region/subregion
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :return: regulated ``subregion_name``
         :rtype: str
@@ -1203,7 +1203,7 @@ class BBBikeDownloader:
 
     def get_subregion_download_catalogue(self, subregion_name, confirmation_required=True, verbose=False):
         """
-        :param subregion_name: name of a region/subregion
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param confirmation_required: whether to prompt a message for confirmation to proceed, defaults to ``True``
         :type confirmation_required: bool
@@ -1388,7 +1388,7 @@ class BBBikeDownloader:
 
     def get_download_url(self, subregion_name, osm_file_format):
         """
-        :param subregion_name: name of a region/subregion
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: format (file extension) of an OSM data
         :type osm_file_format: str
@@ -1433,7 +1433,7 @@ class BBBikeDownloader:
 
     def validate_download_info(self, subregion_name, osm_file_format, download_dir=None):
         """
-        :param subregion_name: name of a region/subregion
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: format (file extension) of an OSM data
         :type osm_file_format: str
@@ -1482,7 +1482,7 @@ class BBBikeDownloader:
         """
         Download BBBike OSM data of a given format for a sequence of regions/subregions.
 
-        :param subregion_name: name of a region/subregion
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: format (file extension) of an OSM data
         :type osm_file_format: str
@@ -1550,7 +1550,7 @@ class BBBikeDownloader:
         """
         Download all available BBBike OSM data (of all available formats) for a region/subregion.
 
-        :param subregion_name: name of a region/subregion
+        :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param download_dir: directory where the downloaded file is saved, defaults to ``None``
         :type download_dir: str, None
