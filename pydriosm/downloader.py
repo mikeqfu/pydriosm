@@ -901,7 +901,7 @@ class GeoFabrikDownloader:
         return default_download_dir
 
     def download_subregion_osm_file(self, *subregion_name, osm_file_format, download_dir=None, update=False,
-                                    confirmation_required=True, deep_retry=False, interval_sec=2, verbose=False):
+                                    confirmation_required=True, deep_retry=False, interval_sec=None, verbose=False):
         """
         Download OSM data files.
 
@@ -917,7 +917,7 @@ class GeoFabrikDownloader:
         :type confirmation_required: bool
         :param deep_retry: defaults to ``False``
         :type deep_retry: bool
-        :param interval_sec: interval (in sec) between downloading two subregions, defaults to ``2``
+        :param interval_sec: interval (in sec) between downloading two subregions, defaults to ``None``
         :type interval_sec: int, None
         :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
         :type verbose: bool, int
