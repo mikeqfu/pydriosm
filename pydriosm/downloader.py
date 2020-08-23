@@ -1,4 +1,4 @@
-""" Download Geofabrik and BBBike data extracts
+""" A module for downloading Geofabrik and BBBike data extracts
 
 Data source:
 
@@ -28,8 +28,14 @@ from pydriosm.utils import cd_dat, cd_dat_bbbike, cd_dat_geofabrik
 
 
 class GeoFabrikDownloader:
+    """
+    A class representation of a tool for downloading GeoFabrik data extracts.
+    """
 
     def __init__(self):
+        """
+        Constructor method.
+        """
         self.Name = 'OpenStreetMap Data Extracts'
         self.URL = 'http://download.geofabrik.de/'
         self.DownloadIndexURL = urllib.parse.urljoin(self.URL, 'index-v1.json')
@@ -558,13 +564,13 @@ class GeoFabrikDownloader:
 
         return subregion_name_list
 
-    def regulate_input_subregion_name(self, subregion_name):
+    def validate_input_subregion_name(self, subregion_name):
         """
-        Rectify the input subregion name in order to make it match the available subregion name.
+        Validate the input subregion name and make it match the available subregion name.
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
-        :return: default subregion name that matches, or is the most similar to, the input ``subregion_name``
+        :return: valid subregion name that matches, or is the most similar to, the input ``subregion_name``
         :rtype: str
 
         **Examples**::
@@ -574,13 +580,13 @@ class GeoFabrikDownloader:
             geofabrik_downloader = GeoFabrikDownloader()
 
             subregion_name = 'london'
-            subregion_name_ = geofabrik_downloader.regulate_input_subregion_name(subregion_name)
+            subregion_name_ = geofabrik_downloader.validate_input_subregion_name(subregion_name)
 
             print(subregion_name_)
             # Greater London
 
             subregion_name = 'https://download.geofabrik.de/europe/great-britain.html'
-            subregion_name_ = geofabrik_downloader.regulate_input_subregion_name(subregion_name)
+            subregion_name_ = geofabrik_downloader.validate_input_subregion_name(subregion_name)
 
             print(subregion_name_)
             # Great Britain
@@ -649,7 +655,7 @@ class GeoFabrikDownloader:
         subregion_downloads_index = self.get_subregion_downloads_catalogue(update=update, verbose=verbose)
         subregion_downloads_index.set_index('Subregion', inplace=True)
 
-        subregion_name_ = self.regulate_input_subregion_name(subregion_name)
+        subregion_name_ = self.validate_input_subregion_name(subregion_name)
         if not subregion_name_:
             raise ValueError("The input 'subregion_name' is not identified.\n"
                              "Check if the required subregion exists in the catalogue and retry.")
@@ -774,6 +780,7 @@ class GeoFabrikDownloader:
     def retrieve_names_of_subregions_of(self, *subregion_name, deep=False):
         """
         Retrieve names of all subregions (if available) from the catalogue of region-subregion tier.
+
         See also [`RNS-1 <https://stackoverflow.com/questions/9807634/>`_].
 
         :param subregion_name: name of a region/subregion (case-insensitive)
@@ -825,6 +832,7 @@ class GeoFabrikDownloader:
                     reg_name = region
                     reg_sub_idx = region_subregion_tier
                 """
+
                 for k, v in reg_sub_idx.items():
                     if reg_name == k:
                         if isinstance(v, dict):
@@ -840,7 +848,7 @@ class GeoFabrikDownloader:
 
             res = []
             for region in subregion_name:
-                res += list(find_subregions(self.regulate_input_subregion_name(region), region_subregion_tier))[0]
+                res += list(find_subregions(self.validate_input_subregion_name(region), region_subregion_tier))[0]
 
             if not deep:
                 subregion_names = res
@@ -901,7 +909,8 @@ class GeoFabrikDownloader:
         return default_download_dir
 
     def download_subregion_osm_file(self, *subregion_name, osm_file_format, download_dir=None, update=False,
-                                    confirmation_required=True, deep_retry=False, interval_sec=None, verbose=False):
+                                    confirmation_required=True, deep_retry=False, interval_sec=None, verbose=False,
+                                    ret_download_path=False):
         """
         Download OSM data files.
 
@@ -921,6 +930,8 @@ class GeoFabrikDownloader:
         :type interval_sec: int, None
         :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
         :type verbose: bool, int
+        :param ret_download_path: whether to return the path(s) to the downloaded file(s), defaults to ``False``
+        :type ret_download_path: bool
 
         **Examples**::
 
@@ -937,23 +948,32 @@ class GeoFabrikDownloader:
 
             subregion_name = 'rutland'
             osm_file_format = ".osm.pbf"
-            geofabrik_downloader.download_subregion_osm_file(subregion_name, 
-                                                             osm_file_format=osm_file_format,
-                                                             verbose=verbose)
+            ret_download_path = True
+            download_path = geofabrik_downloader.download_subregion_osm_file(
+                subregion_name, osm_file_format=osm_file_format, verbose=verbose,
+                ret_download_path=ret_download_path)
+
+            print(download_path)
+            # ['<cwd>\\dat_GeoFabrik\\Europe\\Great Britain\\England\\rutland-latest.osm.pbf']
+
 
             subregion_name = 'great britain'
             osm_file_format = ".shp.zip"
+            confirmation_required = True
             # (Note this may take a few minutes)
-            geofabrik_downloader.download_subregion_osm_file(subregion_name, 
+            geofabrik_downloader.download_subregion_osm_file(subregion_name,
                                                              osm_file_format=osm_file_format,
+                                                             confirmation_required=confirmation_required,
                                                              verbose=verbose)
 
             subregion_name = 'guernsey-jersey'
             osm_file_format = ".shp.zip"
-            geofabrik_downloader.download_subregion_osm_file(subregion_name, 
+            geofabrik_downloader.download_subregion_osm_file(subregion_name,
                                                              osm_file_format=osm_file_format,
                                                              verbose=verbose)
         """
+
+        download_path = []
 
         for sub_reg_name in subregion_name:
 
@@ -982,7 +1002,8 @@ class GeoFabrikDownloader:
 
                     self.download_subregion_osm_file(*sub_subregions, osm_file_format=osm_file_format,
                                                      download_dir=download_dir_, update=update,
-                                                     confirmation_required=confirmation_required, verbose=verbose)
+                                                     confirmation_required=confirmation_required, verbose=verbose,
+                                                     ret_download_path=ret_download_path)
             else:
 
                 if not download_dir:
@@ -993,6 +1014,9 @@ class GeoFabrikDownloader:
                     regulated_dir = regulate_input_data_dir(download_dir)
                     osm_filename = self.get_default_osm_filename(subregion_name_, osm_file_format=osm_file_format)
                     path_to_file = os.path.join(regulated_dir, osm_filename)
+
+                if ret_download_path:
+                    download_path.append(path_to_file)
 
                 if os.path.isfile(path_to_file) and not update:
                     print("\n\"{}\" for \"{}\" is already available: \"{}\".".format(
@@ -1018,8 +1042,11 @@ class GeoFabrikDownloader:
             if interval_sec:
                 time.sleep(interval_sec)
 
+        if ret_download_path:
+            return download_path
+
     def download_sub_subregion_osm_file(self, *subregion_name, osm_file_format, download_dir=None, update=False,
-                                        confirmation_required=True, verbose=False):
+                                        confirmation_required=True, verbose=False, ret_download_path=False):
         """
         Download OSM data of one (or a sequence of) regions and all its (or their) subregions.
 
@@ -1035,36 +1062,68 @@ class GeoFabrikDownloader:
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
         :type verbose: bool, int
+        :param ret_download_path: whether to return the path(s) to the downloaded file(s), defaults to ``False``
+        :type ret_download_path: bool
 
-        **Example**::
+        **Examples**::
 
             from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader()
 
-            download_dir = None
             update = False
             confirmation_required = True
             verbose = True
 
             osm_file_format = ".osm.pbf"
 
+            download_dir = None
             geofabrik_downloader.download_sub_subregion_osm_file(
                 'bedfordshire', 'rutland', osm_file_format=osm_file_format, download_dir=download_dir, 
                 update=update, confirmation_required=confirmation_required, verbose=verbose)
+            # To download .osm.pbf data for all the following subregions:
+            # Bedfordshire
+            # Rutland?
+            #  [No]|Yes: >? yes
+
+            download_dir = "tests"
+            ret_download_path = True
+            download_path = geofabrik_downloader.download_sub_subregion_osm_file(
+                'west midlands', 'west yorkshire', osm_file_format=osm_file_format,
+                download_dir=download_dir, update=update, confirmation_required=confirmation_required,
+                verbose=verbose, ret_download_path=ret_download_path)
+            # To download .osm.pbf data for all the following subregions:
+            # West Midlands
+            # West Yorkshire?
+            #  [No]|Yes: >? yes
+
+            print(download_path)
+            # ['<cwd>\\tests\\west-midlands-latest.osm.pbf',
+            #  '<cwd>\\tests\\west-yorkshire-latest.osm.pbf']
         """
 
         subregions = self.retrieve_names_of_subregions_of(*subregion_name)
 
-        if confirmed("\nTo download {} data for all the following subregions: \n{}?\n".format(
+        if confirmed("\nTo download {} data for all the following subregions: \n{} ... \n".format(
                 osm_file_format, "\n".join(subregions)), confirmation_required=confirmation_required):
-            self.download_subregion_osm_file(*subregions, osm_file_format=osm_file_format, download_dir=download_dir,
-                                             update=update, confirmation_required=False, verbose=verbose)
+            download_path = self.download_subregion_osm_file(*subregions, osm_file_format=osm_file_format,
+                                                             download_dir=download_dir, update=update,
+                                                             confirmation_required=False, verbose=verbose,
+                                                             ret_download_path=ret_download_path)
+
+            if ret_download_path:
+                return download_path
 
 
 class BBBikeDownloader:
+    """
+    A class representation of a tool for downloading BBBike data extracts.
+    """
 
     def __init__(self):
+        """
+        Constructor method.
+        """
         self.Name = 'BBBike'
         self.URL = 'http://download.bbbike.org/osm/bbbike/'
         self.CatalogueName = 'BBBike subregion catalogue'
@@ -1175,11 +1234,11 @@ class BBBikeDownloader:
 
     def regulate_input_subregion_name(self, subregion_name):
         """
-        Regulate input of any ``subregion_name``.
+        Validate the input subregion name and make it match the available subregion name.
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
-        :return: regulated ``subregion_name``
+        :return: valid subregion name that matches, or is the most similar to, the input ``subregion_name``
         :rtype: str
 
         **Example**::
@@ -1190,7 +1249,7 @@ class BBBikeDownloader:
 
             subregion_name = 'leeds'
 
-            subregion_name_ = bbbike_downloader.regulate_input_subregion_name(subregion_name)
+            subregion_name_ = bbbike_downloader.validate_input_subregion_name(subregion_name)
 
             print(subregion_name_)
             # Leeds
@@ -1203,12 +1262,16 @@ class BBBikeDownloader:
 
     def get_subregion_download_catalogue(self, subregion_name, confirmation_required=True, verbose=False):
         """
+        Get a catalogues for subregion downloads.
+
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param confirmation_required: whether to prompt a message for confirmation to proceed, defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
         :type verbose: bool, int
+        :return: a catalogues for subregion downloads
+        :rtype: pandas.DataFrame, None
 
         **Example**::
 
@@ -1267,14 +1330,16 @@ class BBBikeDownloader:
                 # save_pickle(subregion_downloads_catalogue, path_to_file, verbose=verbose)
                 print("Done. ") if verbose else ""
 
-            except Exception as e_:
+            except Exception as e:
                 subregion_download_catalogue = None
-                print("Failed. {}".format(subregion_name_, e_)) if verbose else ""
+                print("Failed. {}".format(subregion_name_, e)) if verbose else ""
 
             return subregion_download_catalogue
 
     def get_download_dictionary(self, update=False, confirmation_required=True, verbose=False):
         """
+        Get a dictionary of available formats, data types and catalogue for downloading the BBBike data extracts.
+
         :param update: whether to check on update and proceed to update the package data, defaults to ``False``
         :type update: bool
         :param confirmation_required: whether to prompt a message for confirmation to proceed, defaults to ``True``
@@ -1349,11 +1414,13 @@ class BBBikeDownloader:
 
         return downloads_dictionary
 
-    def regulate_input_osm_file_format(self, osm_file_format):
+    def validate_input_osm_file_format(self, osm_file_format):
         """
+        Validate the input file format.
+
         :param osm_file_format: format (file extension) of an OSM data
         :type osm_file_format: str
-        :return: one of the formats in get_download_dictionary("BBBike-osm-file-formats")
+        :return: valid file format (file extension)
         :rtype: str
 
         **Example**::
@@ -1364,7 +1431,7 @@ class BBBikeDownloader:
 
             osm_file_format = 'pbf'
 
-            osm_file_format_ = bbbike_downloader.regulate_input_osm_file_format(osm_file_format)
+            osm_file_format_ = bbbike_downloader.validate_input_osm_file_format(osm_file_format)
 
             print(osm_file_format_)
             # .osm.pbf
@@ -1388,6 +1455,8 @@ class BBBikeDownloader:
 
     def get_download_url(self, subregion_name, osm_file_format):
         """
+        Get valid URL for downloading data of the given subregion and file format.
+
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: format (file extension) of an OSM data
@@ -1423,7 +1492,7 @@ class BBBikeDownloader:
         """
 
         subregion_name_ = self.regulate_input_subregion_name(subregion_name)
-        osm_file_format_ = self.regulate_input_osm_file_format(osm_file_format)
+        osm_file_format_ = self.validate_input_osm_file_format(osm_file_format)
         bbbike_download_dictionary = self.get_download_dictionary()['Catalogue']
         sub_download_catalogue = bbbike_download_dictionary[subregion_name_]
 
@@ -1431,15 +1500,18 @@ class BBBikeDownloader:
 
         return subregion_name_, url
 
-    def validate_download_info(self, subregion_name, osm_file_format, download_dir=None):
+    def get_valid_download_info(self, subregion_name, osm_file_format, download_dir=None):
         """
+        Get valid subregion name, filename, URL and path for downloading data.
+
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
         :param osm_file_format: format (file extension) of an OSM data
         :type osm_file_format: str
         :param download_dir: directory where downloaded OSM file is saved; if ``None`` (default), package data directory
         :type download_dir: str, None
-        :return: [tuple] of length 4 ([str], [str], [str], [str]) subregion name, filename, download url and file path
+        :return: valid subregion name, filename, download url and file path
+        :rtype: tuple
 
         **Examples**::
 
@@ -1452,7 +1524,7 @@ class BBBikeDownloader:
             download_dir = None
 
             subregion_name_, osm_filename, download_url, path_to_file = \
-                bbbike_downloader.validate_download_info(subregion_name, osm_file_format, download_dir)
+                bbbike_downloader.get_valid_download_info(subregion_name, osm_file_format, download_dir)
 
             print(subregion_name_)
             # Leeds
@@ -1478,7 +1550,7 @@ class BBBikeDownloader:
         return subregion_name_, osm_filename, download_url, path_to_file
 
     def download_osm(self, *subregion_name, osm_file_format, download_dir=None, update=False,
-                     confirmation_required=True, verbose=False):
+                     confirmation_required=True, verbose=False, ret_download_path=False):
         """
         Download BBBike OSM data of a given format for a sequence of regions/subregions.
 
@@ -1492,7 +1564,10 @@ class BBBikeDownloader:
         :type update: bool
         :param confirmation_required: whether to prompt a message for confirmation to proceed, defaults to ``True``
         :type confirmation_required: bool
-        :param verbose:
+        :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
+        :type verbose: bool, int
+        :param ret_download_path: whether to return the path(s) to the downloaded file(s), defaults to ``False``
+        :type ret_download_path: bool
 
         **Examples**::
 
@@ -1501,32 +1576,44 @@ class BBBikeDownloader:
             bbbike_downloader = BBBikeDownloader()
 
             osm_file_format = 'pbf'
-            download_dir = None
             update = False
             confirmation_required = True
             verbose = True
 
-            bbbike_downloader.download_osm('leeds', osm_file_format=osm_file_format, verbose=verbose)
-            # To download pbf data of Leeds [No]|Yes: >? yes
+            download_dir = None
+            bbbike_downloader.download_osm('London', osm_file_format=osm_file_format, verbose=verbose)
+            # To download pbf data of London [No]|Yes: >? yes
             # Done.
 
-            bbbike_downloader.download_osm('leeds', 'birmingham', osm_file_format=osm_file_format,
-                                           verbose=verbose)
-            # The requested data is already available at dat_BBBike\\Leeds\\Leeds.osm.pbf.
-            # To download pbf data of Birmingham [No]|Yes: >? yes
+            download_dir = "tests"
+            ret_download_path = True
+            download_path = bbbike_downloader.download_osm('leeds', 'birmingham',
+                                                           osm_file_format=osm_file_format,
+                                                           download_dir=download_dir, verbose=verbose,
+                                                           ret_download_path=ret_download_path)
+            # To download pbf data of "Leeds" [No]|Yes: >? yes
             # Done.
+            # To download pbf data of "Birmingham" [No]|Yes: >? yes
+            # Done.
+
+            print()
+            # ['<cwd>\\tests\\Leeds.osm.pbf', '<cwd>\\tests\\Birmingham.osm.pbf']
         """
 
+        download_path = []
+
         for sub_reg_name in subregion_name:
-            subregion_name_, osm_filename, download_url, path_to_file = self.validate_download_info(
+            subregion_name_, osm_filename, download_url, path_to_file = self.get_valid_download_info(
                 sub_reg_name, osm_file_format, download_dir)
 
             if os.path.isfile(path_to_file) and not update:
                 if verbose:
                     print("The requested data is already available at {}.".format(os.path.relpath(path_to_file)))
 
+                download_path.append(path_to_file)
+
             else:
-                if confirmed("To download {} data of {}".format(osm_file_format, subregion_name_),
+                if confirmed("To download {} data of \"{}\"".format(osm_file_format, subregion_name_),
                              confirmation_required=confirmation_required):
                     try:
                         if verbose:
@@ -1537,6 +1624,8 @@ class BBBikeDownloader:
 
                         print("Done. ") if verbose else ""
 
+                        download_path.append(path_to_file)
+
                         if os.path.getsize(path_to_file) / (1024 ** 2) <= 5:
                             time.sleep(5)
 
@@ -1546,7 +1635,11 @@ class BBBikeDownloader:
                 else:
                     print("The downloading process was not activated.") if verbose else ""
 
-    def download_subregion_data(self, subregion_name, download_dir=None, confirmation_required=True, verbose=False):
+        if ret_download_path:
+            return download_path
+
+    def download_subregion_data(self, subregion_name, download_dir=None, confirmation_required=True, verbose=False,
+                                ret_download_path=False):
         """
         Download all available BBBike OSM data (of all available formats) for a region/subregion.
 
@@ -1556,7 +1649,10 @@ class BBBikeDownloader:
         :type download_dir: str, None
         :param confirmation_required: whether to prompt a message for confirmation to proceed, defaults to ``True``
         :type confirmation_required: bool
-        :param verbose:
+        :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
+        :type verbose: bool, int
+        :param ret_download_path: whether to return the path(s) to the downloaded file(s), defaults to ``False``
+        :type ret_download_path: bool
 
         **Example**::
 
@@ -1564,17 +1660,36 @@ class BBBikeDownloader:
 
             bbbike_downloader = BBBikeDownloader()
 
-            subregion_name = 'leeds'
-            download_dir = None
             confirmation_required = True
             verbose = True
 
+            subregion_name = 'london'
+            download_dir = None
             bbbike_downloader.download_subregion_data(subregion_name, download_dir,
                                                       confirmation_required, verbose)
-            # To download all available BBBike data for "Leeds"? [No]|Yes: >? yes
-            # Downloading BBBike OSM data for "Leeds" ...
+            # To download all available BBBike data for "London"? [No]|Yes: >? yes
+            # Downloading BBBike OSM data for "London" ...
             #   ...
             # Finished. Check out the downloaded OSM data at dat_BBBike\\Leeds.
+
+
+            subregion_name = 'leeds'
+            download_dir = "tests"
+            ret_download_path = True
+            download_paths = bbbike_downloader.download_subregion_data(subregion_name, download_dir,
+                                                                       confirmation_required, verbose,
+                                                                       ret_download_path)
+            # To download all available BBBike data for "Leeds"? [No]|Yes: >? yes
+            # Downloading BBBike OSM data for "Leeds" ...
+            #   Leeds.osm.pbf ... Done.
+            #   ...
+            #   CHECKSUM.txt ... Done.
+            # Finished. Check out the downloaded OSM data at dat_BBBike\\Leeds.
+
+            print(download_paths)
+            # ['<cwd>\\tests\\Leeds\\Leeds.osm.pbf',
+            #  ...
+            #  '<cwd>\\tests\\Leeds\\CHECKSUM.txt']
         """
 
         subregion_name_ = self.regulate_input_subregion_name(subregion_name)
@@ -1589,6 +1704,8 @@ class BBBikeDownloader:
             if verbose:
                 print("Downloading BBBike OSM data for \"{}\" ... ".format(subregion_name_))
 
+            download_paths = []
+
             for download_url, osm_filename in zip(sub_download_catalogue.URL, sub_download_catalogue.Filename):
                 try:
                     path_to_file = os.path.join(data_dir, "" if not download_dir else subregion_name_, osm_filename)
@@ -1596,11 +1713,17 @@ class BBBikeDownloader:
                     print("\t{} ... Done.".format(osm_filename)) if verbose else ""
                     # if os.path.getsize(path_to_file) / (1024 ** 2) <= 5:
                     #     time.sleep(5)
+
+                    download_paths.append(path_to_file)
+
                 except Exception as e:
                     print("Failed. {}.".format(e)) if verbose else ""
 
             if verbose:
-                print("Finished. Check out the downloaded OSM data at {}.".format(os.path.relpath(cd(data_dir))))
+                print("Finished. Check out the downloaded OSM data at \"{}\".".format(os.path.relpath(cd(data_dir))))
+
+            if ret_download_path:
+                return download_paths
 
         else:
             print("The downloading process was not activated.") if verbose else ""
