@@ -1422,6 +1422,9 @@ class BBBikeDownloader:
 
         return downloads_dictionary
 
+    def get_osm_file_formats(self):
+        return self.get_download_dictionary()['FileFormat']
+
     def validate_input_osm_file_format(self, osm_file_format):
         """
         Validate the input file format.
@@ -1446,7 +1449,7 @@ class BBBikeDownloader:
         """
 
         assert isinstance(osm_file_format, str)
-        bbbike_osm_file_formats = self.get_download_dictionary()['FileFormat']
+        bbbike_osm_file_formats = self.get_osm_file_formats()
 
         try:
             osm_file_format_ = find_similar_str(osm_file_format, bbbike_osm_file_formats)
