@@ -1068,6 +1068,8 @@ class GeoFabrikDownloader:
         :type verbose: bool, int
         :param ret_download_path: whether to return the path(s) to the downloaded file(s), defaults to ``False``
         :type ret_download_path: bool
+        :return: the path(s) to the downloaded file(s) when ``ret_download_path=True``
+        :rtype: list, str
 
         **Examples**::
 
