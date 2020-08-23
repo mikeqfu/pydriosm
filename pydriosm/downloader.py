@@ -932,6 +932,8 @@ class GeoFabrikDownloader:
         :type verbose: bool, int
         :param ret_download_path: whether to return the path(s) to the downloaded file(s), defaults to ``False``
         :type ret_download_path: bool
+        :return: the path(s) to the downloaded file(s) when ``ret_download_path=True``
+        :rtype: list, str
 
         **Examples**::
 
@@ -1043,6 +1045,8 @@ class GeoFabrikDownloader:
                 time.sleep(interval_sec)
 
         if ret_download_path:
+            if len(download_path) == 1:
+                download_path = download_path[0]
             return download_path
 
     def download_sub_subregion_osm_file(self, *subregion_name, osm_file_format, download_dir=None, update=False,
@@ -1112,6 +1116,8 @@ class GeoFabrikDownloader:
                                                              ret_download_path=ret_download_path)
 
             if ret_download_path:
+                if len(download_path) == 1:
+                    download_path = download_path[0]
                 return download_path
 
 
@@ -1568,6 +1574,8 @@ class BBBikeDownloader:
         :type verbose: bool, int
         :param ret_download_path: whether to return the path(s) to the downloaded file(s), defaults to ``False``
         :type ret_download_path: bool
+        :return: the path(s) to the downloaded file(s) when ``ret_download_path=True``
+        :rtype: list, str
 
         **Examples**::
 
@@ -1636,6 +1644,8 @@ class BBBikeDownloader:
                     print("The downloading process was not activated.") if verbose else ""
 
         if ret_download_path:
+            if len(download_path) == 1:
+                download_path = download_path[0]
             return download_path
 
     def download_subregion_data(self, subregion_name, download_dir=None, confirmation_required=True, verbose=False,
@@ -1653,6 +1663,8 @@ class BBBikeDownloader:
         :type verbose: bool, int
         :param ret_download_path: whether to return the path(s) to the downloaded file(s), defaults to ``False``
         :type ret_download_path: bool
+        :return: the path(s) to the downloaded file(s) when ``ret_download_path=True``
+        :rtype: list, str
 
         **Example**::
 
