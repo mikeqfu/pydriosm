@@ -1145,7 +1145,7 @@ class GeoFabrikReader:
             geofabrik_reader = GeoFabrikReader()
 
             parse_raw_feat = True
-            file_size_limit = 50
+            chunk_size_limit = 50
             fmt_other_tags = True
             fmt_single_geom = True
             fmt_multi_geom = True
