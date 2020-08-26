@@ -1,26 +1,20 @@
 """ A module for parsing/reading OSM data extracts. """
 
-import copy
 import gc
 import glob
 import lzma
-import os
-import re
 import shutil
 import zipfile
 
 import geopandas as gpd
 import ogr
-import pandas as pd
 import rapidjson
 import shapefile
 import shapely.geometry
-from pyhelpers.dir import cd, regulate_input_data_dir
-from pyhelpers.ops import confirmed, split_list
-from pyhelpers.store import load_pickle, save_pickle
+from pyhelpers.ops import split_list
 
-from pydriosm.downloader import BBBikeDownloader, GeoFabrikDownloader
-from pydriosm.utils import get_number_of_chunks, osm_geom_shapely_object_dict, pbf_layer_feat_types_dict, \
+from .downloader import *
+from .utils import get_number_of_chunks, osm_geom_shapely_object_dict, pbf_layer_feat_types_dict, \
     remove_subregion_osm_file
 
 
@@ -151,7 +145,8 @@ def read_shp(path_to_shp, method='geopandas', **kwargs):
     :param path_to_shp: full path to a .shp file
     :type: str
     :param method: the method used to read the .shp file;
-        if ``'geopandas'`` (default), use the `geopandas.read_file_` method, for otherwise use `shapefile.Reader_`
+        if ``'geopandas'`` (default), use the `geopandas.read_file_` method,
+        for otherwise use `shapefile.Reader_`
     :type method: str
     :param kwargs: optional parameters of `geopandas.read_file`_
     :return: data frame of the .shp data
@@ -215,7 +210,7 @@ def read_shp(path_to_shp, method='geopandas', **kwargs):
 
 def get_osm_pbf_layer_idx_names(path_to_osm_pbf):
     """
-    Get names of all layers contained in the .osm.pbf file for a given subregion.
+    Get names of all layers contained in a .osm.pbf file for a given subregion.
 
     :param path_to_osm_pbf: full path to a .osm.pbf file
     :type path_to_osm_pbf: str
@@ -270,7 +265,7 @@ def make_point_as_polygon(x):
 
 def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom, fmt_other_tags):
     """
-    Parse data of each layer in .pbf file.
+    Parse data of each layer in a .osm.pbf file.
 
     :param pbf_layer_data: data of a specific layer of a given .pbf file.
     :type pbf_layer_data: pandas.DataFrame
@@ -280,7 +275,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
     :type fmt_single_geom: bool
     :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object
     :type fmt_multi_geom: bool
-    :param fmt_other_tags: whether to transform a 'other_tags' into a dictionary
+    :param fmt_other_tags: whether to transform a ``'other_tags'`` into a dictionary
     :type fmt_other_tags: bool
     :return: parsed data of the ``geo_typ`` layer of a given .pbf file
     :rtype: pandas.DataFrame
@@ -361,7 +356,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
 
     def reformat_other_tags(other_tags):
         """
-        Transform a 'other_tags' into a dictionary.
+        Transform a ``'other_tags'`` into a dictionary.
 
         :param other_tags: data of a single record in the ``'other_tags'`` feature
         :type other_tags: str, None
@@ -411,7 +406,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
 
 def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_geom, fmt_multi_geom, fmt_other_tags):
     """
-    Parse .osm.pbf file.
+    Parse a .osm.pbf file.
     
     :param path_to_osm_pbf: full path to a .osm.pbf file
     :type path_to_osm_pbf: str
@@ -423,7 +418,7 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
     :type fmt_single_geom: bool
     :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object
     :type fmt_multi_geom: bool
-    :param fmt_other_tags: whether to transform a 'other_tags' into a dictionary
+    :param fmt_other_tags: whether to transform a ``'other_tags'`` into a dictionary
     :type fmt_other_tags: bool
     :return: parsed OSM PBF data
     :rtype: dict
@@ -494,7 +489,7 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
         if number_of_chunks:
             features = [feature for _, feature in enumerate(layer_dat)]
             # number_of_chunks = file_size_in_mb / chunk_size_limit; chunk_size = len(features) / number_of_chunks
-            feats = split_list(features, number_of_chunks)
+            feats = split_list(lst=features, num_of_sub=number_of_chunks)
 
             del features
             gc.collect()
@@ -503,7 +498,8 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
             for feat in feats:
                 if parse_raw_feat:
                     lyr_dat_ = pd.DataFrame(f.ExportToJson(as_object=True) for f in feat)
-                    lyr_dat = parse_osm_pbf_layer(lyr_dat_, layer_name, fmt_single_geom, fmt_multi_geom, fmt_other_tags)
+                    lyr_dat = parse_osm_pbf_layer(lyr_dat_, geo_typ=layer_name, fmt_single_geom=fmt_single_geom,
+                                                  fmt_multi_geom=fmt_multi_geom, fmt_other_tags=fmt_other_tags)
                     del lyr_dat_
                     gc.collect()
                 else:
@@ -519,8 +515,8 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
         else:
             if parse_raw_feat:
                 layer_data_ = pd.DataFrame(feature.ExportToJson(as_object=True) for _, feature in enumerate(layer_dat))
-                layer_data = parse_osm_pbf_layer(layer_data_, layer_name, fmt_single_geom, fmt_multi_geom,
-                                                 fmt_other_tags)
+                layer_data = parse_osm_pbf_layer(layer_data_, geo_typ=layer_name, fmt_single_geom=fmt_single_geom,
+                                                 fmt_multi_geom=fmt_multi_geom, fmt_other_tags=fmt_other_tags)
                 del layer_data_
                 gc.collect()
             else:
@@ -540,7 +536,7 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
 
 def parse_csv_xz(path_to_csv_xz, col_names=None):
     """
-    Parse .csv.xz file.
+    Parse a .csv.xz file.
 
     :param path_to_csv_xz: full path to a .csv.xz file
     :type path_to_csv_xz: str
@@ -567,7 +563,7 @@ def parse_csv_xz(path_to_csv_xz, col_names=None):
 
 def parse_geojson_xz(path_to_geojson_xz, fmt_geom=False, decode_properties=False):
     """
-    Parse .geojson.xz file.
+    Parse a .geojson.xz file.
 
     :param path_to_geojson_xz: full path to a .csv.xz file
     :type path_to_geojson_xz: str
@@ -645,13 +641,12 @@ class GeoFabrikReader:
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
-        :param layer: name of a .shp layer (e.g. 'railways'), defaults to ``None``
+        :param layer: name of a .shp layer (e.g. ``'railways'``), defaults to ``None``
         :type layer: str, None
-        :param feature: name of a feature, e.g. 'rail'; if None, all available features included
-        :type feature: str; None
-        :param data_dir: path to the directory where the search is performed;
-            if ``None`` (default), use the default path
-        :type data_dir: str; None
+        :param feature: name of a feature (e.g. ``'rail'``); if ``None`` (default), all available features included
+        :type feature: str, None
+        :param data_dir: directory where the search is conducted; if ``None`` (default), the default directory
+        :type data_dir: str, None
         :param file_ext: file extension, defaults to ``".shp"``
         :type file_ext: str
         :return: path(s) to .shp file(s)
@@ -733,10 +728,10 @@ class GeoFabrikReader:
         """
         Merge GeoFabrik .shp files for a layer for two or more subregions.
 
-        :param subregion_names: subregion names, e.g. ['rutland', 'essex']
+        :param subregion_names: a list of subregion names
         :type subregion_names: list
-        :param layer: name of a .shp layer (e.g. 'railways'), defaults to ``None``
-        :type layer: str, None
+        :param layer: name of a .shp layer (e.g. 'railways')
+        :type layer: str
         :param method: the method used to merge/save .shp files;
             if ``'geopandas'`` (default), use the `geopandas.GeoDataFrame.to_file_` method,
             use `shapefile.Writer_` otherwise
@@ -746,8 +741,7 @@ class GeoFabrikReader:
         :param download_confirmation_required: whether to ask for confirmation before starting to download a file,
             defaults to ``True``
         :type download_confirmation_required: bool
-        :param data_dir: directory where the data file(s) is (or are) located and/or saved;
-            if ``None``, use the default directory
+        :param data_dir: directory where the .shp.zip data files are located/saved; if ``None``, the default directory
         :type data_dir: str, None
         :param rm_zip_extracts: whether to delete the extracted files, defaults to ``False``
         :type rm_zip_extracts: bool
@@ -923,10 +917,10 @@ class GeoFabrikReader:
         :type subregion_name: str
         :param layer: name of a .shp layer (e.g. 'railways'), defaults to ``None``
         :type layer: str, None
-        :param feature: name of a feature, e.g. 'rail'; if None (default), all available features included
+        :param feature: name of a feature, e.g. 'rail'; if ``None`` (default), all available features included
         :type feature: str, None
-        :param data_dir: directory where the data file(s) is (or are) located and/or saved;
-            if ``None``, use the default directory
+        :param data_dir: directory where the .shp.zip data file is located/saved;
+            if ``None``, the default directory
         :type data_dir: str, None
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
@@ -1045,15 +1039,15 @@ class GeoFabrikReader:
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
-        :param data_dir: directory where the data file(s) is (or are) located and/or saved;
-            if ``None``, use the default directory
+        :param data_dir: directory where the data file of the ``subregion_name`` is located/saved;
+            if ``None`` (default), the default directory
         :type data_dir: str, None
         :return: path to .osm.pbf file
         :rtype: str, None
 
         **Examples**::
 
-            from pydriosm.reader import GeoFabrikReader, unzip_shp_zip
+            from pydriosm.reader import GeoFabrikReader
 
             geofabrik_downloader = GeoFabrikDownloader()
             geofabrik_reader = GeoFabrikReader()
@@ -1098,7 +1092,7 @@ class GeoFabrikReader:
 
         return path_to_osm_pbf
 
-    def read_osm_pbf(self, subregion_name, data_dir=None, parse_raw_feat=True, chunk_size_limit=50,
+    def read_osm_pbf(self, subregion_name, data_dir=None, chunk_size_limit=50, parse_raw_feat=True,
                      fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
                      update=False, download_confirmation_required=True, pickle_it=False, rm_osm_pbf=False,
                      verbose=False):
@@ -1107,20 +1101,20 @@ class GeoFabrikReader:
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
-        :param data_dir: directory where the data file(s) is (or are) located and/or saved;
-            if ``None``, use the default directory
+        :param data_dir: directory where the .osm.pbf data file is located/saved; if ``None``, the default directory
         :type data_dir: str, None
         :param chunk_size_limit: threshold (in MB) that triggers the use of chunk parser, defaults to ``50``;
             if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``, it will be parsed in a
             chunk-wise way
         :type chunk_size_limit: int
-        :param parse_raw_feat: whether to parse each feature in the raw data
+        :param parse_raw_feat: whether to parse each feature in the raw data, defaults to ``True``
         :type parse_raw_feat: bool
-        :param fmt_single_geom: whether to transform a single coordinate into a geometric object
+        :param fmt_single_geom: whether to transform a single coordinate into a geometric object, defaults to ``True``
         :type fmt_single_geom: bool
-        :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object
+        :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object,
+            defaults to ``True``
         :type fmt_multi_geom: bool
-        :param fmt_other_tags: whether to transform a 'other_tags' into a dictionary
+        :param fmt_other_tags: whether to transform a ``'other_tags'`` into a dictionary, defaults to ``True``
         :type fmt_other_tags: bool
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
@@ -1135,8 +1129,6 @@ class GeoFabrikReader:
         :type verbose: bool, int
         :return: data of the .osm.pbf file
         :rtype: dict, None
-
-        If 'subregion' is the name of the subregion, the default file path will be used.
 
         **Example**::
 
@@ -1187,37 +1179,30 @@ class GeoFabrikReader:
                 osm_pbf_data = load_pickle(path_to_pickle, verbose=verbose)
 
             else:
-                # If the target file is not available, try downloading it first.
                 if not os.path.isfile(path_to_osm_pbf) or update:
+                    # If the target file is not available, try downloading it first.
+                    self.Downloader.download_subregion_osm_file(
+                        subregion_name, osm_file_format=".osm.pbf", download_dir=data_dir, update=update,
+                        confirmation_required=download_confirmation_required, verbose=False)
 
-                    try:
-                        self.Downloader.download_subregion_osm_file(
-                            subregion_name, osm_file_format=".osm.pbf", download_dir=data_dir, update=update,
-                            confirmation_required=download_confirmation_required, verbose=False)
+                print("Parsing \"{}\"".format(os.path.basename(path_to_osm_pbf)), end=" ... ") if verbose else ""
+                try:
+                    number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
 
-                    except Exception as e:
-                        print("Cancelled reading data. {}".format(e))
+                    osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, number_of_chunks=number_of_chunks,
+                                                 parse_raw_feat=parse_raw_feat, fmt_single_geom=fmt_single_geom,
+                                                 fmt_multi_geom=fmt_multi_geom, fmt_other_tags=fmt_other_tags)
+                    print("Successfully. ") if verbose else ""
 
-                    osm_pbf_data = None
-
-                else:
-                    print("Parsing \"{}\"".format(os.path.basename(path_to_osm_pbf)), end=" ... ") if verbose else ""
-                    try:
-                        number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
-
-                        osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat,
-                                                     fmt_other_tags, fmt_single_geom, fmt_multi_geom)
-
-                        print("Successfully. ") if verbose else ""
-                        if pickle_it:
-                            save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
-
-                    except Exception as e:
-                        print("Failed. {}".format(e))
-                        osm_pbf_data = None
+                    if pickle_it:
+                        save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
 
                     if rm_osm_pbf:
                         remove_subregion_osm_file(path_to_osm_pbf, verbose=verbose)
+
+                except Exception as e:
+                    print("Failed. {}".format(e))
+                    osm_pbf_data = None
 
             return osm_pbf_data
 
@@ -1246,10 +1231,9 @@ class BBBikeReader:
         :type subregion_name: str
         :param osm_file_format: format (file extension) of an OSM data
         :type osm_file_format: str
-        :param data_dir: directory where the data file(s) is (or are) located and/or saved;
-            if ``None``, use the default directory
+        :param data_dir: directory where the data file is located/saved; if ``None`` (None), the default directory
         :type data_dir: str, None
-        :return: path to data file
+        :return: path to the data file
         :rtype: str, None
 
         **Example**::
@@ -1269,20 +1253,33 @@ class BBBikeReader:
 
         return path_to_file
 
-    def read_osm_pbf(self, subregion_name, data_dir=None, download_confirmation_required=True, parse_raw_feat=True,
-                     chunk_size_limit=50, fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
+    def read_osm_pbf(self, subregion_name, data_dir=None, download_confirmation_required=True, chunk_size_limit=50,
+                     parse_raw_feat=True, fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
                      verbose=False):
         """
         Read BBBike .osm.pbf file of a subregion.
 
-        :param subregion_name:
-        :param data_dir:
-        :param download_confirmation_required:
-        :param parse_raw_feat:
-        :param chunk_size_limit:
-        :param fmt_other_tags:
-        :param fmt_single_geom:
-        :param fmt_multi_geom:
+        :param subregion_name: name of a region/subregion (case-insensitive)
+        :type subregion_name: str
+        :param data_dir: directory where the .osm.pbf data file is located/saved;
+            if ``None`` (default), the default directory
+        :type data_dir: str, None
+        :param download_confirmation_required: whether to ask for confirmation before starting to download a file,
+            defaults to ``True``
+        :type download_confirmation_required: bool
+        :param chunk_size_limit: threshold (in MB) that triggers the use of chunk parser, defaults to ``50``;
+            if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``, it will be parsed in a
+            chunk-wise way
+        :type chunk_size_limit: int
+        :param parse_raw_feat: whether to parse each feature in the raw data, defaults to ``True``
+        :type parse_raw_feat: bool
+        :param fmt_single_geom: whether to transform a single coordinate into a geometric object, defaults to ``True``
+        :type fmt_single_geom: bool
+        :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object,
+            defaults to ``True``
+        :type fmt_multi_geom: bool
+        :param fmt_other_tags: whether to transform a ``'other_tags'`` into a dictionary, defaults to ``True``
+        :type fmt_other_tags: bool
         :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
         :type verbose: bool, int
         :return: data of the .osm.pbf file
@@ -1310,6 +1307,8 @@ class BBBikeReader:
             # <data frame>
         """
 
+        assert isinstance(chunk_size_limit, int) or chunk_size_limit is None
+
         osm_file_format = ".osm.pbf"
 
         path_to_osm_pbf = self.get_path_to_file(subregion_name, osm_file_format, data_dir)
@@ -1320,10 +1319,11 @@ class BBBikeReader:
                                                            confirmation_required=download_confirmation_required,
                                                            verbose=verbose, ret_download_path=True)
 
-        number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
+        number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit=chunk_size_limit)
 
-        osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat,
-                                     fmt_other_tags, fmt_single_geom, fmt_multi_geom)
+        osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, number_of_chunks=number_of_chunks, parse_raw_feat=parse_raw_feat,
+                                     fmt_single_geom=fmt_single_geom, fmt_multi_geom=fmt_multi_geom,
+                                     fmt_other_tags=fmt_other_tags)
 
         return osm_pbf_data
 
@@ -1333,7 +1333,8 @@ class BBBikeReader:
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
-        :param data_dir: directory for saving .csv.xz file; if None (default), use the default directory
+        :param data_dir: directory where the .csv.xz data file is located/saved;
+            if ``None`` (default), the default directory
         :type data_dir: str, None
         :param download_confirmation_required: whether to ask for confirmation before starting to download a file,
             defaults to ``True``
@@ -1383,7 +1384,8 @@ class BBBikeReader:
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
-        :param data_dir: directory for saving .csv.xz file; if None (default), use the default directory
+        :param data_dir: directory where the .geojson.xz data file is located/saved;
+            if ``None`` (default), the default directory
         :type data_dir: str, None
         :param fmt_geom: whether to reformat coordinates into a geometric object, defaults to ``False``
         :type fmt_geom: bool
