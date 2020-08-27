@@ -263,7 +263,7 @@ def make_point_as_polygon(x):
     return x_
 
 
-def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom, fmt_other_tags):
+def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other_tags):
     """
     Parse data of each layer in a .osm.pbf file.
 
@@ -271,12 +271,11 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
     :type pbf_layer_data: pandas.DataFrame
     :param geo_typ: geometric type
     :type geo_typ: str
-    :param fmt_single_geom: whether to transform a single coordinate into a geometric object
-    :type fmt_single_geom: bool
-    :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object
-    :type fmt_multi_geom: bool
-    :param fmt_other_tags: whether to transform a ``'other_tags'`` into a dictionary
-    :type fmt_other_tags: bool
+    :param transform_geom: whether to transform a single coordinate (or a collection of coordinates) into
+        a geometric object
+    :type transform_geom: bool
+    :param transform_other_tags: whether to transform a ``'other_tags'`` into a dictionary
+    :type transform_other_tags: bool
     :return: parsed data of the ``geo_typ`` layer of a given .pbf file
     :rtype: pandas.DataFrame
 
@@ -309,19 +308,27 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
         pbf_points = pd.DataFrame(feat.ExportToJson(as_object=True) for feat in points_data)
 
         # Maintain the original format
-        fmt_single_geom, fmt_multi_geom, fmt_other_tags = False, False, False
-        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, fmt_single_geom, fmt_multi_geom,
-                                                 fmt_other_tags)
+        transform_geom = False
+        transform_other_tags = False
+        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom,
+                                                 transform_other_tags)
         print(parsed_points_data)
 
         # Reformat the original data
-        fmt_single_geom, fmt_multi_geom, fmt_other_tags = True, True, True
-        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, fmt_single_geom, fmt_multi_geom,
-                                                 fmt_other_tags)
+        transform_geom = True
+        transform_other_tags = False
+        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom,
+                                                 transform_other_tags)
+        print(parsed_points_data)
+
+        transform_geom = True
+        transform_other_tags = True
+        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom,
+                                                 transform_other_tags)
         print(parsed_points_data)
     """
 
-    def reformat_single_geometry(geom_data):
+    def transform_single_geometry_(geom_data):
         """
         Transform a single coordinate into a geometric object by using `shapely.geometry_`.
         """
@@ -339,7 +346,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
 
         return geom_coords
 
-    def reformat_multi_geometries(geom_collection):
+    def transform_multi_geometries_(geom_collection):
         """
         Transform a collection of coordinates into a geometric object formatted by `shapely.geometry_`.
         """
@@ -354,7 +361,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
 
         return shapely.geometry.GeometryCollection(geometry_collection)
 
-    def reformat_other_tags(other_tags):
+    def transform_other_tags_(other_tags):
         """
         Transform a ``'other_tags'`` into a dictionary.
 
@@ -379,18 +386,18 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
         dat_geometry = pd.DataFrame(x for x in pbf_layer_data.geometry).rename(columns={'type': 'geom_type'})
 
         if geo_typ != 'other_relations':  # `geo_type` can be 'points', 'lines', 'multilinestrings' or 'multipolygons'
-            if fmt_single_geom:
-                dat_geometry.coordinates = reformat_single_geometry(dat_geometry)
+            if transform_geom:
+                dat_geometry.coordinates = transform_single_geometry_(dat_geometry)
         else:  # geo_typ == 'other_relations'
-            if fmt_multi_geom:
-                dat_geometry.geometries = dat_geometry.geometries.map(reformat_multi_geometries)
+            if transform_geom:
+                dat_geometry.geometries = dat_geometry.geometries.map(transform_multi_geometries_)
                 dat_geometry.rename(columns={'geometries': 'coordinates'}, inplace=True)
 
         # Start parsing 'properties' column
         dat_properties = pd.DataFrame(x for x in pbf_layer_data.properties)
 
-        if fmt_other_tags:
-            dat_properties.other_tags = dat_properties.other_tags.map(reformat_other_tags)
+        if transform_other_tags:
+            dat_properties.other_tags = dat_properties.other_tags.map(transform_other_tags_)
 
         parsed_layer_data = pbf_layer_data[['id']].join(dat_geometry).join(dat_properties)
         parsed_layer_data.drop(['geom_type'], axis=1, inplace=True)
@@ -404,7 +411,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, fmt_single_geom, fmt_multi_geom
     return parsed_layer_data
 
 
-def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_geom, fmt_multi_geom, fmt_other_tags):
+def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_geom, transform_other_tags):
     """
     Parse a .osm.pbf file.
     
@@ -414,12 +421,10 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
     :type number_of_chunks: int, None
     :param parse_raw_feat: whether to parse each feature in the raw data
     :type parse_raw_feat: bool
-    :param fmt_single_geom: whether to transform a single coordinate into a geometric object
-    :type fmt_single_geom: bool
-    :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object
-    :type fmt_multi_geom: bool
-    :param fmt_other_tags: whether to transform a ``'other_tags'`` into a dictionary
-    :type fmt_other_tags: bool
+    :param transform_geom: whether to transform a single coordinate (or a collection of coordinates) into
+        a geometric object
+    :param transform_other_tags: whether to transform a ``'other_tags'`` into a dictionary
+    :type transform_other_tags: bool
     :return: parsed OSM PBF data
     :rtype: dict
 
@@ -457,12 +462,12 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
 
         chunks_no = 50
         parsed = True
-        fmt_single_geom = False
+        transform_geom = False
         fmt_multi_geom = False
-        fmt_other_tags = False
+        transform_other_tags = False
 
-        osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, fmt_single_geom, fmt_multi_geom,
-                                     fmt_other_tags)
+        osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, chunks_no, parsed, transform_geom, fmt_multi_geom,
+                                     transform_other_tags)
 
         print(osm_pbf_data)
         # {'points': <data frame>,
@@ -498,8 +503,8 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
             for feat in feats:
                 if parse_raw_feat:
                     lyr_dat_ = pd.DataFrame(f.ExportToJson(as_object=True) for f in feat)
-                    lyr_dat = parse_osm_pbf_layer(lyr_dat_, geo_typ=layer_name, fmt_single_geom=fmt_single_geom,
-                                                  fmt_multi_geom=fmt_multi_geom, fmt_other_tags=fmt_other_tags)
+                    lyr_dat = parse_osm_pbf_layer(lyr_dat_, geo_typ=layer_name, transform_geom=transform_geom,
+                                                  transform_other_tags=transform_other_tags)
                     del lyr_dat_
                     gc.collect()
                 else:
@@ -515,8 +520,8 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, fmt_single_
         else:
             if parse_raw_feat:
                 layer_data_ = pd.DataFrame(feature.ExportToJson(as_object=True) for _, feature in enumerate(layer_dat))
-                layer_data = parse_osm_pbf_layer(layer_data_, geo_typ=layer_name, fmt_single_geom=fmt_single_geom,
-                                                 fmt_multi_geom=fmt_multi_geom, fmt_other_tags=fmt_other_tags)
+                layer_data = parse_osm_pbf_layer(layer_data_, geo_typ=layer_name, transform_geom=transform_geom,
+                                                 transform_other_tags=transform_other_tags)
                 del layer_data_
                 gc.collect()
             else:
@@ -1092,8 +1097,8 @@ class GeoFabrikReader:
 
         return path_to_osm_pbf
 
-    def read_osm_pbf(self, subregion_name, data_dir=None, chunk_size_limit=50, parse_raw_feat=True,
-                     fmt_single_geom=True, fmt_multi_geom=True, fmt_other_tags=True,
+    def read_osm_pbf(self, subregion_name, data_dir=None, chunk_size_limit=50,
+                     parse_raw_feat=False, transform_geom=False, transform_other_tags=False,
                      update=False, download_confirmation_required=True, pickle_it=False, rm_osm_pbf=False,
                      verbose=False):
         """
@@ -1107,15 +1112,13 @@ class GeoFabrikReader:
             if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``, it will be parsed in a
             chunk-wise way
         :type chunk_size_limit: int
-        :param parse_raw_feat: whether to parse each feature in the raw data, defaults to ``True``
+        :param parse_raw_feat: whether to parse each feature in the raw data, defaults to ``False``
         :type parse_raw_feat: bool
-        :param fmt_single_geom: whether to transform a single coordinate into a geometric object, defaults to ``True``
-        :type fmt_single_geom: bool
-        :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object,
-            defaults to ``True``
-        :type fmt_multi_geom: bool
-        :param fmt_other_tags: whether to transform a ``'other_tags'`` into a dictionary, defaults to ``True``
-        :type fmt_other_tags: bool
+        :param transform_geom: whether to transform a single coordinate (or a collection of coordinates)
+            into a geometric object, defaults to ``False``
+        :type transform_geom: bool
+        :param transform_other_tags: whether to transform a ``'other_tags'`` into a dictionary, defaults to ``False``
+        :type transform_other_tags: bool
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
         :param download_confirmation_required: whether to ask for confirmation before starting to download a file,
@@ -1136,22 +1139,24 @@ class GeoFabrikReader:
 
             geofabrik_reader = GeoFabrikReader()
 
-            parse_raw_feat = True
             chunk_size_limit = 50
-            fmt_other_tags = True
-            fmt_single_geom = True
-            fmt_multi_geom = True
             update = False
             download_confirmation_required = True
             pickle_it = False
-            rm_osm_pbf = True
+            rm_osm_pbf = False
             verbose = True
 
             subregion_name = 'Rutland'
             data_dir = "tests"
 
-            osm_pbf_data = geofabrik_reader.read_osm_pbf(subregion_name, data_dir, rm_osm_pbf=rm_osm_pbf,
-                                                         verbose=verbose)
+            parse_raw_feat = True
+            transform_geom = True
+            transform_other_tags = True
+            rutland_osm_pbf = geofabrik_reader.read_osm_pbf(subregion_name, data_dir,
+                                                            parse_raw_feat=parse_raw_feat,
+                                                            transform_geom=transform_geom,
+                                                            transform_other_tags=transform_other_tags,
+                                                            verbose=verbose)
             # Parsing "rutland-latest.osm.pbf" ... Successfully.
 
             print(osm_pbf_data)
@@ -1185,14 +1190,15 @@ class GeoFabrikReader:
                         subregion_name, osm_file_format=".osm.pbf", download_dir=data_dir, update=update,
                         confirmation_required=download_confirmation_required, verbose=False)
 
-                print("Parsing \"{}\"".format(os.path.basename(path_to_osm_pbf)), end=" ... ") if verbose else ""
+                if verbose and parse_raw_feat:
+                    print("Parsing \"{}\"".format(os.path.basename(path_to_osm_pbf)), end=" ... ")
                 try:
                     number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
 
                     osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, number_of_chunks=number_of_chunks,
-                                                 parse_raw_feat=parse_raw_feat, fmt_single_geom=fmt_single_geom,
-                                                 fmt_multi_geom=fmt_multi_geom, fmt_other_tags=fmt_other_tags)
-                    print("Successfully. ") if verbose else ""
+                                                 parse_raw_feat=parse_raw_feat, transform_geom=transform_geom,
+                                                 transform_other_tags=transform_other_tags)
+                    print("Successfully. ") if verbose and parse_raw_feat else ""
 
                     if pickle_it:
                         save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
@@ -1254,8 +1260,7 @@ class BBBikeReader:
         return path_to_file
 
     def read_osm_pbf(self, subregion_name, data_dir=None, download_confirmation_required=True, chunk_size_limit=50,
-                     parse_raw_feat=True, fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
-                     verbose=False):
+                     parse_raw_feat=False, transform_geom=False, transform_other_tags=False, verbose=False):
         """
         Read BBBike .osm.pbf file of a subregion.
 
@@ -1271,15 +1276,13 @@ class BBBikeReader:
             if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``, it will be parsed in a
             chunk-wise way
         :type chunk_size_limit: int
-        :param parse_raw_feat: whether to parse each feature in the raw data, defaults to ``True``
+        :param parse_raw_feat: whether to parse each feature in the raw data, defaults to ``False``
         :type parse_raw_feat: bool
-        :param fmt_single_geom: whether to transform a single coordinate into a geometric object, defaults to ``True``
-        :type fmt_single_geom: bool
-        :param fmt_multi_geom: whether to transform a collection of coordinates into a geometric object,
-            defaults to ``True``
-        :type fmt_multi_geom: bool
-        :param fmt_other_tags: whether to transform a ``'other_tags'`` into a dictionary, defaults to ``True``
-        :type fmt_other_tags: bool
+        :param transform_geom: whether to transform a single coordinate (or a collection of coordinates) into
+            a geometric object, defaults to ``False``
+        :type transform_geom: bool
+        :param transform_other_tags: whether to transform a ``'other_tags'`` into a dictionary, defaults to ``False``
+        :type transform_other_tags: bool
         :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
         :type verbose: bool, int
         :return: data of the .osm.pbf file
@@ -1294,17 +1297,25 @@ class BBBikeReader:
             subregion_name = 'Leeds'
             data_dir = "tests"
             download_confirmation_required = True
-            parse_raw_feat = True
             chunk_size_limit = 50
-            fmt_other_tags = True
-            fmt_single_geom = True
-            fmt_multi_geom = True
             verbose = True
 
-            osm_pbf_data = bbbike_reader.read_osm_pbf(subregion_name, data_dir, verbose=verbose)
+            parse_raw_feat = True
+            transform_geom = True
+            transform_other_tags = True
+            leeds_osm_pbf = bbbike_reader.read_osm_pbf(subregion_name, data_dir,
+                                                       parse_raw_feat=parse_raw_feat,
+                                                       transform_geom=transform_geom,
+                                                       transform_other_tags=transform_other_tags,
+                                                       verbose=verbose)
+            # Parsing "Leeds.osm.pbf" ... Successfully.
 
-            print(osm_pbf_data)
-            # <data frame>
+            print(leeds_osm_pbf)
+            # {'points': <data frame>,
+            #  'lines': <data frame>,
+            #  'multilinestrings': <data frame>,
+            #  'multipolygons': <data frame>,
+            #  'other_relations: <data frame>'}
         """
 
         assert isinstance(chunk_size_limit, int) or chunk_size_limit is None
@@ -1319,11 +1330,20 @@ class BBBikeReader:
                                                            confirmation_required=download_confirmation_required,
                                                            verbose=verbose, ret_download_path=True)
 
-        number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit=chunk_size_limit)
+        if verbose and parse_raw_feat:
+            print("Parsing \"{}\"".format(os.path.basename(path_to_osm_pbf)), end=" ... ")
+        try:
+            number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit=chunk_size_limit)
 
-        osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, number_of_chunks=number_of_chunks, parse_raw_feat=parse_raw_feat,
-                                     fmt_single_geom=fmt_single_geom, fmt_multi_geom=fmt_multi_geom,
-                                     fmt_other_tags=fmt_other_tags)
+            osm_pbf_data = parse_osm_pbf(path_to_osm_pbf, number_of_chunks=number_of_chunks,
+                                         parse_raw_feat=parse_raw_feat, transform_geom=transform_geom,
+                                         transform_other_tags=transform_other_tags)
+
+            print("Successfully. ") if verbose and parse_raw_feat else ""
+
+        except Exception as e:
+            print("Failed. {}".format(e))
+            osm_pbf_data = None
 
         return osm_pbf_data
 
