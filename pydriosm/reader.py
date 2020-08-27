@@ -310,22 +310,20 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
         # Maintain the original format
         transform_geom = False
         transform_other_tags = False
-        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom,
-                                                 transform_other_tags)
+        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom=transform_geom,
+                                                 transform_other_tags=transform_other_tags)
         print(parsed_points_data)
 
         # Reformat the original data
         transform_geom = True
         transform_other_tags = False
-        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom,
-                                                 transform_other_tags)
-        print(parsed_points_data)
+        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom=transform_geom,
+                                                 transform_other_tags=transform_other_tags)
 
         transform_geom = True
         transform_other_tags = True
-        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom,
-                                                 transform_other_tags)
-        print(parsed_points_data)
+        parsed_points_data = parse_osm_pbf_layer(pbf_points, geo_typ, transform_geom=transform_geom,
+                                                 transform_other_tags=transform_other_tags)
     """
 
     def transform_single_geometry_(geom_data):
@@ -1149,6 +1147,43 @@ class GeoFabrikReader:
             subregion_name = 'Rutland'
             data_dir = "tests"
 
+            parse_raw_feat = False
+            transform_geom = False
+            transform_other_tags = False
+            rutland_osm_pbf = geofabrik_reader.read_osm_pbf(subregion_name, data_dir, verbose=verbose)
+
+            print(osm_pbf_data)
+            # {'points': <data frame>,
+            #  'lines': <data frame>,
+            #  'multilinestrings': <data frame>,
+            #  'multipolygons': <data frame>,
+            #  'other_relations: <data frame>'}
+
+            print(rutland_osm_pbf['points'])
+            # <data frame of a single column>
+
+
+            parse_raw_feat = True
+            transform_geom = False
+            transform_other_tags = False
+            rutland_osm_pbf = geofabrik_reader.read_osm_pbf(subregion_name, data_dir, verbose=verbose,
+                                                            parse_raw_feat=parse_raw_feat)
+            # Parsing "rutland-latest.osm.pbf" ... Successfully.
+            print(rutland_osm_pbf['points'])
+            # <data frame of 12 columns>
+
+
+            parse_raw_feat = True
+            transform_geom = True
+            transform_other_tags = False
+            rutland_osm_pbf = geofabrik_reader.read_osm_pbf(subregion_name, data_dir, verbose=verbose,
+                                                            parse_raw_feat=parse_raw_feat,
+                                                            transform_geom=transform_geom)
+            # Parsing "rutland-latest.osm.pbf" ... Successfully.
+            print(rutland_osm_pbf['points'].coordinates[0])
+            # POINT (-0.5134241 52.6555853)
+
+
             parse_raw_feat = True
             transform_geom = True
             transform_other_tags = True
@@ -1158,13 +1193,8 @@ class GeoFabrikReader:
                                                             transform_other_tags=transform_other_tags,
                                                             verbose=verbose)
             # Parsing "rutland-latest.osm.pbf" ... Successfully.
-
-            print(osm_pbf_data)
-            # {'points': <data frame>,
-            #  'lines': <data frame>,
-            #  'multilinestrings': <data frame>,
-            #  'multipolygons': <data frame>,
-            #  'other_relations: <data frame>'}
+            print(rutland_osm_pbf['points'].other_tags[0])
+            # {'odbl': 'clean'}
         """
 
         assert isinstance(chunk_size_limit, int) or chunk_size_limit is None
@@ -1295,15 +1325,15 @@ class BBBikeReader:
             bbbike_reader = BBBikeReader()
 
             subregion_name = 'Leeds'
-            data_dir = "tests"
             download_confirmation_required = True
             chunk_size_limit = 50
             verbose = True
 
+            data_dir = "tests"
             parse_raw_feat = True
             transform_geom = True
             transform_other_tags = True
-            leeds_osm_pbf = bbbike_reader.read_osm_pbf(subregion_name, data_dir,
+            leeds_osm_pbf = bbbike_reader.read_osm_pbf(subregion_name, data_dir=data_dir,
                                                        parse_raw_feat=parse_raw_feat,
                                                        transform_geom=transform_geom,
                                                        transform_other_tags=transform_other_tags,
