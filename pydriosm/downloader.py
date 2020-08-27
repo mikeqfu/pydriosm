@@ -24,7 +24,7 @@ from pyhelpers.ops import confirmed, download_file_from_url, fake_requests_heade
 from pyhelpers.store import load_pickle, save_pickle
 from pyhelpers.text import find_similar_str
 
-from .utils import cd_dat, cd_dat_bbbike, cd_dat_geofabrik
+from pydriosm.utils import cd_dat, cd_dat_bbbike, cd_dat_geofabrik
 
 
 class GeoFabrikDownloader:
