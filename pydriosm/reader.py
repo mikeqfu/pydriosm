@@ -13,8 +13,8 @@ import shapefile
 import shapely.geometry
 from pyhelpers.ops import split_list
 
-from .downloader import *
-from .utils import get_number_of_chunks, osm_geom_shapely_object_dict, pbf_layer_feat_types_dict, \
+from pydriosm.downloader import *
+from pydriosm.utils import get_number_of_chunks, osm_geom_shapely_object_dict, pbf_layer_feat_types_dict, \
     remove_subregion_osm_file
 
 
@@ -1093,7 +1093,7 @@ class GeoFabrikReader:
         return path_to_osm_pbf
 
     def read_osm_pbf(self, subregion_name, data_dir=None, chunk_size_limit=50, parse_raw_feat=True,
-                     fmt_other_tags=True, fmt_single_geom=True, fmt_multi_geom=True,
+                     fmt_single_geom=True, fmt_multi_geom=True, fmt_other_tags=True,
                      update=False, download_confirmation_required=True, pickle_it=False, rm_osm_pbf=False,
                      verbose=False):
         """
