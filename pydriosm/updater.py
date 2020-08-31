@@ -2,7 +2,7 @@ import time
 
 from pyhelpers.ops import confirmed
 
-from .downloader import BBBikeDownloader, GeoFabrikDownloader
+from pydriosm.downloader import BBBikeDownloader, GeoFabrikDownloader
 
 
 def update_backup_data(confirmation_required=True, interval_sec=5, verbose=True):
