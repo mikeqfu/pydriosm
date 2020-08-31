@@ -1122,7 +1122,7 @@ class GeoFabrikReader:
         :param download_confirmation_required: whether to ask for confirmation before starting to download a file,
             defaults to ``True``
         :type download_confirmation_required: bool
-        :param pickle_it: whether to save the .shp data as a .pickle file, defaults to ``False``
+        :param pickle_it: whether to save the .pbf data as a .pickle file, defaults to ``False``
         :type pickle_it: bool
         :param rm_osm_pbf: whether to delete the downloaded .osm.pbf file, defaults to ``False``
         :type rm_osm_pbf: bool
