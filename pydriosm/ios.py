@@ -609,7 +609,7 @@ class PostgresOSM:
                 if not data_dir:  # Go to default file path
                     path_to_osm_pbf = default_path_to_pbf
                 else:
-                    osm_pbf_dir = regulate_input_data_dir(data_dir)
+                    osm_pbf_dir = validate_input_data_dir(data_dir)
                     path_to_osm_pbf = os.path.join(osm_pbf_dir, default_pbf_filename)
 
                 self.Downloader.download_subregion_osm_file(subregion_name, osm_file_format=".osm.pbf",
