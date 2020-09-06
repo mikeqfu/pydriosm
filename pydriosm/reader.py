@@ -706,7 +706,7 @@ class GeoFabrikReader:
                 subregion_name, osm_file_format=".shp.zip", mkdir=False)
         else:
             shp_zip_filename = self.Downloader.get_default_osm_filename(subregion_name, osm_file_format=".shp.zip")
-            path_to_shp_zip = cd(regulate_input_data_dir(data_dir), shp_zip_filename)
+            path_to_shp_zip = cd(validate_input_data_dir(data_dir), shp_zip_filename)
         shp_dir = os.path.splitext(path_to_shp_zip)[0]
 
         if layer is None:
@@ -836,7 +836,7 @@ class GeoFabrikReader:
         else:
             default_filenames = (self.Downloader.get_default_path_to_osm_file(x, file_format, mkdir=False)[0]
                                  for x in subregion_names_)
-            file_paths = [cd(regulate_input_data_dir(data_dir), f) for f in default_filenames]
+            file_paths = [cd(validate_input_data_dir(data_dir), f) for f in default_filenames]
 
         extract_info = [(p, os.path.splitext(p)[0]) for p in file_paths]
         extract_dirs = []
@@ -849,7 +849,7 @@ class GeoFabrikReader:
         if data_dir is None:
             temp_path_to_merged = cd(os.path.commonpath(extract_info[0]), layer_, mkdir=True)
         else:
-            temp_path_to_merged = cd(regulate_input_data_dir(data_dir), layer_, mkdir=True)
+            temp_path_to_merged = cd(validate_input_data_dir(data_dir), layer_, mkdir=True)
 
         # Copy .shp files (e.g. gis_osm_***_free_1.shp) into the output directory
         for subregion, p in zip(subregion_names, extract_dirs):
@@ -892,7 +892,7 @@ class GeoFabrikReader:
             print("Done.") if verbose else ""
 
             if merged_shp_dir:
-                path_to_merged = cd(regulate_input_data_dir(merged_shp_dir), mkdir=True)
+                path_to_merged = cd(validate_input_data_dir(merged_shp_dir), mkdir=True)
             else:
                 path_to_merged = cd(data_dir, layer_.replace("_temp", "", -1), mkdir=True)
             for x in glob.glob(cd(temp_path_to_merged, "merged_*")):
@@ -969,7 +969,7 @@ class GeoFabrikReader:
         if shp_zip_filename and path_to_shp_zip:
             extract_dir = os.path.splitext(path_to_shp_zip)[0]
             if data_dir:
-                shp_zip_dir = regulate_input_data_dir(data_dir)
+                shp_zip_dir = validate_input_data_dir(data_dir)
                 path_to_shp_zip = os.path.join(shp_zip_dir, shp_zip_filename)
                 extract_dir = os.path.join(shp_zip_dir, os.path.basename(extract_dir))
 
@@ -1087,7 +1087,7 @@ class GeoFabrikReader:
             path_to_osm_pbf = path_to_osm_pbf_
 
         else:
-            osm_pbf_dir = regulate_input_data_dir(data_dir)
+            osm_pbf_dir = validate_input_data_dir(data_dir)
             path_to_osm_pbf = os.path.join(osm_pbf_dir, osm_pbf_filename_)
 
         if not os.path.isfile(path_to_osm_pbf):
@@ -1206,7 +1206,7 @@ class GeoFabrikReader:
             if not data_dir:  # Go to default file path
                 path_to_osm_pbf = path_to_osm_pbf
             else:
-                osm_pbf_dir = regulate_input_data_dir(data_dir)
+                osm_pbf_dir = validate_input_data_dir(data_dir)
                 path_to_osm_pbf = os.path.join(osm_pbf_dir, osm_pbf_filename)
 
             path_to_pickle = path_to_osm_pbf.replace(".osm.pbf", ".pickle" if parse_raw_feat else "-raw.pickle")
