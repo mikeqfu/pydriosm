@@ -19,7 +19,7 @@ import more_itertools
 import numpy as np
 import pandas as pd
 import requests
-from pyhelpers.dir import cd, regulate_input_data_dir
+from pyhelpers.dir import cd, validate_input_data_dir
 from pyhelpers.ops import confirmed, download_file_from_url, fake_requests_headers, update_nested_dict
 from pyhelpers.store import load_pickle, save_pickle
 from pyhelpers.text import find_similar_str
@@ -1013,7 +1013,7 @@ class GeoFabrikDownloader:
                     osm_filename, path_to_file = self.get_default_path_to_osm_file(subregion_name_, osm_file_format,
                                                                                    mkdir=True)
                 else:
-                    regulated_dir = regulate_input_data_dir(download_dir)
+                    regulated_dir = validate_input_data_dir(download_dir)
                     osm_filename = self.get_default_osm_filename(subregion_name_, osm_file_format=osm_file_format)
                     path_to_file = os.path.join(regulated_dir, osm_filename)
 
@@ -1554,7 +1554,7 @@ class BBBikeDownloader:
         osm_filename = os.path.basename(download_url)
 
         if download_dir:
-            path_to_file = cd(regulate_input_data_dir(download_dir), osm_filename, mkdir=True)
+            path_to_file = cd(validate_input_data_dir(download_dir), osm_filename, mkdir=True)
         else:
             path_to_file = cd_dat_bbbike(subregion_name_, osm_filename)  # default directory of package data
 
