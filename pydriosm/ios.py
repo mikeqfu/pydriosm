@@ -214,7 +214,7 @@ class PostgresOSM:
             if self.DataSource == 'GeoFabrik':
                 subregion_name_ = self.Downloader.validate_input_subregion_name(subregion_name)
             else:  # self.DataSource == 'BBBike':
-                subregion_name_, _, _, _ = self.Downloader.get_valid_download_info(subregion_name)
+                subregion_name_, _, _, _ = self.Downloader.get_valid_download_info(subregion_name, osm_file_format='')
         else:
             subregion_name_ = subregion_name
 
