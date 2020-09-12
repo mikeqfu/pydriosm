@@ -1713,7 +1713,7 @@ class BBBikeDownloader:
         bbbike_download_dictionary = self.get_download_dictionary()['Catalogue']
         sub_download_catalogue = bbbike_download_dictionary[subregion_name_]
 
-        data_dir = regulate_input_data_dir(download_dir) if download_dir else cd_dat_bbbike(subregion_name_)
+        data_dir = validate_input_data_dir(download_dir) if download_dir else cd_dat_bbbike(subregion_name_)
 
         if confirmed("To download all available BBBike data for \"{}\"?".format(subregion_name_),
                      confirmation_required=confirmation_required):
