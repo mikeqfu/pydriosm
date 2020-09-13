@@ -27,22 +27,22 @@ Documentation contents
 ######################
 
 .. toctree::
-   :maxdepth: 2
-   :includehidden:
+    :maxdepth: 2
+    :includehidden:
 
-   installation
-   quick-start
-   modules
-   license
-   acknowledgement
+    installation
+    quick-start
+    modules
+    license
+    acknowledgement
 
 .. only:: html
 
-   ##################
-   Indices and tables
-   ##################
+    ##################
+    Indices and tables
+    ##################
 
-   * :ref:`genindex`
-   * :ref:`modindex`
-   * :ref:`search`
+    * :ref:`genindex`
+    * :ref:`modindex`
+    * :ref:`search`
 
