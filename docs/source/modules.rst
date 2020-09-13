@@ -1,10 +1,10 @@
 .. _pydriosm-modules:
 
+.. py:currentmodule:: pydriosm
+
 =======
 Modules
 =======
-
-.. py:currentmodule:: pydriosm
 
 .. toctree::
    :hidden:
