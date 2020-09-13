@@ -9,7 +9,31 @@ import shapely.geometry
 from pyhelpers.dir import cd
 
 
-# -- Change directory ---------------------------------------------------------------------------------
+# -- Source homepage ----------------------------------------------------------------------------------
+
+def geofabrik_homepage():
+    """
+    Specify the source homepage URL of the GeoFabrik data extracts.
+
+    :return: URL of the data source homepage
+    :rtype: str
+    """
+
+    return 'http://download.geofabrik.de/'
+
+
+def bbbike_homepage():
+    """
+    Specify the source homepage URL of the BBBike data extracts.
+
+    :return: URL of the data source homepage
+    :rtype: str
+    """
+
+    return 'http://download.bbbike.org/osm/bbbike/'
+
+
+# -- Directory ----------------------------------------------------------------------------------------
 
 def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     """
@@ -90,16 +114,6 @@ def cd_dat_bbbike(*sub_dir, mkdir=False, **kwargs):
     path = cd("dat_BBBike", *sub_dir, mkdir=mkdir, **kwargs)
 
     return path
-
-
-# -- URLs ---------------------------------------------------------------------------------------------
-
-def geofabrik_homepage():
-    return 'http://download.geofabrik.de/'
-
-
-def bbbike_homepage():
-    return 'http://download.bbbike.org/osm/bbbike/'
 
 
 # -- Geometric object ---------------------------------------------------------------------------------
