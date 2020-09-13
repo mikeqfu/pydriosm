@@ -38,4 +38,4 @@ To test if pyrcs is correctly installed, try importing the package from an inter
         - For *Linux/Unix* users:
             To try out any earlier version (<2.0.0) on *Linux*, check `this page <https://github.com/mikeqfu/pydriosm/issues/1#issuecomment-540684439>`_ for installation instructions. However, it's always recommended to use the latest version.
 
-    - For more general instructions, check the web page of "`Installing Packages <https://packaging.python.org/tutorials/installing-packages>`_".
+    - For more general instructions, check the `Installing Packages <https://packaging.python.org/tutorials/installing-packages>`_ page.
