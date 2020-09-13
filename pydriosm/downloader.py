@@ -1,4 +1,4 @@
-""" A module for downloading Geofabrik and BBBike data extracts
+""" A module for downloading Geofabrik and BBBike data extracts.
 
 Data source:
 
