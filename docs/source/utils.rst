@@ -3,63 +3,55 @@
 .. py:currentmodule:: pydriosm.utils
 
 utils
------
+=====
 
-A module of helper functions for the package.
+.. automodule:: pydriosm.utils
+    :no-members:
+    :no-inherited-members:
 
 Source homepage
-~~~~~~~~~~~~~~~
+---------------
 
 .. autosummary::
+    :toctree: _generated/
+    :template: function.rst
 
-   geofabrik_homepage
-   bbbike_homepage
-
-.. autofunction:: geofabrik_homepage
-
-.. autofunction:: bbbike_homepage
+    geofabrik_homepage
+    bbbike_homepage
 
 |
 
 Directory
-~~~~~~~~~
+---------
 
 .. autosummary::
+    :toctree: _generated/
+    :template: function.rst
 
-   cd_dat
-   cd_dat_geofabrik
-   cd_dat_bbbike
-
-.. autofunction:: cd_dat
-
-.. autofunction:: cd_dat_geofabrik
-
-.. autofunction:: cd_dat_bbbike
+    cd_dat
+    cd_dat_geofabrik
+    cd_dat_bbbike
 
 |
 
 Geometric object
-~~~~~~~~~~~~~~~~
+----------------
 
 .. autosummary::
+    :toctree: _generated/
+    :template: function.rst
 
-   pbf_layer_feat_types_dict
-   osm_geom_shapely_object_dict
-
-.. autofunction:: pbf_layer_feat_types_dict
-
-.. autofunction:: osm_geom_shapely_object_dict
+    pbf_layer_feat_types_dict
+    osm_geom_shapely_object_dict
 
 |
 
 Miscellaneous
-~~~~~~~~~~~~~
+-------------
 
 .. autosummary::
+    :toctree: _generated/
+    :template: function.rst
 
-   remove_subregion_osm_file
-   get_number_of_chunks
-
-.. autofunction:: remove_subregion_osm_file
-
-.. autofunction:: get_number_of_chunks
+    remove_subregion_osm_file
+    get_number_of_chunks
