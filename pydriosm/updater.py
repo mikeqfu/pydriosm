@@ -5,7 +5,7 @@ from pyhelpers.ops import confirmed
 from pydriosm.downloader import BBBikeDownloader, GeoFabrikDownloader
 
 
-def update_backup_data(confirmation_required=True, interval_sec=5, verbose=True):
+def update_package_data(confirmation_required=True, interval_sec=5, verbose=True):
     """
     Update package data.
 
@@ -18,13 +18,13 @@ def update_backup_data(confirmation_required=True, interval_sec=5, verbose=True)
 
     **Example**::
 
-        from pydriosm.updater import update_backup_data
+        from pydriosm.updater import update_package_data
 
         confirmation_required = True
         time_gap = 5
         verbose = True
 
-        update_backup_data(confirmation_required=True, verbose=True)
+        update_package_data(confirmation_required=True, verbose=True)
     """
 
     if confirmed("To update resources (which may take a few minutes)?"):
