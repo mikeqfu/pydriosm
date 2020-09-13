@@ -1,9 +1,12 @@
-from .download_BBBike import *
-from .download_GeoFabrik import *
-from .dump_GeoFabrik import *
-from .osm_psql import *
-from .read_GeoFabrik import *
-from .settings import *
-from .utils import *
+from .downloader import *
+from .reader import *
+from .ios import *
+from .settings import gdal_configurations
 
 gdal_configurations(reset=False)
+
+__package_name__ = 'pydriosm'
+__version__ = '2.0.0'
+__author__ = 'Qian Fu'
+__email__ = 'qian.fu@outlook.com'
+__description__ = "A toolkit for manipulating OpenStreetMap data."
