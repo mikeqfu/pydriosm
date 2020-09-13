@@ -1,33 +1,48 @@
 import setuptools
 
-import pydriosm.settings
+import pydriosm
 
 with open("README.md", 'r') as readme:
     long_description = readme.read()
 
-with open('requirements.txt') as f:
-    requirements = f.readlines()
-requirements_ = [r.strip() for r in requirements]
+# with open('requirements.txt') as f:
+#     requirements = f.readlines()
+# requirements = [r.strip() for r in requirements]
 
 setuptools.setup(
 
-    name='pydriosm',
-    version='1.0.20',
+    name=pydriosm.__package_name__,
+    version=pydriosm.__version__,
 
-    author='Qian Fu',
-    author_email='qian.fu@outlook.com',
+    author=pydriosm.__author__,
+    author_email=pydriosm.__email__,
 
-    description="Download, read/parse and import/export OpenStreetMap data extracts",
+    description=pydriosm.__description__,
     long_description=long_description,
     long_description_content_type="text/markdown",
 
     url='https://github.com/mikeqfu/pydriosm',
 
-    install_requires=requirements_,
+    install_requires=[
+        'beautifulsoup4',
+        # 'Fiona',
+        # 'GDAL',
+        'geopandas',
+        'html5lib',
+        'humanfriendly',
+        'lxml',
+        'pandas>=1.1.2',
+        'psycopg2',
+        'pyhelpers>=1.2.4',
+        'pyproj',
+        # 'pyshp',
+        'python-Levenshtein',
+        # 'Shapely',
+    ],
 
     packages=setuptools.find_packages(exclude=["*.tests", "tests.*", "tests"]),
 
-    package_data={"pydriosm": ["dat/*"]},
+    package_data={"": ["requirements.txt", "LICENSE"], "pydriosm": ["dat/*"]},
     include_package_data=True,
 
     classifiers=[
@@ -37,5 +52,3 @@ setuptools.setup(
         'Operating System :: POSIX :: Linux'
     ],
 )
-
-pydriosm.settings.gdal_configurations(reset=False)
