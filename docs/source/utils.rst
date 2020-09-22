@@ -1,11 +1,12 @@
 .. _pydriosm-utils:
 
-.. py:currentmodule:: pydriosm.utils
+.. py:module:: pydriosm.utils
 
 utils
 =====
 
 .. automodule:: pydriosm.utils
+    :noindex:
     :no-members:
     :no-inherited-members:
 
@@ -41,8 +42,9 @@ Geometric object
     :toctree: _generated/
     :template: function.rst
 
-    pbf_layer_feat_types_dict
-    osm_geom_shapely_object_dict
+    get_pbf_layer_feat_types_dict
+    get_osm_geom_shapely_object_dict
+    get_valid_shp_layer_names
 
 |
 
@@ -53,5 +55,7 @@ Miscellaneous
     :toctree: _generated/
     :template: function.rst
 
+    find_shp_layer_name
+    append_fclass_to_shp_filename
     remove_subregion_osm_file
     get_number_of_chunks
