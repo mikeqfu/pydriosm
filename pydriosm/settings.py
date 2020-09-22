@@ -1,4 +1,6 @@
-""" Settings """
+"""
+Default settings for working environment.
+"""
 
 import gdal
 
@@ -11,7 +13,6 @@ def gdal_configurations(reset=False, max_tmpfile_size=5000):
     :type reset: bool
     :param max_tmpfile_size: maximum size of the temporary file, defaults to ``5000``
     :type max_tmpfile_size: int
-    :return:
     """
 
     if not reset:
