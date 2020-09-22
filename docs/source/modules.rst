@@ -1,26 +1,26 @@
 .. _pydriosm-modules:
 
-.. py:currentmodule:: pydriosm
+.. py:module:: pydriosm
 
 =======
 Modules
 =======
 
 .. toctree::
-   :hidden:
+    :hidden:
 
-   downloader
-   reader
-   ios
-   utils
-   settings
-   updater
+    downloader
+    reader
+    ios
+    utils
+    settings
+    updater
 
 .. autosummary::
 
-   downloader
-   reader
-   ios
-   utils
-   settings
-   updater
+    downloader
+    reader
+    ios
+    utils
+    settings
+    updater
