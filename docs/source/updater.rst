@@ -6,11 +6,12 @@ updater
 =======
 
 .. automodule:: pydriosm.updater
+    :noindex:
     :no-members:
     :no-inherited-members:
 
-Function
---------
+Functions for data updating
+---------------------------
 
 .. autosummary::
     :toctree: _generated/
