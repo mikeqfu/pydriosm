@@ -1,7 +1,10 @@
-""" Utilities - Helper functions """
+"""
+Helper functions.
+"""
 
 import math
 import os
+import re
 import shutil
 
 import pkg_resources
@@ -45,11 +48,10 @@ def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     :type dat_dir: str
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of `os.makedirs`_, e.g. ``mode=0o777``
+    :param kwargs: optional parameters of `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
+        e.g. ``mode=0o777``
     :return: a full path to a directory (or a file) under ``data_dir``
     :rtype: str
-
-    .. _`os.makedirs`: https://docs.python.org/3/library/os.html#os.makedirs
 
     **Example**::
 
@@ -88,7 +90,8 @@ def cd_dat_geofabrik(*sub_dir, mkdir=False, **kwargs):
     :type sub_dir: str
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of `os.makedirs`_, e.g. ``mode=0o777``
+    :param kwargs: optional parameters of `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
+        e.g. ``mode=0o777``
     :return: a full path to a directory (or a file) under ``data_dir``
     :rtype: str
     """
@@ -106,7 +109,8 @@ def cd_dat_bbbike(*sub_dir, mkdir=False, **kwargs):
     :type sub_dir: str
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of `os.makedirs`_, e.g. ``mode=0o777``
+    :param kwargs: optional parameters of `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
+        e.g. ``mode=0o777``
     :return: a full path to a directory (or a file) under ``data_dir``
     :rtype: str
     """
@@ -118,7 +122,14 @@ def cd_dat_bbbike(*sub_dir, mkdir=False, **kwargs):
 
 # -- Geometric object ---------------------------------------------------------------------------------
 
-def pbf_layer_feat_types_dict():
+def get_pbf_layer_feat_types_dict():
+    """
+    A dictionary for PBF layers and the corresponding geometry types.
+
+    :return: a dictionary with keys and values being PBF layers and geometry types
+    :rtype: dict
+    """
+
     # {Layer name in .pbf data: the corresponding feature type}
     pbf_layer_feat_types = {'points': 'Point',
                             'lines': 'LineString',
@@ -129,11 +140,11 @@ def pbf_layer_feat_types_dict():
     return pbf_layer_feat_types
 
 
-def osm_geom_shapely_object_dict():
+def get_osm_geom_shapely_object_dict():
     """
-    Make a dictionary for OSM geometry types.
+    A dictionary for OSM geometry types.
 
-    :return: a dictionary with keys and values being shape type (in OSM .shp file) and shapely.geometry
+    :return: a dictionary with keys and values being shape types (in OSM .shp file) and shapely.geometry types
     :rtype: dict
     """
 
@@ -148,13 +159,78 @@ def osm_geom_shapely_object_dict():
     return shape_object_dict
 
 
+def get_valid_shp_layer_names():
+    """
+    Get valid layer names of OSM shapefiles.
+
+    :return: a list of valid layer names of OSM shapefiles
+    :rtype: list
+    """
+
+    shp_layer_names = ['buildings',
+                       'landuse',
+                       'natural',
+                       'places',
+                       'pofw',
+                       'pois',
+                       'railways',
+                       'roads',
+                       'traffic',
+                       'transport',
+                       'water',
+                       'waterways']
+
+    return shp_layer_names
+
+
 # -- Miscellaneous ------------------------------------------------------------------------------------
+
+def find_shp_layer_name(shp_filename):
+    """
+    Find the layer name of the .shp file given its filename.
+
+    :param shp_filename: filename of a shapefile (.shp)
+    :type shp_filename: str
+    :return: layer name of the .shp file
+    :rtype: str
+    """
+
+    layer_name = re.search(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)', shp_filename).group(0).replace("_a", "")
+
+    return layer_name
+
+
+def append_fclass_to_shp_filename(shp_filename, feature_names):
+    """
+    Append a 'fclass' name to the original .shp filename.
+
+    :param shp_filename: original .shp filename
+    :type shp_filename: str
+    :param feature_names: name (or names) of a ``fclass`` (or multiple ``fclass``) in .shp data
+    :type feature_names: str or list
+    :return: updated filename used for saving only the ``fclass`` data of the original .shp data file
+    :rtype: str
+    """
+
+    filename, ext = os.path.splitext(shp_filename)
+
+    feature_names_ = [feature_names] if isinstance(feature_names, str) else feature_names.copy()
+    new_shp_filename = "{filename}_{feature_names}{ext}".format(
+        filename=filename, feature_names='_'.join(feature_names_), ext=ext)
+
+    if os.path.dirname(new_shp_filename):
+        layer_name = find_shp_layer_name(shp_filename)
+        new_shp_filename = cd(os.path.dirname(new_shp_filename), layer_name, os.path.basename(new_shp_filename),
+                              mkdir=True)
+
+    return new_shp_filename
+
 
 def remove_subregion_osm_file(path_to_osm_file, verbose=True):
     """
-    Remove the downloaded file.
+    Remove a downloaded file.
 
-    :param path_to_osm_file:
+    :param path_to_osm_file: full path to a downloaded OSM data file
     :type path_to_osm_file: str
     :param verbose: defaults to ``True``
     :type verbose: bool
@@ -177,23 +253,22 @@ def remove_subregion_osm_file(path_to_osm_file, verbose=True):
         remove_subregion_osm_file(path_to_osm_file_)
     """
 
-    if not os.path.exists(path_to_osm_file):
-        if verbose:
-            print("\"{}\" does not exist at \"{}\".".format(*os.path.split(path_to_osm_file)[::-1]))
+    print("Deleting \"{}\"".format(os.path.relpath(path_to_osm_file)), end=" ... ") if verbose else ""
 
-    else:
-        try:
-            if os.path.isfile(path_to_osm_file):
-                os.remove(path_to_osm_file)
+    try:
+        if os.path.isfile(path_to_osm_file):
+            os.remove(path_to_osm_file)
+            print("Done. ") if verbose else ""
 
-            elif os.path.isdir(path_to_osm_file):
-                shutil.rmtree(path_to_osm_file)
+        elif os.path.isdir(path_to_osm_file):
+            shutil.rmtree(path_to_osm_file)
+            print("Done. ") if verbose else ""
 
-            if verbose:
-                print("\"{}\" has been removed.\n".format(os.path.basename(path_to_osm_file)))
+        else:
+            print("File not found at {}.".format(*os.path.split(path_to_osm_file)[::-1])) if verbose else ""
 
-        except Exception as e:
-            print(e)
+    except Exception as e:
+        print("Failed. {}".format(e))
 
 
 def get_number_of_chunks(path_to_file, chunk_size_limit=50):
@@ -205,7 +280,7 @@ def get_number_of_chunks(path_to_file, chunk_size_limit=50):
     :param chunk_size_limit: threshold (in MB) above which the file is to be split into chunks, defaults to ``50``;
     :type chunk_size_limit: int
     :return: number of chunks
-    :rtype: int, None
+    :rtype: int or None
     """
 
     file_size_in_mb = round(os.path.getsize(path_to_file) / (1024 ** 2), 1)
