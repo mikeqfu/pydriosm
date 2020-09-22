@@ -6,11 +6,12 @@ downloader
 ==========
 
 .. automodule:: pydriosm.downloader
+    :noindex:
     :no-members:
     :no-inherited-members:
 
-Classes
--------
+Classes for downloading data
+----------------------------
 
 .. autosummary::
     :toctree: _generated/
