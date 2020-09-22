@@ -6,11 +6,12 @@ settings
 ========
 
 .. automodule:: pydriosm.settings
+    :noindex:
     :no-members:
     :no-inherited-members:
 
-Function
---------
+Functions for environment settings
+----------------------------------
 
 .. autosummary::
     :toctree: _generated/
