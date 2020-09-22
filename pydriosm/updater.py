@@ -1,8 +1,12 @@
+"""
+Update package data.
+"""
+
 import time
 
 from pyhelpers.ops import confirmed
 
-from pydriosm.downloader import BBBikeDownloader, GeoFabrikDownloader
+from .downloader import BBBikeDownloader, GeoFabrikDownloader
 
 
 def update_package_data(confirmation_required=True, interval_sec=5, verbose=True):
