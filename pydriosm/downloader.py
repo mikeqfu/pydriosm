@@ -25,7 +25,7 @@ from .utils import bbbike_homepage, cd_dat, cd_dat_bbbike, cd_dat_geofabrik, geo
 
 class GeoFabrikDownloader:
     """
-    A class representation of a tool for downloading GeoFabrik data extracts.
+    A class representation of a tool for downloading `GeoFabrik <https://download.geofabrik.de/>`_ data extracts.
     """
 
     def __init__(self):
@@ -1276,7 +1276,7 @@ class GeoFabrikDownloader:
 
 class BBBikeDownloader:
     """
-    A class representation of a tool for downloading BBBike data extracts.
+    A class representation of a tool for downloading `BBBike <https://extract.bbbike.org/>`_ data extracts.
     """
 
     def __init__(self):
