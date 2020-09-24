@@ -1232,6 +1232,7 @@ class GeoFabrikDownloader:
 
         **Examples**::
 
+            import os
             from pydriosm.downloader import GeoFabrikDownloader
 
             geofabrik_downloader = GeoFabrikDownloader()
@@ -1267,8 +1268,6 @@ class GeoFabrikDownloader:
             print(download_paths)
             # ['<cwd>\\tests\\west-midlands-latest.osm.pbf',
             #  '<cwd>\\tests\\west-yorkshire-latest.osm.pbf']
-
-            import os
 
             for file_path in download_paths:
                 os.remove(file_path)
