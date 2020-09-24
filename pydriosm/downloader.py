@@ -1004,8 +1004,7 @@ class GeoFabrikDownloader:
 
             import os
             import shutil
-            from pydriosm.utils import cd_dat_geofabrik
-            from pydriosm.downloader import GeoFabrikDownloader
+            from pydriosm.downloader import GeoFabrikDownloader, cd_dat_geofabrik
 
             geofabrik_downloader = GeoFabrikDownloader()
 
@@ -1921,7 +1920,9 @@ class BBBikeDownloader:
 
         **Examples**::
 
-            from pydriosm.downloader import BBBikeDownloader
+            import os
+            import shutil
+            from pydriosm.downloader import BBBikeDownloader, cd_dat_bbbike
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -1935,12 +1936,14 @@ class BBBikeDownloader:
             # Downloading "London.osm.pbf" to "dat_BBBike\\London" ...
             # Done.
 
+            shutil.rmtree(cd_dat_bbbike())
+
             subregion_names = ['leeds', 'birmingham']
             download_dir = "tests"
 
-            download_path = bbbike_downloader.download_osm(subregion_names, osm_file_format,
-                                                           download_dir, verbose=True,
-                                                           ret_download_path=True)
+            download_paths = bbbike_downloader.download_osm(subregion_names, osm_file_format,
+                                                            download_dir, verbose=True,
+                                                            ret_download_path=True)
             # Confirm to download .osm.pbf data of the following (sub)region(s):
             # 	Leeds
             # 	Birmingham
@@ -1950,8 +1953,11 @@ class BBBikeDownloader:
             # Downloading "Birmingham.osm.pbf" to "tests" ...
             # Done.
 
-            print(download_path)
+            print(download_paths)
             # ['<cwd>\\tests\\Leeds.osm.pbf', '<cwd>\\tests\\Birmingham.osm.pbf']
+
+            for file_path in download_paths:
+                os.remove(file_path)
         """
 
         subregion_names_ = [subregion_names] if isinstance(subregion_names, str) else subregion_names.copy()
@@ -2026,7 +2032,9 @@ class BBBikeDownloader:
 
         **Example**::
 
-            from pydriosm.downloader import BBBikeDownloader
+            import os
+            import shutil
+            from pydriosm.downloader import BBBikeDownloader, cd_dat_bbbike
 
             bbbike_downloader = BBBikeDownloader()
 
@@ -2035,21 +2043,23 @@ class BBBikeDownloader:
             bbbike_downloader.download_subregion_data(subregion_name, verbose=True)
             # Confirm to download BBBike OSM data of London? [No]|Yes: yes
             # Downloading BBBike OSM data for "London" ...
-            #   London.osm.pbf ... Done.
-            #   London.osm.gz ... Done.
-            #   London.osm.shp.zip ... Done.
-            #   London.osm.garmin-onroad-latin1.zip ... Done.
-            # 	London.osm.garmin-onroad.zip ... Done.
-            # 	London.osm.garmin-opentopo.zip ... Done.
-            # 	London.osm.garmin-osm.zip ... Done.
-            # 	London.osm.geojson.xz ... Done.
-            # 	London.osm.svg-osm.zip ... Done.
-            # 	London.osm.mapsforge-osm.zip ... Done.
-            # 	London.osm.navit.zip ... Done.
-            # 	London.osm.csv.xz ... Done.
-            # 	London.poly ... Done.
-            # 	CHECKSUM.txt ... Done.
+            #   London.osm.pbf ...
+            #   London.osm.gz ...
+            #   London.osm.shp.zip ...
+            #   London.osm.garmin-onroad-latin1.zip ...
+            # 	London.osm.garmin-onroad.zip ...
+            # 	London.osm.garmin-opentopo.zip ...
+            # 	London.osm.garmin-osm.zip ...
+            # 	London.osm.geojson.xz ...
+            # 	London.osm.svg-osm.zip ...
+            # 	London.osm.mapsforge-osm.zip ...
+            # 	London.osm.navit.zip ...
+            # 	London.osm.csv.xz ...
+            # 	London.poly ...
+            # 	CHECKSUM.txt ...
             # Finished. Check out the requested OSM data at ..\\dat_BBBike\\London.
+
+            shutil.rmtree(cd_dat_bbbike())
 
             subregion_name = 'leeds'
             download_dir = "tests"
@@ -2059,20 +2069,20 @@ class BBBikeDownloader:
                                                                        ret_download_path=True)
             # Confirm to download BBBike OSM data of Leeds? [No]|Yes: yes
             # Downloading BBBike OSM data for "Leeds" ...
-            #   Leeds.osm.pbf ... Done.
-            # 	Leeds.osm.gz ... Done.
-            # 	Leeds.osm.shp.zip ... Done.
-            # 	Leeds.osm.garmin-onroad-latin1.zip ... Done.
-            # 	Leeds.osm.garmin-onroad.zip ... Done.
-            # 	Leeds.osm.garmin-opentopo.zip ... Done.
-            # 	Leeds.osm.garmin-osm.zip ... Done.
-            # 	Leeds.osm.geojson.xz ... Done.
-            # 	Leeds.osm.svg-osm.zip ... Done.
-            # 	Leeds.osm.mapsforge-osm.zip ... Done.
-            # 	Leeds.osm.navit.zip ... Done.
-            # 	Leeds.osm.csv.xz ... Done.
-            # 	Leeds.poly ... Done.
-            # 	CHECKSUM.txt ... Done.
+            #   Leeds.osm.pbf ...
+            # 	Leeds.osm.gz ...
+            # 	Leeds.osm.shp.zip ...
+            # 	Leeds.osm.garmin-onroad-latin1.zip ...
+            # 	Leeds.osm.garmin-onroad.zip ...
+            # 	Leeds.osm.garmin-opentopo.zip ...
+            # 	Leeds.osm.garmin-osm.zip ...
+            # 	Leeds.osm.geojson.xz ...
+            # 	Leeds.osm.svg-osm.zip ...
+            # 	Leeds.osm.mapsforge-osm.zip ...
+            # 	Leeds.osm.navit.zip ...
+            # 	Leeds.osm.csv.xz ...
+            # 	Leeds.poly ...
+            # 	CHECKSUM.txt ...
             # Finished. Check out the requested OSM data at ..\\tests\\Leeds.
 
             print(download_paths)
@@ -2090,6 +2100,8 @@ class BBBikeDownloader:
             #  '<cwd>\\tests\\Leeds\\Leeds.osm.csv.xz',
             #  '<cwd>\\tests\\Leeds\\Leeds.poly',
             #  '<cwd>\\tests\\Leeds\\CHECKSUM.txt']
+
+            shutil.rmtree(os.path.dirname(download_paths[0]))
         """
 
         subregion_name_ = self.validate_input_subregion_name(subregion_name)
@@ -2115,8 +2127,10 @@ class BBBikeDownloader:
                             print("\t\"{}\" is already available.".format(os.path.basename(path_to_file)))
 
                     else:
+                        print("\t{} ... ".format(osm_filename)) if verbose else ""
+
                         download_file_from_url(download_url, path_to_file)
-                        print("\t{} ... Done.".format(osm_filename)) if verbose else ""
+
                         # if os.path.getsize(path_to_file) / (1024 ** 2) <= 5:
                         #     time.sleep(5)
 
