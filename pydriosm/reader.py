@@ -2,6 +2,7 @@
 Parsing/reading OSM data extracts.
 """
 
+import collections
 import gc
 import glob
 import lzma
@@ -1053,51 +1054,51 @@ class GeoFabrikReader:
             # Confirm to download .shp.zip data of the following (sub)region(s):
             # 	Greater Manchester
             # 	West Yorkshire
-            # ? [No]|Yes: >? yes
+            # ? [No]|Yes: yes
             # Downloading "greater-manchester-latest-free.shp.zip" to "tests" ...
             # Done.
             # Downloading "west-yorkshire-latest-free.shp.zip" to "tests" ...
             # Done.
             # Extracting from "greater-manchester-latest-free.shp.zip" the following layer(s):
             # 	'railways'
-            # to "tests\\greater-manchester-latest-free.shp" ...
+            # to "tests\\greater-manchester-latest-free-shp" ...
             # In progress ... Done.
             # Extracting from "west-yorkshire-latest-free.shp.zip" the following layer(s):
             # 	'railways'
-            # to "tests\\west-yorkshire-latest-free.shp" ...
+            # to "tests\\west-yorkshire-latest-free-shp" ...
             # In progress ... Done.
             # Merging the following shape files:
             # 	manchester_gis_osm_railways_free_1.shp
             # 	west-yorkshire_gis_osm_railways_free_1.shp
             # In progress ... Done.
-            # The merged .shp file is saved at "tests\\merged_railways".
+            # Find the merged .shp file(s) at "tests\\greater-manchester_west-yorkshire_railways".
 
             path_to_merged_shp = geofabrik_reader.merge_multi_shp(
                 subregion_names, layer_name, download_confirmation_required=False,
                 data_dir=data_dir, rm_zip_extracts=True, rm_shp_temp=True,  verbose=True,
                 ret_merged_shp_path=True)
-            # "greater-manchester-latest-free.shp.zip" of Greater Manchester is already available
-            # "west-yorkshire-latest-free.shp.zip" of West Yorkshire is already available.
+            # "greater-manchester-latest-free.shp.zip" of Greater Manchester is already available...
+            # "west-yorkshire-latest-free.shp.zip" of West Yorkshire is already available...
             # Extracting from "greater-manchester-latest-free.shp.zip" the following layer(s):
             # 	'railways'
-            # to "tests\\greater-manchester-latest-free.shp" ...
+            # to "tests\\greater-manchester-latest-free-shp" ...
             # In progress ... Done.
             # Extracting from "west-yorkshire-latest-free.shp.zip" the following layer(s):
             # 	'railways'
-            # to "tests\\west-yorkshire-latest-free.shp" ...
+            # to "tests\\west-yorkshire-latest-free-shp" ...
             # In progress ... Done.
             # Merging the following shape files:
             # 	manchester_gis_osm_railways_free_1.shp
             # 	west-yorkshire_gis_osm_railways_free_1.shp
             # In progress ... Done.
-            # The merged .shp file is saved at "tests\\merged_railways".
+            # Find the merged .shp file(s) at "tests\\greater-manchester_west-yorkshire_railways".
 
             print(path_to_merged_shp)
-            # <cwd>\\tests\\merged_railways\\merged_railways.shp
+            # <cwd>\\tests\\...\\greater-manchester_west-yorkshire_railways.shp
 
             rm_dir(os.path.dirname(path_to_merged_shp))
-            # "<cwd>\\tests\\merged_railways" is not empty. Confirmed to remove the directory?
-            # [No]|Yes: >? yes
+            # ... is not empty. Confirmed to remove the directory?
+            # [No]|Yes: yes
 
             os.remove(cd(data_dir, "greater-manchester-latest-free.shp.zip"))
             os.remove(cd(data_dir, "west-yorkshire-latest-free.shp.zip"))
@@ -1105,6 +1106,7 @@ class GeoFabrikReader:
 
         # Make sure all the required shape files are ready
         subregion_names_ = [self.Downloader.validate_input_subregion_name(x) for x in subregion_names]
+        layer_name_ = find_similar_str(layer_name, get_valid_shp_layer_names())
 
         osm_file_format = ".shp.zip"
 
@@ -1122,14 +1124,15 @@ class GeoFabrikReader:
                                  for x in subregion_names_)
             file_paths = [cd(validate_input_data_dir(data_dir), f) for f in default_filenames]
 
-        extract_info = [(p, os.path.splitext(p)[0]) for p in file_paths]
+        extract_info = [(p, os.path.splitext(p)[0].replace(".", "-")) for p in file_paths]
         extract_dirs = []
         for file_path, extract_dir in extract_info:
-            unzip_shp_zip(file_path, extract_dir, layer_names=layer_name, verbose=verbose)
+            unzip_shp_zip(file_path, extract_dir, layer_names=layer_name_, verbose=verbose)
             extract_dirs.append(extract_dir)
 
         # Specify a directory that stores files for the specific layer
-        layer_ = "merged_{}_temp".format(layer_name)
+        prefix, suffix = "_".join([x.lower().replace(' ', '-') for x in subregion_names_]) + "_", "_temp"
+        layer_ = f"{prefix}{layer_name_}{suffix}"
         if data_dir is None:
             temp_path_to_merged = cd(os.path.commonpath(extract_info[0]), layer_, mkdir=True)
         else:
@@ -1141,24 +1144,53 @@ class GeoFabrikReader:
                 dest = cd(temp_path_to_merged, "{}_{}".format(subregion.lower().replace(' ', '-'), original_filename))
                 shutil.copyfile(cd(p, original_filename), dest)
 
-        if rm_zip_extracts:
-            for p in extract_dirs:
-                shutil.rmtree(p)
-
         shp_file_paths = [x for x in glob.glob(cd(temp_path_to_merged, "*.shp"))
-                          if not os.path.basename(x).startswith("merged_")]
+                          if not os.path.basename(x).startswith(prefix)]
 
         if verbose:
             print("Merging the following shape files:")
             print("\t{}".format("\n\t".join(os.path.basename(f) for f in shp_file_paths)))
             print("In progress ... ", end="")
 
+        if merged_shp_dir:
+            path_to_merged = cd(validate_input_data_dir(merged_shp_dir), mkdir=True)
+        else:
+            if data_dir:
+                path_to_merged = cd(data_dir, layer_.replace(suffix, "", -1), mkdir=True)
+            else:
+                path_to_merged = cd(os.path.commonpath(extract_info[0]), layer_.replace(suffix, "", -1), mkdir=True)
+
         try:
             if method in ('geopandas', 'gpd'):
-                merged_shp_data_ = [gpd.read_file(x) for x in shp_file_paths]
-                merged_shp_data = pd.concat(merged_shp_data_, ignore_index=True)
-                merged_shp_data.crs = {'no_defs': True, 'ellps': 'WGS84', 'datum': 'WGS84', 'proj': 'longlat'}
-                merged_shp_data.to_file(filename=temp_path_to_merged.replace("_temp", "", -1), driver="ESRI Shapefile")
+                shp_data, geom_types = [], []
+                for shp_file_path in shp_file_paths:
+                    shp_dat = gpd.read_file(shp_file_path)
+                    shp_data.append(shp_dat)
+                    geom_types.append(shp_dat['geometry'].type[0])
+
+                geom_types_ = list(set(geom_types))
+                if len(geom_types_) > 1:
+                    shp_data_dict = collections.defaultdict(list)
+                    for geo_typ, shp_dat in zip(geom_types, shp_data):
+                        shp_data_dict[geo_typ].append(shp_dat)
+
+                    for k, v in shp_data_dict.items():
+                        shp_data_ = pd.concat(v, ignore_index=True)
+                        shp_data_.crs = specify_shp_crs()
+                        shp_data_.to_file(filename=path_to_merged + f"_{k.lower()}", driver="ESRI Shapefile")
+
+                    temp_dir_ = []
+                    for x in glob.glob(cd(path_to_merged + "*", "{}*".format(prefix))):
+                        shutil.move(x, cd(temp_path_to_merged.replace(suffix, "")))
+                        temp_dir_.append(os.path.dirname(x))
+
+                    for x in set(temp_dir_):
+                        shutil.rmtree(x)
+
+                else:
+                    merged_shp_data = pd.concat(shp_data, ignore_index=True)
+                    merged_shp_data.crs = specify_shp_crs()
+                    merged_shp_data.to_file(filename=path_to_merged, driver="ESRI Shapefile")
 
             else:  # method == 'pyshp'
                 # Resource: https://github.com/GeospatialPython/pyshp
@@ -1172,22 +1204,25 @@ class GeoFabrikReader:
                         w.shape(shaperec.shape)
                     r.close()
                 w.close()
+
+                for x in glob.glob(cd(temp_path_to_merged, "{}*".format(prefix))):
+                    shutil.move(x, cd(path_to_merged, os.path.basename(x).replace(suffix, "")))
+
             print("Done.") if verbose else ""
 
-            if merged_shp_dir:
-                path_to_merged = cd(validate_input_data_dir(merged_shp_dir), mkdir=True)
-            else:
-                path_to_merged = cd(data_dir, layer_.replace("_temp", "", -1), mkdir=True)
-            for x in glob.glob(cd(temp_path_to_merged, "merged_*")):
-                shutil.move(x, cd(path_to_merged, os.path.basename(x).replace("_temp", "")))
+            if rm_zip_extracts:
+                for p in extract_dirs:
+                    shutil.rmtree(p)
 
             if rm_shp_temp:
                 shutil.rmtree(temp_path_to_merged)
 
-            print("The merged .shp file is saved at \"{}\".".format(os.path.relpath(path_to_merged))) if verbose else ""
+            print("Find the merged .shp file(s) at \"{}\".".format(os.path.relpath(path_to_merged))) if verbose else ""
 
             if ret_merged_shp_path:
-                path_to_merged_shp = glob.glob(cd(path_to_merged, "*.shp"))[0]
+                path_to_merged_shp = glob.glob(cd("{}*".format(path_to_merged), "*.shp"))
+                if len(path_to_merged_shp) == 1:
+                    path_to_merged_shp = path_to_merged_shp[0]
                 return path_to_merged_shp
 
         except Exception as e:
