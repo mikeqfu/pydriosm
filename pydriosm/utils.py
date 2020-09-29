@@ -171,6 +171,7 @@ def get_valid_shp_layer_names():
                        'landuse',
                        'natural',
                        'places',
+                       'points',
                        'pofw',
                        'pois',
                        'railways',
@@ -195,7 +196,11 @@ def find_shp_layer_name(shp_filename):
     :rtype: str
     """
 
-    layer_name = re.search(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)', shp_filename).group(0).replace("_a", "")
+    try:
+        layer_name = re.search(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)', shp_filename).group(0).replace("_a", "")
+
+    except AttributeError:
+        layer_name = re.search(r'(?<=(\\shape)\\)\w+(?=\.*)', shp_filename).group(0)
 
     return layer_name
 
