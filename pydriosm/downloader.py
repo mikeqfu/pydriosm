@@ -1064,6 +1064,7 @@ class GeoFabrikDownloader:
         """
 
         subregion_names_ = [subregion_names] if isinstance(subregion_names, str) else subregion_names.copy()
+        subregion_names_ = [self.validate_input_subregion_name(x) for x in subregion_names_]
 
         osm_file_format_ = self.validate_input_file_format(osm_file_format)
 
@@ -1274,12 +1275,12 @@ class GeoFabrikDownloader:
         """
 
         subregion_names_ = [subregion_names] if isinstance(subregion_names, str) else subregion_names.copy()
-
-        osm_file_format_ = self.validate_input_file_format(osm_file_format)
-
+        subregion_names_ = [self.validate_input_subregion_name(x) for x in subregion_names_]
         subregion_names_ = self.retrieve_names_of_subregions_of(*subregion_names_)
 
         subregion_name_list = subregion_names_.copy()
+
+        osm_file_format_ = self.validate_input_file_format(osm_file_format)
 
         for subregion_name in subregion_names_:
             if self.osm_file_exists(subregion_name, osm_file_format_, download_dir, update):
