@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 
+import numpy as np
 import pkg_resources
 import shapely.geometry
 from pyhelpers.dir import cd
@@ -296,3 +297,21 @@ def get_number_of_chunks(path_to_file, chunk_size_limit=50):
         number_of_chunks = None
 
     return number_of_chunks
+
+
+def convert_dtype_dict():
+    """
+    Specify equivalent of data types between PostgreSQL data types and `pandas.read_csv`_ (``dtype``)
+
+    :return: a dictionary as convertor between PostgreSQL data type and `pandas.read_csv`_
+    :rtype: dict
+
+    .. _`pandas.read_csv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
+    """
+
+    data_types = {'text': str,
+                  'bigint': np.int64,
+                  'json': str
+                  }
+
+    return data_types
