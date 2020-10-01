@@ -1035,9 +1035,9 @@ class GeofabrikDownloader:
                 Greater London
                 Rutland
             ? [No]|Yes: yes
-            Downloading "greater-london-latest.osm.pbf" to "dat_GeoFabrik\\ ... \\England" ...
+            Downloading "greater-london-latest.osm.pbf" to "\\dat_GeoFabrik\\ ... \\England" ...
             Done.
-            Downloading "rutland-latest.osm.pbf" to "dat_GeoFabrik\\ ... \\England" ...
+            Downloading "rutland-latest.osm.pbf" to "\\dat_GeoFabrik\\ ... \\England" ...
             Done.
 
             >>> for dwnld_path in dwnld_paths: print(os.path.relpath(dwnld_path))
@@ -1058,7 +1058,7 @@ class GeofabrikDownloader:
             Confirm to download .shp.zip data of the following geographic region(s):
                 West Midlands
             ? [No]|Yes: yes
-            Downloading "west-midlands-latest-free.shp.zip" to "tests" ...
+            Downloading "west-midlands-latest-free.shp.zip" to "\\tests" ...
             Done.
 
             >>> print(os.path.relpath(dwnld_path))
@@ -1150,7 +1150,7 @@ class GeofabrikDownloader:
                         # if confirmed(f"Confirm to download {osm_file_format_} data of {subregion_name_}?",
                         #              confirmation_required=False):
                         if verbose:
-                            print("{} \"{}\" to \"{}\" ... ".format(
+                            print("{} \"{}\" to \"\\{}\" ... ".format(
                                 "Updating" if os.path.isfile(path_to_file) else "Downloading", osm_filename,
                                 os.path.relpath(os.path.dirname(path_to_file))))
 
@@ -1272,9 +1272,9 @@ class GeofabrikDownloader:
                 Rutland
                 West Yorkshire
             ? [No]|Yes: yes
-            Downloading "rutland-latest.osm.pbf" to "tests" ...
+            Downloading "rutland-latest.osm.pbf" to "\\tests" ...
             Done.
-            Downloading "west-yorkshire-latest.osm.pbf" to "tests" ...
+            Downloading "west-yorkshire-latest.osm.pbf" to "\\tests" ...
             Done.
 
             >>> os.remove(cd("tests", "rutland-latest.osm.pbf"))
@@ -1287,7 +1287,7 @@ class GeofabrikDownloader:
             To download .osm.pbf data of the following geographic region(s):
                 West Midlands
             ? [No]|Yes: yes
-            Downloading "west-midlands-latest.osm.pbf" to "tests" ...
+            Downloading "west-midlands-latest.osm.pbf" to "\\tests" ...
             Done.
             "west-yorkshire-latest.osm.pbf" of West Yorkshire is already available at "tests".
 
@@ -1979,7 +1979,7 @@ class BBBikeDownloader:
             Confirm to download .pbf data of the following geographic region(s):
                 London
             ? [No]|Yes: yes
-            Downloading "London.osm.pbf" to "dat_BBBike\\London" ...
+            Downloading "London.osm.pbf" to "\\dat_BBBike\\London" ...
             Done.
 
             # Delete the directory generated above
@@ -1995,9 +1995,9 @@ class BBBikeDownloader:
                 Leeds
                 Birmingham
             ? [No]|Yes: yes
-            Downloading "Leeds.osm.pbf" to "tests" ...
+            Downloading "Leeds.osm.pbf" to "\\tests" ...
             Done.
-            Downloading "Birmingham.osm.pbf" to "tests" ...
+            Downloading "Birmingham.osm.pbf" to "\\tests" ...
             Done.
 
             >>> for dwnld_path in dwnld_paths: print(os.path.relpath(dwnld_path))
@@ -2036,7 +2036,7 @@ class BBBikeDownloader:
 
                     try:
                         if verbose:
-                            print("{} \"{}\" to \"{}\" ... ".format(
+                            print("{} \"{}\" to \"\\{}\" ... ".format(
                                 "Updating" if os.path.isfile(path_to_file) else "Downloading", osm_filename,
                                 os.path.relpath(os.path.dirname(path_to_file))))
 
