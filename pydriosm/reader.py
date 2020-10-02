@@ -1,5 +1,5 @@
 """
-Parsing/reading OSM data extracts.
+Read the free OSM data extracts.
 """
 
 import collections
@@ -24,38 +24,44 @@ from .utils import append_fclass_to_shp_filename, find_shp_layer_name, get_numbe
 
 def get_osm_pbf_layer_idx_names(path_to_osm_pbf):
     """
-    Get names of all layers contained in a PBF file for a given subregion.
+    Get names of all layers in a PBF data file.
 
-    :param path_to_osm_pbf: full path to a .osm.pbf file
+    :param path_to_osm_pbf: absolute path to a PBF data file
     :type path_to_osm_pbf: str
-    :return: name and index of each layer of the .osm.pbf file
+    :return: name (and index) of each layer of the PBF data file
     :rtype: dict
 
     **Example**::
 
-        import os
-        from pydriosm import GeoFabrikDownloader, get_osm_pbf_layer_idx_names
+        >>> import os
+        >>> from pydriosm import GeofabrikDownloader, get_osm_pbf_layer_idx_names
 
-        geofabrik_downloader = GeoFabrikDownloader()
+        >>> geofabrik_downloader = GeofabrikDownloader()
 
-        subregion_name = 'rutland'
-        osm_file_format = ".osm.pbf"
-        download_dir = "tests"
+        >>> sr_name = 'Rutland'
+        >>> file_fmt = ".pbf"
+        >>> dwnld_dir = "tests"
 
-        path_to_rutland_pbf = geofabrik_downloader.download_subregion_osm_file(
-            subregion_name, osm_file_format, download_dir, verbose=True, ret_download_path=True)
-        # Confirm to download .osm.pbf data of the following (sub)region(s):
-        # 	rutland
-        # ? [No]|Yes: yes
-        # Downloading "rutland-latest.osm.pbf" to "tests" ...
-        # Done.
+        >>> path_to_rutland_pbf = geofabrik_downloader.download_osm_data(sr_name, file_fmt,
+        ...                                                              dwnld_dir, verbose=True,
+        ...                                                              ret_download_path=True)
+        Confirm to download .osm.pbf data of the following geographic region(s):
+            Rutland
+        ? [No]|Yes: yes
+        Downloading "rutland-latest.osm.pbf" to "\\tests" ...
+        Done.
 
-        layer_idx_names = get_osm_pbf_layer_idx_names(path_to_rutland_pbf)
+        >>> lyr_idx_names = get_osm_pbf_layer_idx_names(path_to_rutland_pbf)
 
-        print(layer_idx_names)
-        # {0: 'points', 1: 'lines', 2: 'multilinestrings', 3: 'multipolygons', 4: 'other_relations'}
+        >>> for k, v in lyr_idx_names.items(): print(f'{k}: {v}')
+        0: points
+        1: lines
+        2: multilinestrings
+        3: multipolygons
+        4: other_relations
 
-        os.remove(path_to_rutland_pbf)
+        # Delete the downloaded PBF data file
+        >>> os.remove(path_to_rutland_pbf)
     """
 
     try:
@@ -80,9 +86,9 @@ def get_osm_pbf_layer_idx_names(path_to_osm_pbf):
 
 def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other_tags):
     """
-    Parse data of each layer in a .osm.pbf file.
+    Parse data of a layer in a PBF data file.
 
-    :param pbf_layer_data: data of a specific layer of a given .pbf file.
+    :param pbf_layer_data: data of a specific layer of PBF data.
     :type pbf_layer_data: pandas.DataFrame
     :param geo_typ: geometric type
     :type geo_typ: str
@@ -96,77 +102,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
 
     .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
 
-    **Examples**::
-
-        import ogr
-        import os
-        import pandas as pd
-        from pyhelpers.dir import cd
-        from pydriosm.reader import GeoFabrikDownloader, parse_osm_pbf_layer
-
-        geofabrik_downloader = GeoFabrikDownloader()
-
-        subregion_name = 'rutland'
-        osm_file_format = ".pbf"
-        download_dir = "tests"
-
-        path_to_rutland_pbf = geofabrik_downloader.download_subregion_osm_file(
-            subregion_name, osm_file_format, download_dir, verbose=True, ret_download_path=True)
-        # Confirm to download .osm.pbf data of the following (sub)region(s):
-        # 	rutland
-        # ? [No]|Yes: yes
-        # Downloading "rutland-latest.osm.pbf" to "tests" ...
-        # Done.
-
-        raw_rutland_pbf = ogr.Open(path_to_rutland_pbf)
-
-        geo_typ = 'points'
-
-        rutland_points_ = raw_rutland_pbf.GetLayerByName(geo_typ)
-        rutland_points = pd.DataFrame(feat.ExportToJson(as_object=True) for feat in rutland_points_)
-
-        rutland_points_parsed = parse_osm_pbf_layer(
-            rutland_points, geo_typ, transform_geom=False, transform_other_tags=False)
-
-        print(rutland_points_parsed.head())
-        #          id               coordinates  ... man_made                    other_tags
-        # 0    488432  [-0.5134241, 52.6555853]  ...     None               "odbl"=>"clean"
-        # 1    488658  [-0.5313354, 52.6737716]  ...     None                          None
-        # 2  13883868  [-0.7229332, 52.5889864]  ...     None                          None
-        # 3  14049101  [-0.7249922, 52.6748223]  ...     None  "traffic_calming"=>"cushion"
-        # 4  14558402  [-0.7266686, 52.6695051]  ...     None      "direction"=>"clockwise"
-        #
-        # [5 rows x 12 columns]
-
-        rutland_points_parsed = parse_osm_pbf_layer(
-            rutland_points, geo_typ, transform_geom=True, transform_other_tags=False)
-
-        print(rutland_points_parsed.head())
-        #          id  ...                    other_tags
-        # 0    488432  ...               "odbl"=>"clean"
-        # 1    488658  ...                          None
-        # 2  13883868  ...                          None
-        # 3  14049101  ...  "traffic_calming"=>"cushion"
-        # 4  14558402  ...      "direction"=>"clockwise"
-        #
-        # [5 rows x 12 columns]
-
-        rutland_points_parsed = parse_osm_pbf_layer(
-            rutland_points, geo_typ, transform_geom=True, transform_other_tags=True)
-
-        print(rutland_points_parsed.head())
-        #          id  ...                      other_tags
-        # 0    488432  ...               {'odbl': 'clean'}
-        # 1    488658  ...                            None
-        # 2  13883868  ...                            None
-        # 3  14049101  ...  {'traffic_calming': 'cushion'}
-        # 4  14558402  ...      {'direction': 'clockwise'}
-        #
-        # [5 rows x 12 columns]
-
-        raw_rutland_pbf.Release()
-
-        os.remove(path_to_rutland_pbf)
+    See the examples for the function :ref:`parse_osm_pbf()<pydriosm-reader-parse_osm_pbf>`.
     """
 
     def make_point_as_polygon(mp_coords):
@@ -231,6 +167,14 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
 
         return other_tags_
 
+    # def decode_other_relations_geometries(other_relations_geom):
+    #     or_types = list(set([d['type'] for d in other_relations_geom]))
+    #
+    #     if len(or_types) == 1:
+    #         or_types = or_types[0]
+    #
+    #     return or_types
+
     if not pbf_layer_data.empty:
         # Start parsing 'geometry' column
         dat_geometry = pd.DataFrame(x for x in pbf_layer_data.geometry).rename(columns={'type': 'geom_type'})
@@ -239,6 +183,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
             if transform_geom:
                 dat_geometry.coordinates = transform_single_geometry_(dat_geometry)
         else:  # geo_typ == 'other_relations'
+            # dat_geometry['geom_types'] = dat_geometry.geometries.map(decode_other_relations_geometries)
             if transform_geom:
                 dat_geometry.geometries = dat_geometry.geometries.map(transform_multi_geometries_)
                 dat_geometry.rename(columns={'geometries': 'coordinates'}, inplace=True)
@@ -258,14 +203,18 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
     else:
         parsed_layer_data = pbf_layer_data
 
+    if 'id' in parsed_layer_data.columns:
+        parsed_layer_data.sort_values('id', inplace=True)
+        parsed_layer_data.index = range(len(parsed_layer_data))
+
     return parsed_layer_data
 
 
 def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_geom, transform_other_tags):
     """
-    Parse a .osm.pbf file.
+    Parse a PBF data file.
 
-    :param path_to_osm_pbf: full path to a .osm.pbf file
+    :param path_to_osm_pbf: absolute path to a .osm.pbf file
     :type path_to_osm_pbf: str
     :param number_of_chunks: number of chunks
     :type number_of_chunks: int or None
@@ -277,6 +226,8 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
     :type transform_other_tags: bool
     :return: parsed OSM PBF data
     :rtype: dict
+
+    .. _pydriosm-reader-parse_osm_pbf:
 
     .. note::
 
@@ -295,43 +246,87 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
 
     **Example**::
 
-        import os
-        from pydriosm.reader import GeoFabrikDownloader, parse_osm_pbf
+        >>> import os
+        >>> from pydriosm.reader import GeofabrikDownloader, parse_osm_pbf
 
-        geofabrik_downloader = GeoFabrikDownloader()
+        >>> geofabrik_downloader = GeofabrikDownloader()
 
-        subregion_name = 'rutland'
-        osm_file_format = ".osm.pbf"
-        download_dir = "tests"
+        >>> sr_name = 'Rutland'
+        >>> file_fmt = ".pbf"
+        >>> dwnld_dir = "tests"
 
-        path_to_rutland_pbf = geofabrik_downloader.download_subregion_osm_file(
-            subregion_name, osm_file_format, download_dir, ret_download_path=True)
-        # Confirm to download .osm.pbf data of the following (sub)region(s):
-        # 	rutland
-        # ? [No]|Yes: yes
+        >>> path_to_rutland_pbf = geofabrik_downloader.download_osm_data(sr_name, file_fmt,
+        ...                                                              dwnld_dir, verbose=True,
+        ...                                                              ret_download_path=True)
+        Confirm to download .osm.pbf data of the following geographic region(s):
+            Rutland
+        ? [No]|Yes: yes
+        Downloading "rutland-latest.osm.pbf" to "\\tests" ...
+        Done.
 
-        chunks_no = 50
-        parsed = True
-        transform_geom = False
-        fmt_multi_geom = False
-        transform_other_tags = False
+        >>> rutland_pbf_raw = parse_osm_pbf(path_to_rutland_pbf, number_of_chunks=50,
+        ...                                 parse_raw_feat=False, transform_geom=False,
+        ...                                 transform_other_tags=False)
 
-        rutland_pbf_data = parse_osm_pbf(path_to_rutland_pbf, chunks_no, transform_geom,
-                                         fmt_multi_geom, transform_other_tags)
+        >>> print(list(rutland_pbf_raw.keys()))
+        ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
 
-        print(list(rutland_pbf_data.keys()))
-        # ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+        >>> rutland_pbf_raw_points = rutland_pbf_raw['points']
+        >>> print(rutland_pbf_raw_points.head())
+                                                      points
+        0  {"type": "Feature", "geometry": {"type": "Poin...
+        1  {"type": "Feature", "geometry": {"type": "Poin...
+        2  {"type": "Feature", "geometry": {"type": "Poin...
+        3  {"type": "Feature", "geometry": {"type": "Poin...
+        4  {"type": "Feature", "geometry": {"type": "Poin...
 
-        print(rutland_pbf_data['points'].head())
-        #                                               points
-        # 0  {"type": "Feature", "geometry": {"type": "Poin...
-        # 1  {"type": "Feature", "geometry": {"type": "Poin...
-        # 2  {"type": "Feature", "geometry": {"type": "Poin...
-        # 3  {"type": "Feature", "geometry": {"type": "Poin...
-        # 4  {"type": "Feature", "geometry": {"type": "Poin...
+        >>> rutland_pbf_parsed = parse_osm_pbf(path_to_rutland_pbf, number_of_chunks=50,
+        ...                                    parse_raw_feat=True, transform_geom=False,
+        ...                                    transform_other_tags=False)
 
-        os.remove(path_to_rutland_pbf)
+        >>> rutland_pbf_parsed_points = rutland_pbf_parsed['points']
+        >>> print(rutland_pbf_parsed_points.head())
+                 id               coordinates  ... man_made                    other_tags
+        0    488432  [-0.5134241, 52.6555853]  ...     None               "odbl"=>"clean"
+        1    488658  [-0.5313354, 52.6737716]  ...     None                          None
+        2  13883868  [-0.7229332, 52.5889864]  ...     None                          None
+        3  14049101  [-0.7249922, 52.6748223]  ...     None  "traffic_calming"=>"cushion"
+        4  14558402  [-0.7266686, 52.6695051]  ...     None      "direction"=>"clockwise"
+        [5 rows x 12 columns]
+
+        >>> rutland_pbf_parsed = parse_osm_pbf(path_to_rutland_pbf, number_of_chunks=50,
+        ...                                    parse_raw_feat=True, transform_geom=True,
+        ...                                    transform_other_tags=False)
+
+        >>> rutland_pbf_parsed_points = rutland_pbf_parsed['points']
+        >>> print(rutland_pbf_parsed_points.coordinates.head())
+        0             POINT (-0.5134241 52.6555853)
+        1             POINT (-0.5313354 52.6737716)
+        2    POINT (-0.7229332000000001 52.5889864)
+        3             POINT (-0.7249922 52.6748223)
+        4             POINT (-0.7266686 52.6695051)
+        Name: coordinates, dtype: object
+
+        >>> rutland_pbf_parsed = parse_osm_pbf(path_to_rutland_pbf, number_of_chunks=50,
+        ...                                    parse_raw_feat=True, transform_geom=True,
+        ...                                    transform_other_tags=True)
+
+        >>> rutland_pbf_parsed_points = rutland_pbf_parsed['points']
+        >>> print(rutland_pbf_parsed_points[['coordinates', 'other_tags']].head())
+                                      coordinates                      other_tags
+        0           POINT (-0.5134241 52.6555853)               {'odbl': 'clean'}
+        1           POINT (-0.5313354 52.6737716)                            None
+        2  POINT (-0.7229332000000001 52.5889864)                            None
+        3           POINT (-0.7249922 52.6748223)  {'traffic_calming': 'cushion'}
+        4           POINT (-0.7266686 52.6695051)      {'direction': 'clockwise'}
+
+        # Delete the downloaded PBF data file
+        >>> os.remove(path_to_rutland_pbf)
+
+    See also the examples for the method :ref:`GeofabrikReader.read_osm_pbf()<pydriosm-reader-geofabrik-read_osm_pbf>`.
     """
+
+    parse_raw_feat_ = True if transform_geom or transform_other_tags else copy.copy(parse_raw_feat)
 
     raw_osm_pbf = ogr.Open(path_to_osm_pbf)
     # Grab available layers in file: points, lines, multilinestrings, multipolygons, & other_relations
@@ -357,7 +352,7 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
 
             all_lyr_dat = []
             for feat in feats:
-                if parse_raw_feat:
+                if parse_raw_feat_:
                     lyr_dat_ = pd.DataFrame(f.ExportToJson(as_object=True) for f in feat)
                     lyr_dat = parse_osm_pbf_layer(lyr_dat_, geo_typ=layer_name, transform_geom=transform_geom,
                                                   transform_other_tags=transform_other_tags)
@@ -375,7 +370,7 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
             layer_data = pd.concat(all_lyr_dat, ignore_index=True, sort=False)
 
         else:
-            if parse_raw_feat:
+            if parse_raw_feat_:
                 layer_data_ = pd.DataFrame(feature.ExportToJson(as_object=True) for _, feature in enumerate(layer_dat))
                 layer_data = parse_osm_pbf_layer(layer_data_, geo_typ=layer_name, transform_geom=transform_geom,
                                                  transform_other_tags=transform_other_tags)
@@ -401,9 +396,9 @@ def unzip_shp_zip(path_to_shp_zip, path_to_extract_dir=None, layer_names=None, m
     """
     Unzip a .shp.zip file.
 
-    :param path_to_shp_zip: full path to a .shp.zip file
+    :param path_to_shp_zip: absolute path to a .shp.zip file
     :type path_to_shp_zip: str
-    :param path_to_extract_dir: full path to a directory where extracted files will be saved;
+    :param path_to_extract_dir: absolute path to a directory where extracted files will be saved;
         if ``None`` (default), use the same directory where the .shp.zip file is
     :type path_to_extract_dir: str or None
     :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;;
@@ -425,67 +420,67 @@ def unzip_shp_zip(path_to_shp_zip, path_to_extract_dir=None, layer_names=None, m
 
     **Examples**::
 
-        import os
-        from pyhelpers.dir import cd, rm_dir
-        from pydriosm.reader import GeoFabrikDownloader, unzip_shp_zip
+        >>> import os
+        >>> from pyhelpers.dir import cd, delete_dir
+        >>> from pydriosm.reader import GeofabrikDownloader, unzip_shp_zip
 
-        geofabrik_downloader = GeoFabrikDownloader()
+        >>> geofabrik_downloader = GeofabrikDownloader()
 
-        subregion_name = 'rutland'
-        osm_file_format = ".shp"
-        download_dir = "tests"
+        >>> sr_name = 'Rutland'
+        >>> file_fmt = ".shp"
+        >>> dwnld_dir = "tests"
 
-        path_to_rutland_shp_zip = geofabrik_downloader.download_subregion_osm_file(
-            subregion_name, osm_file_format, download_dir, verbose=True, ret_download_path=True)
-        # Confirm to download .shp.zip data of the following (sub)region(s):
-        # 	rutland
-        # ? [No]|Yes: yes
-        # Downloading "rutland-latest-free.shp.zip" to "tests" ...
-        # Done.
+        >>> path_to_rutland_shp_zip = geofabrik_downloader.download_osm_data(sr_name, file_fmt,
+        ...                                                                  dwnld_dir,
+        ...                                                                  ret_download_path=True)
+        Confirm to download .shp.zip data of the following geographic region(s):
+            Rutland
+        ? [No]|Yes: yes
 
-        layer_names = 'railways'
+        >>> layer_name = 'railways'
 
-        unzip_shp_zip(path_to_rutland_shp_zip, layer_names=layer_names, verbose=True)
-        # Extracting from "rutland-latest-free.shp.zip" the following layer(s):
-        # 	'railways'
-        # to "tests\\rutland-latest-free-shp" ...
-        # In progress ... Done.
+        >>> unzip_shp_zip(path_to_rutland_shp_zip, layer_names=layer_name, verbose=True)
+        Extracting from "rutland-latest-free.shp.zip" the following layer(s):
+            'railways'
+        to "\\tests\\rutland-latest-free-shp" ...
+        In progress ... Done.
 
-        layer_names = None
+        >>> path_to_rutland_shp_dir = unzip_shp_zip(path_to_rutland_shp_zip, verbose=True,
+        ...                                  ret_extract_dir=True)
+        Extracting all of "rutland-latest-free.shp.zip" to "\\tests\\rutland-latest-free-shp" ...
+        In progress ... Done.
 
-        path_to_extract_dir = unzip_shp_zip(path_to_rutland_shp_zip, verbose=True,
-                                            ret_extract_dir=True)
-        # Extracting all of "rutland-latest-free.shp.zip" to "tests\\rutland-latest-free-shp" ...
-        # In progress ... Done.
+        >>> lyr_names = ['railways', 'transport', 'traffic']
 
-        layer_names = ['railways', 'transport', 'traffic']
+        >>> paths_to_layer_dirs = unzip_shp_zip(path_to_rutland_shp_zip, layer_names=lyr_names,
+        ...                                       clustered=True, verbose=2, ret_extract_dir=True)
+        Extracting from "rutland-latest-free.shp.zip" the following layer(s):
+            'railways'
+            'transport'
+            'traffic'
+        to "\\tests\\rutland-latest-free-shp" ...
+        In progress ... Done.
+        Clustering the layer data ...
+            traffic_a ...
+            transport_a ...
+            railways ...
+            transport ...
+            traffic ...
+        Done.
 
-        paths_to_extract_dirs = unzip_shp_zip(path_to_rutland_shp_zip, layer_names=layer_names,
-                                              clustered=True, verbose=2, ret_extract_dir=True)
-        # Extracting from "rutland-latest-free.shp.zip" the following layer(s):
-        # 	'railways'
-        # 	'transport'
-        # 	'traffic'
-        # to "tests\\rutland-latest-free-shp" ...
-        # In progress ... Done.
-        # Clustering the layer data ...
-        # 	railways ...
-        # 	transport ...
-        # 	traffic ...
-        # 	transport_a ...
-        # 	traffic_a ...
-        # Done.
+        >>> for path_to_lyr_dir in paths_to_layer_dirs: print(os.path.relpath(path_to_lyr_dir))
+        tests\\rutland-latest-free-shp\\traffic
+        tests\\rutland-latest-free-shp\\railways
+        tests\\rutland-latest-free-shp\\transport
 
-        print(paths_to_extract_dirs)
-        # ['<cwd>\\tests\\rutland-latest-free-shp\\transport',
-        #  '<cwd>\\tests\\rutland-latest-free-shp\\traffic',
-        #  '<cwd>\\tests\\rutland-latest-free-shp\\railways']
+        # Delete the extracted files
+        >>> delete_dir(os.path.dirname(path_to_lyr_dir))
+        The directory "\\tests\\rutland-latest-free-shp" is not empty.
+        Confirmed to delete it? [No]|Yes: yes
+        Deleting "\\tests\\rutland-latest-free-shp" ... Done.
 
-        rm_dir(path_to_extract_dir)
-        # "<cwd>\\tests\\rutland-latest-free-shp" is not empty. Confirmed to remove the directory?
-        # [No]|Yes: yes
-
-        os.remove(path_to_rutland_shp_zip)
+        # Delete the downloaded .shp.zip data file
+        >>> os.remove(path_to_rutland_shp_zip)
     """
 
     extract_dir = path_to_extract_dir if path_to_extract_dir \
@@ -494,14 +489,14 @@ def unzip_shp_zip(path_to_shp_zip, path_to_extract_dir=None, layer_names=None, m
     if not layer_names:
         layer_names_ = layer_names
         if verbose:
-            print("Extracting all of \"{}\" to \"{}\" ... ".format(
+            print("Extracting all of \"{}\" to \"\\{}\" ... ".format(
                 os.path.basename(path_to_shp_zip), os.path.relpath(extract_dir)))
     else:
         layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
         if verbose:
             print("Extracting from \"{}\" the following layer(s):".format(os.path.basename(path_to_shp_zip)))
             print("\t{}".format("\n\t".join([f"'{x}'" for x in layer_names_])))
-            print("to \"{}\" ... ".format(os.path.relpath(extract_dir)))
+            print("to \"\\{}\" ... ".format(os.path.relpath(extract_dir)))
 
     print("In progress", end=" ... ") if verbose else ""
     try:
@@ -553,11 +548,11 @@ def unzip_shp_zip(path_to_shp_zip, path_to_extract_dir=None, layer_names=None, m
         return extract_dir
 
 
-def parse_shp(path_to_shp, method='geopandas', **kwargs):
+def read_shp_file(path_to_shp, method='geopandas', **kwargs):
     """
-    Read a shapefile format (.shp) file.
+    Parse a shapefile.
 
-    :param path_to_shp: full path to a .shp data file
+    :param path_to_shp: absolute path to a .shp data file
     :type: str
     :param method: the method used to read the .shp file;
         if ``'geopandas'`` (default), use the `geopandas.read_file()`_ method,
@@ -572,56 +567,56 @@ def parse_shp(path_to_shp, method='geopandas', **kwargs):
 
     **Examples**::
 
-        from pyhelpers.dir import cd, rm_dir
-        from pydriosm.reader import GeoFabrikDownloader, unzip_shp_zip, parse_shp
+        >>> from pyhelpers.dir import cd, delete_dir
+        >>> from pydriosm.reader import GeofabrikDownloader, unzip_shp_zip, read_shp_file
 
-        geofabrik_downloader = GeoFabrikDownloader()
+        >>> geofabrik_downloader = GeofabrikDownloader()
 
-        subregion_name = 'rutland'
-        osm_file_format = ".shp"
-        download_dir = "tests"
+        >>> sr_name = 'Rutland'
+        >>> file_fmt = ".shp"
+        >>> dwnld_dir = "tests"
 
-        path_to_rutland_shp_zip = geofabrik_downloader.download_subregion_osm_file(
-            subregion_name, osm_file_format, download_dir, ret_download_path=True)
-        # Confirm to download .shp.zip data of the following (sub)region(s):
-        # 	rutland
-        # ? [No]|Yes: yes
+        >>> path_to_rutland_shp_zip = geofabrik_downloader.download_osm_data(sr_name, file_fmt,
+        ...                                                                  dwnld_dir,
+        ...                                                                  ret_download_path=True)
+        Confirm to download .shp.zip data of the following geographic region(s):
+            Rutland
+        ? [No]|Yes: yes
 
-        rutland_shp_dir = unzip_shp_zip(path_to_rutland_shp_zip, ret_extract_dir=True)
+        >>> path_to_rutland_shp_dir = unzip_shp_zip(path_to_rutland_shp_zip, ret_extract_dir=True)
 
-        path_to_railways_shp = cd(rutland_shp_dir, "gis_osm_railways_free_1.shp")
+        >>> railways_shp_filename = "gis_osm_railways_free_1.shp"
+        >>> path_to_rutland_railways_shp = cd(path_to_rutland_shp_dir, railways_shp_filename)
 
-        method = 'geopandas'  # or 'gpd'
-        rutland_railways_shp = parse_shp(path_to_railways_shp, method)  # geopandas.GeoDataFrame
+        >>> rutland_railways_shp = read_shp_file(path_to_rutland_railways_shp, method='gpd')
 
-        print(rutland_railways_shp.head())
-        #     osm_id  code  ... tunnel                                           geometry
-        # 0  2162114  6101  ...      F  LINESTRING (-0.45281 52.69934, -0.45189 52.698...
-        # 1  3681043  6101  ...      F  LINESTRING (-0.65312 52.57308, -0.65318 52.572...
-        # 2  3693985  6101  ...      F  LINESTRING (-0.73234 52.67821, -0.73191 52.678...
-        # 3  3693986  6101  ...      F  LINESTRING (-0.61731 52.61323, -0.62419 52.614...
-        # 4  4806329  6101  ...      F  LINESTRING (-0.45769 52.70352, -0.45654 52.702...
-        #
-        # [5 rows x 8 columns]
+        >>> print(rutland_railways_shp.head())
+            osm_id  code  ... tunnel                                           geometry
+        0  2162114  6101  ...      F  LINESTRING (-0.45281 52.69934, -0.45189 52.698...
+        1  3681043  6101  ...      F  LINESTRING (-0.65312 52.57308, -0.65318 52.572...
+        2  3693985  6101  ...      F  LINESTRING (-0.73234 52.67821, -0.73191 52.678...
+        3  3693986  6101  ...      F  LINESTRING (-0.61731 52.61323, -0.62419 52.614...
+        4  4806329  6101  ...      F  LINESTRING (-0.45769 52.70352, -0.45654 52.702...
+        [5 rows x 8 columns]
 
-        method = 'pyshp'  # (Or anything except 'geopandas')
-        rutland_railways_shp = parse_shp(path_to_railways_shp, method)  # pandas.DataFrame
+        >>> rutland_railways_shp = read_shp_file(path_to_rutland_railways_shp, method='pyshp')
 
-        print(rutland_railways_shp.head())
-        #     osm_id  code  ...                                             coords shape_type
-        # 0  2162114  6101  ...  [(-0.4528083, 52.6993402), (-0.4518933, 52.698...          3
-        # 1  3681043  6101  ...  [(-0.6531215, 52.5730787), (-0.6531793, 52.572...          3
-        # 2  3693985  6101  ...  [(-0.7323403, 52.6782102), (-0.7319059, 52.678...          3
-        # 3  3693986  6101  ...  [(-0.6173072, 52.6132317), (-0.6241869, 52.614...          3
-        # 4  4806329  6101  ...  [(-0.4576926, 52.7035194), (-0.4565358, 52.702...          3
-        #
-        # [5 rows x 9 columns]
+        >>> print(rutland_railways_shp.head())
+            osm_id  code  ...                                             coords shape_type
+        0  2162114  6101  ...  [(-0.4528083, 52.6993402), (-0.4518933, 52.698...          3
+        1  3681043  6101  ...  [(-0.6531215, 52.5730787), (-0.6531793, 52.572...          3
+        2  3693985  6101  ...  [(-0.7323403, 52.6782102), (-0.7319059, 52.678...          3
+        3  3693986  6101  ...  [(-0.6173072, 52.6132317), (-0.6241869, 52.614...          3
+        4  4806329  6101  ...  [(-0.4576926, 52.7035194), (-0.4565358, 52.702...          3
+        [5 rows x 9 columns]
 
-        rm_dir(path_to_extract_dir)
-        # "<cwd>\\tests\\rutland-latest-free-shp" is not empty. Confirmed to remove the directory?
-        # [No]|Yes: yes
+        >>> delete_dir(path_to_rutland_shp_dir, verbose=True)
+        The directory "\\tests\\rutland-latest-free-shp" is not empty.
+        Confirmed to delete it? [No]|Yes: yes
+        Deleting "\\tests\\rutland-latest-free-shp" ... Done.
 
-        os.remove(path_to_rutland_shp_zip)
+        # Delete the downloaded shapefile
+        >>> os.remove(path_to_rutland_shp_zip)
     """
 
     if method in ('geopandas', 'gpd'):  # default
@@ -645,21 +640,21 @@ def parse_shp(path_to_shp, method='geopandas', **kwargs):
     return shp_data
 
 
-def specify_shp_crs():
+def get_default_shp_crs():
     """
-    Specify the coordinate reference system (CRS) for saving shapefile format data.
+    Get default specification of the coordinate reference system (CRS) for saving shapefile format data.
 
     :return: default settings of CRS
     :rtype: dict
 
     **Example**::
 
-        from pydriosm.reader import specify_shp_crs
+        >>> from pydriosm.reader import get_default_shp_crs
 
-        crs = specify_shp_crs()
+        >>> default_shp_crs = get_default_shp_crs()
 
-        print(crs)
-        # {'no_defs': True, 'ellps': 'WGS84', 'datum': 'WGS84', 'proj': 'longlat'}
+        >>> print(default_shp_crs)
+        {'no_defs': True, 'ellps': 'WGS84', 'datum': 'WGS84', 'proj': 'longlat'}
     """
 
     crs = {'no_defs': True, 'ellps': 'WGS84', 'datum': 'WGS84', 'proj': 'longlat'}
@@ -667,19 +662,19 @@ def specify_shp_crs():
     return crs
 
 
-def parse_shp_layer(path_to_layer_shp, feature_names=None, crs=None, save_fclass_shp=False, driver='ESRI Shapefile',
+def parse_layer_shp(path_to_layer_shp, feature_names=None, crs=None, save_fclass_shp=False, driver='ESRI Shapefile',
                     ret_path_to_fclass_shp=False, **kwargs):
     """
-    Parse a layer of OSM .shp data file.
+    Parse a layer of OSM shapefile data.
 
-    :param path_to_layer_shp: full paths to one or multiple .shp data files (of the one layer)
+    :param path_to_layer_shp: absolute path(s) to one (or multiple) shapefile(s)
     :type path_to_layer_shp: str or list
-    :param feature_names: class name (or names) of a feature (or features), defaults to ``None``
+    :param feature_names: class name(s) of feature(s), defaults to ``None``
     :type feature_names: str or list or None
     :param crs: specification of coordinate reference system; if ``None`` (default),
         check :py:func:`specify_shp_crs()<pydriosm.reader.specify_shp_crs>`
     :type crs: dict
-    :param save_fclass_shp: (when ``fclass`` is not ``None``) whether to save the data of the ``fclass`` as shapefile,
+    :param save_fclass_shp: (when ``fclass`` is not ``None``) whether to save data of the ``fclass`` as shapefile,
         defaults to ``False``
     :type save_fclass_shp: bool
     :param driver: the OGR format driver, defaults to ``'ESRI Shapefile'``;
@@ -688,64 +683,63 @@ def parse_shp_layer(path_to_layer_shp, feature_names=None, crs=None, save_fclass
     :param ret_path_to_fclass_shp: (when ``save_fclass_shp`` is ``True``) whether to return the path to
         the saved data of ``fclass``, defaults to ``False``
     :type ret_path_to_fclass_shp: bool
-    :param kwargs: optional parameters of `geopandas.read_file()`_
-    :return: shapefile data
+    :param kwargs: optional parameters of :py:func:`read_shp_file()<pydriosm.reader.read_shp_file>`
+    :return: parsed shapefile data
     :rtype: geopandas.GeoDataFrame
 
-    .. _`geopandas.read_file()`: https://geopandas.org/reference/geopandas.read_file.html
     .. _`geopandas.GeoDataFrame.to_file()`: https://geopandas.org/reference.html#geopandas.GeoDataFrame.to_file
 
     **Examples**::
 
-        from pyhelpers.dir import cd, rm_dir
-        from pydriosm.reader import GeoFabrikDownloader, parse_shp_layer, unzip_shp_zip
+        >>> import os
+        >>> from pyhelpers.dir import cd, delete_dir
+        >>> from pydriosm.reader import GeofabrikDownloader, parse_layer_shp, unzip_shp_zip
 
-        geofabrik_downloader = GeoFabrikDownloader()
+        >>> geofabrik_downloader = GeofabrikDownloader()
 
-        subregion_name = 'rutland'
+        >>> sr_name = 'Rutland'
 
-        path_to_shp_zip = geofabrik_downloader.download_subregion_osm_file(
-            subregion_name, osm_file_format=".shp", download_dir="tests", ret_download_path=True,
-            confirmation_required=False)
+        >>> path_to_rutland_shp_zip = geofabrik_downloader.download_osm_data(
+        ...     sr_name, osm_file_format=".shp", download_dir="tests", confirmation_required=False,
+        ...     ret_download_path=True)
 
-        rutland_shp_dir = unzip_shp_zip(path_to_rutland_shp_zip, ret_extract_dir=True)
+        >>> rutland_shp_dir = unzip_shp_zip(path_to_rutland_shp_zip, ret_extract_dir=True)
+        >>> path_to_railways_shp = cd(rutland_shp_dir, "gis_osm_railways_free_1.shp")
 
-        path_to_railways_shp = cd(rutland_shp_dir, "gis_osm_railways_free_1.shp")
+        >>> rutland_railways_shp = parse_layer_shp(path_to_railways_shp)
 
-        rutland_railways_shp = parse_shp_layer(path_to_railways_shp)
+        >>> print(rutland_railways_shp.head())
+            osm_id  code  ... tunnel                                           geometry
+        0  2162114  6101  ...      F  LINESTRING (-0.45281 52.69934, -0.45189 52.698...
+        1  3681043  6101  ...      F  LINESTRING (-0.65312 52.57308, -0.65318 52.572...
+        2  3693985  6101  ...      F  LINESTRING (-0.73234 52.67821, -0.73191 52.678...
+        3  3693986  6101  ...      F  LINESTRING (-0.61731 52.61323, -0.62419 52.614...
+        4  4806329  6101  ...      F  LINESTRING (-0.45769 52.70352, -0.45654 52.702...
+        [5 rows x 8 columns]
 
-        print(rutland_railways_shp.head())
-        #     osm_id  code  ... tunnel                                           geometry
-        # 0  2162114  6101  ...      F  LINESTRING (-0.45281 52.69934, -0.45189 52.698...
-        # 1  3681043  6101  ...      F  LINESTRING (-0.65312 52.57308, -0.65318 52.572...
-        # 2  3693985  6101  ...      F  LINESTRING (-0.73234 52.67821, -0.73191 52.678...
-        # 3  3693986  6101  ...      F  LINESTRING (-0.61731 52.61323, -0.62419 52.614...
-        # 4  4806329  6101  ...      F  LINESTRING (-0.45769 52.70352, -0.45654 52.702...
-        #
-        # [5 rows x 8 columns]
+        >>> rutland_railways_rail, path_to_rutland_railways_rail = parse_layer_shp(
+        ...     path_to_railways_shp, feature_names='rail', save_fclass_shp=True,
+        ...     ret_path_to_fclass_shp=True)
 
-        rutland_railways_rail, path_to_rutland_railways_rail = parse_shp_layer(
-            path_to_railways_shp, feature_names='rail', save_fclass_shp=True,
-            ret_path_to_fclass_shp=True)
+        >>> print(rutland_railways_rail.head())
+            osm_id  code  ... tunnel                                           geometry
+        0  2162114  6101  ...      F  LINESTRING (-0.45281 52.69934, -0.45189 52.698...
+        1  3681043  6101  ...      F  LINESTRING (-0.65312 52.57308, -0.65318 52.572...
+        2  3693985  6101  ...      F  LINESTRING (-0.73234 52.67821, -0.73191 52.678...
+        3  3693986  6101  ...      F  LINESTRING (-0.61731 52.61323, -0.62419 52.614...
+        4  4806329  6101  ...      F  LINESTRING (-0.45769 52.70352, -0.45654 52.702...
+        [5 rows x 8 columns]
 
-        print(rutland_railways_rail.head())
-        #     osm_id  code  ... tunnel                                           geometry
-        # 0  2162114  6101  ...      F  LINESTRING (-0.45281 52.69934, -0.45189 52.698...
-        # 1  3681043  6101  ...      F  LINESTRING (-0.65312 52.57308, -0.65318 52.572...
-        # 2  3693985  6101  ...      F  LINESTRING (-0.73234 52.67821, -0.73191 52.678...
-        # 3  3693986  6101  ...      F  LINESTRING (-0.61731 52.61323, -0.62419 52.614...
-        # 4  4806329  6101  ...      F  LINESTRING (-0.45769 52.70352, -0.45654 52.702...
-        #
-        # [5 rows x 8 columns]
+        >>> print(os.path.relpath(path_to_rutland_railways_rail))
+        tests\\rutland-latest-free-shp\\railways\\gis_osm_railways_free_1_rail.shp
 
-        print(path_to_rutland_railways_rail)
-        # <cwd>\\tests\\rutland-latest-free-shp\\railways\\gis_osm_railways_free_1_rail.shp
+        >>> delete_dir(rutland_shp_dir, verbose=True)
+        The directory "\\tests\\rutland-latest-free-shp" is not empty.
+        Confirmed to delete it? [No]|Yes: yes
+        Deleting "\\tests\\rutland-latest-free-shp" ... Done.
 
-        rm_dir(rutland_shp_dir)
-        # "<cwd>\\tests\\rutland-latest-free-shp" is not empty. Confirmed to remove the directory?
-        # [No]|Yes: yes
-
-        os.remove(path_to_rutland_shp_zip)
+        # Delete the downloaded shapefile
+        >>> os.remove(path_to_rutland_shp_zip)
     """
 
     path_to_lyr_shp = [path_to_layer_shp] if isinstance(path_to_layer_shp, str) else copy.copy(path_to_layer_shp)
@@ -755,13 +749,13 @@ def parse_shp_layer(path_to_layer_shp, feature_names=None, crs=None, save_fclass
 
     else:
         if crs is None:
-            crs = specify_shp_crs()
+            crs = get_default_shp_crs()
 
         if len(path_to_lyr_shp) == 1:
             path_to_lyr_shp_ = path_to_lyr_shp[0]
-            shp_data = gpd.read_file(path_to_lyr_shp_, **kwargs)  # gpd.GeoDataFrame(read_shp_file(path_to_shp))
+            shp_data = read_shp_file(path_to_lyr_shp_, **kwargs)  # gpd.GeoDataFrame(read_shp_file(path_to_shp))
         else:
-            shp_data = [gpd.read_file(path_to_lyr_shp_, **kwargs) for path_to_lyr_shp_ in path_to_lyr_shp]
+            shp_data = [read_shp_file(path_to_lyr_shp_, **kwargs) for path_to_lyr_shp_ in path_to_lyr_shp]
             shp_data = pd.concat(shp_data, axis=0, ignore_index=True)
 
         shp_data.crs = crs
@@ -791,13 +785,13 @@ def parse_shp_layer(path_to_layer_shp, feature_names=None, crs=None, save_fclass
 
 def parse_csv_xz(path_to_csv_xz, col_names=None):
     """
-    Parse a .csv.xz file.
+    Parse a compressed CSV (.csv.xz) data file.
 
-    :param path_to_csv_xz: full path to a .csv.xz file
+    :param path_to_csv_xz: absolute path to a .csv.xz data file
     :type path_to_csv_xz: str
     :param col_names: column names of .csv.xz data, defaults to ``None``
     :type col_names: list or None
-    :return: tabular data of the .csv.xz file
+    :return: tabular data of the CSV file
     :rtype: pandas.DataFrame
 
     See the example for :ref:`BBBikeReader.read_csv_xz()<pydriosm-reader-bbbike-read_csv_xz>`.
@@ -816,13 +810,13 @@ def parse_csv_xz(path_to_csv_xz, col_names=None):
 
 def parse_geojson_xz(path_to_geojson_xz, fmt_geom=False):
     """
-    Parse a .geojson.xz file.
+    Parse a compressed Osmium GeoJSON (.geojson.xz) data file.
 
-    :param path_to_geojson_xz: full path to a .csv.xz file
+    :param path_to_geojson_xz: absolute path to a .geojson.xz data file
     :type path_to_geojson_xz: str
     :param fmt_geom: whether to reformat coordinates into a geometric object, defaults to ``False``
     :type fmt_geom: bool
-    :return: tabular data of the .geojson.xz file
+    :return: tabular data of the Osmium GeoJSON file
     :rtype: pandas.DataFrame
 
     See the example for :ref:`BBBikeReader.read_geojson_xz()<pydriosm-reader-bbbike-read_geojson_xz>`.
@@ -873,22 +867,66 @@ def parse_geojson_xz(path_to_geojson_xz, fmt_geom=False):
     return geojson_xz_data
 
 
-class GeoFabrikReader:
+# def validate_input_layer_names(layer_names):
+#     """
+#     Validate the input of layer name(s) for reading shape files.
+#
+#     :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;;
+#         if ``None`` (default), all available layers
+#     :type layer_names: str or list or None
+#     :return: valid layer names to be input
+#     :rtype: list
+#
+#
+#     **Examples**::
+#
+#         from pydriosm.reader import validate_shp_layer_names
+#
+#         layer_names = None
+#         layer_names_ = validate_shp_layer_names(layer_names)
+#         print(layer_names_)
+#         # []
+#
+#         layer_names = ['point', 'line']
+#         layer_names_ = validate_shp_layer_names(layer_names)
+#         print(layer_names_)
+#         # []
+#     """
+#
+#     if layer_names:
+#         layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
+#         layer_names_ = [find_similar_str(x, get_valid_shp_layer_names()) for x in layer_names_]
+#     else:
+#         layer_names_ = []
+#
+#     return layer_names_
+
+
+class GeofabrikReader:
     """
-    A class representation of a tool for reading `GeoFabrik <https://download.geofabrik.de/>`_ data extracts.
+    A class representation of a tool for reading `Geofabrik <https://download.geofabrik.de/>`_ data extracts.
+
+    **Example**::
+
+        >>> from pydriosm.reader import GeofabrikReader
+
+        >>> geofabrik_reader = GeofabrikReader()
+
+        >>> print(geofabrik_reader.Name)
+        Geofabrik OpenStreetMap data extracts
     """
 
     def __init__(self):
         """
         Constructor method.
         """
-        self.Downloader = GeoFabrikDownloader()
+        self.Downloader = GeofabrikDownloader()
         self.Name = copy.copy(self.Downloader.Name)
         self.URL = copy.copy(self.Downloader.URL)
 
     def get_path_to_osm_shp(self, subregion_name, layer_name=None, feature_name=None, data_dir=None, file_ext=".shp"):
         """
-        Search the directory of GeoFabrik data to get the full path(s) to the .shp file(s) for a subregion.
+        Get absolute path(s) to the .shp file(s) for a geographic region via searching the directory of Geofabrik data.
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
@@ -905,62 +943,58 @@ class GeoFabrikReader:
 
         **Examples**::
 
-            import os
-            from pyhelpers.dir import rm_dir
-            from pydriosm.downloader import GeoFabrikDownloader
-            from pydriosm.reader import GeoFabrikReader, unzip_shp_zip, parse_shp_layer
+            >>> import os
+            >>> from pyhelpers.dir import delete_dir
+            >>> from pydriosm.reader import GeofabrikReader, unzip_shp_zip, parse_layer_shp
 
-            geofabrik_downloader = GeoFabrikDownloader()
-            geofabrik_reader = GeoFabrikReader()
+            >>> geofabrik_reader = GeofabrikReader()
 
-            subregion_name = 'rutland'
-            file_ext = ".shp"
+            >>> sr_name = 'Rutland'
+            >>> file_fmt = ".shp"
 
-            path_to_osm_shp_file = geofabrik_reader.get_path_to_osm_shp(subregion_name)
+            >>> path_to_shp_file = geofabrik_reader.get_path_to_osm_shp(sr_name)
 
-            print(path_to_osm_shp_file)
+            >>> print(path_to_shp_file)
             # (if "gis.osm_railways_free_1.shp" is not available at the package data directory)
-            # []
+            []
 
-            osm_file_format = ".shp"
-            download_dir = "tests"
+            >>> dwnld_dir = "tests"
 
-            path_to_rutland_shp_zip = geofabrik_downloader.download_subregion_osm_file(
-                subregion_name, osm_file_format, download_dir, verbose=True, ret_download_path=True)
-            # Confirm to download .shp.zip data of the following (sub)region(s):
-            # 	rutland
-            # ? [No]|Yes: yes
-            # Downloading "rutland-latest-free.shp.zip" to "tests" ...
-            # Done.
+            # Download the shapefiles of Rutland
+            >>> path_to_rutland_shp_zip = geofabrik_reader.Downloader.download_osm_data(
+            ...     sr_name, file_fmt, dwnld_dir, confirmation_required=False,
+            ...     ret_download_path=True)
 
-            unzip_shp_zip(path_to_rutland_shp_zip, verbose=True)
-            # Extracting all of "rutland-latest-free.shp.zip" to "tests\\rutland-latest-free-shp"...
-            # In progress ... Done.
+            >>> unzip_shp_zip(path_to_rutland_shp_zip, verbose=True)
+            Extracting all of "rutland-latest-free.shp.zip" to "\\tests\\rutland-latest-free-shp" ...
+            In progress ... Done.
 
-            layer_name = 'railways'
+            >>> lyr_name = 'railways'
 
-            path_to_rutland_railways_shp = geofabrik_reader.get_path_to_osm_shp(
-                subregion_name, layer_name, data_dir=download_dir)
+            >>> path_to_rutland_railways_shp = geofabrik_reader.get_path_to_osm_shp(
+            ...     sr_name, lyr_name, data_dir=dwnld_dir)
 
-            print(path_to_rutland_railways_shp)
-            # '<cwd>\\tests\\rutland-latest-free-shp\\gis_osm_railways_free_1.shp'
+            >>> print(os.path.relpath(path_to_rutland_railways_shp))
+            tests\\rutland-latest-free-shp\\gis_osm_railways_free_1.shp
 
-            feature_name = 'rail'
+            >>> feat_name = 'rail'
 
-            _ = parse_shp_layer(path_to_rutland_railways_shp, feature_names=feature_name,
-                                save_fclass_shp=True)
+            >>> _ = parse_layer_shp(path_to_rutland_railways_shp, feature_names=feat_name,
+            ...                     save_fclass_shp=True)
 
-            path_to_rutland_railways_shp = geofabrik_reader.get_path_to_osm_shp(
-                subregion_name, layer_name, feature_name='rail', data_dir=download_dir)
+            >>> path_to_rutland_railways_rail_shp = geofabrik_reader.get_path_to_osm_shp(
+            ...     sr_name, lyr_name, feat_name, data_dir=dwnld_dir)
 
-            print(path_to_rutland_railways_shp)
-            # '<cwd>\\tests\\rutland-latest-free-shp\\railways\\gis_osm_railways_free_1_rail.shp'
+            >>> print(os.path.relpath(path_to_rutland_railways_rail_shp))
+            tests\\rutland-latest-free-shp\\railways\\gis_osm_railways_free_1_rail.shp
 
-            rm_dir(path_to_rutland_shp_zip.replace(".shp.zip", "-shp"))
-            # "<cwd>\\tests\\rutland-latest-free-shp" is not empty. Confirmed to remove the directory?
-            # [No]|Yes: yes
+            >>> delete_dir(os.path.dirname(path_to_rutland_railways_shp), verbose=True)
+            The directory "\\tests\\rutland-latest-free-shp" is not empty.
+            Confirmed to delete it? [No]|Yes: yes
+            Deleting "\\tests\\rutland-latest-free-shp" ... Done.
 
-            os.remove(path_to_rutland_shp_zip)
+            # Delete the downloaded .shp.zip file
+            >>> os.remove(path_to_rutland_shp_zip)
         """
 
         if data_dir is None:  # Go to default file path
@@ -994,7 +1028,7 @@ class GeoFabrikReader:
                         download_confirmation_required=True, data_dir=None, rm_zip_extracts=False, merged_shp_dir=None,
                         rm_shp_temp=False, verbose=False, ret_merged_shp_path=False):
         """
-        Merge GeoFabrik .shp files for a layer for two or more subregions.
+        Merge Geofabrik .shp files for a layer for two or more subregions.
 
         :param subregion_names: a list of subregion names
         :type subregion_names: list
@@ -1038,34 +1072,34 @@ class GeoFabrikReader:
 
         **Examples**::
 
-            import os
+            >>> import os
             from pyhelpers.dir import cd, rm_dir
-            from pydriosm.reader import GeoFabrikReader
+            >>> from pydriosm.reader import GeofabrikReader
 
-            geofabrik_reader = GeoFabrikReader()
+            >>> geofabrik_reader = GeofabrikReader()
 
             # To merge 'railways' layers of "Greater Manchester" and "West Yorkshire"
             subregion_names = ['Manchester', 'West Yorkshire']
             layer_name = 'railways'
-            data_dir = "tests"
+            >>> dat_dir = "tests"
 
             geofabrik_reader.merge_multi_shp(subregion_names, layer_name, data_dir=data_dir,
                                              rm_shp_temp=True, verbose=True)
-            # Confirm to download .shp.zip data of the following (sub)region(s):
+            # Confirm to download .shp.zip data of the following geographic region(s):
             # 	Greater Manchester
             # 	West Yorkshire
             # ? [No]|Yes: yes
-            # Downloading "greater-manchester-latest-free.shp.zip" to "tests" ...
+            # Downloading "greater-manchester-latest-free.shp.zip" to "\\tests" ...
             # Done.
-            # Downloading "west-yorkshire-latest-free.shp.zip" to "tests" ...
+            # Downloading "west-yorkshire-latest-free.shp.zip" to "\\tests" ...
             # Done.
             # Extracting from "greater-manchester-latest-free.shp.zip" the following layer(s):
             # 	'railways'
-            # to "tests\\greater-manchester-latest-free-shp" ...
+            # to "\\tests\\greater-manchester-latest-free-shp" ...
             # In progress ... Done.
             # Extracting from "west-yorkshire-latest-free.shp.zip" the following layer(s):
             # 	'railways'
-            # to "tests\\west-yorkshire-latest-free-shp" ...
+            # to "\\tests\\west-yorkshire-latest-free-shp" ...
             # In progress ... Done.
             # Merging the following shape files:
             # 	manchester_gis_osm_railways_free_1.shp
@@ -1081,11 +1115,11 @@ class GeoFabrikReader:
             # "west-yorkshire-latest-free.shp.zip" of West Yorkshire is already available...
             # Extracting from "greater-manchester-latest-free.shp.zip" the following layer(s):
             # 	'railways'
-            # to "tests\\greater-manchester-latest-free-shp" ...
+            # to "\\tests\\greater-manchester-latest-free-shp" ...
             # In progress ... Done.
             # Extracting from "west-yorkshire-latest-free.shp.zip" the following layer(s):
             # 	'railways'
-            # to "tests\\west-yorkshire-latest-free-shp" ...
+            # to "\\tests\\west-yorkshire-latest-free-shp" ...
             # In progress ... Done.
             # Merging the following shape files:
             # 	manchester_gis_osm_railways_free_1.shp
@@ -1093,7 +1127,7 @@ class GeoFabrikReader:
             # In progress ... Done.
             # Find the merged .shp file(s) at "tests\\greater-manchester_west-yorkshire_railways".
 
-            print(path_to_merged_shp)
+            >>> print(path_to_merged_shp)
             # <cwd>\\tests\\...\\greater-manchester_west-yorkshire_railways.shp
 
             rm_dir(os.path.dirname(path_to_merged_shp))
@@ -1110,10 +1144,10 @@ class GeoFabrikReader:
 
         osm_file_format = ".shp.zip"
 
-        self.Downloader.download_subregion_osm_file(subregion_names_, osm_file_format=osm_file_format,
-                                                    download_dir=data_dir, update=update,
-                                                    confirmation_required=download_confirmation_required,
-                                                    deep_retry=True, interval_sec=0, verbose=verbose)
+        self.Downloader.download_osm_data(subregion_names_, osm_file_format=osm_file_format,
+                                          download_dir=data_dir, update=update,
+                                          confirmation_required=download_confirmation_required,
+                                          deep_retry=True, interval_sec=0, verbose=verbose)
 
         # Extract all files from .zip
         if data_dir is None:
@@ -1176,7 +1210,7 @@ class GeoFabrikReader:
 
                     for k, v in shp_data_dict.items():
                         shp_data_ = pd.concat(v, ignore_index=True)
-                        shp_data_.crs = specify_shp_crs()
+                        shp_data_.crs = get_default_shp_crs()
                         shp_data_.to_file(filename=path_to_merged + f"_{k.lower()}", driver="ESRI Shapefile")
 
                     temp_dir_ = []
@@ -1189,7 +1223,7 @@ class GeoFabrikReader:
 
                 else:
                     merged_shp_data = pd.concat(shp_data, ignore_index=True)
-                    merged_shp_data.crs = specify_shp_crs()
+                    merged_shp_data.crs = get_default_shp_crs()
                     merged_shp_data.to_file(filename=path_to_merged, driver="ESRI Shapefile")
 
             else:  # method == 'pyshp'
@@ -1230,10 +1264,9 @@ class GeoFabrikReader:
 
     def read_shp_zip(self, subregion_name, layer_names=None, feature_names=None, data_dir=None, update=False,
                      download_confirmation_required=True, pickle_it=False, ret_pickle_path=False, rm_extracts=False,
-                     rm_shp_zip=False,
-                     verbose=False):
+                     rm_shp_zip=False, verbose=False):
         """
-        Read GeoFabrik .shp.zip file of a subregion.
+        Read Geofabrik .shp.zip file of a subregion.
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
@@ -1253,7 +1286,7 @@ class GeoFabrikReader:
         :type download_confirmation_required: bool
         :param pickle_it: whether to save the .shp data as a .pickle file, defaults to ``False``
         :type pickle_it: bool
-        :param ret_pickle_path: whether to return a full path to the saved pickle file (when ``pickle_it=True``)
+        :param ret_pickle_path: whether to return an absolute path to the saved pickle file (when ``pickle_it=True``)
         :type ret_pickle_path: bool
         :param rm_extracts: whether to delete extracted files from the .shp.zip file, defaults to ``False``
         :type rm_extracts: bool
@@ -1269,33 +1302,33 @@ class GeoFabrikReader:
 
         **Example**::
 
-            from pydriosm.reader import GeoFabrikReader
+            >>> from pydriosm.reader import GeofabrikReader
 
-            geofabrik_reader = GeoFabrikReader()
+            >>> geofabrik_reader = GeofabrikReader()
 
-            subregion_name = 'Rutland'
-            data_dir = "tests"
+            >>> sr_name = 'Rutland'
+            >>> dat_dir = "tests"
 
-            shp_data = geofabrik_reader.read_shp_zip(subregion_name, data_dir=data_dir)
-            # Confirm to download .shp.zip data of the following (sub)region(s):
+            rutland_shp = geofabrik_reader.read_shp_zip(subregion_name, data_dir=data_dir)
+            # Confirm to download .shp.zip data of the following geographic region(s):
             # 	Rutland
             # ? [No]|Yes: yes
 
-            print(list(shp_data.keys()))
-            # ['buildings',
-            #  'landuse',
-            #  'natural',
-            #  'places',
-            #  'pofw',
-            #  'pois',
-            #  'railways',
-            #  'roads',
-            #  'traffic',
+            print(list(rutland_shp.keys()))
+            # ['waterways',
+            #  'buildings',
             #  'transport',
+            #  'landuse',
+            #  'railways',
+            #  'places',
+            #  'natural',
+            #  'traffic',
             #  'water',
-            #  'waterways']
+            #  'pois',
+            #  'roads',
+            #  'pofw']
 
-            print(shp_data['railways'].head())
+            print(rutland_shp['railways'].head())
             #     osm_id  code  ... tunnel                                           geometry
             # 0  2162114  6101  ...      F  LINESTRING (-0.45281 52.69934, -0.45189 52.698...
             # 1  3681043  6101  ...      F  LINESTRING (-0.65312 52.57308, -0.65318 52.572...
@@ -1308,14 +1341,15 @@ class GeoFabrikReader:
             layer_names = 'transport'
             feature_names = None
 
-            shp_data = geofabrik_reader.read_shp_zip(subregion_name, layer_names, feature_names,
-                                                     data_dir, rm_extracts=True, verbose=True)
+            rutland_shp_transport = geofabrik_reader.read_shp_zip(subregion_name, layer_names,
+                                                                  feature_names, data_dir,
+                                                                  rm_extracts=True, verbose=True)
             # Deleting the extracted files ... Done.
 
-            print(list(shp_data.keys()))
+            print(list(rutland_shp_transport.keys()))
             # ['transport']
 
-            print(shp_data['transport'].head())
+            print(rutland_shp_transport['transport'].head())
             #       osm_id  code    fclass                    name                   geometry
             # 0  472398147  5621  bus_stop                    None  POINT (-0.73213 52.66974)
             # 1  502322073  5621  bus_stop              Fife Close  POINT (-0.50962 52.66052)
@@ -1326,17 +1360,17 @@ class GeoFabrikReader:
             layer_names = 'transport'
             feature_names = 'bus_stop'
 
-            shp_data = geofabrik_reader.read_shp_zip(subregion_name, layer_names, feature_names,
-                                                     data_dir, verbose=True)
+            rutland_shp_transport_bus_stop = geofabrik_reader.read_shp_zip(
+                subregion_name, layer_names, feature_names, data_dir, verbose=True)
             # Extracting from "rutland-latest-free.shp.zip" the following layer(s):
             # 	'transport'
-            # to "tests\\rutland-latest-free-shp" ...
+            # to "\\tests\\rutland-latest-free-shp" ...
             # In progress ... Done.
 
-            print(list(shp_data.keys()))
+            print(list(rutland_shp_transport_bus_stop.keys()))
             # ['transport']
 
-            print(shp_data['transport'].head())
+            print(rutland_shp_transport_bus_stop['transport'].head())
             #       osm_id  code    fclass                    name                   geometry
             # 0  472398147  5621  bus_stop                    None  POINT (-0.73213 52.66974)
             # 1  502322073  5621  bus_stop              Fife Close  POINT (-0.50962 52.66052)
@@ -1353,7 +1387,7 @@ class GeoFabrikReader:
             # Extracting from "rutland-latest-free.shp.zip" the following layer(s):
             # 	'traffic'
             # 	'roads'
-            # to "tests\\rutland-latest-free-shp" ...
+            # to "\\tests\\rutland-latest-free-shp" ...
             # In progress ... Done.
             # Deleting the extracted files ... Done.
             # Deleting "tests\\rutland-latest-free.shp.zip" ... Done.
@@ -1361,7 +1395,9 @@ class GeoFabrikReader:
             print(list(shp_data.keys()))
             # ['traffic', 'roads']
 
-            print(shp_data['traffic'][['fclass', 'name', 'geometry']].head())
+            selected_columns = ['fclass', 'name', 'geometry']
+
+            print(shp_data['traffic'][selected_columns].head())
             #     fclass  name                                           geometry
             # 0  parking  None  POLYGON ((-0.66704 52.71108, -0.66670 52.71121...
             # 1  parking  None  POLYGON ((-0.78712 52.71974, -0.78700 52.71991...
@@ -1369,7 +1405,7 @@ class GeoFabrikReader:
             # 3  parking  None  POLYGON ((-0.63381 52.66442, -0.63367 52.66441...
             # 4  parking  None  POLYGON ((-0.62814 52.64093, -0.62701 52.64169...
 
-            print(shp_data['roads'][['fclass', 'name', 'geometry']].head())
+            print(shp_data['roads'][selected_columns].head())
             #    fclass           name                                           geometry
             # 0   trunk           None  LINESTRING (-0.72461 52.59642, -0.72452 52.596...
             # 1   trunk   Glaston Road  LINESTRING (-0.64671 52.59353, -0.64590 52.593...
@@ -1386,7 +1422,8 @@ class GeoFabrikReader:
         if layer_names:
             layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
         else:
-            layer_names_ = get_valid_shp_layer_names()
+            layer_names_ = []  # get_valid_shp_layer_names()
+
         if feature_names:
             feature_names_ = [feature_names] if isinstance(feature_names, str) else feature_names.copy()
         else:
@@ -1418,17 +1455,23 @@ class GeoFabrikReader:
                 # Download the requested OSM file urlretrieve(download_url, file_path)
                 if not os.path.exists(path_to_extract_dir):
                     if not os.path.exists(path_to_shp_zip):
-                        self.Downloader.download_subregion_osm_file(
-                            subregion_name, osm_file_format=osm_file_format, download_dir=data_dir, update=update,
-                            confirmation_required=download_confirmation_required, verbose=verbose)
+                        self.Downloader.download_osm_data(subregion_name, osm_file_format=osm_file_format,
+                                                          download_dir=data_dir, update=update,
+                                                          confirmation_required=download_confirmation_required,
+                                                          verbose=verbose)
 
                     unzip_shp_zip(path_to_shp_zip, path_to_extract_dir, layer_names=layer_names_, verbose=verbose)
+
+                    if not layer_names_:
+                        layer_names_ = list(set(
+                            [find_shp_layer_name(x) for x in os.listdir(cd(path_to_extract_dir)) if x != 'README']))
 
                 else:
                     unavailable_layers = []
 
-                    layer_names_temp = [find_shp_layer_name(x) for x in os.listdir(cd(path_to_extract_dir))]
-                    layer_names_temp = list(set(layer_names_ + layer_names_temp))
+                    layer_names_temp_ = [find_shp_layer_name(x) for x in os.listdir(cd(path_to_extract_dir))
+                                         if x != 'README']
+                    layer_names_temp = list(set(layer_names_ + layer_names_temp_))
 
                     for lyr_name in layer_names_temp:
                         shp_filename = self.get_path_to_osm_shp(subregion_name, layer_name=lyr_name, data_dir=data_dir)
@@ -1436,21 +1479,23 @@ class GeoFabrikReader:
                             unavailable_layers.append(lyr_name)
 
                     if unavailable_layers:
-                        # if unavailable_layers == get_valid_shp_layer_names():
-                        #     unavailable_layers = None
                         if not os.path.exists(path_to_shp_zip):
-                            self.Downloader.download_subregion_osm_file(
-                                subregion_name, osm_file_format=osm_file_format, download_dir=data_dir, update=update,
-                                confirmation_required=download_confirmation_required, verbose=verbose)
+                            self.Downloader.download_osm_data(subregion_name, osm_file_format=osm_file_format,
+                                                              download_dir=data_dir, update=update,
+                                                              confirmation_required=download_confirmation_required,
+                                                              verbose=verbose)
 
                         unzip_shp_zip(path_to_shp_zip, path_to_extract_dir, layer_names=unavailable_layers,
                                       verbose=verbose)
+
+                    if not layer_names_:
+                        layer_names_ = layer_names_temp
 
                 paths_to_layers_shp = [glob.glob(cd(path_to_extract_dir, r"gis_osm_{}_*.shp".format(layer_name)))
                                        for layer_name in layer_names_]
                 paths_to_layers_shp = [x for x in paths_to_layers_shp if x]
 
-                shp_data_ = [parse_shp_layer(p, feature_names=feature_names_) for p in paths_to_layers_shp]
+                shp_data_ = [parse_layer_shp(p, feature_names=feature_names_) for p in paths_to_layers_shp]
 
                 shp_data = dict(zip(layer_names_, shp_data_))
 
@@ -1481,7 +1526,7 @@ class GeoFabrikReader:
 
     def get_path_to_osm_pbf(self, subregion_name, data_dir=None):
         """
-        Retrieve path to GeoFabrik .osm.pbf file (if available) for a subregion.
+        Retrieve path to Geofabrik .osm.pbf file (if available) for a subregion.
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
@@ -1493,35 +1538,35 @@ class GeoFabrikReader:
 
         **Example**::
 
-            import os
-            from pydriosm.reader import GeoFabrikReader
+            >>> import os
+            >>> from pydriosm.reader import GeofabrikReader
 
-            geofabrik_reader = GeoFabrikReader()
+            >>> geofabrik_reader = GeofabrikReader()
 
-            subregion_name = 'rutland'
+            >>> sr_name = 'Rutland'
             data_dir = None
 
             path_to_osm_pbf = geofabrik_reader.get_path_to_osm_pbf(subregion_name, data_dir)
 
-            print(path_to_osm_pbf)
+            >>> print(path_to_osm_pbf)
             # (if "rutland-latest.osm.pbf" is not available at the default package data directory)
             # None
 
-            osm_file_format = ".pbf"
-            download_dir = "tests"
+            >>> file_fmt = ".pbf"
+            >>> dwnld_dir = "tests"
 
             geofabrik_reader.Downloader.download_subregion_osm_file(subregion_name, osm_file_format,
                                                                     download_dir, verbose=True)
-            # Confirm to download .osm.pbf data of the following (sub)region(s):
+            # Confirm to download .osm.pbf data of the following geographic region(s):
             # 	rutland
             # ? [No]|Yes: yes
-            # Downloading "rutland-latest.osm.pbf" to "tests" ...
+            # Downloading "rutland-latest.osm.pbf" to "\\tests" ...
             # Done.
 
             path_to_osm_pbf = geofabrik_reader.get_path_to_osm_pbf(subregion_name,
                                                                    data_dir=download_dir)
 
-            print(path_to_osm_pbf)
+            >>> print(path_to_osm_pbf)
             # <cwd>\\tests\\rutland-latest.osm.pbf
 
             os.remove(path_to_osm_pbf)
@@ -1547,7 +1592,7 @@ class GeoFabrikReader:
                      update=False, download_confirmation_required=True, pickle_it=False, ret_pickle_path=False,
                      rm_osm_pbf=False, verbose=False):
         """
-        Read GeoFabrik .osm.pbf file of a subregion.
+        Read Geofabrik .osm.pbf file of a subregion.
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
@@ -1571,36 +1616,38 @@ class GeoFabrikReader:
         :type download_confirmation_required: bool
         :param pickle_it: whether to save the .pbf data as a .pickle file, defaults to ``False``
         :type pickle_it: bool
-        :param ret_pickle_path: whether to return a full path to the saved pickle file (when ``pickle_it=True``)
+        :param ret_pickle_path: whether to return an absolute path to the saved pickle file (when ``pickle_it=True``)
         :type ret_pickle_path: bool
         :param rm_osm_pbf: whether to delete the downloaded .osm.pbf file, defaults to ``False``
         :type rm_osm_pbf: bool
         :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
         :type verbose: bool or int
         :return: dictionary of the .osm.pbf data; when ``pickle_it=True``, return a tuple of the dictionary and
-            a full path to the pickle file
+            an absolute path to the pickle file
         :rtype: dict or tuple or None
+
+        .. _pydriosm-reader-geofabrik-read_osm_pbf:
 
         **Examples**::
 
-            import os
+            >>> import os
             from pyhelpers.dir import cd
-            from pydriosm.reader import GeoFabrikReader
+            >>> from pydriosm.reader import GeofabrikReader
 
-            geofabrik_reader = GeoFabrikReader()
+            >>> geofabrik_reader = GeofabrikReader()
 
-            subregion_name = 'Rutland'
-            data_dir = "tests"
+            >>> sr_name = 'Rutland'
+            >>> dat_dir = "tests"
 
-            rutland_osm_pbf = geofabrik_reader.read_osm_pbf(subregion_name, data_dir, verbose=True)
-            # Confirm to download .osm.pbf data of the following (sub)region(s):
+            >>> rutland_pbf_raw = geofabrik_reader.read_osm_pbf(sr_name, data_dir, verbose=True)
+            # Confirm to download .osm.pbf data of the following geographic region(s):
             # 	Rutland
             # ? [No]|Yes: yes
 
-            print(list(rutland_osm_pbf.keys()))
+            >>> print(list(rutland_pbf_raw.keys()))
             # ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
 
-            print(rutland_osm_pbf['points'].head())
+            print(rutland_pbf_raw['points'].head())
             #                                          points_data
             # 0  {"type": "Feature", "geometry": {"type": "Poin...
             # 1  {"type": "Feature", "geometry": {"type": "Poin...
@@ -1673,9 +1720,10 @@ class GeoFabrikReader:
             else:
                 if not os.path.isfile(path_to_osm_pbf) or update:
                     # If the target file is not available, try downloading it first.
-                    self.Downloader.download_subregion_osm_file(
-                        subregion_name, osm_file_format=osm_file_format, download_dir=data_dir, update=update,
-                        confirmation_required=download_confirmation_required, verbose=False)
+                    self.Downloader.download_osm_data(subregion_name, osm_file_format=osm_file_format,
+                                                      download_dir=data_dir, update=update,
+                                                      confirmation_required=download_confirmation_required,
+                                                      verbose=False)
 
                 if verbose and parse_raw_feat:
                     print("Parsing \"{}\"".format(os.path.basename(path_to_osm_pbf)), end=" ... ")
@@ -1734,26 +1782,26 @@ class BBBikeReader:
 
         **Example**::
 
-            import os
-            from pydriosm.reader import BBBikeReader
+            >>> import os
+            >>> from pydriosm.reader import BBBikeReader
 
-            bbbike_reader = BBBikeReader()
+            >>> bbbike_reader = BBBikeReader()
 
-            subregion_name = 'leeds'
-            osm_file_format = ".pbf"
-            data_dir = "tests"
+            >>> sr_name = 'Leeds'
+            >>> file_fmt = ".pbf"
+            >>> dat_dir = "tests"
 
-            path_to_leeds_pbf = bbbike_reader.Downloader.download_osm(
-                subregion_name, osm_file_format, data_dir, verbose=True, ret_download_path=True)
-            # Confirm to download .osm.pbf data of the following (sub)region(s):
+            >>> path_to_leeds_pbf = bbbike_reader.Downloader.download_osm_data(
+            ...     subregion_name, osm_file_format, data_dir, verbose=True, ret_download_path=True)
+            # Confirm to download .osm.pbf data of the following geographic region(s):
             # 	Leeds
             # ? [No]|Yes: yes
-            # Downloading "Leeds.osm.pbf" to "tests" ...
+            # Downloading "Leeds.osm.pbf" to "\\tests" ...
             # Done.
 
             path_to_file = bbbike_reader.get_path_to_file(subregion_name, osm_file_format, data_dir)
 
-            print(path_to_leeds_pbf == path_to_file)
+            >>> print(path_to_leeds_pbf == path_to_file)
             # True
 
             os.remove(path_to_leeds_pbf)
@@ -1788,7 +1836,7 @@ class BBBikeReader:
         :type download_confirmation_required: bool
         :param pickle_it: whether to save the .shp data as a .pickle file, defaults to ``False``
         :type pickle_it: bool
-        :param ret_pickle_path: whether to return a full path to the saved pickle file (when ``pickle_it=True``)
+        :param ret_pickle_path: whether to return an absolute path to the saved pickle file (when ``pickle_it=True``)
         :type ret_pickle_path: bool
         :param rm_extracts: whether to delete extracted files from the .shp.zip file, defaults to ``False``
         :type rm_extracts: bool
@@ -1798,22 +1846,22 @@ class BBBikeReader:
         :type verbose: bool or int
         :return: dictionary of the shapefile data, with keys and values being layer names and
             tabular data (in the format of `geopandas.GeoDataFrame`_), respectively;
-            when ``pickle_it=True``, return a tuple of the dictionary and a full path to the pickle file
+            when ``pickle_it=True``, return a tuple of the dictionary and an absolute path to the pickle file
         :rtype: dict or tuple or None
 
         .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
 
         **Example**::
 
-            from pydriosm.reader import BBBikeReader
+            >>> from pydriosm.reader import BBBikeReader
 
-            bbbike_reader = BBBikeReader()
+            >>> bbbike_reader = BBBikeReader()
 
             subregion_name = 'Birmingham'
-            data_dir = "tests"
+            >>> dat_dir = "tests"
 
             shp_data = bbbike_reader.read_shp_zip(subregion_name, data_dir=data_dir)
-            # Confirm to download .osm.shp.zip data of the following (sub)region(s):
+            # Confirm to download .osm.shp.zip data of the following geographic region(s):
             # 	Birmingham
             # ? [No]|Yes: yes
 
@@ -1859,7 +1907,7 @@ class BBBikeReader:
             # Extracting from "Birmingham.osm.shp.zip" the following layer(s):
             # 	'railways'
             # 	'waterways'
-            # to "tests" ...
+            # to "\\tests" ...
             # In progress ... Done.
             # Deleting the extracted files ... Done.
             # Deleting "tests\\Birmingham.osm.shp.zip" ... Done.
@@ -1894,7 +1942,8 @@ class BBBikeReader:
         if layer_names:
             layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
         else:
-            layer_names_ = get_valid_shp_layer_names()
+            layer_names_ = []  # get_valid_shp_layer_names()
+
         if feature_names:
             feature_names_ = [feature_names] if isinstance(feature_names, str) else feature_names.copy()
         else:
@@ -1920,18 +1969,22 @@ class BBBikeReader:
                 # Download the requested OSM file urlretrieve(download_url, file_path)
                 if not os.path.exists(path_to_extract_dir_):
                     if not os.path.exists(path_to_shp_zip):
-                        self.Downloader.download_osm(subregion_name, osm_file_format=osm_file_format,
-                                                     download_dir=data_dir, update=update,
-                                                     confirmation_required=download_confirmation_required,
-                                                     verbose=verbose)
+                        self.Downloader.download_osm_data(subregion_name, osm_file_format=osm_file_format,
+                                                          download_dir=data_dir, update=update,
+                                                          confirmation_required=download_confirmation_required,
+                                                          verbose=verbose)
 
                     unzip_shp_zip(path_to_shp_zip, path_to_extract_dir, layer_names=layer_names_, verbose=verbose)
+
+                    if not layer_names_:
+                        layer_names_ = list(set(
+                            [x.rsplit(".", 1)[0] for x in os.listdir(cd(path_to_extract_dir_, "shape"))]))
 
                 else:
                     unavailable_layers = []
 
-                    layer_names_temp = [x.rsplit(".", 1)[0] for x in os.listdir(cd(path_to_extract_dir_, "shape"))]
-                    layer_names_temp = list(set(layer_names_ + layer_names_temp))
+                    layer_names_temp_ = [x.rsplit(".", 1)[0] for x in os.listdir(cd(path_to_extract_dir_, "shape"))]
+                    layer_names_temp = list(set(layer_names_ + layer_names_temp_))
 
                     for lyr_name in layer_names_temp:
                         shp_filename = cd(path_to_extract_dir_, "shape", f"{lyr_name}.shp")
@@ -1939,22 +1992,23 @@ class BBBikeReader:
                             unavailable_layers.append(lyr_name)
 
                     if unavailable_layers:
-                        # if unavailable_layers == layer_names_temp:
-                        #     unavailable_layers = None
                         if not os.path.exists(path_to_shp_zip):
-                            self.Downloader.download_osm(subregion_name, osm_file_format=osm_file_format,
-                                                         download_dir=data_dir, update=update,
-                                                         confirmation_required=download_confirmation_required,
-                                                         verbose=verbose)
+                            self.Downloader.download_osm_data(subregion_name, osm_file_format=osm_file_format,
+                                                              download_dir=data_dir, update=update,
+                                                              confirmation_required=download_confirmation_required,
+                                                              verbose=verbose)
 
                         unzip_shp_zip(path_to_shp_zip, path_to_extract_dir, layer_names=unavailable_layers,
                                       verbose=verbose)
+
+                    if not layer_names_:
+                        layer_names_ = layer_names_temp
 
                 paths_to_layers_shp = [
                     glob.glob(cd(path_to_extract_dir_, "shape", f"{lyr_name}.shp")) for lyr_name in layer_names_]
                 paths_to_layers_shp = [x for x in paths_to_layers_shp if x]
 
-                shp_data_ = [parse_shp_layer(p, feature_names=feature_names_) for p in paths_to_layers_shp]
+                shp_data_ = [parse_layer_shp(p, feature_names=feature_names_) for p in paths_to_layers_shp]
 
                 shp_data = dict(zip(layer_names_, shp_data_))
 
@@ -2014,25 +2068,25 @@ class BBBikeReader:
         :type download_confirmation_required: bool
         :param pickle_it: whether to save the .pbf data as a .pickle file, defaults to ``False``
         :type pickle_it: bool
-        :param ret_pickle_path: whether to return a full path to the saved pickle file (when ``pickle_it=True``)
+        :param ret_pickle_path: whether to return an absolute path to the saved pickle file (when ``pickle_it=True``)
         :type ret_pickle_path: bool
         :param rm_osm_pbf: whether to delete the downloaded .osm.pbf file, defaults to ``False``
         :type rm_osm_pbf: bool
         :param verbose: whether to print relevant information in console as the function runs, defaults to ``False``
         :type verbose: bool or int
         :return: dictionary of the .osm.pbf data; when ``pickle_it=True``, return a tuple of the dictionary and
-            a full path to the pickle file
+            an absolute path to the pickle file
         :rtype: dict or tuple or None
 
         **Example**::
 
-            import os
+            >>> import os
             from pyhelpers.dir import cd
-            from pydriosm.reader import BBBikeReader
+            >>> from pydriosm.reader import BBBikeReader
 
-            bbbike_reader = BBBikeReader()
+            >>> bbbike_reader = BBBikeReader()
 
-            data_dir = "tests"
+            >>> dat_dir = "tests"
 
             # (Note that this process may take a long time.)
             leeds_osm_pbf = bbbike_reader.read_osm_pbf(subregion_name, data_dir,
@@ -2071,10 +2125,9 @@ class BBBikeReader:
 
         else:
             if not os.path.isfile(path_to_osm_pbf):
-                path_to_osm_pbf = self.Downloader.download_osm(subregion_name, osm_file_format=osm_file_format,
-                                                               download_dir=data_dir,
-                                                               confirmation_required=download_confirmation_required,
-                                                               verbose=verbose, ret_download_path=True)
+                path_to_osm_pbf = self.Downloader.download_osm_data(
+                    subregion_name, osm_file_format=osm_file_format, download_dir=data_dir,
+                    confirmation_required=download_confirmation_required, verbose=verbose, ret_download_path=True)
 
             if verbose and parse_raw_feat:
                 print("Parsing \"{}\"".format(os.path.basename(path_to_osm_pbf)), end=" ... ")
@@ -2124,12 +2177,12 @@ class BBBikeReader:
 
         **Example**::
 
-            from pydriosm.reader import BBBikeReader
+            >>> from pydriosm.reader import BBBikeReader
 
-            bbbike_reader = BBBikeReader()
+            >>> bbbike_reader = BBBikeReader()
 
-            subregion_name = 'Leeds'
-            data_dir = "tests"
+            >>> sr_name = 'Leeds'
+            >>> dat_dir = "tests"
 
             csv_xz_data = bbbike_reader.read_csv_xz(subregion_name, data_dir, verbose=True)
             # Confirm to download the .osm.csv.xz data of "Leeds" [No]|Yes: yes
@@ -2151,10 +2204,10 @@ class BBBikeReader:
         path_to_csv_xz = self.get_path_to_file(subregion_name_, osm_file_format, data_dir)
 
         if not os.path.isfile(path_to_csv_xz):
-            path_to_csv_xz = self.Downloader.download_osm(subregion_name_, osm_file_format=osm_file_format,
-                                                          download_dir=data_dir,
-                                                          confirmation_required=download_confirmation_required,
-                                                          verbose=verbose, ret_download_path=True)
+            path_to_csv_xz = self.Downloader.download_osm_data(subregion_name_, osm_file_format=osm_file_format,
+                                                               download_dir=data_dir,
+                                                               confirmation_required=download_confirmation_required,
+                                                               verbose=verbose, ret_download_path=True)
 
         if verbose:
             print("Parsing the {} data for \"{}\"".format(osm_file_format, subregion_name_), end=" ... ")
@@ -2192,12 +2245,12 @@ class BBBikeReader:
 
         **Examples**::
 
-            from pydriosm.reader import BBBikeReader
+            >>> from pydriosm.reader import BBBikeReader
 
-            bbbike_reader = BBBikeReader()
+            >>> bbbike_reader = BBBikeReader()
 
-            subregion_name = 'Leeds'
-            data_dir = "tests"
+            >>> sr_name = 'Leeds'
+            >>> dat_dir = "tests"
 
             geojson_xz_data = bbbike_reader.read_geojson_xz(subregion_name, data_dir, verbose=True)
             # Confirm to download the .osm.geojson.xz data of "Leeds" [No]|Yes: yes
@@ -2231,10 +2284,10 @@ class BBBikeReader:
         path_to_geojson_xz = self.get_path_to_file(subregion_name_, osm_file_format, data_dir)
 
         if not os.path.isfile(path_to_geojson_xz):
-            path_to_geojson_xz = self.Downloader.download_osm(subregion_name_, osm_file_format=osm_file_format,
-                                                              download_dir=data_dir,
-                                                              confirmation_required=download_confirmation_required,
-                                                              verbose=verbose, ret_download_path=True)
+            path_to_geojson_xz = self.Downloader.download_osm_data(subregion_name_, osm_file_format=osm_file_format,
+                                                                   download_dir=data_dir,
+                                                                   confirmation_required=download_confirmation_required,
+                                                                   verbose=verbose, ret_download_path=True)
 
         if verbose:
             print("Parsing the {} data for \"{}\"".format(osm_file_format, subregion_name_), end=" ... ")
