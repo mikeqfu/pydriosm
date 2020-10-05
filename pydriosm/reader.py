@@ -324,7 +324,9 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
         >>> # Delete the downloaded PBF data file
         >>> os.remove(path_to_rutland_pbf)
 
-    See also the examples for the method :ref:`GeofabrikReader.read_osm_pbf()<pydriosm-reader-geofabrik-read_osm_pbf>`.
+    .. seealso::
+
+        The examples for the method :ref:`GeofabrikReader.read_osm_pbf()<pydriosm-reader-geofabrik-read_osm_pbf>`.
     """
 
     parse_raw_feat_ = True if transform_geom or transform_other_tags else copy.copy(parse_raw_feat)
@@ -933,8 +935,10 @@ def merge_layer_shps(paths_to_shp_zip_files, layer_name, method='geopandas', rm_
         >>> # Delete the downloaded shapefiles
         >>> for shp_zip_file_path in shp_zip_file_paths: os.remove(shp_zip_file_path)
 
-    See also the examples for the method
-    :ref:`GeofabrikReader.merge_subregion_layer_shp()<pydriosm-GeofabrikReader-merge_subregion_layer_shp>`.
+    .. seealso::
+
+        The examples for the method
+        :ref:`GeofabrikReader.merge_subregion_layer_shp()<pydriosm-GeofabrikReader-merge_subregion_layer_shp>`.
     """
 
     path_to_extract_dirs = []
@@ -1388,7 +1392,8 @@ class GeofabrikReader:
                 osm_pbf_dir = validate_input_data_dir(data_dir)
                 path_to_osm_pbf = os.path.join(osm_pbf_dir, osm_pbf_filename)
 
-            path_to_pickle = path_to_osm_pbf.replace(osm_file_format, ".pickle" if parse_raw_feat else "-raw.pickle")
+            path_to_pickle = path_to_osm_pbf.replace(osm_file_format,
+                                                     "-pbf.pickle" if parse_raw_feat else "-raw.pickle")
             if os.path.isfile(path_to_pickle) and not update:
                 osm_pbf_data = load_pickle(path_to_pickle)
 
@@ -2118,7 +2123,7 @@ class BBBikeReader:
 
         path_to_osm_pbf = self.get_path_to_osm_file(subregion_name, osm_file_format, data_dir)
 
-        path_to_pickle = path_to_osm_pbf.replace(".osm.pbf", ".pickle" if parse_raw_feat else "-raw.pickle")
+        path_to_pickle = path_to_osm_pbf.replace(".osm.pbf", "-pbf.pickle" if parse_raw_feat else "-raw.pickle")
         if os.path.isfile(path_to_pickle) and not update:
             osm_pbf_data = load_pickle(path_to_pickle)
 
