@@ -6,10 +6,10 @@ import time
 
 from pyhelpers.ops import confirmed
 
-from .downloader import BBBikeDownloader, GeoFabrikDownloader
+from .downloader import BBBikeDownloader, GeofabrikDownloader
 
 
-def update_package_data(confirmation_required=True, interval_sec=5, verbose=True):
+def update_package_data(confirmation_required=True, interval_sec=2, verbose=True):
     """
     Update package data.
 
@@ -22,59 +22,66 @@ def update_package_data(confirmation_required=True, interval_sec=5, verbose=True
 
     **Example**::
 
-        from pydriosm.updater import update_package_data
+        >>> from pydriosm.updater import update_package_data
 
-        confirmation_required = True
-        time_gap = 5
-        verbose = True
-
-        update_package_data(confirmation_required=True, verbose=True)
+        >>> update_package_data(confirmation_required=True, verbose=True)
     """
 
     if confirmed("To update resources (which may take a few minutes)?"):
 
-        geofabrik_downloader = GeoFabrikDownloader()
+        update = True
 
-        _ = geofabrik_downloader.get_index_of_all_downloads(update=True, confirmation_required=confirmation_required,
+        geofabrik_downloader = GeofabrikDownloader()
+
+        _ = geofabrik_downloader.get_index_of_all_downloads(update=update, confirmation_required=confirmation_required,
                                                             verbose=verbose)
 
         time.sleep(interval_sec)
 
-        _ = geofabrik_downloader.get_continents_subregion_tables(update=True,
+        _ = geofabrik_downloader.get_continents_subregion_tables(update=update,
                                                                  confirmation_required=confirmation_required,
                                                                  verbose=verbose)
 
         time.sleep(interval_sec)
 
-        _ = geofabrik_downloader.get_region_subregion_tier(update=True, confirmation_required=confirmation_required,
+        _ = geofabrik_downloader.get_region_subregion_tier(update=update, confirmation_required=confirmation_required,
                                                            verbose=verbose)
 
         time.sleep(interval_sec)
 
-        _ = geofabrik_downloader.get_subregion_downloads_catalogue(update=True,
-                                                                   confirmation_required=confirmation_required,
-                                                                   verbose=verbose)
+        _ = geofabrik_downloader.get_download_catalogue(update=update, confirmation_required=confirmation_required,
+                                                        verbose=verbose)
 
         time.sleep(interval_sec)
 
-        _ = geofabrik_downloader.get_subregion_name_list(update=True, confirmation_required=confirmation_required,
+        _ = geofabrik_downloader.get_subregion_name_list(update=update, confirmation_required=confirmation_required,
                                                          verbose=verbose)
 
         time.sleep(interval_sec)
 
         bbbike_downloader = BBBikeDownloader()
 
-        _ = bbbike_downloader.get_subregion_catalogue(update=True, confirmation_required=confirmation_required,
+        _ = bbbike_downloader.get_list_of_cities(update=update, confirmation_required=confirmation_required,
+                                                 verbose=verbose)
+
+        time.sleep(interval_sec)
+
+        _ = bbbike_downloader.get_cities_coordinates(update=update, confirmation_required=confirmation_required,
+                                                     verbose=verbose)
+
+        time.sleep(interval_sec)
+
+        _ = bbbike_downloader.get_subregion_catalogue(update=update, confirmation_required=confirmation_required,
                                                       verbose=verbose)
 
         time.sleep(interval_sec)
 
-        _ = bbbike_downloader.get_subregion_name_list(update=True, confirmation_required=confirmation_required,
+        _ = bbbike_downloader.get_subregion_name_list(update=update, confirmation_required=confirmation_required,
                                                       verbose=verbose)
 
         time.sleep(interval_sec)
 
-        _ = bbbike_downloader.get_download_dictionary(update=True, confirmation_required=confirmation_required,
+        _ = bbbike_downloader.get_download_dictionary(update=update, confirmation_required=confirmation_required,
                                                       verbose=verbose)
 
         if verbose:
