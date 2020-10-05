@@ -1657,7 +1657,10 @@ class BBBikeDownloader:
                      confirmation_required=confirmation_required):
 
             try:
-                print("In progress", end=" ... ") if verbose else ""
+                if confirmation_required:
+                    print("In progress", end=" ... ") if verbose else ""
+                else:
+                    print(f"  {subregion_name_}", end=" ... ") if verbose else ""
 
                 url = urllib.parse.urljoin(self.URL, subregion_name_ + '/')
 
