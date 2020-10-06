@@ -921,7 +921,7 @@ def merge_layer_shps(paths_to_shp_zip_files, layer_name, method='geopandas', rm_
             "greater-manchester_gis_osm_railways_free_1.shp"
             "west-yorkshire_gis_osm_railways_free_1.shp"
         In progress ... Done.
-        Find the merged .shp file(s) at "tests\\greater-manchester_west-yorkshire_railways".
+        Find the merged .shp file(s) at "\\tests\\greater-manchester_west-yorkshire_railways".
 
         >>> print(os.path.relpath(merged_shp_path))
         tests\\greater-manchester_west-yorkshire_railways\\greater-manchester_west-yorkshire_railways.shp
@@ -1045,7 +1045,7 @@ def merge_layer_shps(paths_to_shp_zip_files, layer_name, method='geopandas', rm_
             shutil.rmtree(path_to_merged_dir_temp)
 
         if verbose:
-            print(f"Find the merged .shp file(s) at \"{os.path.relpath(path_to_merged_dir)}\".")
+            print(f"Find the merged .shp file(s) at \"\\{os.path.relpath(path_to_merged_dir)}\".")
 
         if ret_merged_shp_path:
             path_to_merged_shp = glob.glob(cd(f"{path_to_merged_dir}*", "*.shp"))
@@ -1611,7 +1611,7 @@ class GeofabrikReader:
                 "greater-manchester_gis_osm_railways_free_1.shp"
                 "west-yorkshire_gis_osm_railways_free_1.shp"
             In progress ... Done.
-            Find the merged .shp file(s) at "tests\\greater-manchester_west-yorkshire_railways".
+            Find the merged .shp file(s) at "\\tests\\greater-manchester_west-yorkshire_railways".
 
             >>> print(os.path.relpath(path_to_merged_shp_file))
             tests\\greater-manchester_west-yorkshire_railways\\greater-manchester_west-yorkshire_railways.shp
@@ -1664,7 +1664,7 @@ class GeofabrikReader:
                 "surrey_gis_osm_transport_a_free_1.shp"
                 "surrey_gis_osm_transport_free_1.shp"
             In progress ... Done.
-            Find the merged .shp file(s) at "tests\\greater-london_kent_surrey_transport".
+            Find the merged .shp file(s) at "\\tests\\greater-london_kent_surrey_transport".
 
             >>> for path_to_merged_shp_file in path_to_merged_shp_files:
             ...     print(os.path.relpath(path_to_merged_shp_file))
