@@ -17,5 +17,5 @@ Classes for downloading data
     :toctree: _generated/
     :template: class.rst
 
-    GeoFabrikDownloader
+    GeofabrikDownloader
     BBBikeDownloader
