@@ -59,3 +59,4 @@ Miscellaneous
     append_fclass_to_shp_filename
     remove_subregion_osm_file
     get_number_of_chunks
+    convert_dtype_dict
