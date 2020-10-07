@@ -421,7 +421,7 @@ def unzip_shp_zip(path_to_shp_zip, path_to_extract_dir=None, layer_names=None,
     :param path_to_extract_dir: absolute path to a directory where extracted files will
         be saved; if ``None`` (default), use the same directory where the .shp.zip file is
     :type path_to_extract_dir: str or None
-    :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;;
+    :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
         if ``None`` (default), all available layers
     :type layer_names: str or list or None
     :param mode: the ``mode`` parameter of `zipfile.ZipFile()`_, defaults to ``'r'``
