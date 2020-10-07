@@ -4,25 +4,21 @@ Download `Geofabrik <https://download.geofabrik.de/>`_ and
 """
 
 import copy
-import os
-import re
 import time
 import urllib.error
 import urllib.parse
 
 import bs4
 import more_itertools
-import numpy as np
 import pandas as pd
 import requests
-from pyhelpers.dir import cd, validate_input_data_dir
+from pyhelpers.dir import validate_input_data_dir
 from pyhelpers.ops import confirmed, download_file_from_url, fake_requests_headers, \
     update_nested_dict
 from pyhelpers.store import load_pickle, save_pickle
 from pyhelpers.text import find_similar_str
 
-from .utils import bbbike_homepage, cd_dat, cd_dat_bbbike, cd_dat_geofabrik, \
-    geofabrik_homepage
+from .utils import *
 
 
 class GeofabrikDownloader:
