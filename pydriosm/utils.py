@@ -13,11 +13,11 @@ import shapely.geometry
 from pyhelpers.dir import cd
 
 
-# -- Source homepage ----------------------------------------------------------------------------------
+# -- Source homepage ------------------------------------------------------------------------
 
 def geofabrik_homepage():
     """
-    Specify the source homepage URL of the GeoFabrik data extracts.
+    Specify the homepage URL of the free Geofabrik data extracts.
 
     :return: URL of the data source homepage
     :rtype: str
@@ -28,7 +28,7 @@ def geofabrik_homepage():
 
 def bbbike_homepage():
     """
-    Specify the source homepage URL of the BBBike data extracts.
+    Specify the homepage URL of the free BBBike data extracts.
 
     :return: URL of the data source homepage
     :rtype: str
@@ -37,7 +37,7 @@ def bbbike_homepage():
     return 'http://download.bbbike.org/osm/bbbike/'
 
 
-# -- Directory ----------------------------------------------------------------------------------------
+# -- Directory ------------------------------------------------------------------------------
 
 def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     """
@@ -49,22 +49,21 @@ def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     :type dat_dir: str
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
+    :param kwargs: optional parameters of
+        `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
         e.g. ``mode=0o777``
-    :return: a full path to a directory (or a file) under ``data_dir``
+    :return: an absolute path to a directory (or a file) under ``data_dir``
     :rtype: str
 
     **Example**::
 
-        from pydriosm.utils import cd_dat
+        >>> import os
+        >>> from pydriosm.utils import cd_dat
 
-        dat_dir = "dat"
-        mkdir = False
+        >>> path_to_dat = cd_dat()
 
-        path = cd_dat()
-
-        print(path)
-        # dat
+        >>> print(os.path.relpath(path_to_dat))
+        pydriosm\\dat
     """
 
     path = pkg_resources.resource_filename(__name__, dat_dir)
@@ -85,19 +84,20 @@ def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
 
 def cd_dat_geofabrik(*sub_dir, mkdir=False, **kwargs):
     """
-    Change directory to ``dat_GeoFabrik`` and its sub-directories within a package.
+    Change directory to ``dat_Geofabrik`` and its sub-directories within a package.
 
     :param sub_dir: name of directory; names of directories (and/or a filename)
     :type sub_dir: str
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
+    :param kwargs: optional parameters of
+        `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
         e.g. ``mode=0o777``
-    :return: a full path to a directory (or a file) under ``data_dir``
+    :return: an absolute path to a directory (or a file) under ``data_dir``
     :rtype: str
     """
 
-    path = cd("dat_GeoFabrik", *sub_dir, mkdir=mkdir, **kwargs)
+    path = cd("dat_Geofabrik", *sub_dir, mkdir=mkdir, **kwargs)
 
     return path
 
@@ -110,9 +110,10 @@ def cd_dat_bbbike(*sub_dir, mkdir=False, **kwargs):
     :type sub_dir: str
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
+    :param kwargs: optional parameters of
+        `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
         e.g. ``mode=0o777``
-    :return: a full path to a directory (or a file) under ``data_dir``
+    :return: an absolute path to a directory (or a file) under ``data_dir``
     :rtype: str
     """
 
@@ -121,7 +122,7 @@ def cd_dat_bbbike(*sub_dir, mkdir=False, **kwargs):
     return path
 
 
-# -- Geometric object ---------------------------------------------------------------------------------
+# -- Geometric object -----------------------------------------------------------------------
 
 def get_pbf_layer_feat_types_dict():
     """
@@ -145,8 +146,11 @@ def get_osm_geom_shapely_object_dict():
     """
     A dictionary for OSM geometry types.
 
-    :return: a dictionary with keys and values being shape types (in OSM .shp file) and shapely.geometry types
+    :return: a dictionary with keys and values being shape types and `shapely.geometry`_ types
     :rtype: dict
+
+    .. _`shapely.geometry`:
+        https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
     """
 
     shape_object_dict = {'Point': shapely.geometry.Point,
@@ -185,11 +189,11 @@ def get_valid_shp_layer_names():
     return shp_layer_names
 
 
-# -- Miscellaneous ------------------------------------------------------------------------------------
+# -- Miscellaneous --------------------------------------------------------------------------
 
 def find_shp_layer_name(shp_filename):
     """
-    Find the layer name of the .shp file given its filename.
+    Find the layer name of OSM shapefile given its filename.
 
     :param shp_filename: filename of a shapefile (.shp)
     :type shp_filename: str
@@ -198,7 +202,8 @@ def find_shp_layer_name(shp_filename):
     """
 
     try:
-        layer_name = re.search(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)', shp_filename).group(0).replace("_a", "")
+        layer_name = re.search(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)',
+                               shp_filename).group(0).replace("_a", "")
 
     except AttributeError:
         layer_name = re.search(r'(?<=(\\shape)\\)\w+(?=\.*)', shp_filename).group(0)
@@ -208,58 +213,46 @@ def find_shp_layer_name(shp_filename):
 
 def append_fclass_to_shp_filename(shp_filename, feature_names):
     """
-    Append a 'fclass' name to the original .shp filename.
+    Append a ``'fclass'`` name to the original filename of shapefile.
 
     :param shp_filename: original .shp filename
     :type shp_filename: str
-    :param feature_names: name (or names) of a ``fclass`` (or multiple ``fclass``) in .shp data
+    :param feature_names: name (or names) of a ``fclass``
+        (or multiple ``fclass``) in .shp data
     :type feature_names: str or list
-    :return: updated filename used for saving only the ``fclass`` data of the original .shp data file
+    :return: updated filename used for saving only the ``fclass`` data
+        of the original .shp data file
     :rtype: str
     """
 
     filename, ext = os.path.splitext(shp_filename)
 
-    feature_names_ = [feature_names] if isinstance(feature_names, str) else feature_names.copy()
+    feature_names_ = [feature_names] if isinstance(feature_names, str) \
+        else feature_names.copy()
     new_shp_filename = "{filename}_{feature_names}{ext}".format(
         filename=filename, feature_names='_'.join(feature_names_), ext=ext)
 
     if os.path.dirname(new_shp_filename):
         layer_name = find_shp_layer_name(shp_filename)
-        new_shp_filename = cd(os.path.dirname(new_shp_filename), layer_name, os.path.basename(new_shp_filename),
-                              mkdir=True)
+        new_shp_filename = \
+            cd(os.path.dirname(new_shp_filename), layer_name,
+               os.path.basename(new_shp_filename), mkdir=True)
 
     return new_shp_filename
 
 
 def remove_subregion_osm_file(path_to_osm_file, verbose=True):
     """
-    Remove a downloaded file.
+    Remove a downloaded OSM data file.
 
-    :param path_to_osm_file: full path to a downloaded OSM data file
+    :param path_to_osm_file: absolute path to a downloaded OSM data file
     :type path_to_osm_file: str
     :param verbose: defaults to ``True``
     :type verbose: bool
-
-    **Example**::
-
-        from utils import validate_input_subregion_name
-        from download.geofabrik import GeoFabrik
-
-        geofabrik = GeoFabrik()
-
-        verbose = True
-        subregion_name = 'great britain'
-        _, path_to_osm_file = geofabrik.get_default_path_to_osm_file(subregion_name, ".shp.zip")
-
-        path_to_osm_file_ = geofabrik.make_default_sub_subregion_download_dir(subregion_name,
-                                                                              osm_file_format,
-                                                                              download_dir)
-
-        remove_subregion_osm_file(path_to_osm_file_)
     """
 
-    print("Deleting \"{}\"".format(os.path.relpath(path_to_osm_file)), end=" ... ") if verbose else ""
+    if verbose:
+        print("Deleting \"{}\"".format(os.path.relpath(path_to_osm_file)), end=" ... ")
 
     try:
         if os.path.isfile(path_to_osm_file):
@@ -271,7 +264,8 @@ def remove_subregion_osm_file(path_to_osm_file, verbose=True):
             print("Done. ") if verbose else ""
 
         else:
-            print("File not found at {}.".format(*os.path.split(path_to_osm_file)[::-1])) if verbose else ""
+            if verbose:
+                print("File not found at {}.".format(*os.path.split(path_to_osm_file)[::-1]))
 
     except Exception as e:
         print("Failed. {}".format(e))
@@ -279,11 +273,12 @@ def remove_subregion_osm_file(path_to_osm_file, verbose=True):
 
 def get_number_of_chunks(path_to_file, chunk_size_limit=50):
     """
-    Compute  to parse the data file in a chunk-wise way
+    Compute number of chunks for parsing OSM (mainly PBF) data file in a chunk-wise manner.
 
-    :param path_to_file: full path to a file
+    :param path_to_file: absolute path to a file
     :type path_to_file: str
-    :param chunk_size_limit: threshold (in MB) above which the file is to be split into chunks, defaults to ``50``;
+    :param chunk_size_limit: threshold (in MB) above which the data file is split into chunks,
+        defaults to ``50``;
     :type chunk_size_limit: int
     :return: number of chunks
     :rtype: int or None
@@ -301,12 +296,16 @@ def get_number_of_chunks(path_to_file, chunk_size_limit=50):
 
 def convert_dtype_dict():
     """
-    Specify equivalent of data types between PostgreSQL data types and `pandas.read_csv`_ (``dtype``)
+    Specify data-type dictionary for data types of
+    `PostgreSQL <https://www.postgresql.org/docs/9.5/datatype.html>`_ and
+    `pandas.read_csv()
+    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html>`_.
 
-    :return: a dictionary as convertor between PostgreSQL data type and `pandas.read_csv`_
+    :return: a dictionary as data-type convertor between PostgreSQL and `pandas.read_csv()`_
     :rtype: dict
 
-    .. _`pandas.read_csv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
+    .. _`pandas.read_csv()`:
+        https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
     """
 
     data_types = {'text': str,
