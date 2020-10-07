@@ -570,7 +570,7 @@ class PostgresOSM:
             >>> # Import all layers of the raw PBF data of Rutland
 
             >>> osmdb_test.import_osm_data(rutland_pbf_raw, table_name=sr_name, verbose=True)
-            Importing PBF data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
+            Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
                 points ... done: <total of rows> features.
                 lines ... done: <total of rows> features.
                 multilinestrings ... done: <total of rows> features.
@@ -586,7 +586,7 @@ class PostgresOSM:
 
             >>> osmdb_test.import_osm_data(rutland_pbf, table_name=sr_name, schema_names=schemas,
             ...                            verbose=True)
-            Importing PBF data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
+            Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
                 schema_0 ... done: <total of rows> features.
                 schema_1 ... done: <total of rows> features.
                 schema_2 ... done: <total of rows> features.
@@ -614,7 +614,7 @@ class PostgresOSM:
             >>> # Import all layers of the shapefile data of Rutland
 
             >>> osmdb_test.import_osm_data(rutland_shp, table_name=sr_name, verbose=True)
-            Importing PBF data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
+            Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
                 water ... done: <total of rows> features.
                 pofw ... done: <total of rows> features.
                 buildings ... done: <total of rows> features.
@@ -648,7 +648,7 @@ class PostgresOSM:
             Deleting "tests\\Leeds.osm.shp.zip" ... Done.
 
             >>> osmdb_test.import_osm_data(leeds_shp, table_name=sr_name, verbose=True)
-            Importing PBF data into "Leeds" at postgres:***@localhost:5432/osmdb_test ...
+            Importing data into "Leeds" at postgres:***@localhost:5432/osmdb_test ...
                 buildings ... done: <total of rows> features.
                 points ... done: <total of rows> features.
                 natural ... done: <total of rows> features.
@@ -674,7 +674,7 @@ class PostgresOSM:
         table_name_ = self.get_table_name_for_subregion(table_name, table_named_as_subregion)
 
         if verbose:
-            print("Importing PBF data into \"{}\" at {} ... ".format(table_name_, self.PostgreSQL.address))
+            print("Importing data into \"{}\" at {} ... ".format(table_name_, self.PostgreSQL.address))
         for geom_type, osm_layer in data_items:
 
             print("\t{}".format(geom_type), end=" ... ") if verbose else ""
@@ -752,7 +752,7 @@ class PostgresOSM:
             ? [No]|Yes: yes
             Downloading "rutland-latest.osm.pbf" to "\\tests" ...
             Done.
-            Importing PBF data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
+            Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
                 points ... done: <total of rows> features.
                 lines ... done: <total of rows> features.
                 multilinestrings ... done: <total of rows> features.
@@ -776,7 +776,7 @@ class PostgresOSM:
             Downloading "Victoria.osm.pbf" to "\tests" ...
             Done.
             Parsing "\\tests\\Victoria.osm.pbf" ... Done.
-            Importing PBF data into "Victoria" at postgres:***@localhost:5432/osmdb_test ...
+            Importing data into "Victoria" at postgres:***@localhost:5432/osmdb_test ...
                 points ... done: <total of rows> features.
                 lines ... done: <total of rows> features.
                 multilinestrings ... done: <total of rows> features.
@@ -787,7 +787,7 @@ class PostgresOSM:
             Downloading "Waterloo.osm.pbf" to "\\tests" ...
             Done.
             Parsing "\\tests\\Waterloo.osm.pbf" ... Done.
-            Importing PBF data into "Waterloo" at postgres:***@localhost:5432/osmdb_test ...
+            Importing data into "Waterloo" at postgres:***@localhost:5432/osmdb_test ...
                 points ... done: <total of rows> features.
                 lines ... done: <total of rows> features.
                 multilinestrings ... done: <total of rows> features.
@@ -1215,63 +1215,54 @@ class PostgresOSM:
 
             >>> osmdb_test.drop_subregion_table(subregion_tbl_names, verbose=True)
             Confirmed to drop the following tables:
-                "Rutland" and
-                "Leeds"
+                "Leeds" and
+                "Rutland"
               from the following schemas:
-                "natural",
-                "water",
-                "pofw",
                 "multipolygons",
-                "waterways",
-                "pois",
+                "water",
+                "multilinestrings",
                 "points",
-                "traffic",
-                "places",
-                "transport",
-                "roads",
-                "lines",
-                "railways",
-                "landuse",
                 "buildings",
-                "multilinestrings" and
-                "other_relations"
+                "natural",
+                "roads",
+                "other_relations",
+                "pois",
+                "traffic",
+                "transport",
+                "pofw",
+                "landuse",
+                "railways",
+                "waterways",
+                "lines" and
+                "places"
               at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Dropping ...
-                "natural"."Rutland" ... Done.
-                "water"."Rutland" ... Done.
-                "pofw"."Rutland" ... Done.
                 "multipolygons"."Rutland" ... Done.
-                "waterways"."Rutland" ... Done.
-                "pois"."Rutland" ... Done.
-                "points"."Rutland" ... Done.
-                "traffic"."Rutland" ... Done.
-                "places"."Rutland" ... Done.
-                "transport"."Rutland" ... Done.
-                "roads"."Rutland" ... Done.
-                "lines"."Rutland" ... Done.
-                "railways"."Rutland" ... Done.
-                "landuse"."Rutland" ... Done.
-                "buildings"."Rutland" ... Done.
+                "water"."Rutland" ... Done.
                 "multilinestrings"."Rutland" ... Done.
-                "other_relations"."Rutland" ... Done.
-                "natural"."Leeds" ... Done.
-                "water"."Leeds" ... Done.
-                "pofw"."Leeds" ... Done.
-                "multipolygons"."Leeds" ... Done.
-                "waterways"."Leeds" ... Done.
-                "pois"."Leeds" ... Done.
                 "points"."Leeds" ... Done.
-                "traffic"."Leeds" ... Done.
-                "places"."Leeds" ... Done.
-                "transport"."Leeds" ... Done.
-                "roads"."Leeds" ... Done.
-                "lines"."Leeds" ... Done.
-                "railways"."Leeds" ... Done.
-                "landuse"."Leeds" ... Done.
+                "points"."Rutland" ... Done.
                 "buildings"."Leeds" ... Done.
-                "multilinestrings"."Leeds" ... Done.
-                "other_relations"."Leeds" ... Done.
+                "buildings"."Rutland" ... Done.
+                "natural"."Leeds" ... Done.
+                "natural"."Rutland" ... Done.
+                "roads"."Leeds" ... Done.
+                "roads"."Rutland" ... Done.
+                "other_relations"."Rutland" ... Done.
+                "pois"."Rutland" ... Done.
+                "traffic"."Rutland" ... Done.
+                "transport"."Rutland" ... Done.
+                "pofw"."Rutland" ... Done.
+                "landuse"."Leeds" ... Done.
+                "landuse"."Rutland" ... Done.
+                "railways"."Leeds" ... Done.
+                "railways"."Rutland" ... Done.
+                "waterways"."Leeds" ... Done.
+                "waterways"."Rutland" ... Done.
+                "lines"."Rutland" ... Done.
+                "places"."Leeds" ... Done.
+                "places"."Rutland" ... Done.
 
             >>> # Delete 'points' and 'other_relations' of Waterloo and Victoria
 
@@ -1288,10 +1279,10 @@ class PostgresOSM:
               at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Dropping ...
-                "points"."Waterloo" ... Done.
-                "other_relations"."Waterloo" ... Done.
                 "points"."Victoria" ... Done.
+                "points"."Waterloo" ... Done.
                 "other_relations"."Victoria" ... Done.
+                "other_relations"."Waterloo" ... Done.
 
             >>> # Delete the database 'osmdb_test'
             >>> osmdb_test.PostgreSQL.drop_database(verbose=True)
@@ -1300,19 +1291,24 @@ class PostgresOSM:
             Dropping the database "osmdb_test" ... Done.
         """
 
-        table_names_ = [self.get_table_name_for_subregion(tbl_name, table_named_as_subregion)
-                        for tbl_name in
-                        ([subregion_table_names] if isinstance(subregion_table_names, str) else subregion_table_names)]
-        _, tbls_msg = self.PostgreSQL.printing_messages_for_multi_names(*table_names_, desc='table')
+        existing_schemas = [
+            x for x in sqlalchemy.engine.reflection.Inspector.from_engine(self.PostgreSQL.engine).get_schema_names()
+            if x != 'public' and x != 'information_schema']
+        # existing_schemas.sort()
+
+        table_names_ = [
+            self.get_table_name_for_subregion(tbl_name, table_named_as_subregion)
+            for tbl_name in ([subregion_table_names] if isinstance(subregion_table_names, str)
+                             else subregion_table_names)]
+        table_names_.sort()
 
         schema_names_ = validate_schema_names(schema_names, schema_named_as_layer)
-
+        schema_names_.sort()
         if not schema_names_:
-            schema_names_ = [
-                x for x in sqlalchemy.engine.reflection.Inspector.from_engine(self.PostgreSQL.engine).get_schema_names()
-                if x != 'public' and x != 'information_schema']
-            tables_schemas_list = list(itertools.product(table_names_, schema_names_))
-            schema_names_ = list(set(s for t, s in tables_schemas_list if self.subregion_table_exists(t, s)))
+            table_list = list(itertools.product(existing_schemas, table_names_))
+            schema_names_ = list(set(
+                s for s, t in table_list
+                if self.subregion_table_exists(t, s, table_named_as_subregion, schema_named_as_layer)))
 
         if not schema_names_:
             print("None of the data exists.")
@@ -1320,25 +1316,26 @@ class PostgresOSM:
         else:
             _, schemas_msg = self.PostgreSQL.printing_messages_for_multi_names(*schema_names_, desc='schema')
 
+            _, tbls_msg = self.PostgreSQL.printing_messages_for_multi_names(*table_names_, desc='table')
+
             if confirmed("Confirmed to drop the following {}  from the following {}  at {}\n?".format(
                     tbls_msg, schemas_msg, self.PostgreSQL.address), confirmation_required=confirmation_required):
 
-                tables_schemas_list_ = list(itertools.product(table_names_, schema_names_))
-                tables = ['"{}"."{}"'.format(s, t) for t, s in tables_schemas_list_]
+                table_list_ = list(itertools.product(schema_names_, table_names_))
 
-                if verbose:
-                    if not tables:
-                        print("None of {} exists. ".format(tbls_msg))
+                print("Dropping ... ") if verbose else ""
+                for schema, table in table_list_:
+                    table_ = f'"{schema}"."{table}"'
+                    if not self.PostgreSQL.table_exists(table, schema):
+                        # schema.table does not exist
+                        print(f"\t{table_} does not exist. ") if verbose == 2 else ""
                     else:
-                        print("Dropping ... ")
-
-                for table in tables:
-                    print("\t{}".format(table), end=" ... ") if verbose else ""
-                    try:
-                        self.PostgreSQL.engine.execute('DROP TABLE IF EXISTS {} CASCADE;'.format(table))
-                        print("Done. ") if verbose else ""
-                    except Exception as e:
-                        print("Failed. {}".format(e))
+                        print(f"\t{table_}", end=" ... ") if verbose else ""
+                        try:
+                            self.PostgreSQL.engine.execute('DROP TABLE IF EXISTS {} CASCADE;'.format(table_))
+                            print("Done. ") if verbose else ""
+                        except Exception as e:
+                            print("Failed. {}".format(e))
 
 
 # class GeoFabrikIOS:
