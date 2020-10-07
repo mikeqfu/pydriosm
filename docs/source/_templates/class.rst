@@ -1,7 +1,9 @@
-:mod:`{{module}}`.{{objname}}
-{{underline}}================
+.. _{{module}}.{{objname}}:
 
-.. currentmodule:: {{module}}
+:py:mod:`{{module}}`.{{objname}}
+{{underline}}===================
+
+.. py:currentmodule:: {{module}}
 
 .. autoclass:: {{objname}}
     :members:
