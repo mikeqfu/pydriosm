@@ -16,10 +16,11 @@ To install the more recent version hosted directly from `GitHub repository`_:
 
 To test if **pydriosm** is correctly installed, try importing the package via an interpreter shell:
 
-.. code-block::
+.. code-block:: python
 
     >>> import pydriosm
-    >>> print(f"The current release version is: {pydriosm.__version__}")
+
+    >>> pydriosm.__version__
 
 .. parsed-literal::
     The current release version is: |version|
