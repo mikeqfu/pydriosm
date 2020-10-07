@@ -10,17 +10,7 @@ reader
     :no-members:
     :no-inherited-members:
 
-Classes for reading data
-------------------------
-
-.. autosummary::
-    :toctree: _generated/
-    :template: class.rst
-
-    GeoFabrikReader
-    BBBikeReader
-
-Functions for reading data
+Functions for parsing data
 --------------------------
 
 .. autosummary::
@@ -31,8 +21,20 @@ Functions for reading data
     parse_osm_pbf_layer
     parse_osm_pbf
     unzip_shp_zip
-    parse_shp
-    specify_shp_crs
-    parse_shp_layer
+    read_shp_file
+    get_default_shp_crs
+    parse_layer_shp
+    merge_shps
+    merge_layer_shps
     parse_csv_xz
     parse_geojson_xz
+
+Classes for reading data
+------------------------
+
+.. autosummary::
+    :toctree: _generated/
+    :template: class.rst
+
+    GeofabrikReader
+    BBBikeReader
