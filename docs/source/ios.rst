@@ -10,6 +10,17 @@ ios
     :no-members:
     :no-inherited-members:
 
+Functions for data I/O and storage
+----------------------------------
+
+.. autosummary::
+    :toctree: _generated/
+    :template: function.rst
+
+    get_default_layer_name
+    validate_schema_names
+    validate_table_name
+
 Classes for data I/O and storage
 --------------------------------
 
@@ -18,14 +29,3 @@ Classes for data I/O and storage
     :template: class.rst
 
     PostgresOSM
-
-Functions for data I/O and storage
-----------------------------------
-
-.. autosummary::
-    :toctree: _generated/
-    :template: function.rst
-
-    validate_table_name
-    get_default_pbf_layer_name
-    validate_schema_names
