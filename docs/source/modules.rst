@@ -1,5 +1,3 @@
-.. _pydriosm-modules:
-
 .. py:module:: pydriosm
 
 =======
