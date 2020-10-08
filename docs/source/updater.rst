@@ -1,5 +1,3 @@
-.. _pydriosm-updater:
-
 .. py:module:: pydriosm.updater
 
 updater
