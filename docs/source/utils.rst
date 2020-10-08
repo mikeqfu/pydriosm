@@ -1,5 +1,3 @@
-.. _pydriosm-utils:
-
 .. py:module:: pydriosm.utils
 
 utils
