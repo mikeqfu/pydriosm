@@ -20,7 +20,7 @@ from .downloader import *
 from .utils import *
 
 
-def get_osm_pbf_layer_idx_names(path_to_osm_pbf):
+def get_osm_pbf_layer_names(path_to_osm_pbf):
     """
     Get names of all layers in a PBF data file.
 
@@ -32,7 +32,7 @@ def get_osm_pbf_layer_idx_names(path_to_osm_pbf):
     **Example**::
 
         >>> import os
-        >>> from pydriosm import GeofabrikDownloader, get_osm_pbf_layer_idx_names
+        >>> from pydriosm import GeofabrikDownloader, get_osm_pbf_layer_names
 
         >>> geofabrik_downloader = GeofabrikDownloader()
 
@@ -48,7 +48,7 @@ def get_osm_pbf_layer_idx_names(path_to_osm_pbf):
         Downloading "rutland-latest.osm.pbf" to "\\tests" ...
         Done.
 
-        >>> lyr_idx_names = get_osm_pbf_layer_idx_names(path_to_rutland_pbf)
+        >>> lyr_idx_names = get_osm_pbf_layer_names(path_to_rutland_pbf)
 
         >>> for k, v in lyr_idx_names.items(): print(f'{k}: {v}')
         0: points
