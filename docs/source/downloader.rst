@@ -1,5 +1,3 @@
-.. _pydriosm-downloader:
-
 .. py:module:: pydriosm.downloader
 
 downloader
