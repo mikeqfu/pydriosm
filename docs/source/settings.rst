@@ -1,5 +1,3 @@
-.. _pydriosm-settings:
-
 .. py:module:: pydriosm.settings
 
 settings
