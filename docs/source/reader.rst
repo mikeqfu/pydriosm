@@ -1,5 +1,3 @@
-.. _pydriosm-reader:
-
 .. py:module:: pydriosm.reader
 
 reader
@@ -17,7 +15,7 @@ Functions for parsing data
     :toctree: _generated/
     :template: function.rst
 
-    get_osm_pbf_layer_idx_names
+    get_osm_pbf_layer_names
     parse_osm_pbf_layer
     parse_osm_pbf
     unzip_shp_zip
