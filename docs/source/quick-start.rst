@@ -21,7 +21,7 @@ Download data
 
 The current release version of the package works mainly for the OSM data extracts that is available for free download from `Geofabrik`_ and `BBBike`_ download servers.
 
-To start with, we could use the class :ref:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>` of the module :ref:`pydriosm.downloader<pydriosm-downloader>` to get a sample from the free `Geofabrik`_ download server.
+To start with, we could use the class :ref:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>` of the module :ref:`pydriosm.downloader<downloader>` to get a sample from the free `Geofabrik`_ download server.
 
 .. code-block:: python
 
@@ -146,7 +146,7 @@ In addition, we can also download data of multiple (sub)regions at one go. For e
 Read/parse data
 ===============
 
-To read/parse any of the downloaded data files above, we could use the class :ref:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` of the module :ref:`pydriosm.reader<pydriosm-reader>`.
+To read/parse any of the downloaded data files above, we could use the class :ref:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` of the module :ref:`pydriosm.reader<reader>`.
 
 .. code-block:: python
 
@@ -327,7 +327,7 @@ For example, to merge the 'railways' layer of London and Kent:
     >>> print(os.path.relpath(path_to_merged_shp))
     tests\greater-london_kent_railways\greater-london_kent_railways.shp
 
-For more details, also check out the functions :ref:`merge_shps()<pydriosm.reader.merge_shps>` and :ref:`merge_layer_shps()<pydriosm.reader.merge_layer_shps>` of the module :ref:`pydriosm.reader<pydriosm-reader>`.
+For more details, also check out the functions :ref:`merge_shps()<pydriosm.reader.merge_shps>` and :ref:`merge_layer_shps()<pydriosm.reader.merge_layer_shps>` of the module :ref:`pydriosm.reader<reader>`.
 
 |
 
@@ -336,7 +336,7 @@ For more details, also check out the functions :ref:`merge_shps()<pydriosm.reade
 Import and fetch data with a PostgreSQL server
 ==============================================
 
-Beyond downloading and reading OSM data, the package further provides a module :ref:`pydriosm.ios<pydriosm-ios>` for communicating with `PostgreSQL`_ server, that is, to import the OSM data into, and fetch it from, PostgreSQL databases.
+Beyond downloading and reading OSM data, the package further provides a module :ref:`pydriosm.ios<ios>` for communicating with `PostgreSQL`_ server, that is, to import the OSM data into, and fetch it from, PostgreSQL databases.
 
 To establish a connection with the server, we need to specify the username, password, host address of a PostgreSQL server and name of a database. For example:
 
@@ -361,7 +361,7 @@ To establish a connection with the server, we need to specify the username, pass
 
     - If we don't specify a password (for creating the instance ``osmdb_test``) as the parameter ``password`` is ``None`` by default, we'll be asked to manually type in the password to the PostgreSQL server.
 
-    - The class :ref:`PostgresOSM<pydriosm.ios.PostgresOSM>` has incorporated all available classes from the modules: :ref:`pydriosm.downloader<pydriosm-downloader>` and :ref:`pydriosm.reader<pydriosm-reader>` as properties. In the case of the above instance, ``osmdb_test.Downloader`` is equivalent to :ref:`pydriosm.GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`, as the parameter ``data_source`` is ``'Geofabrik'`` by default.
+    - The class :ref:`PostgresOSM<pydriosm.ios.PostgresOSM>` has incorporated all available classes from the modules: :ref:`pydriosm.downloader<downloader>` and :ref:`pydriosm.reader<reader>` as properties. In the case of the above instance, ``osmdb_test.Downloader`` is equivalent to :ref:`pydriosm.GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`, as the parameter ``data_source`` is ``'Geofabrik'`` by default.
 
     - To relate the instance ``osmdb_test`` to 'BBBike' data, we could 1) recreate an instance by setting ``data_source='BBBike'``; or 2) set ``osmdb_test.DataSource='BBBike'``
 
@@ -622,4 +622,4 @@ To remove all the data files that have been downloaded and generated:
 
 **(The end of the quick start.)**
 
-For more details, check out :ref:`Modules<pydriosm-modules>`.
+For more details, check out :ref:`Modules<modules>`.
