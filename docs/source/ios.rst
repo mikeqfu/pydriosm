@@ -1,5 +1,3 @@
-.. _pydriosm-ios:
-
 .. py:module:: pydriosm.ios
 
 ios
