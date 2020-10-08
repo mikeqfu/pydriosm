@@ -19,7 +19,7 @@ PyHelpers
 .. |Twitter| image:: https://img.shields.io/twitter/url/https/twitter.com/Qian_Fu?label=Follow&style=social
    :target: https://twitter.com/Qian_Fu
 
-**PyDriosm** provides helpful Python utilities for researchers/practitioners to easily download and read `OpenStreetMap`_ (OSM) data, such as `protocolbuffer binary format`_ (PBF) and `shapefile`_ data, which are available at the free download servers: `Geofabrik`_ and `BBBike`_. The package also provides a convenient way for I/O and storage of the OSM data with `PostgreSQL`_.
+PyDriosm provides helpful Python utilities for researchers/practitioners to easily download and read `OpenStreetMap`_ (OSM) data, such as `protocolbuffer binary format`_ (PBF) and `shapefile`_ data, which are available at the free download servers: `Geofabrik`_ and `BBBike`_. The package also provides a convenient way for I/O and storage of the OSM data with `PostgreSQL`_.
 
 .. _`OpenStreetMap`: https://www.openstreetmap.org/
 .. _`protocolbuffer binary format`: https://wiki.openstreetmap.org/wiki/PBF_Format
@@ -37,4 +37,5 @@ Resources
 License
 -------
 
-**PyDriosm** is licensed under `GNU General Public License, version 3 (GPLv3) <https://github.com/mikeqfu/pydriosm/blob/master/LICENSE>`_.
+- PyDriosm is licensed under `GNU General Public License, version 3 (GPLv3) <https://github.com/mikeqfu/pydriosm/blob/master/LICENSE>`_.
+- The free `OpenStreetMap <https://www.openstreetmap.org/>`_ data, which is used for the development of PyDriosm, is licensed under the `Open Data Commons Open Database License <https://opendatacommons.org/licenses/odbl/>`_ (ODbL) by the `OpenStreetMap Foundation <https://osmfoundation.org/>`_ (OSMF).
