@@ -44,8 +44,8 @@ def get_default_layer_name(schema_name):
 
 def validate_schema_names(schema_names=None, schema_named_as_layer=False):
     """
-    Validate schema names of a `PostgreSQL <https://www.postgresql.org/>`_ database
-    for importing OSM data into it.
+    Validate schema names for importing OSM data into a
+    `PostgreSQL <https://www.postgresql.org/>`_ database.
 
     :param schema_names: one or multiple names of layers, e.g. 'points', 'lines',
         defaults to ``None``
@@ -94,7 +94,8 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
 
 def validate_table_name(table_name, sub_space=''):
     """
-    Validate table name for a `PostgreSQL <https://www.postgresql.org/>`_ database.
+    Validate a table name for importing OSM data into a
+    `PostgreSQL <https://www.postgresql.org/>`_ database.
 
     :param table_name: name (as input) of a table in a (PostgreSQL) database
     :type table_name: str
