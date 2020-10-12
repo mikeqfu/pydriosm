@@ -58,8 +58,8 @@ If we'd like to download say the `protocolbuffer binary format`_ (PBF) data of a
     >>> download_dir = "tests"
 
     >>> # Download the OSM PBF data of London from Geofabrik
-    >>> geofabrik_downloader.download_osm_data(subregion_name, osm_file_format, download_dir,
-    ...                                        verbose=True)
+    >>> geofabrik_downloader.download_osm_data(subregion_name, osm_file_format,
+    ...                                        download_dir, verbose=True)
     Confirm to download .osm.pbf data of the following geographic region(s):
         Greater London
     ? [No]|Yes: yes
@@ -115,9 +115,9 @@ In addition, we can also download data of multiple (sub)regions at one go. For e
 
     >>> subregion_names = ['Rutland', 'West Yorkshire', 'West Midlands']
 
-    >>> paths_to_pbf = geofabrik_downloader.download_osm_data(subregion_names, osm_file_format,
-    ...                                                       download_dir, ret_download_path=True)
-    ...                                                       verbose=True)
+    >>> paths_to_pbf = geofabrik_downloader.download_osm_data(
+    ...     subregion_names, osm_file_format, download_dir, ret_download_path=True)
+    ...     verbose=True)
     Confirm to download .osm.pbf data of the following geographic region(s):
         Rutland
         West Yorkshire
@@ -379,7 +379,8 @@ For example, let's now try to import ``rutland_pbf_parsed`` that we have obtaine
 
     >>> subregion_name = 'Rutland'
 
-    >>> osmdb_test.import_osm_data(rutland_pbf_parsed, table_name=subregion_name, verbose=True)
+    >>> osmdb_test.import_osm_data(rutland_pbf_parsed, table_name=subregion_name,
+    ...                            verbose=True)
     Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
         points ... done: 4195 features.
         lines ... done: 7405 features.
@@ -418,10 +419,11 @@ We could find that ``rutland_pbf_parsed_`` is an equivalent of ``rutland_pbf_par
 
 .. code-block:: python
 
-    >>> check_equivalence = all(rutland_pbf_parsed[lyr_name].equals(rutland_pbf_parsed_[lyr_name])
-    ...                         for lyr_name in rutland_pbf_parsed_.keys())
+    >>> check_equivalence = all(
+    ...     rutland_pbf_parsed[lyr_name].equals(rutland_pbf_parsed_[lyr_name])
+    ...     for lyr_name in rutland_pbf_parsed_.keys())
 
-    >>> print("`rutland_pbf_parsed_` equals `rutland_pbf_parsed`: {}".format(check_equivalence))
+    >>> print(f"`rutland_pbf_parsed_` equals `rutland_pbf_parsed`: {check_equivalence}"))
     `rutland_pbf_parsed_` equals `rutland_pbf_parsed`: True
 
 .. note::
@@ -461,7 +463,14 @@ Of course, we can also import/fetch data of only a specific layer or multiple la
 
     # Check names of layers included in the data
     >>> print(list(birmingham_shp.keys()))
-    ['buildings', 'landuse', 'natural', 'places', 'points', 'railways', 'roads', 'waterways']
+    ['buildings',
+     'landuse',
+     'natural',
+     'places',
+     'points',
+     'railways',
+     'roads',
+     'waterways']
 
     >>> # Import the data of 'railways', 'roads' and 'waterways'
     >>> lyr_names = ['railways', 'roads', 'waterways']
@@ -511,14 +520,17 @@ To fetch only the 'railways' data of Birmingham:
 
 .. note::
 
-    ``birmingham_shp_railways`` is a `geopandas.GeoDataFrame`_  and ``birmingham_shp_railways_`` is a `pandas.DataFrame`_. We may have to make both be the same format before making a comparison between them.
+    ``birmingham_shp_railways`` is a `geopandas.GeoDataFrame`_  and ``birmingham_shp_railways_`` is a `pandas.DataFrame`_. We may have to transform the format of either one to the other before making a comparison between them.
 
 .. code-block:: python
 
-    >>> import pandas as pd
+    >>> import geopandas as gpd
 
-    >>> check_equivalence = birmingham_shp_railways_.equals(pd.DataFrame(birmingham_shp_railways))
-    >>> print(f"`birmingham_shp_railways_` equals `birmingham_shp_railways`: {check_equivalence}")
+    >>> check_equivalence =
+    ...     gpd.GeoDataFrame(birmingham_shp_railways_).equals(birmingham_shp_railways)
+
+    >>> print(f"`birmingham_shp_railways_` equals `birmingham_shp_railways`: "
+    ...       f"{check_equivalence}")
     `birmingham_shp_railways_` equals `birmingham_shp_railways`: True
 
 
@@ -570,7 +582,8 @@ We could also easily drop the whole database 'osmdb_test' if we don't need it an
 .. code-block:: python
 
     >>> osmdb_test.PostgreSQL.drop_database(verbose=True)
-    Confirmed to drop the database "osmdb_test" from postgres:***@localhost:5432/osmdb_test?
+    Confirmed to drop the database "osmdb_test"
+        from postgres:***@localhost:5432/osmdb_test?
      [No]|Yes: yes
     Dropping the database "osmdb_test" ... Done.
 
@@ -620,6 +633,6 @@ To remove all the data files that have been downloaded and generated:
 .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference/geopandas.GeoDataFrame.html
 .. _`pandas.DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 
-**(The end of the quick start.)**
+**(The end of the quick start)**
 
 For more details, check out :ref:`Modules<modules>`.
