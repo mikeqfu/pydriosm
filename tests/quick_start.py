@@ -2,7 +2,7 @@
 Quick start
 """
 
-# Download data ==================================================================================
+# Download data ========================================================================
 
 from pydriosm import GeofabrikDownloader
 
@@ -84,8 +84,25 @@ Current file path: 'tests\\greater-london-latest.osm.pbf'
 subregion_names = ['Rutland', 'West Yorkshire', 'West Midlands']
 
 paths_to_pbf = geofabrik_downloader.download_osm_data(subregion_names, osm_file_format,
-                                                      download_dir, ret_download_path=True,
+                                                      download_dir,
+                                                      ret_download_path=True,
                                                       verbose=True)
+"""
+Confirm to download .osm.pbf data of the following geographic region(s):
+    Rutland
+    West Yorkshire
+    West Midlands
+? [No]|Yes: >? yes
+Downloading "rutland-latest.osm.pbf" to "\\tests" ... 
+2MB [00:00,  7.55MB/s]                       
+Done. 
+Downloading "west-yorkshire-latest.osm.pbf" to "\\tests" ... 
+33MB [00:03,  8.88MB/s]                        
+Done. 
+Downloading "west-midlands-latest.osm.pbf" to "\\tests" ... 
+43MB [00:06,  7.16MB/s]                        
+Done. 
+"""
 
 type(paths_to_pbf)
 """
@@ -100,13 +117,13 @@ tests\\west-yorkshire-latest.osm.pbf
 tests\\west-midlands-latest.osm.pbf
 """
 
-# Read/parse data ================================================================================
+# Read/parse data ======================================================================
 
 from pydriosm import GeofabrikReader  # from pydriosm.reader import GeofabrikReader
 
 geofabrik_reader = GeofabrikReader()
 
-# PBF data (.osm.pbf / .pbf) ---------------------------------------------------------------------
+# PBF data (.osm.pbf / .pbf) -----------------------------------------------------------
 subregion_name = 'Rutland'
 data_dir = download_dir
 
@@ -166,7 +183,7 @@ print(rutland_pbf_parsed_points.head())
 [5 rows x 12 columns]
 """
 
-# Shapefiles (.shp.zip / .shp) -------------------------------------------------------------------
+# Shapefiles (.shp.zip / .shp) ---------------------------------------------------------
 subregion_name = 'London'
 layer_name = 'railways'
 
@@ -203,7 +220,8 @@ print(london_railways_shp.head())
 layer_name = 'railways'
 subregion_names = ['London', 'Kent']
 
-path_to_merged_shp = geofabrik_reader.merge_subregion_layer_shp(layer_name, subregion_names,
+path_to_merged_shp = geofabrik_reader.merge_subregion_layer_shp(layer_name,
+                                                                subregion_names,
                                                                 data_dir, verbose=True,
                                                                 ret_merged_shp_path=True)
 """
@@ -235,7 +253,7 @@ print(os.path.relpath(path_to_merged_shp))
 tests\\greater-london_kent_railways\\greater-london_kent_railways.shp
 """
 
-# Import and retrieve data with a PostgreSQL server ==============================================
+# Import and retrieve data with a PostgreSQL server ====================================
 
 from pydriosm import PostgresOSM
 
@@ -251,7 +269,7 @@ Password (postgres@localhost:5432): ***
 Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 """
 
-# Import data to the database --------------------------------------------------------------------
+# Import data to the database ----------------------------------------------------------
 subregion_name = 'Rutland'
 
 osmdb_test.import_osm_data(rutland_pbf_parsed, table_name=subregion_name, verbose=True)
@@ -264,7 +282,7 @@ Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
     other_relations ... done: 13 features.
 """
 
-# Retrieve data from the database ----------------------------------------------------------------
+# Retrieve data from the database ------------------------------------------------------
 rutland_pbf_parsed_ = osmdb_test.fetch_osm_data(subregion_name, layer_names=None,
                                                 decode_wkt=True)
 
@@ -344,16 +362,18 @@ print(birmingham_shp_railways.head())
 [5 rows x 4 columns]
 """
 
-import pandas as pd
+import geopandas as gpd
 
-check_equivalence = birmingham_shp_railways_.equals(pd.DataFrame(birmingham_shp_railways))
+check_equivalence = \
+    gpd.GeoDataFrame(birmingham_shp_railways_).equals(birmingham_shp_railways)
 
-print(f"`birmingham_shp_railways_` equals `birmingham_shp_railways`: {check_equivalence}")
+print(f"`birmingham_shp_railways_` equals `birmingham_shp_railways`: "
+      f"{check_equivalence}")
 """
 `birmingham_shp_railways_` equals `birmingham_shp_railways`: True
 """
 
-# To drop the database ---------------------------------------------------------------------------
+# To drop the database -----------------------------------------------------------------
 
 osmdb_test.drop_subregion_table(subregion_name, lyr_name, verbose=True)
 """
@@ -389,6 +409,12 @@ Dropping ...
 
 # Drop the database
 osmdb_test.PostgreSQL.drop_database(verbose=True)
+"""
+Confirmed to drop the database "osmdb_test"
+    from postgres:***@localhost:5432/osmdb_test?
+  [No]|Yes: >? yes
+Dropping the database "osmdb_test" ... Done. 
+"""
 
 # Clear up (the mess in here) before we move on
 from pyhelpers.dir import delete_dir
