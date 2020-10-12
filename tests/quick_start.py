@@ -286,8 +286,9 @@ Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
 rutland_pbf_parsed_ = osmdb_test.fetch_osm_data(subregion_name, layer_names=None,
                                                 decode_wkt=True)
 
-check_equivalence = all(rutland_pbf_parsed[lyr_name].equals(rutland_pbf_parsed_[lyr_name])
-                        for lyr_name in rutland_pbf_parsed_.keys())
+check_equivalence = all(
+    rutland_pbf_parsed[lyr_name].equals(rutland_pbf_parsed_[lyr_name])
+    for lyr_name in rutland_pbf_parsed_.keys())
 
 print("`rutland_pbf_parsed_` equals `rutland_pbf_parsed`: {}".format(check_equivalence))
 """
