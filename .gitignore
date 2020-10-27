@@ -3,7 +3,11 @@
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
 *$py.class
+
+# PyCharm
+.idea
 
 # C extensions
 *.so
@@ -16,13 +20,17 @@ dist/
 downloads/
 eggs/
 .eggs/
+lib/
 lib64/
 parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
+*.egg
 MANIFEST
 
 # PyInstaller
@@ -38,14 +46,17 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
+.nox/
 .coverage
 .coverage.*
 .cache
 nosetests.xml
 coverage.xml
 *.cover
+*.py,cover
 .hypothesis/
 .pytest_cache/
+cover/
 
 # Translations
 *.mo
@@ -55,6 +66,7 @@ coverage.xml
 *.log
 local_settings.py
 db.sqlite3
+db.sqlite3-journal
 
 # Flask stuff:
 instance/
@@ -65,18 +77,27 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/build/
+docs/source/_generated
 
 # PyBuilder
+.pybuilder/
 target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IPython
+profile_default/
+ipython_config.py
 
 # pyenv
 .python-version
 
-# celery beat schedule file
+# Celery stuff
 celerybeat-schedule
+celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
@@ -102,9 +123,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-
-# PyCharm
-.idea/
+.dmypy.json
+dmypy.json
 
 # Misc
 misc/osm-data-in-gis-formats-free.pdf
