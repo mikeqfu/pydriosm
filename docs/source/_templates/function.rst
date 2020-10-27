@@ -1,8 +1,6 @@
-.. _{{module}}.{{objname}}:
+{{ fullname | escape | underline }}
 
-:py:mod:`{{module}}`.{{objname}}
-{{underline}}================
-
-.. py:currentmodule:: {{module}}
+.. currentmodule:: {{module}}
 
 .. autofunction:: {{objname}}
+
