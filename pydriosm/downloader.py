@@ -23,8 +23,7 @@ from .utils import *
 
 class GeofabrikDownloader:
     """
-    A class representation of a tool for downloading
-    `Geofabrik <https://download.geofabrik.de/>`_ OSM data extracts.
+    A class representation of a tool for downloading the free Geofabrik OSM data extracts.
 
     **Example**::
 
@@ -173,7 +172,8 @@ class GeofabrikDownloader:
                 text = '[{}]'.format(file_type)
                 urls = [urllib.parse.urljoin(url, link['href']) for link in
                         soup.find_all(name='a', href=True, text=text)]
-                subregion_table.loc[subregion_table[file_type].notnull(), file_type] = urls
+                subregion_table.loc[
+                    subregion_table[file_type].notnull(), file_type] = urls
 
             try:
                 subregion_urls = [
@@ -1492,8 +1492,7 @@ class GeofabrikDownloader:
 
 class BBBikeDownloader:
     """
-    A class representation of a tool for downloading
-    `BBBike <https://download.bbbike.org/osm/>`_ data extracts.
+    A class representation of a tool for downloading the free BBBike data extracts.
 
     **Example**::
 
@@ -2079,8 +2078,8 @@ class BBBikeDownloader:
                 return osm_file_format_
 
             else:
-                print("The input file format must be one of the following: \n  \"{}\".".format(
-                    "\",\n  \"".join(bbbike_osm_file_formats)))
+                print("The input file format must be one of the following:"
+                      " \n  \"{}\".".format("\",\n  \"".join(bbbike_osm_file_formats)))
 
         except Exception as e:
             print(e)
@@ -2128,14 +2127,15 @@ class BBBikeDownloader:
         bbbike_download_dictionary = self.get_download_dictionary()['Catalogue']
         sub_download_catalogue = bbbike_download_dictionary[subregion_name_]
 
-        url = sub_download_catalogue[
-            sub_download_catalogue.Filename == subregion_name_ + osm_file_format_].URL.iloc[0]
+        tmp = subregion_name_ + osm_file_format_
+        url = sub_download_catalogue[sub_download_catalogue.Filename == tmp].URL.iloc[0]
 
         return subregion_name_, url
 
     def get_valid_download_info(self, subregion_name, osm_file_format, download_dir=None):
         """
-        Get a valid subregion name, filename, a URL and a absolute path for downloading data.
+        Get a valid subregion name, filename, a URL and a absolute path
+        for downloading data.
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
