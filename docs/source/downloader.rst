@@ -8,9 +8,7 @@ downloader
     :no-members:
     :no-inherited-members:
 
-Classes for downloading data
-----------------------------
-
+.. rubric:: Classes
 .. autosummary::
     :toctree: _generated/
     :template: class.rst
