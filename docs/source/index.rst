@@ -4,18 +4,16 @@ PyDriosm
 
 .. only:: html
 
-   |PyPI| |Python| |License| |Code size| |Downloads|
+    |PyPI| |Python| |License| |Downloads|
 
-   .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm?color=important&label=PyPI
-      :target: https://pypi.org/project/pydriosm/
-   .. |Python| image:: https://img.shields.io/pypi/pyversions/pydriosm?color=informational&label=Python
-      :target: https://www.python.org/downloads/
-   .. |License| image:: https://img.shields.io/pypi/l/pydriosm?color=green&label=License
-      :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
-   .. |Code size| image:: https://img.shields.io/github/languages/code-size/mikeqfu/pydriosm?color=yellowgreen&label=Code%20size
-      :target: https://github.com/mikeqfu/pydriosm/tree/master/pydriosm
-   .. |Downloads| image:: https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads
-      :target: https://pypistats.org/packages/pydriosm
+    .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm?color=important&label=PyPI
+        :target: https://pypi.org/project/pydriosm/
+    .. |Python| image:: https://img.shields.io/pypi/pyversions/pydriosm?color=informational&label=Python
+        :target: https://www.python.org/downloads/
+    .. |License| image:: https://img.shields.io/pypi/l/pydriosm?color=green&label=License
+        :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
+    .. |Downloads| image:: https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads
+        :target: https://pypistats.org/packages/pydriosm
 
 | **Author**: Qian Fu
 | **Email**: qian.fu@outlook.com
