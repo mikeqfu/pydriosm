@@ -1,5 +1,5 @@
 """
-Download `Geofabrik <https://download.geofabrik.de/>`_ and
+Downloading `Geofabrik <https://download.geofabrik.de/>`_ and
 `BBBike <https://download.bbbike.org/osm/>`_ OpenStreetMap (OSM) data extracts.
 """
 
@@ -53,7 +53,8 @@ class GeofabrikDownloader:
     def get_raw_directory_index(url, verbose=False):
         """
         Get a raw directory index
-        (including logs of older files and their and download URLs).
+        (including logs of older files and their and download URLs)
+        on the free Geofabrik download server.
 
         :param url: a URL to the web resource
         :type url: str
@@ -115,7 +116,7 @@ class GeofabrikDownloader:
 
     def get_subregion_table(self, url, verbose=False):
         """
-        Get download information for all geographic regions presented on a given web page.
+        Get download information for all geographic regions on a web page on Geofabrik.
 
         :param url: URL to the web resource
         :type url: str
@@ -207,10 +208,10 @@ class GeofabrikDownloader:
 
         return subregion_table
 
-    def get_index_of_all_downloads(self, update=False, confirmation_required=True,
-                                   verbose=False):
+    def get_download_index(self, update=False, confirmation_required=True, verbose=False):
         """
-        Get the formal index of all downloads.
+        Get the formal index of all available downloads
+        on the free Geofabrik download server.
 
         :param update: whether to check on update and proceed to update the package data,
             defaults to ``False``
@@ -230,7 +231,7 @@ class GeofabrikDownloader:
 
             >>> geofabrik_downloader = GeofabrikDownloader()
 
-            >>> download_idx = geofabrik_downloader.get_index_of_all_downloads()
+            >>> download_idx = geofabrik_downloader.get_download_index()
 
             >>> print(download_idx.head())
                         id  ...                                            updates
@@ -285,7 +286,7 @@ class GeofabrikDownloader:
     def get_continents_subregion_tables(self, update=False, confirmation_required=True,
                                         verbose=False):
         """
-        Get download information for each continent.
+        Get download information for each continent on the free Geofabrik download server.
 
         :param update: whether to check on update and proceed to update the package data,
             defaults to ``False``
@@ -365,7 +366,7 @@ class GeofabrikDownloader:
     def get_region_subregion_tier(self, update=False, confirmation_required=True,
                                   verbose=False):
         """
-        Get a catalogue of region-subregion tier
+        Get a catalogue of Geofabrik region-subregion tier
         (including all geographic regions to which data of subregions is not available).
 
         :param update: whether to check on update and proceed to update the package data,
@@ -502,9 +503,9 @@ class GeofabrikDownloader:
     def get_download_catalogue(self, update=False, confirmation_required=True,
                                verbose=False):
         """
-        Get a catalogue of download information.
-        (Similar to :py:meth:`.get_index_of_all_downloads()
-        <pydriosm.downloader.GeofabrikDownloader.get_index_of_all_downloads>`).
+        Get a catalogue of download information of free Geofabrik data.
+        (Similar to :py:meth:`.get_download_index()
+        <pydriosm.downloader.GeofabrikDownloader.get_download_index>`).
 
         :param update: whether to check on update and proceed to update the package data,
             defaults to ``False``
@@ -625,11 +626,11 @@ class GeofabrikDownloader:
 
         return subregion_downloads_catalogue
 
-    def get_subregion_name_list(self, update=False, confirmation_required=True,
-                                verbose=False):
+    def get_list_of_subregion_names(self, update=False, confirmation_required=True,
+                                    verbose=False):
         """
-        Get a list of names of all geographic regions
-        available on the free download server.
+        Get a list of names of all available geographic regions
+        on the free Geofabrik download server.
 
         :param update: whether to check on update and proceed to update the package data,
             defaults to ``False``
@@ -649,7 +650,7 @@ class GeofabrikDownloader:
 
             >>> geofabrik_downloader = GeofabrikDownloader()
 
-            >>> sr_name_list = geofabrik_downloader.get_subregion_name_list()
+            >>> sr_name_list = geofabrik_downloader.get_list_of_subregion_names()
 
             >>> print(sr_name_list[:5])
             ['Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso']
@@ -681,7 +682,7 @@ class GeofabrikDownloader:
     def validate_input_subregion_name(self, subregion_name):
         """
         Validate input subregion name
-        (by matching it to a name of an available geographic region).
+        (by matching it to a name of a geographic region available on Geofabrik).
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
@@ -710,7 +711,7 @@ class GeofabrikDownloader:
 
         assert isinstance(subregion_name, str)
         # Get a list of available
-        subregion_names = self.get_subregion_name_list()
+        subregion_names = self.get_list_of_subregion_names()
 
         if os.path.isdir(os.path.dirname(subregion_name)) or \
                 urllib.parse.urlparse(subregion_name).path:
@@ -730,7 +731,7 @@ class GeofabrikDownloader:
     def validate_input_file_format(self, osm_file_format):
         """
         Validate input OSM file format
-        (by matching it to an available filename extension).
+        (by matching it to a filename extension available on Geofabrik).
 
         :param osm_file_format: file format of any OSM data extract
         :type osm_file_format: str
@@ -766,7 +767,7 @@ class GeofabrikDownloader:
     def get_subregion_download_url(self, subregion_name, osm_file_format, update=False,
                                    verbose=False):
         """
-        Get download URL of a subregion.
+        Get download URL of a subregion available on Geofabrik.
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
@@ -826,7 +827,7 @@ class GeofabrikDownloader:
 
     def get_default_osm_filename(self, subregion_name, osm_file_format, update=False):
         """
-        get default filename for a given subregion name
+        get default filename for a subregion name available on Geofabrik
         (by parsing the relevant download URL).
 
         :param subregion_name: name of a geographic region (case-insensitive)
@@ -884,7 +885,7 @@ class GeofabrikDownloader:
                                      update=False, verbose=False):
         """
         Get default path for storing the downloaded file
-        (by parsing the relevant download URL).
+        (by parsing the relevant download URL available on Geofabrik).
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
@@ -941,7 +942,7 @@ class GeofabrikDownloader:
             if len(parsed_path) == 1:
                 parsed_path = [subregion_name_] + parsed_path
 
-            subregion_names = self.get_subregion_name_list()
+            subregion_names = self.get_list_of_subregion_names()
             directory = cd_dat_geofabrik(
                 *[find_similar_str(x, subregion_names) if x != 'us' else 'United States'
                   for x in parsed_path[0:-1]],
@@ -952,10 +953,10 @@ class GeofabrikDownloader:
 
         return default_filename, default_file_path
 
-    def retrieve_names_of_subregions(self, *subregion_name, deep=False):
+    def search_for_subregions(self, *subregion_name, deep=False):
         """
         Retrieve names of all subregions (if any) of the given geographic region(s)
-        from the region-subregion tier.
+        from the Geofabrik region-subregion tier.
 
         See also [`RNS-1 <https://stackoverflow.com/questions/9807634/>`_].
 
@@ -974,18 +975,18 @@ class GeofabrikDownloader:
 
             >>> geofabrik_downloader = GeofabrikDownloader()
 
-            >>> sr_names = geofabrik_downloader.retrieve_names_of_subregions()
+            >>> sr_names = geofabrik_downloader.search_for_subregions()
             >>> print(sr_names[:5])
             ['Antarctica', 'Algeria', 'Angola', 'Benin', 'Botswana']
 
-            >>> sr_names = geofabrik_downloader.retrieve_names_of_subregions(
+            >>> sr_names = geofabrik_downloader.search_for_subregions(
             ...     'england', 'asia', deep=False)
             >>> print(sr_names[:5])
             ['Bedfordshire', 'Berkshire', 'Bristol', 'Buckinghamshire', 'Cambridgeshire']
             >>> print(sr_names[-5:])
             ['Thailand', 'Turkmenistan', 'Uzbekistan', 'Vietnam', 'Yemen']
 
-            >>> sr_names = geofabrik_downloader.retrieve_names_of_subregions(
+            >>> sr_names = geofabrik_downloader.search_for_subregions(
             ...     'britain', deep=True)
             >>> print(sr_names[:5])
             ['Scotland', 'Wales', 'Bedfordshire', 'Berkshire', 'Bristol']
@@ -1039,7 +1040,7 @@ class GeofabrikDownloader:
                     res_ = list(set(res) - set(check_list))
                     # for region in check_list:
                     #     res_ += self.retrieve_names_of_subregions_of(region)
-                    res_ += self.retrieve_names_of_subregions(*check_list)
+                    res_ += self.search_for_subregions(*check_list)
                 else:
                     res_ = res
                 del non_subregions_list, region_subregion_tier, check_list
@@ -1048,11 +1049,12 @@ class GeofabrikDownloader:
 
         return subregion_names
 
-    def make_default_sub_subregion_download_dir(self, subregion_name, osm_file_format,
-                                                download_dir=None, mkdir=False):
+    def make_sub_download_dir(self, subregion_name, osm_file_format, download_dir=None,
+                              mkdir=False):
         """
         Make a default directory for downloading subregions of a geographic region
-        (e.g. in case that the requested file format is unavailable for the region).
+        available on Geofabrik (e.g. in case that the requested file format is
+        unavailable for the region).
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
@@ -1077,7 +1079,7 @@ class GeofabrikDownloader:
             >>> sr_name = 'london'
             >>> file_format = ".pbf"
 
-            >>> dwnld_dir = geofabrik_downloader.make_default_sub_subregion_download_dir(
+            >>> dwnld_dir = geofabrik_downloader.make_sub_download_dir(
             ...     sr_name, file_format)
 
             >>> print(os.path.relpath(dwnld_dir))
@@ -1086,7 +1088,7 @@ class GeofabrikDownloader:
             >>> sr_name = 'britain'
             >>> file_format = ".shp"
 
-            >>> dwnld_dir = geofabrik_downloader.make_default_sub_subregion_download_dir(
+            >>> dwnld_dir = geofabrik_downloader.make_sub_download_dir(
             ...     sr_name, file_format, download_dir="tests")
 
             >>> print(os.path.relpath(dwnld_dir))
@@ -1119,7 +1121,7 @@ class GeofabrikDownloader:
                           update=False, confirmation_required=True, deep_retry=False,
                           interval_sec=None, verbose=False, ret_download_path=False):
         """
-        Download Geofabrik OSM data extracts
+        Download `Geofabrik <https://download.geofabrik.de/>`_ OSM data extracts
         for given geographic region(s) and file format.
 
         :param subregion_names: name(s) of one (or multiple) geographic region(s)
@@ -1250,7 +1252,7 @@ class GeofabrikDownloader:
                     if confirmed("Try downloading the data of its subregions instead",
                                  confirmation_required=confirmation_required):
 
-                        sub_subregions = self.retrieve_names_of_subregions(
+                        sub_subregions = self.search_for_subregions(
                             subregion_name_, deep=deep_retry)
 
                         if sub_subregions == [subregion_name_]:
@@ -1264,7 +1266,7 @@ class GeofabrikDownloader:
                                     subregion_name_, ".osm.pbf")
                                 download_dir = os.path.dirname(path_to_file_)
 
-                            download_dir_ = self.make_default_sub_subregion_download_dir(
+                            download_dir_ = self.make_sub_download_dir(
                                 subregion_name_, osm_file_format_, download_dir)
 
                             self.download_osm_data(
@@ -1391,7 +1393,7 @@ class GeofabrikDownloader:
                                 update=False, verbose=False, ret_download_path=False):
         """
         Download OSM data of one (or multiple) geographic regions and
-        all its (or their) subregions.
+        all its (or their) subregions available on Geofabrik.
 
         :param subregion_names: name(s) of one (or multiple) regions/subregions
         :type subregion_names: str or list
@@ -1461,7 +1463,7 @@ class GeofabrikDownloader:
             else subregion_names.copy()
         subregion_names_ = [
             self.validate_input_subregion_name(x) for x in subregion_names_]
-        subregion_names_ = self.retrieve_names_of_subregions(*subregion_names_)
+        subregion_names_ = self.search_for_subregions(*subregion_names_)
 
         subregion_name_list = subregion_names_.copy()
 
@@ -1522,7 +1524,7 @@ class BBBikeDownloader:
 
     def get_list_of_cities(self, update=False, confirmation_required=True, verbose=False):
         """
-        Get a list of names of BBBike cities.
+        Get a list of names of cities available on the free BBBike download server.
 
         :param update: whether to check on update and proceed to update the package data,
             defaults to ``False``
@@ -1574,10 +1576,10 @@ class BBBikeDownloader:
 
         return cities_names
 
-    def get_cities_coordinates(self, update=False, confirmation_required=True,
-                               verbose=False):
+    def get_coordinates_of_cities(self, update=False, confirmation_required=True,
+                                  verbose=False):
         """
-        Get location information of BBBike cities.
+        Get location information of cities available on the free BBBike download server.
 
         :param update: whether to check on update and proceed to update the package data,
             defaults to ``False``
@@ -1597,7 +1599,7 @@ class BBBikeDownloader:
 
             >>> bbbike_downloader = BBBikeDownloader()
 
-            >>> coords_of_cities = bbbike_downloader.get_cities_coordinates()
+            >>> coords_of_cities = bbbike_downloader.get_coordinates_of_cities()
 
             >>> print(coords_of_cities.tail())
                       City            Real name  ... ur_longitude ur_latitude
@@ -1663,7 +1665,7 @@ class BBBikeDownloader:
     def get_subregion_catalogue(self, update=False, confirmation_required=True,
                                 verbose=False):
         """
-        Get catalogue for subregions of BBBike data.
+        Get a catalogue for subregions of BBBike data.
 
         :param update: whether to check on update and proceed to update the package data,
             defaults to ``False``
@@ -1734,8 +1736,8 @@ class BBBikeDownloader:
 
         return subregion_catalogue
 
-    def get_subregion_name_list(self, update=False, confirmation_required=True,
-                                verbose=False):
+    def get_list_of_subregion_names(self, update=False, confirmation_required=True,
+                                    verbose=False):
         """
         Get a list of names of all geographic regions available on
         the free BBBike download server.
@@ -1759,7 +1761,7 @@ class BBBikeDownloader:
 
             >>> bbbike_downloader = BBBikeDownloader()
 
-            >>> sr_name_list = bbbike_downloader.get_subregion_name_list()
+            >>> sr_name_list = bbbike_downloader.get_list_of_subregion_names()
 
             >>> print(sr_name_list[:5])
             ['Aachen', 'Aarhus', 'Adelaide', 'Albuquerque', 'Alexandria']
@@ -1791,7 +1793,7 @@ class BBBikeDownloader:
     def validate_input_subregion_name(self, subregion_name):
         """
         Validate input subregion name
-        (by matching it to a name of an available geographic region).
+        (by matching it to a name of a geographic region available on BBBike).
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
@@ -1815,7 +1817,7 @@ class BBBikeDownloader:
 
         assert isinstance(subregion_name, str)
 
-        bbbike_subregion_names = self.get_subregion_name_list()
+        bbbike_subregion_names = self.get_list_of_subregion_names()
 
         subregion_name_ = find_similar_str(subregion_name, bbbike_subregion_names)
 
@@ -1915,11 +1917,10 @@ class BBBikeDownloader:
 
             return subregion_download_catalogue
 
-    def get_download_dictionary(self, update=False, confirmation_required=True,
-                                verbose=False):
+    def get_download_index(self, update=False, confirmation_required=True, verbose=False):
         """
-        Get a dictionary of available formats, data types and a download catalogue for
-        BBBike data extracts.
+        Get a dict-type index of available formats, data types and a download catalogue
+        for BBBike data extracts.
 
         :param update: whether to check on update and proceed to update the package data,
             defaults to ``False``
@@ -1940,7 +1941,7 @@ class BBBikeDownloader:
 
             >>> bbbike_downloader = BBBikeDownloader()
 
-            >>> dwnld_dict = bbbike_downloader.get_download_dictionary()
+            >>> dwnld_dict = bbbike_downloader.get_download_index()
 
             >>> print(list(dwnld_dict.keys()))
             ['FileFormat', 'DataType', 'Catalogue']
@@ -2040,14 +2041,14 @@ class BBBikeDownloader:
             .csv.xz
         """
 
-        osm_file_formats = self.get_download_dictionary()['FileFormat']
+        osm_file_formats = self.get_download_index()['FileFormat']
 
         return osm_file_formats
 
-    def validate_input_osm_file_format(self, osm_file_format):
+    def validate_input_file_format(self, osm_file_format):
         """
         Validate input OSM file format
-        (by matching it to an available filename extension).
+        (by matching it to a filename extension available on BBBike).
 
         :param osm_file_format: format (file extension) of an OSM data extract
         :type osm_file_format: str
@@ -2062,7 +2063,7 @@ class BBBikeDownloader:
 
             >>> file_fmt = 'PBF'
 
-            >>> file_fmt_ = bbbike_downloader.validate_input_osm_file_format(file_fmt)
+            >>> file_fmt_ = bbbike_downloader.validate_input_file_format(file_fmt)
 
             >>> print(file_fmt_)
             .pbf
@@ -2084,9 +2085,9 @@ class BBBikeDownloader:
         except Exception as e:
             print(e)
 
-    def get_download_url(self, subregion_name, osm_file_format):
+    def get_subregion_download_url(self, subregion_name, osm_file_format):
         """
-        Get valid URL for downloading data of the given subregion and file format.
+        Get valid URL for downloading BBBike data of the given subregion and file format.
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
@@ -2105,7 +2106,8 @@ class BBBikeDownloader:
             >>> sr_name = 'leeds'
             >>> file_fmt = 'pbf'
 
-            >>> sr_name_, sr_url = bbbike_downloader.get_download_url(sr_name, file_fmt)
+            >>> sr_name_, sr_url = bbbike_downloader.get_subregion_download_url(
+            ...     sr_name, file_fmt)
 
             >>> print(sr_name_)
             Leeds
@@ -2113,7 +2115,8 @@ class BBBikeDownloader:
             http://download.bbbike.org/osm/bbbike/Leeds/Leeds.osm.pbf
 
             >>> file_fmt = 'csv.xz'
-            >>> sr_name_, sr_url = bbbike_downloader.get_download_url(sr_name, file_fmt)
+            >>> sr_name_, sr_url = bbbike_downloader.get_subregion_download_url(
+            ...     sr_name, file_fmt)
 
             >>> print(sr_name_)
             Leeds
@@ -2122,9 +2125,9 @@ class BBBikeDownloader:
         """
 
         subregion_name_ = self.validate_input_subregion_name(subregion_name)
-        osm_file_format_ = ".osm" + self.validate_input_osm_file_format(osm_file_format)
+        osm_file_format_ = ".osm" + self.validate_input_file_format(osm_file_format)
 
-        bbbike_download_dictionary = self.get_download_dictionary()['Catalogue']
+        bbbike_download_dictionary = self.get_download_index()['Catalogue']
         sub_download_catalogue = bbbike_download_dictionary[subregion_name_]
 
         tmp = subregion_name_ + osm_file_format_
@@ -2135,7 +2138,7 @@ class BBBikeDownloader:
     def get_valid_download_info(self, subregion_name, osm_file_format, download_dir=None):
         """
         Get a valid subregion name, filename, a URL and a absolute path
-        for downloading data.
+        for downloading BBBike data.
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
@@ -2170,7 +2173,7 @@ class BBBikeDownloader:
             dat_BBBike\\Leeds\\Leeds.osm.pbf
         """
 
-        subregion_name_, download_url = self.get_download_url(
+        subregion_name_, download_url = self.get_subregion_download_url(
             subregion_name, osm_file_format)
         osm_filename = os.path.basename(download_url)
 
@@ -2187,7 +2190,7 @@ class BBBikeDownloader:
                           update=False, confirmation_required=True, interval_sec=1,
                           verbose=False, ret_download_path=False):
         """
-        Download BBBike OSM data
+        Download `BBBike <https://download.bbbike.org/osm/>`_ OSM data
         of a given format of one (or multiple) geographic region(s).
 
         :param subregion_names: name(s) of one (or multiple) geographic region(s)
@@ -2269,7 +2272,7 @@ class BBBikeDownloader:
         subregion_names_ = [
             self.validate_input_subregion_name(x) for x in subregion_names_]
 
-        osm_file_format_ = self.validate_input_osm_file_format(osm_file_format)
+        osm_file_format_ = self.validate_input_file_format(osm_file_format)
 
         download_path = []
 
@@ -2322,7 +2325,8 @@ class BBBikeDownloader:
                                 confirmation_required=True, verbose=False,
                                 ret_download_path=False):
         """
-        Download BBBike OSM data of all available formats for a geographic region.
+        Download `BBBike <https://download.bbbike.org/osm/>`_ OSM data
+        of all available formats for a geographic region.
 
         :param subregion_name: name of a geographic region (case-insensitive)
         :type subregion_name: str
@@ -2424,7 +2428,7 @@ class BBBikeDownloader:
         """
 
         subregion_name_ = self.validate_input_subregion_name(subregion_name)
-        bbbike_download_dictionary = self.get_download_dictionary()['Catalogue']
+        bbbike_download_dictionary = self.get_download_index()['Catalogue']
         sub_download_catalogue = bbbike_download_dictionary[subregion_name_]
 
         data_dir = validate_input_data_dir(download_dir) if download_dir \
