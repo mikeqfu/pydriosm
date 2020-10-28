@@ -13,7 +13,7 @@ import shapely.geometry
 from pyhelpers.dir import cd
 
 
-# -- Specify source homepages ----------------------------------------------------------
+# -- Specify resource homepages --------------------------------------------------------
 
 def geofabrik_homepage():
     """
