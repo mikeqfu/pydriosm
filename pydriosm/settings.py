@@ -7,12 +7,19 @@ import gdal
 
 def gdal_configurations(reset=False, max_tmpfile_size=5000):
     """
-    Set GDAL configurations. See also [`GC-1 <https://www.gdal.org/drv_osm.html>`_]
+    Set `GDAL <https://gdal.org/index.html>`_ configurations.
+    See also [`GC-1 <https://www.gdal.org/drv_osm.html>`_].
 
     :param reset: reset to default settings, defaults to ``False``
     :type reset: bool
     :param max_tmpfile_size: maximum size of the temporary file, defaults to ``5000``
     :type max_tmpfile_size: int
+
+    **Example**::
+
+        >>> from pyhelpers.settings import gdal_configurations
+
+        >>> gdal_configurations()
     """
 
     if not reset:
