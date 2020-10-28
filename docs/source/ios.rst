@@ -8,9 +8,14 @@ ios
     :no-members:
     :no-inherited-members:
 
-Functions for data I/O and storage
-----------------------------------
+.. rubric:: Classes
+.. autosummary::
+    :toctree: _generated/
+    :template: class.rst
 
+    PostgresOSM
+
+.. rubric:: Functions
 .. autosummary::
     :toctree: _generated/
     :template: function.rst
@@ -18,12 +23,3 @@ Functions for data I/O and storage
     get_default_layer_name
     validate_schema_names
     validate_table_name
-
-Classes for data I/O and storage
---------------------------------
-
-.. autosummary::
-    :toctree: _generated/
-    :template: class.rst
-
-    PostgresOSM
