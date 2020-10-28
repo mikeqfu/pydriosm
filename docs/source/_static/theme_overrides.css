@@ -9,4 +9,8 @@
    .wy-table-responsive {
       overflow: visible !important;
    }
+
+   .wy-nav-content {
+      max-width: 70% !important;
+   }
 }
