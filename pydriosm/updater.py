@@ -1,5 +1,5 @@
 """
-Update package data.
+Updating package data.
 """
 
 import time
@@ -36,7 +36,7 @@ def update_package_data(confirmation_required=True, interval_sec=2, verbose=True
 
         geofabrik_downloader = GeofabrikDownloader()
 
-        _ = geofabrik_downloader.get_index_of_all_downloads(
+        _ = geofabrik_downloader.get_download_index(
             update=update, confirmation_required=confirmation_required, verbose=verbose)
 
         time.sleep(interval_sec)
@@ -56,7 +56,7 @@ def update_package_data(confirmation_required=True, interval_sec=2, verbose=True
 
         time.sleep(interval_sec)
 
-        _ = geofabrik_downloader.get_subregion_name_list(
+        _ = geofabrik_downloader.get_list_of_subregion_names(
             update=update, confirmation_required=confirmation_required, verbose=verbose)
 
         time.sleep(interval_sec)
@@ -68,7 +68,7 @@ def update_package_data(confirmation_required=True, interval_sec=2, verbose=True
 
         time.sleep(interval_sec)
 
-        _ = bbbike_downloader.get_cities_coordinates(
+        _ = bbbike_downloader.get_coordinates_of_cities(
             update=update, confirmation_required=confirmation_required, verbose=verbose)
 
         time.sleep(interval_sec)
@@ -78,12 +78,12 @@ def update_package_data(confirmation_required=True, interval_sec=2, verbose=True
 
         time.sleep(interval_sec)
 
-        _ = bbbike_downloader.get_subregion_name_list(
+        _ = bbbike_downloader.get_list_of_subregion_names(
             update=update, confirmation_required=confirmation_required, verbose=verbose)
 
         time.sleep(interval_sec)
 
-        _ = bbbike_downloader.get_download_dictionary(
+        _ = bbbike_downloader.get_download_index(
             update=update, confirmation_required=confirmation_required, verbose=verbose)
 
         if verbose:
