@@ -1,5 +1,6 @@
-from .downloader import *
-from .ios import *
+from .downloader import BBBikeDownloader, GeofabrikDownloader
+from .ios import PostgresOSM
+from .reader import BBBikeReader, GeofabrikReader
 from .settings import gdal_configurations
 
 gdal_configurations(reset=False)
