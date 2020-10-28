@@ -131,3 +131,4 @@ misc/osm-data-in-gis-formats-free.pdf
 misc/osm-layer-features.vsdx
 dat_BBBike/
 dat_GeoFabrik/
+tests/pull_requests.py
