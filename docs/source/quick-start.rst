@@ -21,7 +21,7 @@ Download data
 
 The current release version of the package works mainly for the OSM data extracts that is available for free download from `Geofabrik`_ and `BBBike`_ download servers.
 
-To start with, we could use the class :ref:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>` of the module :ref:`pydriosm.downloader<downloader>` to get a sample from the free `Geofabrik`_ download server.
+To start with, we could use the class :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>` (see also :ref:`pydriosm.downloader<downloader>`) to get a sample from the free `Geofabrik`_ download server.
 
 .. code-block:: python
 
@@ -146,7 +146,7 @@ In addition, we can also download data of multiple (sub)regions at one go. For e
 Read/parse data
 ===============
 
-To read/parse any of the downloaded data files above, we could use the class :ref:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` of the module :ref:`pydriosm.reader<reader>`.
+To read/parse any of the downloaded data files above, we could use the class :py:class:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` (see also :ref:`pydriosm.reader<reader>`).
 
 .. code-block:: python
 
@@ -160,7 +160,7 @@ To read/parse any of the downloaded data files above, we could use the class :re
 PBF data (.pbf / .osm.pbf)
 --------------------------
 
-To read the PBF data, we can use the method :py:meth:`.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>`, whose parser depends largely on `GDAL/OGR <https://pypi.org/project/GDAL/>`_. Also check out the function :ref:`parse_osm_pbf()<pydriosm.reader.parse_osm_pbf>` for more details.
+To read the PBF data, we can use the method :py:meth:`.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>`, whose parser depends largely on `GDAL/OGR <https://pypi.org/project/GDAL/>`_. Also check out the function :py:func:`parse_osm_pbf()<pydriosm.reader.GeofabrikReader.parse_osm_pbf>` for more details.
 
 Now, let's try to read the PBF data of Rutland:
 
@@ -327,7 +327,7 @@ For example, to merge the 'railways' layer of London and Kent:
     >>> print(os.path.relpath(path_to_merged_shp))
     tests\greater-london_kent_railways\greater-london_kent_railways.shp
 
-For more details, also check out the functions :ref:`merge_shps()<pydriosm.reader.merge_shps>` and :ref:`merge_layer_shps()<pydriosm.reader.merge_layer_shps>` of the module :ref:`pydriosm.reader<reader>`.
+For more details, also check out the functions :py:func:`merge_shps()<pydriosm.reader.merge_shps>` and :py:func:`merge_layer_shps()<pydriosm.reader.merge_layer_shps>` (see also :ref:`pydriosm.reader<reader>`).
 
 |
 
@@ -361,7 +361,7 @@ To establish a connection with the server, we need to specify the username, pass
 
     - If we don't specify a password (for creating the instance ``osmdb_test``) as the parameter ``password`` is ``None`` by default, we'll be asked to manually type in the password to the PostgreSQL server.
 
-    - The class :ref:`PostgresOSM<pydriosm.ios.PostgresOSM>` has incorporated all available classes from the modules: :ref:`pydriosm.downloader<downloader>` and :ref:`pydriosm.reader<reader>` as properties. In the case of the above instance, ``osmdb_test.Downloader`` is equivalent to :ref:`pydriosm.GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`, as the parameter ``data_source`` is ``'Geofabrik'`` by default.
+    - The class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>` has incorporated all available classes from the modules: :py:mod:`downloader<downloader>` and :py:mod:`pydriosm.reader<reader>` as properties. In the case of the above instance, ``osmdb_test.Downloader`` is equivalent to :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`, as the parameter ``data_source`` is ``'Geofabrik'`` by default.
 
     - To relate the instance ``osmdb_test`` to 'BBBike' data, we could 1) recreate an instance by setting ``data_source='BBBike'``; or 2) set ``osmdb_test.DataSource='BBBike'``
 
