@@ -13,7 +13,7 @@ import shapely.geometry
 from pyhelpers.dir import cd
 
 
-# -- Source homepage ------------------------------------------------------------------------
+# -- Specify source homepages ----------------------------------------------------------
 
 def geofabrik_homepage():
     """
@@ -37,7 +37,7 @@ def bbbike_homepage():
     return 'http://download.bbbike.org/osm/bbbike/'
 
 
-# -- Directory ------------------------------------------------------------------------------
+# -- Specify directory/file paths ------------------------------------------------------
 
 def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     """
@@ -122,7 +122,7 @@ def cd_dat_bbbike(*sub_dir, mkdir=False, **kwargs):
     return path
 
 
-# -- Geometric object -----------------------------------------------------------------------
+# -- Specify geometric object types/names ----------------------------------------------
 
 def get_pbf_layer_feat_types_dict():
     """
@@ -142,11 +142,12 @@ def get_pbf_layer_feat_types_dict():
     return pbf_layer_feat_types
 
 
-def get_osm_geom_shapely_object_dict():
+def get_osm_geom_object_dict():
     """
     A dictionary for OSM geometry types.
 
-    :return: a dictionary with keys and values being shape types and `shapely.geometry`_ types
+    :return: a dictionary with keys and values
+        being shape types and `shapely.geometry`_ types
     :rtype: dict
 
     .. _`shapely.geometry`:
@@ -189,7 +190,7 @@ def get_valid_shp_layer_names():
     return shp_layer_names
 
 
-# -- Miscellaneous --------------------------------------------------------------------------
+# -- Miscellaneous ---------------------------------------------------------------------
 
 def find_shp_layer_name(shp_filename):
     """
@@ -211,7 +212,7 @@ def find_shp_layer_name(shp_filename):
     return layer_name
 
 
-def append_fclass_to_shp_filename(shp_filename, feature_names):
+def append_fclass_to_filename(shp_filename, feature_names):
     """
     Append a ``'fclass'`` name to the original filename of shapefile.
 
@@ -265,7 +266,8 @@ def remove_subregion_osm_file(path_to_osm_file, verbose=True):
 
         else:
             if verbose:
-                print("File not found at {}.".format(*os.path.split(path_to_osm_file)[::-1]))
+                print("File not found at {}.".format(
+                    *os.path.split(path_to_osm_file)[::-1]))
 
     except Exception as e:
         print("Failed. {}".format(e))
@@ -273,12 +275,13 @@ def remove_subregion_osm_file(path_to_osm_file, verbose=True):
 
 def get_number_of_chunks(path_to_file, chunk_size_limit=50):
     """
-    Compute number of chunks for parsing OSM (mainly PBF) data file in a chunk-wise manner.
+    Compute number of chunks for parsing OSM (mainly PBF) data file
+    in a chunk-wise manner.
 
     :param path_to_file: absolute path to a file
     :type path_to_file: str
-    :param chunk_size_limit: threshold (in MB) above which the data file is split into chunks,
-        defaults to ``50``;
+    :param chunk_size_limit: threshold (in MB) above which
+        the data file is split into chunks, defaults to ``50``;
     :type chunk_size_limit: int
     :return: number of chunks
     :rtype: int or None
@@ -301,7 +304,8 @@ def convert_dtype_dict():
     `pandas.read_csv()
     <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html>`_.
 
-    :return: a dictionary as data-type convertor between PostgreSQL and `pandas.read_csv()`_
+    :return: a dictionary as data-type convertor
+        between PostgreSQL and `pandas.read_csv()`_
     :rtype: dict
 
     .. _`pandas.read_csv()`:
