@@ -8,9 +8,15 @@ reader
     :no-members:
     :no-inherited-members:
 
-Functions for parsing data
---------------------------
+.. rubric:: Classes
+.. autosummary::
+    :toctree: _generated/
+    :template: class.rst
 
+    GeofabrikReader
+    BBBikeReader
+
+.. rubric:: Functions
 .. autosummary::
     :toctree: _generated/
     :template: function.rst
@@ -26,13 +32,3 @@ Functions for parsing data
     merge_layer_shps
     parse_csv_xz
     parse_geojson_xz
-
-Classes for reading data
-------------------------
-
-.. autosummary::
-    :toctree: _generated/
-    :template: class.rst
-
-    GeofabrikReader
-    BBBikeReader
