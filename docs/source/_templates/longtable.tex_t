@@ -6,7 +6,7 @@
 <%- elif table.align == 'right' -%>
   [r]
 <%- endif -%>
-{\X{5}{7}\X{2}{7}} %<%= table.get_colspec() %>
+{\X{3}{8}\X{5}{8}} %<%= table.get_colspec() %>
 <%- if table.caption -%>
 \sphinxthelongtablecaptionisattop
 \caption{<%= ''.join(table.caption) %>\strut}<%= labels %>\\*[\sphinxlongtablecapskipadjust]

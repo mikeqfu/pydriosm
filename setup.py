@@ -2,24 +2,19 @@ import setuptools
 
 import pydriosm
 
-with open("README.md", 'r') as readme:
+with open("README.rst", 'r', encoding='utf-8') as readme:
     long_description = readme.read()
-
-# with open('requirements.txt') as f:
-#     requirements = f.readlines()
-# requirements = [r.strip() for r in requirements]
 
 setuptools.setup(
 
     name=pydriosm.__package_name__,
     version=pydriosm.__version__,
-
     author=pydriosm.__author__,
     author_email=pydriosm.__email__,
 
     description=pydriosm.__description__,
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
 
     url='https://github.com/mikeqfu/pydriosm',
 
@@ -31,11 +26,11 @@ setuptools.setup(
         'html5lib',
         'humanfriendly',
         'lxml',
-        'pandas>=1.1.2',
+        'pandas~=1.1.3',
         'psycopg2',
-        'pyhelpers>=1.2.4',
+        'pyhelpers>=1.2.5',
         'pyproj',
-        # 'pyshp',
+        'pyshp',
         'python-Levenshtein',
         # 'Shapely',
     ],
