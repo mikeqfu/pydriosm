@@ -1,5 +1,5 @@
 """
-Read the free OSM data extracts.
+Reading `OSM <https://www.openstreetmap.org/>`_ data extracts.
 """
 
 import collections
@@ -32,7 +32,7 @@ def get_osm_pbf_layer_names(path_to_osm_pbf):
     **Example**::
 
         >>> import os
-        >>> from pydriosm import GeofabrikDownloader, get_osm_pbf_layer_names
+        >>> from pydriosm.reader import GeofabrikDownloader, get_osm_pbf_layer_names
 
         >>> geofabrik_downloader = GeofabrikDownloader()
 
@@ -100,8 +100,8 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
     .. _`shapely.geometry`:
         https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
 
-    See the examples
-    for the function :py:func:`parse_osm_pbf()<pydriosm.reader.parse_osm_pbf>`.
+    See the examples for the function
+    :py:func:`parse_osm_pbf()<pydriosm.reader.parse_osm_pbf>`.
     """
 
     def make_point_as_polygon(mp_coords):
@@ -118,7 +118,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
         by using `shapely.geometry_`.
         """
 
-        geom_types_funcs = get_osm_geom_shapely_object_dict()
+        geom_types_funcs = get_osm_geom_object_dict()
         pbf_layer_feat_types = get_pbf_layer_feat_types_dict()
         geom_type = pbf_layer_feat_types[geo_typ]
         geom_type_func = geom_types_funcs[geom_type]
@@ -141,7 +141,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
         <https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects>`_.
         """
 
-        geom_obj_funcs = get_osm_geom_shapely_object_dict()
+        geom_obj_funcs = get_osm_geom_object_dict()
         geom_types = [g['type'] for g in geom_collection]
         coordinates = [gs['coordinates'] for gs in geom_collection]
         geometry_collection = [
@@ -445,7 +445,7 @@ def unzip_shp_zip(path_to_shp_zip, path_to_extract_dir=None, layer_names=None,
     :rtype: str
 
     .. _`zipfile.ZipFile()`:
-    https://docs.python.org/3/library/zipfile.html#zipfile-objects
+        https://docs.python.org/3/library/zipfile.html#zipfile-objects
 
     **Examples**::
 
@@ -829,8 +829,8 @@ def parse_layer_shp(path_to_layer_shp, feature_names=None, crs=None,
 
             if save_fclass_shp:
                 path_to_lyr_shp_ = path_to_lyr_shp[0].replace("_a_", "_")
-                path_to_lyr_feat_shp = append_fclass_to_shp_filename(path_to_lyr_shp_,
-                                                                     feature_names_)
+                path_to_lyr_feat_shp = append_fclass_to_filename(path_to_lyr_shp_,
+                                                                 feature_names_)
                 shp_data.to_file(path_to_lyr_feat_shp, driver=driver)
 
                 if ret_path_to_fclass_shp:
@@ -1182,7 +1182,7 @@ def parse_geojson_xz(path_to_geojson_xz, fmt_geom=False):
         lambda x: x['geometry']['type']).to_frame(name='geom_types')
 
     if fmt_geom:
-        geom_types_funcs = get_osm_geom_shapely_object_dict()
+        geom_types_funcs = get_osm_geom_object_dict()
 
         def reformat_geom(geo_typ, coords):
             sub_geom_type_func = geom_types_funcs[geo_typ]
