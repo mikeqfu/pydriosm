@@ -25,7 +25,6 @@ To test if PyDriosm is correctly installed, try importing the package via an int
 .. parsed-literal::
     The current release version is: |version|
 
-|
 
 .. note::
 
