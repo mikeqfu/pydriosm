@@ -1,7 +1,7 @@
-.. py:module:: pydriosm.updater
-
 updater
 =======
+
+.. py:module:: pydriosm.updater
 
 .. automodule:: pydriosm.updater
     :noindex:
