@@ -1,8 +1,8 @@
-.. py:module:: pydriosm
-
 =======
 Modules
 =======
+
+.. py:module:: pydriosm
 
 .. toctree::
     :hidden:
