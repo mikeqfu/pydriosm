@@ -1,7 +1,7 @@
-.. py:module:: pydriosm.downloader
-
 downloader
 ==========
+
+.. py:module:: pydriosm.downloader
 
 .. automodule:: pydriosm.downloader
     :noindex:
