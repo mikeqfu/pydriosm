@@ -127,8 +127,7 @@ venv.bak/
 dmypy.json
 
 # Misc
-misc/osm-data-in-gis-formats-free.pdf
-misc/osm-layer-features.vsdx
 dat_BBBike/
 dat_GeoFabrik/
+misc/
 tests/pull_requests.py
