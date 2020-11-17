@@ -1,7 +1,7 @@
-.. py:module:: pydriosm.ios
-
 ios
 ===
+
+.. py:module:: pydriosm.ios
 
 .. automodule:: pydriosm.ios
     :noindex:
