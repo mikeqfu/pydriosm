@@ -174,7 +174,7 @@ Now, let's try to read the PBF data of Rutland:
     >>> type(rutland_pbf_raw)
     <class 'dict'>
 
-``rutland_pbf_raw`` is in `dict`_ type and has five keys: ``'points'``, ``'lines'``, ``'multilinestrings'``, ``'multipolygons'`` and ``'other_relations'``, which are also the names of the five different layers of the PBF data.
+``rutland_pbf_raw`` is in `dict`_ type and has five keys: ``'points'``, ``'lines'``, ``'multilinestrings'``, ``'multipolygons'`` and ``'other_relations'``, corresponding to the names of the five different layers of the PBF data.
 
 Check out the **'points'** layer:
 
@@ -191,7 +191,7 @@ Check out the **'points'** layer:
     3  {"type": "Feature", "geometry": {"type": "Poin...
     4  {"type": "Feature", "geometry": {"type": "Poin...
 
-We could find that each row of ``rutland_pbf_points`` is textual `GeoJSON`_ data.
+Each row of ``rutland_pbf_points`` is textual `GeoJSON`_ data, which is a nested dictionary.
 
 .. code-block:: python
 
@@ -207,6 +207,48 @@ We could find that each row of ``rutland_pbf_points`` is textual `GeoJSON`_ data
 
     >>> print(list(rutland_pbf_points_0_.keys()))
     ['type', 'geometry', 'properties', 'id']
+
+Below are charts (:numref:`points` - :numref:`other_relations`) illustrating the different geometry types and structures (i.e. all keys within the corresponding GeoJSON data) for each layer:
+
+.. figure:: _images/Point.*
+    :name: points
+    :align: center
+    :width: 85%
+
+    Type of the geometry object and keys within the nested dictionary of ``'points'``
+
+
+.. figure:: _images/LineString.*
+    :name: lines
+    :align: center
+    :width: 85%
+
+    Type of the geometry object and keys within the nested dictionary of ``'lines'``
+
+
+.. figure:: _images/MultiLineString.*
+    :name: multilinestrings
+    :align: center
+    :width: 85%
+
+    Type of the geometry object and keys within the nested dictionary of ``'multilinestrings'``
+
+
+.. figure:: _images/MultiPolygon.*
+    :name: multipolygons
+    :align: center
+    :width: 85%
+
+    Type of the geometry object and keys within the nested dictionary of ``'multipolygons'``
+
+
+.. figure:: _images/GeometryCollection.*
+    :name: other_relations
+    :align: center
+    :width: 85%
+
+    Type of the geometry object and keys within the nested dictionary of ``'other_relations'``
+
 
 .. _parse_raw_feat:
 
@@ -392,15 +434,20 @@ For example, let's now try to import ``rutland_pbf_parsed`` that we have obtaine
 
     The parameter ``schema_names`` is ``None`` by default, meaning that we are going to import all of the five layers of the PBF data into the database.
 
-In the example above, five schemas, including 'points', 'lines', 'multilinestrings', 'multipolygons' and 'other_relations' are, if they don't exist, created in the database 'osmdb_test'. Each of the schemas corresponds to a key (i.e. name of a layer) of ``rutland_pbf_parsed`` (as illustrated below);
+In the example above, five schemas, including 'points', 'lines', 'multilinestrings', 'multipolygons' and 'other_relations' are, if they do not exist, created in the database 'osmdb_test'. Each of the schemas corresponds to a key (i.e. name of a layer) of ``rutland_pbf_parsed`` (as illustrated in :numref:`pbf_schemas_example`); and the data of each layer is imported into a table named as 'Rutland' under the corresponding schema (as illustrated in :numref:`pbf_table_example`).
 
-.. image:: _images/pbf_schemas_example.*
-    :height: 250pt
+.. figure:: _images/pbf_schemas_example.*
+    :name: pbf_schemas_example
+    :width: 45%
 
-and the data of each layer is imported into a table named as 'Rutland' under the corresponding schema (as illustrated below).
+    An illustration of schemas for importing OSM PBF data into a PostgreSQL database
 
-.. image:: _images/pbf_table_example.*
-    :height: 375pt
+
+.. figure:: _images/pbf_table_example.*
+    :name: pbf_table_example
+    :width: 42%
+
+    An illustration of table name for storing the 'lines' layer of the OSM PBF data of Rutland
 
 
 .. _qs-fetch-data-from-the-database:
