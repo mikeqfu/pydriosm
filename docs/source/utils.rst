@@ -1,7 +1,7 @@
-.. py:module:: pydriosm.utils
-
 utils
 =====
+
+.. py:module:: pydriosm.utils
 
 .. automodule:: pydriosm.utils
     :noindex:
