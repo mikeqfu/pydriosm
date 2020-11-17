@@ -1,7 +1,7 @@
-.. py:module:: pydriosm.settings
-
 settings
 ========
+
+.. py:module:: pydriosm.settings
 
 .. automodule:: pydriosm.settings
     :noindex:
