@@ -1,7 +1,7 @@
-.. py:module:: pydriosm.reader
-
 reader
 ======
+
+.. py:module:: pydriosm.reader
 
 .. automodule:: pydriosm.reader
     :noindex:
