@@ -1,5 +1,5 @@
 beautifulsoup4
-Fiona
+Fiona~=1.8.17
 fuzzywuzzy
 GDAL~=3.1.4
 geopandas
