@@ -37,7 +37,7 @@ To test if PyDriosm is correctly installed, try importing the package via an int
     - Possibilities of being unsuccessful to ``pip install pydriosm``
 
         - For *Windows* users:
-            The ``pip`` method might fail to install some dependencies, such as `Fiona`_, `GDAL`_, `Shapely`_ and `python-Levenshtein`_. If errors occur when ``pip`` installing any of those dependencies, try instead to ``pip install`` their respective *.whl* files, which can be downloaded from the `Unofficial Windows Binaries for Python Extension Packages`_. After they are installed successfully, try to install pydriosm again.
+            The ``pip`` method might fail to install some dependencies, such as `Fiona`_, `GDAL`_, `Shapely`_ and `python-Levenshtein`_. If errors occur when ``pip`` installing any of those dependencies, try instead to ``pip install`` their respective *.whl* files, which can be downloaded from `Unofficial Windows Binaries for Python Extension Packages`_. After they are installed successfully, try to install pydriosm again.
 
         - For *Linux/Unix* users:
             To try out any earlier version (<2.0.0) on *Linux*, check `this page <https://github.com/mikeqfu/pydriosm/issues/1#issuecomment-540684439>`_ for installation instructions.
