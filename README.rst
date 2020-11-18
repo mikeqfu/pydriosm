@@ -15,7 +15,7 @@ PyDriosm
 
 **Author**: Qian Fu
 
-PyDriosm provides helpful Python utilities for researchers/practitioners to easily download and read `OpenStreetMap`_ (OSM) data, such as `protocolbuffer binary format`_ (PBF) and `shapefile`_ data, which are available at the free download servers: `Geofabrik`_ and `BBBike`_. The package also provides a convenient way for I/O and storage of the OSM data with `PostgreSQL`_.
+PyDriosm is an open-source tool for researchers/practitioners to easily download and read `OpenStreetMap`_ (OSM) data in popular file formats such as `protocolbuffer binary format`_ (PBF) and `shapefile`_, which are available for free download from `Geofabrik`_ and `BBBike`_. The package also provides a convenient way for I/O and storage of the OSM data with `PostgreSQL`_.
 
 .. _`OpenStreetMap`: https://www.openstreetmap.org/
 .. _`protocolbuffer binary format`: https://wiki.openstreetmap.org/wiki/PBF_Format
