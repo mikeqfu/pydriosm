@@ -16,7 +16,7 @@ pyshp
 python-Levenshtein
 python-rapidjson
 requests
-Shapely
+Shapely~=1.7.1
 SQLAlchemy
 SQLAlchemy-Utils
 tqdm
