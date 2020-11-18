@@ -19,25 +19,28 @@ setuptools.setup(
     url='https://github.com/mikeqfu/pydriosm',
 
     install_requires=[
-        'beautifulsoup4',
-        # 'Fiona',
-        # 'GDAL',
-        'geopandas',
+        'beautifulsoup4~=4.9.3',
+        'Fiona~=1.8.17',
+        'fuzzywuzzy',
+        'GDAL~=3.1.4',
+        'geopandas~=0.8.1',
         'html5lib',
-        'humanfriendly',
+        'humanfriendly~=8.2',
         'lxml',
         'pandas~=1.1.4',
         'psycopg2',
         'pyhelpers>=1.2.7',
         'pyproj',
         'pyshp',
-        'python-Levenshtein',
-        # 'Shapely',
+        'requests',
+        'Shapely~=1.7.1',
+        'SQLAlchemy',
+        'SQLAlchemy-Utils',
+        'tqdm',
     ],
 
     packages=setuptools.find_packages(exclude=["*.tests", "tests.*", "tests"]),
 
-    package_data={"": ["requirements.txt", "LICENSE"], "pydriosm": ["dat/*"]},
     include_package_data=True,
 
     classifiers=[
