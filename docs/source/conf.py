@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../pydriosm'))
 
 # A list of modules to be mocked up
-autodoc_mock_imports = ['shapely', 'shapely.geometry', 'gdal', 'fiona']
+autodoc_mock_imports = ['shapely', 'shapely.geometry', 'shapely.wkt',
+                        'gdal', 'fiona', 'geopandas']
 
 # Project information ==================================================================
 import datetime
