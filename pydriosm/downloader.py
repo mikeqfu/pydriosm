@@ -1167,7 +1167,7 @@ class GeofabrikDownloader:
 
             >>> dwnld_paths = geofabrik_downloader.download_osm_data(
             ...     sr_names, file_fmt, verbose=True, ret_download_path=True)
-            Confirm to download .osm.pbf data of the following geographic region(s):
+            Confirmed to download .osm.pbf data of the following geographic region(s):
                 Greater London
                 Rutland
             ? [No]|Yes: yes
@@ -1194,7 +1194,7 @@ class GeofabrikDownloader:
 
             >>> dwnld_path = geofabrik_downloader.download_osm_data(
             ...     sr_name, file_fmt, dwnld_dir, verbose=True, ret_download_path=True)
-            Confirm to download .shp.zip data of the following geographic region(s):
+            Confirmed to download .shp.zip data of the following geographic region(s):
                 West Midlands
             ? [No]|Yes: yes
             Downloading "west-midlands-latest-free.shp.zip" to "\\tests" ...
@@ -1213,7 +1213,7 @@ class GeofabrikDownloader:
             >>> dwnld_path = geofabrik_downloader.download_osm_data(
             ...     sr_name, file_fmt, dwnld_dir, deep_retry=True, verbose=True,
             ...     ret_download_path=True)
-            Confirm to download .shp.zip data of the following geographic region(s):
+            Confirmed to download .shp.zip data of the following geographic region(s):
                 Great Britain
             ? [No]|Yes: yes
             The .shp.zip data is not found for "Great Britain".
@@ -1231,7 +1231,7 @@ class GeofabrikDownloader:
         osm_file_format_ = self.validate_input_file_format(osm_file_format)
 
         if confirmed(
-                "Confirm to download {} data of the following geographic region(s):"
+                "Confirmed to download {} data of the following geographic region(s):"
                 "\n\t{}\n?".format(osm_file_format_, "\n\t".join(subregion_names_)),
                 confirmation_required=confirmation_required):
 
@@ -1430,7 +1430,7 @@ class GeofabrikDownloader:
 
             >>> geofabrik_downloader.download_subregion_data(sr_names, file_fmt,
             ...                                              dwnld_dir, verbose=True)
-            To download .osm.pbf data of the following geographic region(s):
+            Confirmed to download .osm.pbf data of the following geographic region(s):
                 Rutland
                 West Yorkshire
             ? [No]|Yes: yes
@@ -1445,7 +1445,7 @@ class GeofabrikDownloader:
 
             >>> dwnld_paths = geofabrik_downloader.download_subregion_data(
             ...     sr_names, file_fmt, dwnld_dir, verbose=True, ret_download_path=True)
-            To download .osm.pbf data of the following geographic region(s):
+            Confirmed to download .osm.pbf data of the following geographic region(s):
                 West Midlands
             ? [No]|Yes: yes
             Downloading "west-midlands-latest.osm.pbf" to "\\tests" ...
@@ -1477,7 +1477,7 @@ class GeofabrikDownloader:
         confirmation_required_ = False if not subregion_name_list else True
 
         if confirmed(
-                "To download {} data of the following geographic region(s): "
+                "Confirmed to download {} data of the following geographic region(s): "
                 "\n\t{}\n?".format(osm_file_format_, "\n\t".join(subregion_name_list)),
                 confirmation_required=confirmation_required_):
 
@@ -1850,7 +1850,7 @@ class BBBikeDownloader:
 
             >>> leeds_dwnld_cat = bbbike_downloader.get_subregion_download_catalogue(
             ...     subregion_name=sr_name, verbose=True)
-            Confirm to collect the download catalogue for Leeds? [No]|Yes: yes
+            Confirmed to collect the download catalogue for Leeds? [No]|Yes: yes
             In progress ... Done.
 
             >>> print(leeds_dwnld_cat.head())
@@ -1866,7 +1866,7 @@ class BBBikeDownloader:
 
         subregion_name_ = self.validate_input_subregion_name(subregion_name)
 
-        if confirmed("Confirm to collect the download catalogue for {}?".format(
+        if confirmed("Confirmed to collect the download catalogue for {}?".format(
                 subregion_name_), confirmation_required=confirmation_required):
 
             try:
@@ -2230,7 +2230,7 @@ class BBBikeDownloader:
             >>> file_fmt = 'pbf'
 
             >>> bbbike_downloader.download_osm_data(sr_names, file_fmt, verbose=True)
-            Confirm to download .pbf data of the following geographic region(s):
+            Confirmed to download .pbf data of the following geographic region(s):
                 London
             ? [No]|Yes: yes
             Downloading "London.osm.pbf" to "\\dat_BBBike\\London" ...
@@ -2248,7 +2248,7 @@ class BBBikeDownloader:
             >>> dwnld_paths = bbbike_downloader.download_osm_data(sr_names, file_fmt,
             ...                                                   dwnld_dir, verbose=True,
             ...                                                   ret_download_path=True)
-            Confirm to download .pbf data of the following geographic region(s):
+            Confirmed to download .pbf data of the following geographic region(s):
                 Leeds
                 Birmingham
             ? [No]|Yes: yes
@@ -2276,7 +2276,7 @@ class BBBikeDownloader:
 
         download_path = []
 
-        if confirmed("Confirm to download {} data of the following geographic region(s):"
+        if confirmed("Confirmed to download {} data of the following geographic region(s):"
                      "\n\t{}\n?".format(osm_file_format_, "\n\t".join(subregion_names_)),
                      confirmation_required=confirmation_required):
 
@@ -2359,7 +2359,7 @@ class BBBikeDownloader:
             >>> sr_name = 'london'
 
             >>> bbbike_downloader.download_subregion_data(sr_name, verbose=True)
-            Confirm to download all available BBBike OSM data of London? [No]|Yes: yes
+            Confirmed to download all available BBBike OSM data of London? [No]|Yes: yes
             Downloading in progress ...
                 London.osm.pbf ...
                 London.osm.gz ...
@@ -2434,7 +2434,7 @@ class BBBikeDownloader:
         data_dir = validate_input_data_dir(download_dir) if download_dir \
             else cd_dat_bbbike(subregion_name_, mkdir=True)
 
-        if confirmed("Confirm to download all available BBBike OSM data of {}?".format(
+        if confirmed("Confirmed to download all available BBBike OSM data of {}?".format(
                 subregion_name_), confirmation_required=confirmation_required):
 
             if verbose:
