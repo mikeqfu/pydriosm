@@ -12,19 +12,32 @@ sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../pydriosm'))
 
 # A list of modules to be mocked up
-autodoc_mock_imports = ['shapely', 'shapely.geometry', 'shapely.wkt',
-                        'gdal', 'fiona', 'geopandas']
+autodoc_mock_imports = ['shapely',
+                        'shapely.geometry',
+                        'shapely.wkt',
+                        'gdal',
+                        'fiona',
+                        'geopandas',
+                        'beautifulsoup4',
+                        'fuzzywuzzy',
+                        'humanfriendly',
+                        'more-itertools',
+                        'python-rapidjson',
+                        'requests',
+                        'pyshp',
+                        'psycopg2',
+                        'sqlalchemy',
+                        'sqlalchemy-utils']
 
 # Project information ==================================================================
 import datetime
-import pydriosm
 
 # General information about the project.
-project = u'{}'.format(pydriosm.__package_name_alt__)
-copyright = u'2019-{}, {}'.format(datetime.datetime.now().year, pydriosm.__author__)
+project = 'PyDriosm'
+copyright = '2019-{}, Qian Fu'.format(datetime.datetime.now().year)
 
 # The version info for the project
-version = pydriosm.__version__  # The short X.Y version.
+version = '2.0.0'  # The short X.Y.Z version.
 release = version  # The full version, including alpha/beta/rc tags.
 
 # General configuration ================================================================
@@ -118,9 +131,9 @@ latex_engine = 'pdflatex'
 # Grouping the document tree into LaTeX files
 latex_documents = [
     ('index',  # source start file
-     '{}.tex'.format(pydriosm.__package_name__),  # target name
-     u'{} Documentation'.format(pydriosm.__package_name_alt__),  # title
-     pydriosm.__author__,  # author
+     'pydriosm.tex',  # target name
+     'PyDriosm Documentation',  # title
+     'Qian Fu',  # author
      'manual',  # document class ['howto', 'manual', or own class]
      1  # toctree only
      ),
@@ -186,9 +199,9 @@ latex_theme = 'manual'
 
 man_pages = [  # How to group the document tree into manual pages
     ('index',  # startdocname
-     pydriosm.__package_name__,  # name
-     u'{} Documentation'.format(pydriosm.__package_name_alt__),  # description
-     [pydriosm.__author__],  # authors
+     'pydriosm',  # name
+     'PyDriosm Documentation',  # description
+     ['Qian Fu'],  # authors
      1  # section
      )
 ]
@@ -197,11 +210,11 @@ man_pages = [  # How to group the document tree into manual pages
 
 texinfo_documents = [  # Grouping the document tree into Texinfo files
     (master_doc,  # source start file
-     pydriosm.__package_name__,  # target name
-     u'{} Documentation'.format(pydriosm.__package_name_alt__),  # title
-     pydriosm.__author__,  # author
-     pydriosm.__package_name_alt__,  # dir menu entry
-     pydriosm.__description__,
+     'pydriosm',  # target name
+     'PyDriosm Documentation',  # title
+     'Qian Fu',  # author
+     'PyDriosm',  # dir menu entry
+     'An open-source tool for downloading, reading and PostgreSQL-based I/O of OpenStreetMap data.',
      'Data manipulation tools',  # category
      1  # toctree only
      ),
