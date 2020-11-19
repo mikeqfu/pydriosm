@@ -1,8 +1,5 @@
 beautifulsoup4
-Fiona~=1.8.17
 fuzzywuzzy
-GDAL~=3.1.4
-geopandas
 html5lib
 humanfriendly
 lxml
@@ -16,7 +13,6 @@ pyshp
 python-Levenshtein
 python-rapidjson
 requests
-Shapely~=1.7.1
 SQLAlchemy
 SQLAlchemy-Utils
 tqdm
