@@ -27,6 +27,7 @@ setuptools.setup(
         'html5lib',
         'humanfriendly~=8.2',
         'lxml',
+        'more-itertools',
         'pandas~=1.1.4',
         'psycopg2',
         'pyhelpers>=1.2.7',
