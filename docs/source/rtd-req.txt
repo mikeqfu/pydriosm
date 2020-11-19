@@ -1,9 +1,12 @@
 beautifulsoup4
+Fiona~=1.8.17
 fuzzywuzzy
+GDAL~=3.1.4
+geopandas~=0.8.1
 html5lib
 humanfriendly
 lxml
-more-itertools~=8.6.0
+more-itertools
 numpy
 openpyxl
 pandas~=1.1.4
@@ -14,10 +17,11 @@ pyshp
 python-Levenshtein
 python-rapidjson
 requests
+Shapely~=1.7.1
+Sphinx~=3.3.1
 SQLAlchemy
 SQLAlchemy-Utils
 tqdm
 xlrd
 XlsxWriter
 xlwt
-Sphinx~=3.3.1
