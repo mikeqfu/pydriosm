@@ -4,11 +4,16 @@ Downloading `Geofabrik <https://download.geofabrik.de/>`_ and
 """
 
 import copy
+import csv
+import io
 import time
 import urllib.error
 import urllib.parse
+import urllib.request
 
 import bs4
+import geopandas as gpd
+import humanfriendly
 import more_itertools
 import pandas as pd
 import requests
@@ -98,7 +103,6 @@ class GeofabrikDownloader:
             raw_directory_index.columns = [c.title() for c in raw_directory_index.columns]
 
             # Clean the DataFrame
-            import humanfriendly
             raw_directory_index.Size = \
                 raw_directory_index.Size.apply(humanfriendly.format_size)
             raw_directory_index.sort_values('Date', ascending=False, inplace=True)
@@ -257,7 +261,6 @@ class GeofabrikDownloader:
                 if verbose == 2:
                     print("Collecting {}".format(self.DownloadIndexName), end=" ... ")
                 try:
-                    import geopandas as gpd
                     download_index_ = gpd.read_file(self.DownloadIndexURL)
 
                     # Note that '<br />' exists in all the names of Poland' subregions
@@ -600,7 +603,6 @@ class GeofabrikDownloader:
                     duplicated = subregion_downloads_catalogue[
                         subregion_downloads_catalogue.Subregion.duplicated(keep=False)]
                     if not duplicated.empty:
-                        import humanfriendly
                         for i in range(0, 2, len(duplicated)):
                             temp = duplicated.iloc[i:i + 2]
                             size = temp['.osm.pbf.Size'].map(
@@ -1622,10 +1624,6 @@ class BBBikeDownloader:
                          confirmation_required=confirmation_required):
 
                 try:
-                    import urllib.request
-                    import csv
-                    import io
-
                     csv_temp = urllib.request.urlopen(self.URLCitiesCoordinates)
                     csv_file = list(
                         csv.reader(io.StringIO(csv_temp.read().decode('utf-8')),
@@ -1879,7 +1877,6 @@ class BBBikeDownloader:
 
                 source = requests.get(url, headers=fake_requests_headers())
 
-                import bs4
                 source_soup = bs4.BeautifulSoup(source.text, 'lxml')
                 download_links_class = source_soup.find_all(
                     name='a', attrs={'class': ['download_link', 'small']})
