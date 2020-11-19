@@ -60,7 +60,7 @@ exclude_patterns = ['_build', '../_build', '../build']
 autosummary_generate = True
 
 # A list of modules to be mocked up
-autodoc_mock_imports = ['fiona', 'gdal', 'shapely']
+autodoc_mock_imports = ['fiona', 'gdal', 'shapely', 'more-itertools']
 
 # The suffix(es) of source filenames (For multiple suffix, a list of string,
 # e.g. source_suffix = ['.rst', '.md'])
