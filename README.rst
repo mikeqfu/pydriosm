@@ -45,4 +45,4 @@ License
 Cite as
 =======
 
-Qian Fu, 2020. PyDriosm: an open-source tool for downloading, reading and PostgreSQL-based I/O of OpenStreetMap (OSM) data. `DOI:10.5281/zenodo.4281194 <https://doi.org/10.5281/zenodo.4281194>`_
+Qian Fu, 2020. PyDriosm: an open-source tool for downloading, reading and PostgreSQL-based I/O of OpenStreetMap (OSM) data. `doi:10.5281/zenodo.4281194 <https://doi.org/10.5281/zenodo.4281194>`_
