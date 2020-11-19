@@ -11,6 +11,9 @@ import sys
 sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../pydriosm'))
 
+# A list of modules to be mocked up
+autodoc_mock_imports = ['gdal', 'fiona', 'shapely', 'more-itertools']
+
 # Project information ==================================================================
 import datetime
 import pydriosm
@@ -58,9 +61,6 @@ exclude_patterns = ['_build', '../_build', '../build']
 # Whether to scan all found documents for autosummary directives,
 # and to generate stub pages for each
 autosummary_generate = True
-
-# A list of modules to be mocked up
-autodoc_mock_imports = ['fiona', 'gdal', 'shapely', 'shapely.geometry', 'more-itertools']
 
 # The suffix(es) of source filenames (For multiple suffix, a list of string,
 # e.g. source_suffix = ['.rst', '.md'])
