@@ -15,19 +15,21 @@ sys.path.insert(0, os.path.abspath('../../pydriosm'))
 autodoc_mock_imports = ['shapely',
                         'shapely.geometry',
                         'shapely.wkt',
-                        'gdal',
+                        'gdal', 'ogr',
                         'fiona',
                         'geopandas',
-                        'beautifulsoup4',
+                        'bs4',
                         'fuzzywuzzy',
                         'humanfriendly',
-                        'more-itertools',
-                        'python-rapidjson',
+                        'more_itertools',
+                        'numpy',
+                        'pandas',
+                        'rapidjson',
                         'requests',
-                        'pyshp',
+                        'shapefile',
                         'psycopg2',
                         'sqlalchemy',
-                        'sqlalchemy-utils']
+                        'sqlalchemy.engine.reflection']
 
 # Project information ==================================================================
 import datetime
