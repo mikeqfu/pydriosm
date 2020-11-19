@@ -12,22 +12,23 @@ sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../pydriosm'))
 
 # A list of modules to be mocked up
-autodoc_mock_imports = ['shapely',
-                        'shapely.geometry',
-                        'shapely.wkt',
-                        'gdal', 'ogr',
+autodoc_mock_imports = ['bs4',
                         'fiona',
-                        'geopandas',
-                        'bs4',
                         'fuzzywuzzy',
+                        'gdal',
+                        'geopandas',
                         'humanfriendly',
                         'more_itertools',
                         'numpy',
+                        'ogr',
                         'pandas',
+                        'psycopg2',
                         'rapidjson',
                         'requests',
                         'shapefile',
-                        'psycopg2',
+                        'shapely',
+                        'shapely.geometry',
+                        'shapely.wkt',
                         'sqlalchemy',
                         'sqlalchemy.engine.reflection']
 
@@ -96,7 +97,7 @@ html_theme = 'sphinx_rtd_theme'  # The theme to use for HTML and HTML Help pages
 
 html_theme_options = {
     'collapse_navigation': False,
-    'navigation_depth': 2,
+    'navigation_depth': 3,
 }
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -149,7 +150,7 @@ latex_elements = {
     'preamble': r'''
         \setlength{\headheight}{14pt}
         \DeclareUnicodeCharacter{229E}{\ensuremath{\boxplus}}
-        \setcounter{tocdepth}{1}
+        \setcounter{tocdepth}{2}
         \usepackage[none]{hyphenat}
         \usepackage[document]{ragged2e}
         \usepackage[utf8]{inputenc}
