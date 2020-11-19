@@ -40,7 +40,7 @@ project = 'PyDriosm'
 copyright = '2019-{}, Qian Fu'.format(datetime.datetime.now().year)
 
 # The version info for the project
-version = '2.0.0'  # The short X.Y.Z version.
+version = '2.0.1'  # The short X.Y.Z version.
 release = version  # The full version, including alpha/beta/rc tags.
 
 # General configuration ================================================================
