@@ -39,7 +39,7 @@ geofabrik_downloader.download_osm_data(subregion_name, osm_file_format, download
 """
 Confirm to download .osm.pbf data of the following geographic region(s):
     Greater London
-? [No]|Yes: yes
+? [No]|Yes: >? yes
 Downloading "greater-london-latest.osm.pbf" to "\\tests" ... 
 Done. 
 """
@@ -77,7 +77,7 @@ path_to_london_pbf = cd(download_dir, london_pbf_filename)
 
 print(f"Current (relative) file path: '{os.path.relpath(path_to_london_pbf)}'")
 """
-Current file path: 'tests\\greater-london-latest.osm.pbf'
+Current (relative) file path: 'tests\\greater-london-latest.osm.pbf'
 """
 
 # Download PBF data of multiple subregions
@@ -168,7 +168,10 @@ print(list(rutland_pbf_points_0_.keys()))
 
 # more granular tabular data
 rutland_pbf_parsed = geofabrik_reader.read_osm_pbf(subregion_name, data_dir,
-                                                   parse_raw_feat=True)
+                                                   parse_raw_feat=True, verbose=True)
+"""
+Parsing "\\tests\\rutland-latest.osm.pbf" ... Done. 
+"""
 
 rutland_pbf_parsed_points = rutland_pbf_parsed['points']
 
@@ -274,11 +277,14 @@ subregion_name = 'Rutland'
 
 osmdb_test.import_osm_data(rutland_pbf_parsed, table_name=subregion_name, verbose=True)
 """
-Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ... 
-    points ... done: 4195 features.
-    lines ... done: 7405 features.
+Confirmed to import the data into table "Rutland"
+    at postgres:***@localhost:5432/osmdb_test
+? [No]|Yes: >? yes
+Importing data into "Rutland" ... 
+    points ... done: 4253 features.
+    lines ... done: 7599 features.
     multilinestrings ... done: 53 features.
-    multipolygons ... done: 6190 features.
+    multipolygons ... done: 6382 features.
     other_relations ... done: 13 features.
 """
 
@@ -326,7 +332,10 @@ lyr_names = ['railways', 'roads', 'waterways']
 osmdb_test.import_osm_data(birmingham_shp, table_name=subregion_name,
                            schema_names=lyr_names, verbose=True)
 """
-Importing data into "Birmingham" at postgres:***@localhost:5432/osmdb_test ... 
+Confirmed to import the data into table "Birmingham"
+    at postgres:***@localhost:5432/osmdb_test
+? [No]|Yes: yes
+Importing data into "Birmingham" ... 
     railways ... done: 3176 features.
     roads ... done: 116939 features.
     waterways ... done: 2897 features.
@@ -384,7 +393,7 @@ Confirmed to drop the following table:
     "railways"
   at postgres:***@localhost:5432/osmdb_test
 ? [No]|Yes: >? yes
-Dropping ... 
+Dropping table ... 
     "railways"."Birmingham" ... Done. 
 """
 
@@ -393,28 +402,27 @@ lyr_names = ['waterways', 'lines', 'multilinestrings']
 
 osmdb_test.drop_subregion_table(subregion_names, lyr_names, verbose=True)
 """
-Confirmed to drop the following tables:
+Confirmed to drop the following tables: 
     "Birmingham" and
     "Rutland"
-  from the following schemas:
+  from the following schemas: 
     "lines",
     "multilinestrings" and
     "waterways"
   at postgres:***@localhost:5432/osmdb_test
-? [No]|Yes: yes
-Dropping ...
-    "lines"."Rutland" ... Done.
-    "multilinestrings"."Rutland" ... Done.
-    "waterways"."Birmingham" ... Done.
+? [No]|Yes: >? yes
+Dropping tables ... 
+    "lines"."Rutland" ... Done. 
+    "multilinestrings"."Rutland" ... Done. 
+    "waterways"."Birmingham" ... Done. 
 """
 
 # Drop the database
 osmdb_test.PostgreSQL.drop_database(verbose=True)
 """
-Confirmed to drop the database "osmdb_test"
-    from postgres:***@localhost:5432/osmdb_test?
-  [No]|Yes: >? yes
-Dropping the database "osmdb_test" ... Done. 
+Confirmed to drop the database "osmdb_test" from postgres:***@localhost:5432
+? [No]|Yes: >? yes
+Dropping "osmdb_test" ... Done. 
 """
 
 # Clear up (the mess in here) before we move on
