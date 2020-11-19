@@ -4,7 +4,7 @@ PyDriosm
 
 .. only:: html
 
-    |PyPI| |Python| |License| |Downloads|
+    |PyPI| |Python| |License| |Downloads| |DOI|
 
     .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm?color=important&label=PyPI
         :target: https://pypi.org/project/pydriosm/
@@ -14,6 +14,8 @@ PyDriosm
         :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
     .. |Downloads| image:: https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads
         :target: https://pypistats.org/packages/pydriosm
+    .. |DOI| image:: https://zenodo.org/badge/92493726.svg
+       :target: https://zenodo.org/badge/latestdoi/92493726
 
 | **Author**: Qian Fu
 | **Email**: qian.fu@outlook.com
