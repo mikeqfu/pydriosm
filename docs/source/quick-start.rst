@@ -60,7 +60,7 @@ If we'd like to download say the `protocolbuffer binary format`_ (PBF) data of a
     >>> # Download the OSM PBF data of London from Geofabrik
     >>> geofabrik_downloader.download_osm_data(subregion_name, osm_file_format,
     ...                                        download_dir, verbose=True)
-    Confirm to download .osm.pbf data of the following geographic region(s):
+    Confirmed to download .osm.pbf data of the following geographic region(s):
         Greater London
     ? [No]|Yes: yes
     Downloading "greater-london-latest.osm.pbf" to "\tests" ...
@@ -118,7 +118,7 @@ In addition, we can also download data of multiple (sub)regions at one go. For e
     >>> paths_to_pbf = geofabrik_downloader.download_osm_data(
     ...     subregion_names, osm_file_format, download_dir, ret_download_path=True)
     ...     verbose=True)
-    Confirm to download .osm.pbf data of the following geographic region(s):
+    Confirmed to download .osm.pbf data of the following geographic region(s):
         Rutland
         West Yorkshire
         West Midlands
@@ -257,7 +257,9 @@ If we set ``parse_raw_feat`` (which defaults to ``False``) to be ``True`` when r
 .. code-block:: python
 
     >>> rutland_pbf_parsed = geofabrik_reader.read_osm_pbf(subregion_name, data_dir,
-    ...                                                    parse_raw_feat=True)
+    ...                                                    parse_raw_feat=True,
+    ...                                                    verbose=True)
+    Parsing "\tests\rutland-latest.osm.pbf" ... Done.
 
     >>> rutland_pbf_parsed_points = rutland_pbf_parsed['points']
 
@@ -299,7 +301,7 @@ For example, let's try to read the 'railways' layer of the shapefile data of Lon
 
     >>> london_shp = geofabrik_reader.read_shp_zip(subregion_name, layer_names=layer_name,
     ...                                            feature_names=None, data_dir=data_dir)
-    Confirm to download .shp.zip data of the following geographic region(s):
+    Confirmed to download .shp.zip data of the following geographic region(s):
         Greater London
     ? [No]|Yes: yes
     Downloading "greater-london-latest-free.shp.zip" to "\tests" ...
@@ -345,7 +347,7 @@ For example, to merge the 'railways' layer of London and Kent:
 
     >>> path_to_merged_shp = geofabrik_reader.merge_subregion_layer_shp(
     ...     layer_name, subregion_names, data_dir, verbose=True, ret_merged_shp_path=True)
-    Confirm to download .shp.zip data of the following geographic region(s):
+    Confirmed to download .shp.zip data of the following geographic region(s):
         Greater London
         Kent
     ? [No]|Yes: yes
@@ -423,11 +425,14 @@ For example, let's now try to import ``rutland_pbf_parsed`` that we have obtaine
 
     >>> osmdb_test.import_osm_data(rutland_pbf_parsed, table_name=subregion_name,
     ...                            verbose=True)
-    Importing data into "Rutland" at postgres:***@localhost:5432/osmdb_test ...
-        points ... done: 4195 features.
-        lines ... done: 7405 features.
+    Confirmed to import the data into table "Rutland"
+        at postgres:***@localhost:5432/osmdb_test
+    ? [No]|Yes: yes
+    Importing data into "Rutland" ...
+        points ... done: 4253 features.
+        lines ... done: 7599 features.
         multilinestrings ... done: 53 features.
-        multipolygons ... done: 6190 features.
+        multipolygons ... done: 6382 features.
         other_relations ... done: 13 features.
 
 .. note::
@@ -438,14 +443,14 @@ In the example above, five schemas, including 'points', 'lines', 'multilinestrin
 
 .. figure:: _images/pbf_schemas_example.*
     :name: pbf_schemas_example
-    :width: 45%
+    :width: 44%
 
     An illustration of schemas for importing OSM PBF data into a PostgreSQL database
 
 
 .. figure:: _images/pbf_table_example.*
     :name: pbf_table_example
-    :width: 42%
+    :width: 41%
 
     An illustration of table name for storing the 'lines' layer of the OSM PBF data of Rutland
 
@@ -499,7 +504,7 @@ Of course, we can also import/fetch data of only a specific layer or multiple la
 
     >>> birmingham_shp = osmdb_test.Reader.read_shp_zip(subregion_name, data_dir=data_dir,
     ...                                                 verbose=True)
-    Confirm to download .shp.zip data of the following geographic region(s):
+    Confirmed to download .shp.zip data of the following geographic region(s):
         Birmingham
     ? [No]|Yes: yes
     Downloading "Birmingham.osm.shp.zip" to "\tests" ...
@@ -523,10 +528,13 @@ Of course, we can also import/fetch data of only a specific layer or multiple la
     >>> lyr_names = ['railways', 'roads', 'waterways']
     >>> osmdb_test.import_osm_data(birmingham_shp, table_name=subregion_name,
     ...                            schema_names=lyr_names, verbose=True)
-    Importing data into "Birmingham" at postgres:***@localhost:5432/osmdb_test ...
+    Confirmed to import the data into table "Birmingham"
+        at postgres:***@localhost:5432/osmdb_test
+    ? [No]|Yes: yes
+    Importing data into "Birmingham" ...
         railways ... done: 3176 features.
-        roads ... done: 116939 features.
-        waterways ... done: 2897 features.
+        roads ... done: 119344 features.
+        waterways ... done: 2917 features.
 
 To fetch only the 'railways' data of Birmingham:
 
@@ -599,7 +607,7 @@ For example, to drop the 'railways' data of Birmingham:
         "railways"
       at postgres:***@localhost:5432/osmdb_test
     ? [No]|Yes: yes
-    Dropping ...
+    Dropping table ...
         "railways"."Birmingham" ... Done.
 
 To also drop the 'waterways' of Birmingham and both 'lines' and 'multilinestrings' of Rutland:
@@ -619,7 +627,7 @@ To also drop the 'waterways' of Birmingham and both 'lines' and 'multilinestring
         "waterways"
       at postgres:***@localhost:5432/osmdb_test
     ? [No]|Yes: yes
-    Dropping ...
+    Dropping tables ...
         "lines"."Rutland" ... Done.
         "multilinestrings"."Rutland" ... Done.
         "waterways"."Birmingham" ... Done.
@@ -629,10 +637,9 @@ We could also easily drop the whole database 'osmdb_test' if we don't need it an
 .. code-block:: python
 
     >>> osmdb_test.PostgreSQL.drop_database(verbose=True)
-    Confirmed to drop the database "osmdb_test"
-        from postgres:***@localhost:5432/osmdb_test?
-     [No]|Yes: yes
-    Dropping the database "osmdb_test" ... Done.
+    Confirmed to drop the database "osmdb_test" from postgres:***@localhost:5432
+    ? [No]|Yes: yes
+    Dropping "osmdb_test" ... Done.
 
 
 Clear up "the mess" in here before we move on
@@ -680,6 +687,6 @@ To remove all the data files that have been downloaded and generated:
 .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference/geopandas.GeoDataFrame.html
 .. _`pandas.DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 
-**(The end of the quick start)**
+(**THE END of** :ref:`Quick start<pydriosm-quick-start>`.)
 
 For more details, check out :ref:`Modules<modules>`.
