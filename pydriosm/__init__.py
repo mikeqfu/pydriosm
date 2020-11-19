@@ -10,8 +10,8 @@ __all__ = ['downloader', 'GeofabrikDownloader', 'BBBikeDownloader',
            'ios', 'PostgresOSM']
 
 __package_name__ = 'pydriosm'
-__package_name_alt__ = u'PyDriosm'
-__version__ = '2.0.0'
-__author__ = u'Qian Fu'
+__package_name_alt__ = 'PyDriosm'
+__version__ = '2.0.1'
+__author__ = 'Qian Fu'
 __email__ = 'qian.fu@outlook.com'
 __description__ = "An open-source tool for downloading, reading and PostgreSQL-based I/O of OpenStreetMap data."
