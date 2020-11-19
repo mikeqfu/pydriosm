@@ -28,6 +28,8 @@ def update_package_data(confirmation_required=True, interval_sec=2, verbose=True
         >>> from pydriosm.updater import update_package_data
 
         >>> update_package_data(confirmation_required=True, verbose=True)
+
+    (**THE END OF** :ref:`Modules<modules>`.)
     """
 
     if confirmed("To update resources (which may take a few minutes)?"):
