@@ -126,8 +126,8 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Misc
-dat_BBBike/
-dat_GeoFabrik/
+# Custom
+dat_*/
 misc/
-tests/pull_requests.py
+tests/cmd
+tests/pull*.py
