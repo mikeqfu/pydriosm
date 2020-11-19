@@ -1,3 +1,3 @@
-pandas~=1.1.4
 pyhelpers>=1.2.7
 Sphinx~=3.3.1
+sphinx-rtd-theme==0.5.0
