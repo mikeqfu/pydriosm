@@ -42,7 +42,7 @@ def get_osm_pbf_layer_names(path_to_osm_pbf):
 
         >>> path_to_rutland_pbf = geofabrik_downloader.download_osm_data(
         ...     sr_name, file_fmt, dwnld_dir, verbose=True, ret_download_path=True)
-        Confirm to download .osm.pbf data of the following geographic region(s):
+        Confirmed to download .osm.pbf data of the following geographic region(s):
             Rutland
         ? [No]|Yes: yes
         Downloading "rutland-latest.osm.pbf" to "\\tests" ...
@@ -273,7 +273,7 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
 
         >>> path_to_rutland_pbf = geofabrik_downloader.download_osm_data(
         ...     sr_name, file_fmt, dwnld_dir, verbose=True, ret_download_path=True)
-        Confirm to download .osm.pbf data of the following geographic region(s):
+        Confirmed to download .osm.pbf data of the following geographic region(s):
             Rutland
         ? [No]|Yes: yes
         Downloading "rutland-latest.osm.pbf" to "\\tests" ...
@@ -461,7 +461,7 @@ def unzip_shp_zip(path_to_shp_zip, path_to_extract_dir=None, layer_names=None,
 
         >>> path_to_rutland_shp_zip = geofabrik_downloader.download_osm_data(
         ...     sr_name, file_fmt, dwnld_dir, ret_download_path=True)
-        Confirm to download .shp.zip data of the following geographic region(s):
+        Confirmed to download .shp.zip data of the following geographic region(s):
             Rutland
         ? [No]|Yes: yes
 
@@ -617,7 +617,7 @@ def read_shp_file(path_to_shp, method='geopandas', **kwargs):
 
         >>> path_to_rutland_shp_zip = geofabrik_downloader.download_osm_data(
         ...     sr_name, file_fmt, dwnld_dir, ret_download_path=True)
-        Confirm to download .shp.zip data of the following geographic region(s):
+        Confirmed to download .shp.zip data of the following geographic region(s):
             Rutland
         ? [No]|Yes: yes
 
@@ -1320,7 +1320,7 @@ class GeofabrikReader:
             >>> # Download the PBF data file of Rutland to "\\tests"
             >>> geofabrik_reader.Downloader.download_osm_data(sr_name, file_fmt,
             ...                                               dwnld_dir, verbose=True)
-            Confirm to download .osm.pbf data of the following geographic region(s):
+            Confirmed to download .osm.pbf data of the following geographic region(s):
                 Rutland
             ? [No]|Yes: yes
             Downloading "rutland-latest.osm.pbf" to "\\tests" ...
@@ -1415,7 +1415,7 @@ class GeofabrikReader:
 
             >>> rutland_pbf_raw = geofabrik_reader.read_osm_pbf(sr_name, dat_dir,
             ...                                                 verbose=True)
-            Confirm to download .osm.pbf data of the following geographic region(s):
+            Confirmed to download .osm.pbf data of the following geographic region(s):
                 Rutland
             ? [No]|Yes: yes
 
@@ -1716,7 +1716,7 @@ class GeofabrikReader:
 
             >>> path_to_merged_shp_file = geofabrik_reader.merge_subregion_layer_shp(
             ...     lyr_name, sr_names, dat_dir, verbose=True, ret_merged_shp_path=True)
-            Confirm to download .shp.zip data of the following geographic region(s):
+            Confirmed to download .shp.zip data of the following geographic region(s):
                 Greater Manchester
                 West Yorkshire
             ? [No]|Yes: yes
@@ -1758,7 +1758,7 @@ class GeofabrikReader:
 
             >>> path_to_merged_shp_files = geofabrik_reader.merge_subregion_layer_shp(
             ...     lyr_name, sr_names, dat_dir, verbose=True, ret_merged_shp_path=True)
-            Confirm to download .shp.zip data of the following geographic region(s):
+            Confirmed to download .shp.zip data of the following geographic region(s):
                 Greater London
                 Kent
                 Surrey
@@ -1837,7 +1837,7 @@ class GeofabrikReader:
                      pickle_it=False, ret_pickle_path=False, rm_extracts=False,
                      rm_shp_zip=False, verbose=False):
         """
-        Read Geofabrik .shp.zip file of a subregion.
+        Read Geofabrik .shp.zip file of a geographic region.
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
@@ -1889,7 +1889,7 @@ class GeofabrikReader:
             >>> dat_dir = "tests"
 
             >>> rutland_shp = geofabrik_reader.read_shp_zip(sr_name, data_dir=dat_dir)
-            Confirm to download .shp.zip data of the following geographic region(s):
+            Confirmed to download .shp.zip data of the following geographic region(s):
                 Rutland
             ? [No]|Yes: yes
 
@@ -2167,7 +2167,7 @@ class BBBikeReader:
 
             >>> path_to_leeds_pbf = bbbike_reader.Downloader.download_osm_data(
             ...     sr_name, file_fmt, dat_dir, verbose=True, ret_download_path=True)
-            Confirm to download .pbf data of the following geographic region(s):
+            Confirmed to download .pbf data of the following geographic region(s):
                 Leeds
             ? [No]|Yes: yes
             Downloading "Leeds.osm.pbf" to "\tests" ...
@@ -2388,7 +2388,7 @@ class BBBikeReader:
 
             >>> birmingham_shp = bbbike_reader.read_shp_zip(sr_name, data_dir=dat_dir,
             ...                                             verbose=True)
-            Confirm to download .shp.zip data of the following geographic region(s):
+            Confirmed to download .shp.zip data of the following geographic region(s):
                 Birmingham
             ? [No]|Yes: yes
             Downloading "Birmingham.osm.shp.zip" to "\\tests" ...
@@ -2639,7 +2639,7 @@ class BBBikeReader:
             >>> dat_dir = "tests"
 
             >>> leeds_csv_xz = bbbike_reader.read_csv_xz(sr_name, dat_dir, verbose=True)
-            Confirm to download .csv.xz data of the following geographic region(s):
+            Confirmed to download .csv.xz data of the following geographic region(s):
                 Leeds
             ? [No]|Yes: yes
             Downloading "Leeds.osm.csv.xz" to "\\tests" ...
@@ -2685,7 +2685,7 @@ class BBBikeReader:
     def read_geojson_xz(self, subregion_name, data_dir=None, fmt_geom=False,
                         download_confirmation_required=True, verbose=False):
         """
-        Read BBBike .geojson.xz file of a subregion.
+        Read BBBike .geojson.xz file of a geographic region.
 
         :param subregion_name: name of a region/subregion (case-insensitive)
         :type subregion_name: str
@@ -2719,7 +2719,7 @@ class BBBikeReader:
 
             >>> leeds_geojson_xz = bbbike_reader.read_geojson_xz(sr_name, dat_dir,
             ...                                                  verbose=True)
-            Confirm to download .geojson.xz data of the following geographic region(s):
+            Confirmed to download .geojson.xz data of the following geographic region(s):
                 Leeds
             ? [No]|Yes: yes
             Downloading "Leeds.osm.geojson.xz" to "\\tests" ...
