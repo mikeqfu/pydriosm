@@ -9,7 +9,6 @@ import itertools
 import lzma
 import zipfile
 
-import geopandas as gpd
 import ogr
 import rapidjson
 import shapefile
