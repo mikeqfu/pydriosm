@@ -14,7 +14,19 @@ To install the more recent version hosted directly from `GitHub repository`_:
 
     pip install --upgrade git+https://github.com/mikeqfu/pydriosm.git
 
-To test if PyDriosm is correctly installed, try importing the package via an interpreter shell:
+
+.. note::
+
+    Possibilities of ``pip install`` being unsuccessful or causing errors:
+
+    - For *Windows* users:
+        The ``pip`` method might fail to install some dependencies, such as `GDAL`_, `Fiona`_ and `Shapely`_. If errors occur when directly installing any of those dependencies, ``pip install`` instead their respective *.whl* files, which can be downloaded from `Unofficial Windows Binaries for Python Extension Packages`_. After the *.whl* files are installed successfully, try ``pip install pydriosm`` again.
+
+    - For *Linux/Unix* users:
+        To try out any earlier version (<2.0.0) that is not compatible with 2.0.0+, check `this page <https://github.com/mikeqfu/pydriosm/issues/1#issuecomment-540684439>`_ for instructions if errors occur during installation.
+
+
+To test if PyDriosm is correctly installed, try to import the package via an interpreter shell:
 
 .. code-block:: python
 
@@ -33,14 +45,6 @@ To test if PyDriosm is correctly installed, try importing the package via an int
     - To ensure you get the most recent version, it is always recommended to add ``--upgrade`` (or ``-U``) to ``pip install``.
 
     - The package has not yet been tested with `Python 2`_. For users who have installed both `Python 2`_ and `Python 3`_, it would be recommended to replace ``pip`` with ``pip3``. But you are more than welcome to volunteer testing the package with `Python 2`_ and any issues should be logged/reported onto the `Issues`_ page.
-
-    - Possibilities of being unsuccessful to ``pip install pydriosm``
-
-        - For *Windows* users:
-            The ``pip`` method might fail to install some dependencies, such as `Fiona`_, `GDAL`_, `Shapely`_ and `python-Levenshtein`_. If errors occur when ``pip`` installing any of those dependencies, try instead to ``pip install`` their respective *.whl* files, which can be downloaded from `Unofficial Windows Binaries for Python Extension Packages`_. After they are installed successfully, try to install pydriosm again.
-
-        - For *Linux/Unix* users:
-            To try out any earlier version (<2.0.0) on *Linux*, check `this page <https://github.com/mikeqfu/pydriosm/issues/1#issuecomment-540684439>`_ for installation instructions.
 
     - For more general instructions, check the `Installing Packages`_ page.
 
