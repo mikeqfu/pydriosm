@@ -2,7 +2,7 @@
 PyDriosm
 ========
 
-|PyPI| |Python| |License| |Downloads|
+|PyPI| |Python| |License| |Downloads| |DOI|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm?color=important&label=PyPI
     :target: https://pypi.org/project/pydriosm/
@@ -12,6 +12,8 @@ PyDriosm
     :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
 .. |Downloads| image:: https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads
     :target: https://pypistats.org/packages/pydriosm
+.. |DOI| image:: https://zenodo.org/badge/92493726.svg
+   :target: https://zenodo.org/badge/latestdoi/92493726
 
 **Author**: Qian Fu
 
@@ -39,3 +41,8 @@ License
 .. _GNU General Public License, version 3 (GPLv3): https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
 .. _Open Data Commons Open Database License: https://opendatacommons.org/licenses/odbl/
 .. _OpenStreetMap Foundation: https://osmfoundation.org/
+
+Cite as
+=======
+
+Qian Fu, 2020. PyDriosm: an open-source tool for downloading, reading and PostgreSQL-based I/O of OpenStreetMap (OSM) data. `DOI:10.5281/zenodo.4281194 <https://doi.org/10.5281/zenodo.4281194>`_
