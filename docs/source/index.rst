@@ -9,13 +9,13 @@ PyDriosm
     .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm?color=important&label=PyPI
         :target: https://pypi.org/project/pydriosm/
     .. |Python| image:: https://img.shields.io/pypi/pyversions/pydriosm?color=informational&label=Python
-        :target: https://www.python.org/downloads/
+        :target: https://docs.python.org/3/
     .. |License| image:: https://img.shields.io/pypi/l/pydriosm?color=green&label=License
         :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
     .. |Downloads| image:: https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads
         :target: https://pypistats.org/packages/pydriosm
     .. |DOI| image:: https://zenodo.org/badge/92493726.svg
-       :target: https://zenodo.org/badge/latestdoi/92493726
+        :target: https://zenodo.org/badge/latestdoi/92493726
 
 | **Author**: Qian Fu
 | **Email**: qian.fu@outlook.com
