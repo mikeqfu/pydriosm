@@ -12,7 +12,6 @@ For a demonstration of how how pydriosm works with `OpenStreetMap`_ (OSM) data, 
 
     - The downloaded data and those being generated during the tutorial will all be deleted from the "tests" directory; a manual confirmation will be prompted at the end of the tutorial to determine whether the "tests" folder should remain.
 
-|
 
 .. _qs-download-data:
 
@@ -139,7 +138,6 @@ In addition, we can also download data of multiple (sub)regions at one go. For e
     'tests\west-yorkshire-latest.osm.pbf'
     'tests\west-midlands-latest.osm.pbf'
 
-|
 
 .. _qs-read-parse-data:
 
@@ -373,7 +371,6 @@ For example, to merge the 'railways' layer of London and Kent:
 
 For more details, also check out the functions :py:func:`merge_shps()<pydriosm.reader.merge_shps>` and :py:func:`merge_layer_shps()<pydriosm.reader.merge_layer_shps>` (see also :ref:`pydriosm.reader<reader>`).
 
-|
 
 .. _qs-import-fetch-data:
 
@@ -686,6 +683,8 @@ To remove all the data files that have been downloaded and generated:
 .. _`str`: https://docs.python.org/3/library/stdtypes.html#str
 .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference/geopandas.GeoDataFrame.html
 .. _`pandas.DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
+
+|
 
 (**THE END of** :ref:`Quick start<pydriosm-quick-start>`.)
 
