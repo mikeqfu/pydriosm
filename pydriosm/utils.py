@@ -199,8 +199,8 @@ def validate_shp_layer_names(layer_names):
     Validate the input of layer name(s) for reading shape files.
 
     :param layer_names: name of a shapefile layer, e.g. 'railways',
-        or names of multiple layers; if``None`` (default), empty list;
-        if 'all', all available layers
+        or names of multiple layers; if ``None`` (default), returns an empty list;
+        if ``'all'``, returns a list of all available layers
     :type layer_names: str or list or None
     :return: valid layer names to be input
     :rtype: list
