@@ -12,9 +12,6 @@ import urllib.parse
 import urllib.request
 
 import bs4
-import geopandas as gpd
-import humanfriendly
-import more_itertools
 import pandas as pd
 import requests
 from pyhelpers.dir import validate_input_data_dir
@@ -97,6 +94,8 @@ class GeofabrikDownloader:
         """
 
         try:
+            import humanfriendly
+
             raw_directory_index = pd.read_html(url, match='file', header=0,
                                                parse_dates=['date'])
             raw_directory_index = pd.concat(raw_directory_index, ignore_index=True)
@@ -261,6 +260,8 @@ class GeofabrikDownloader:
                 if verbose == 2:
                     print("Collecting {}".format(self.DownloadIndexName), end=" ... ")
                 try:
+                    import geopandas as gpd
+
                     download_index_ = gpd.read_file(self.DownloadIndexURL)
 
                     # Note that '<br />' exists in all the names of Poland' subregions
@@ -469,8 +470,11 @@ class GeofabrikDownloader:
 
                 # Russian Federation in both pages of Asia and Europe,
                 # so there are duplicates in non_subregions_list
+                import more_itertools
+
                 non_subregions_list = \
                     list(more_itertools.unique_everseen(non_subregions_list))
+
                 return region_subregion_tiers, non_subregions_list
 
             if confirmed(
@@ -603,6 +607,8 @@ class GeofabrikDownloader:
                     duplicated = subregion_downloads_catalogue[
                         subregion_downloads_catalogue.Subregion.duplicated(keep=False)]
                     if not duplicated.empty:
+                        import humanfriendly
+
                         for i in range(0, 2, len(duplicated)):
                             temp = duplicated.iloc[i:i + 2]
                             size = temp['.osm.pbf.Size'].map(
