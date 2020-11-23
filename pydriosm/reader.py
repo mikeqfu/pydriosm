@@ -9,13 +9,11 @@ import itertools
 import lzma
 import zipfile
 
-import ogr
 import rapidjson
-import shapefile
-import shapely.geometry
 from pyhelpers.ops import split_list
 
 from .downloader import *
+from .settings import gdal_configurations
 from .utils import *
 
 
@@ -61,6 +59,8 @@ def get_osm_pbf_layer_names(path_to_osm_pbf):
     """
 
     try:
+        import ogr
+
         # Start parsing the '.osm.pbf' file
         osm_pbf = ogr.Open(path_to_osm_pbf)
 
@@ -140,15 +140,20 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
         <https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects>`_.
         """
 
+        import shapely.geometry
+
         geom_obj_funcs = get_osm_geom_object_dict()
         geom_types = [g['type'] for g in geom_collection]
         coordinates = [gs['coordinates'] for gs in geom_collection]
+
         geometry_collection = [
             geom_obj_funcs[geom_type](coords) if 'Polygon' not in geom_type
             else geom_obj_funcs[geom_type](pt for pts in coords for pt in pts)
             for geom_type, coords in zip(geom_types, coordinates)]
 
-        return shapely.geometry.GeometryCollection(geometry_collection)
+        geom_collection_ = shapely.geometry.GeometryCollection(geometry_collection)
+
+        return geom_collection_
 
     def transform_other_tags_(other_tags):
         """
@@ -172,14 +177,6 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
             other_tags_ = other_tags
 
         return other_tags_
-
-    # def decode_other_relations_geometries(other_relations_geom):
-    #     or_types = list(set([d['type'] for d in other_relations_geom]))
-    #
-    #     if len(or_types) == 1:
-    #         or_types = or_types[0]
-    #
-    #     return or_types
 
     if not pbf_layer_data.empty:
         # Start parsing 'geometry' column
@@ -220,7 +217,7 @@ def parse_osm_pbf_layer(pbf_layer_data, geo_typ, transform_geom, transform_other
 
 
 def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_geom,
-                  transform_other_tags):
+                  transform_other_tags, max_tmpfile_size=None):
     """
     Parse a PBF data file.
 
@@ -234,6 +231,9 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
         (or a collection of coordinates) into a geometric object
     :param transform_other_tags: whether to transform a ``'other_tags'`` into a dictionary
     :type transform_other_tags: bool
+    :param max_tmpfile_size: defaults to ``None``,
+        see also :py:func:`gdal_configurations()<pydriosm.settings.gdal_configurations>`
+    :type max_tmpfile_size: int or None
     :return: parsed OSM PBF data
     :rtype: dict
 
@@ -346,9 +346,13 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
     parse_raw_feat_ = True if transform_geom or transform_other_tags \
         else copy.copy(parse_raw_feat)
 
+    import ogr
+
+    if max_tmpfile_size:
+        gdal_configurations(max_tmpfile_size=max_tmpfile_size)
+
     raw_osm_pbf = ogr.Open(path_to_osm_pbf)
-    # Grab available layers in file:
-    #   points, lines, multilinestrings, multipolygons, & other_relations
+
     layer_names, all_layer_data = [], []
     # Parse the data feature by feature
     layer_count = raw_osm_pbf.GetLayerCount()
@@ -418,9 +422,9 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
 def unzip_shp_zip(path_to_shp_zip, path_to_extract_dir=None, layer_names=None,
                   mode='r', clustered=False, verbose=False, ret_extract_dir=False):
     """
-    Unzip a shapefile (.shp.zip) data.
+    Unzip a .shp.zip file data.
 
-    :param path_to_shp_zip: absolute path to a .shp.zip file
+    :param path_to_shp_zip: absolute path to a zipped shapefile data (.shp.zip)
     :type path_to_shp_zip: str
     :param path_to_extract_dir: absolute path to a directory where extracted files will
         be saved; if ``None`` (default), use the same directory where the .shp.zip file is
@@ -661,9 +665,13 @@ def read_shp_file(path_to_shp, method='geopandas', **kwargs):
     """
 
     if method in ('geopandas', 'gpd'):  # default
+        import geopandas as gpd
+
         shp_data = gpd.read_file(path_to_shp, **kwargs)
 
     else:
+        import shapefile
+
         # Read .shp file using shapefile.Reader()
         shp_reader = shapefile.Reader(path_to_shp)
 
@@ -861,6 +869,8 @@ def merge_shps(paths_to_shp_files, path_to_merged_dir, method='geopandas'):
     """
 
     if method in ('geopandas', 'gpd'):
+        import geopandas as gpd
+
         shp_data, geom_types = [], []
         for shp_file_path in paths_to_shp_files:
             shp_dat = gpd.read_file(shp_file_path)
@@ -885,6 +895,8 @@ def merge_shps(paths_to_shp_files, path_to_merged_dir, method='geopandas'):
             merged_shp_data.to_file(filename=path_to_merged_dir, driver="ESRI Shapefile")
 
     else:  # method == 'pyshp'
+        import shapefile
+
         # Resource: https://github.com/GeospatialPython/pyshp
         w = shapefile.Writer(path_to_merged_dir)
         for f in paths_to_shp_files:
@@ -1226,43 +1238,6 @@ def parse_geojson_xz(path_to_geojson_xz, fmt_geom=False):
     return geojson_xz_data
 
 
-# def validate_input_layer_names(layer_names):
-#     """
-#     Validate the input of layer name(s) for reading shape files.
-#
-#     :param layer_names: name of a .shp layer, e.g. 'railways',
-#         or names of multiple layers; if ``None`` (default), all available layers
-#     :type layer_names: str or list or None
-#     :return: valid layer names to be input
-#     :rtype: list
-#
-#
-#     **Examples**::
-#
-#         from pydriosm.reader import validate_shp_layer_names
-#
-#         layer_names = None
-#         layer_names_ = validate_shp_layer_names(layer_names)
-#         print(layer_names_)
-#         # []
-#
-#         layer_names = ['point', 'line']
-#         layer_names_ = validate_shp_layer_names(layer_names)
-#         print(layer_names_)
-#         # []
-#     """
-#
-#     if layer_names:
-#         layer_names_ = [layer_names] if isinstance(layer_names, str)
-#             else layer_names.copy()
-#         layer_names_ = [find_similar_str(x, get_valid_shp_layer_names())
-#                         for x in layer_names_]
-#     else:
-#         layer_names_ = []
-#
-#     return layer_names_
-
-
 class GeofabrikReader:
     """
     A class representation of a tool for reading Geofabrik data extracts.
@@ -1281,19 +1256,21 @@ class GeofabrikReader:
         """
         Constructor method.
         """
+        gdal_configurations(reset=False, max_tmpfile_size=5000)
+
         self.Downloader = GeofabrikDownloader()
         self.Name = copy.copy(self.Downloader.Name)
         self.URL = copy.copy(self.Downloader.URL)
 
     def get_path_to_osm_pbf(self, subregion_name, data_dir=None):
         """
-        Get absolute path to Geofabrik PBF (.osm.pbf) data file (if available)
-        for a geographic region.
+        Get the absolute local path to a PBF (.osm.pbf) data file for a geographic region.
 
-        :param subregion_name: name of a geographic region (case-insensitive)
+        :param subregion_name: name of a geographic region (case-insensitive) available
+            on Geofabrik's free download server
         :type subregion_name: str
         :param data_dir: directory where the data file of the ``subregion_name`` is
-            located/saved; if ``None`` (default), the default directory
+            located/saved; if ``None`` (default), the default local directory
         :type data_dir: str or None
         :return: path to PBF (.osm.pbf) file
         :rtype: str or None
@@ -1357,12 +1334,13 @@ class GeofabrikReader:
                      download_confirmation_required=True, pickle_it=False,
                      ret_pickle_path=False, rm_osm_pbf=False, verbose=False):
         """
-        Read Geofabrik PBF (.osm.pbf) data file of a geographic region.
+        Read a PBF (.osm.pbf) data file of a geographic region.
 
-        :param subregion_name: name of a geographic region (case-insensitive)
+        :param subregion_name: name of a geographic region (case-insensitive) available
+            on Geofabrik's free download server
         :type subregion_name: str
         :param data_dir: directory where the .osm.pbf data file is located/saved;
-            if ``None``, the default directory
+            if ``None``, the default local directory
         :type data_dir: str or None
         :param chunk_size_limit: threshold (in MB) that triggers the use of chunk parser,
             defaults to ``50``; if the size of the .osm.pbf file (in MB) is greater than
@@ -1542,10 +1520,11 @@ class GeofabrikReader:
     def get_path_to_osm_shp(self, subregion_name, layer_name=None, feature_name=None,
                             data_dir=None, file_ext=".shp"):
         """
-        Get absolute path(s) to .shp file(s) for a geographic region
-        via searching the directory of Geofabrik data.
+        Get the absolute path(s) to .shp file(s) for a geographic region
+        (by searching a local data directory).
 
-        :param subregion_name: name of a region/subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive) available
+            on Geofabrik's free download server
         :type subregion_name: str
         :param layer_name: name of a .shp layer (e.g. ``'railways'``),
             defaults to ``None``
@@ -1657,9 +1636,10 @@ class GeofabrikReader:
                                   rm_shp_temp=True, verbose=False,
                                   ret_merged_shp_path=False):
         """
-        Merge shapefiles for a layer for two or multiple geographic regions.
+        Merge shapefiles for a specific layer of two or multiple geographic regions.
 
-        :param subregion_names: a list of subregion names
+        :param subregion_names: a list of region/subregion names (case-insensitive)
+            that are available on Geofabrik's free download server
         :type subregion_names: list
         :param layer_name: name of a layer (e.g. 'railways')
         :type layer_name: str
@@ -1836,9 +1816,10 @@ class GeofabrikReader:
                      pickle_it=False, ret_pickle_path=False, rm_extracts=False,
                      rm_shp_zip=False, verbose=False):
         """
-        Read Geofabrik .shp.zip file of a geographic region.
+        Read a .shp.zip data file of a geographic region.
 
-        :param subregion_name: name of a region/subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive) available
+            on Geofabrik's free download server
         :type subregion_name: str
         :param layer_names: name of a .shp layer, e.g. 'railways',
             or names of multiple layers; if ``None`` (default), all available layers
@@ -2134,16 +2115,19 @@ class BBBikeReader:
         """
         Constructor method.
         """
+        gdal_configurations(reset=False, max_tmpfile_size=5000)
+
         self.Downloader = BBBikeDownloader()
         self.Name = copy.copy(self.Downloader.Name)
         self.URL = copy.copy(self.Downloader.URL)
 
     def get_path_to_osm_file(self, subregion_name, osm_file_format, data_dir=None):
         """
-        Get absolute path to a BBBike data file (if available) of a specific file format
+        Get the absolute path to an OSM data file (if available) of a specific file format
         for a geographic region.
 
-        :param subregion_name: name of a geographic region (case-insensitive)
+        :param subregion_name: name of a geographic region (case-insensitive) available
+            on BBBike's free download server
         :type subregion_name: str
         :param osm_file_format: format (file extension) of an OSM data
         :type osm_file_format: str
@@ -2195,9 +2179,10 @@ class BBBikeReader:
                      download_confirmation_required=True, pickle_it=False,
                      ret_pickle_path=False, rm_osm_pbf=False, verbose=False):
         """
-        Read BBBike PBF data file of a geographic region.
+        Read a PBF data file of a geographic region.
 
-        :param subregion_name: name of a geographic region (case-insensitive)
+        :param subregion_name: name of a geographic region (case-insensitive) available
+            on BBBike's free download server
         :type subregion_name: str
         :param data_dir: directory where the PBF data file is saved;
             if ``None`` (default), the default directory
@@ -2333,9 +2318,10 @@ class BBBikeReader:
                      pickle_it=False, ret_pickle_path=False, rm_extracts=False,
                      rm_shp_zip=False, verbose=False):
         """
-        Read BBBike shapefile of a geographic region.
+        Read a shapefile of a geographic region.
 
-        :param subregion_name: name of a geographic region (case-insensitive)
+        :param subregion_name: name of a geographic region (case-insensitive) available
+            on BBBike's free download server
         :type subregion_name: str
         :param layer_names: name of a .shp layer, e.g. 'railways',
             or names of multiple layers; if ``None`` (default), all available layers
@@ -2608,9 +2594,10 @@ class BBBikeReader:
     def read_csv_xz(self, subregion_name, data_dir=None,
                     download_confirmation_required=True, verbose=False):
         """
-        Read compressed CSV (.csv.xz) data file of a BBBike geographic region.
+        Read a compressed CSV (.csv.xz) data file of a geographic region.
 
-        :param subregion_name: name of a geographic region (case-insensitive)
+        :param subregion_name: name of a geographic region (case-insensitive) available
+            on BBBike's free download server
         :type subregion_name: str
         :param data_dir: directory where the .csv.xz data file is located/saved;
             if ``None`` (default), the default directory
@@ -2684,9 +2671,10 @@ class BBBikeReader:
     def read_geojson_xz(self, subregion_name, data_dir=None, fmt_geom=False,
                         download_confirmation_required=True, verbose=False):
         """
-        Read BBBike .geojson.xz file of a geographic region.
+        Read a .geojson.xz data file of a geographic region.
 
-        :param subregion_name: name of a region/subregion (case-insensitive)
+        :param subregion_name: name of a region/subregion (case-insensitive) available
+            on BBBike's free download server
         :type subregion_name: str
         :param data_dir: directory where the .geojson.xz data file is located/saved;
             if ``None`` (default), the default directory
