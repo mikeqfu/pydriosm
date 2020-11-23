@@ -39,6 +39,7 @@ utils
     :toctree: _generated/
     :template: function.rst
 
+    validate_shp_layer_names
     find_shp_layer_name
     append_fclass_to_filename
     remove_subregion_osm_file
