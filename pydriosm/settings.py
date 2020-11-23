@@ -2,8 +2,6 @@
 Default settings for working environment.
 """
 
-import gdal
-
 
 def gdal_configurations(reset=False, max_tmpfile_size=5000):
     """
@@ -17,10 +15,12 @@ def gdal_configurations(reset=False, max_tmpfile_size=5000):
 
     **Example**::
 
-        >>> from pyhelpers.settings import gdal_configurations
+        >>> from pydriosm.settings import gdal_configurations
 
         >>> gdal_configurations()
     """
+
+    import gdal
 
     if not reset:
         # Whether to enable interleaved reading. Defaults to NO.
