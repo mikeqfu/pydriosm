@@ -4,8 +4,7 @@ Modules
 
 .. py:module:: pydriosm
 
-.. toctree::
-    :hidden:
+.. autosummary::
 
     downloader
     reader
@@ -14,7 +13,8 @@ Modules
     settings
     updater
 
-.. autosummary::
+.. toctree::
+    :hidden:
 
     downloader
     reader
