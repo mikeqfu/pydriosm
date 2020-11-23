@@ -1,6 +1,6 @@
-{{ "{}.{}".format(module, objname).replace("pydriosm.", "", 1) | escape | underline }}
+{{ objname | escape | underline }}
 
-.. currentmodule:: {{module}}
+.. currentmodule:: {{ module }}
 
-.. autofunction:: {{objname}}
+.. autofunction:: {{ objname }}
 
