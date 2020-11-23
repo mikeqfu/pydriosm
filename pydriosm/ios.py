@@ -243,8 +243,7 @@ class PostgresOSM:
     def get_table_name_for_subregion(self, subregion_name,
                                      table_named_as_subregion=False):
         """
-        Get the default table name in PostgreSQL database
-        for a specific geographic region.
+        Get the default table name for a specific geographic region.
 
         :param subregion_name: name of a geographic region, which acts as a table name
         :type subregion_name: str
@@ -301,8 +300,7 @@ class PostgresOSM:
                                table_named_as_subregion=False,
                                schema_named_as_layer=False):
         """
-        Check if a table (for a geographic region) exists in the
-        PostgreSQL database being connected.
+        Check if a table (for a geographic region) exists.
 
         :param subregion_name: name of a geographic region, which acts as a table name
         :type subregion_name: str
@@ -427,7 +425,7 @@ class PostgresOSM:
                          if_exists='replace', force_replace=False, chunk_size=None,
                          confirmation_required=True, verbose=False, **kwargs):
         """
-        Import one layer of OSM data into the database being connected.
+        Import one layer of OSM data into a table.
 
         :param osm_layer_data: one layer of OSM data
         :type osm_layer_data: pandas.DataFrame or geopandas.GeoDataFrame
@@ -630,7 +628,7 @@ class PostgresOSM:
                         if_exists='replace', force_replace=False, chunk_size=None,
                         confirmation_required=True, verbose=False, **kwargs):
         """
-        Import OSM data into the database being connected.
+        Import OSM data into a database.
 
         :param osm_data: OSM data of a geographic region
         :type osm_data: dict
@@ -859,7 +857,7 @@ class PostgresOSM:
                                  confirmation_required=True, verbose=False, **kwargs):
         """
         Import data of geographic region(s) that do not have (sub-)subregions into
-        the database being connected.
+        a database.
 
         :param subregion_names: name(s) of geographic region(s)
         :type subregion_names: str or list or None
