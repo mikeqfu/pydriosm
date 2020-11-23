@@ -29,6 +29,8 @@ def update_package_data(confirmation_required=True, interval_sec=2, verbose=True
 
         >>> update_package_data(confirmation_required=True, verbose=True)
 
+    |
+
     (**THE END OF** :ref:`Modules<modules>`.)
     """
 
