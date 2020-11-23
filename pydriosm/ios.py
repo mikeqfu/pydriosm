@@ -3,8 +3,6 @@ I/O and storage of `OSM <https://www.openstreetmap.org/>`_ data extracts
 with `PostgreSQL <https://www.postgresql.org/>`_.
 """
 
-import shapely.wkt
-import sqlalchemy.engine.reflection
 from pyhelpers.sql import PostgreSQL
 from pyhelpers.text import remove_punctuation
 
@@ -600,6 +598,9 @@ class PostgresOSM:
                                         verbose=verbose, **kwargs)
 
         else:
+            import geopandas as gpd
+            import sqlalchemy.types
+
             lyr_dat = osm_layer_data.copy()
 
             if lyr_dat.shape[1] == 1:
@@ -1059,6 +1060,8 @@ class PostgresOSM:
                             gc.collect()
 
                     else:
+                        import ogr
+
                         if verbose:
                             print(
                                 "Parsing and importing the data of \"{}\" feature-wisely "
@@ -1316,6 +1319,8 @@ class PostgresOSM:
                         pd.DataFrame.from_records(lyr_dat_[geo_typ].map(rapidjson.loads))
 
             else:
+                import shapely.wkt
+
                 if decode_wkt:
                     if 'coordinates' in lyr_dat_.columns:
                         try:
@@ -1513,6 +1518,8 @@ class PostgresOSM:
             ? [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
         """
+
+        import sqlalchemy.engine.reflection
 
         existing_schemas = [
             x for x in sqlalchemy.engine.reflection.Inspector.from_engine(
