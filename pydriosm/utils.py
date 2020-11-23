@@ -10,6 +10,7 @@ import shutil
 import numpy as np
 import pkg_resources
 from pyhelpers.dir import cd
+from pyhelpers.text import find_similar_str
 
 
 # -- Specify resource homepages --------------------------------------------------------
@@ -192,6 +193,68 @@ def get_valid_shp_layer_names():
 
 
 # -- Miscellaneous ---------------------------------------------------------------------
+
+def validate_shp_layer_names(layer_names):
+    """
+    Validate the input of layer name(s) for reading shape files.
+
+    :param layer_names: name of a shapefile layer, e.g. 'railways',
+        or names of multiple layers; if``None`` (default), empty list;
+        if 'all', all available layers
+    :type layer_names: str or list or None
+    :return: valid layer names to be input
+    :rtype: list
+
+    **Examples**::
+
+        >>> from pydriosm.utils import validate_shp_layer_names
+
+        >>> lyr_names = None
+        >>> lyr_names_ = validate_shp_layer_names(lyr_names)
+        >>> print(lyr_names_)
+        []
+
+        >>> lyr_names = 'point'
+        >>> lyr_names_ = validate_shp_layer_names(lyr_names)
+        >>> print(lyr_names_)
+        ['points']
+
+        >>> lyr_names = ['point', 'land']
+        >>> lyr_names_ = validate_shp_layer_names(lyr_names)
+        >>> print(lyr_names_)
+        ['points', 'landuse']
+
+        >>> lyr_names = 'all'
+        >>> lyr_names_ = validate_shp_layer_names(lyr_names)
+        >>> print(lyr_names_)
+        ['buildings',
+         'landuse',
+         'natural',
+         'places',
+         'points',
+         'pofw',
+         'pois',
+         'railways',
+         'roads',
+         'traffic',
+         'transport',
+         'water',
+         'waterways']
+    """
+
+    if layer_names:
+        if layer_names == 'all':
+            layer_names_ = get_valid_shp_layer_names()
+        else:
+            layer_names_ = [layer_names] if isinstance(layer_names, str) \
+                else layer_names.copy()
+            layer_names_ = [find_similar_str(x, get_valid_shp_layer_names())
+                            for x in layer_names_]
+    else:
+        layer_names_ = []
+
+    return layer_names_
+
 
 def find_shp_layer_name(shp_filename):
     """
