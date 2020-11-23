@@ -1,4 +1,4 @@
-{{ "{}.{}".format(module, objname).replace("pydriosm.", "", 1) | escape | underline }}
+{{ objname | escape | underline }}
 
 .. currentmodule:: {{ module }}.{{ objname }}
 
