@@ -13,10 +13,9 @@ from .utils import convert_dtype_dict
 def get_default_layer_name(schema_name):
     """
     Get default name (as an input schema name) of an OSM layer for
-    the class :py:class:`PostgresOSM()<pydriosm.ios.PostgresOSM>`.
+    the class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>`.
 
-    See, for example, the method
-    :py:meth:`PostgresOSM.import_osm_layer()<pydriosm.ios.PostgresOSM.import_osm_layer>`.
+    See, for example, the method :py:meth:`pydriosm.ios.PostgresOSM.import_osm_layer`.
 
     :param schema_name: name of a schema (or name of an OSM layer)
     :type schema_name: str
@@ -44,7 +43,7 @@ def get_default_layer_name(schema_name):
 
 def validate_schema_names(schema_names=None, schema_named_as_layer=False):
     """
-    Validate PostgreSQL schema names for importing data into the database.
+    Validate schema names for importing data into a PostgreSQL database.
 
     :param schema_names: one or multiple names of layers, e.g. 'points', 'lines',
         defaults to ``None``
@@ -93,9 +92,9 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
 
 def validate_table_name(table_name, sub_space=''):
     """
-    Validate a PostgreSQL table name for importing OSM data into the database.
+    Validate a table name for importing OSM data into a PostgreSQL database.
 
-    :param table_name: name (as input) of a table in a (PostgreSQL) database
+    :param table_name: name as input of a table in a PostgreSQL database
     :type table_name: str
     :param sub_space: substitute for space
     :type sub_space: str
