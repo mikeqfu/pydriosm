@@ -9,7 +9,6 @@ import shutil
 
 import numpy as np
 import pkg_resources
-import shapely.geometry
 from pyhelpers.dir import cd
 
 
@@ -153,6 +152,8 @@ def get_osm_geom_object_dict():
     .. _`shapely.geometry`:
         https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
     """
+
+    import shapely.geometry
 
     shape_object_dict = {'Point': shapely.geometry.Point,
                          'LineString': shapely.geometry.LineString,
