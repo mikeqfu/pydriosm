@@ -232,7 +232,7 @@ def parse_osm_pbf(path_to_osm_pbf, number_of_chunks, parse_raw_feat, transform_g
     :param transform_other_tags: whether to transform a ``'other_tags'`` into a dictionary
     :type transform_other_tags: bool
     :param max_tmpfile_size: defaults to ``None``,
-        see also :py:func:`gdal_configurations()<pydriosm.settings.gdal_configurations>`
+        see also :py:func:`pydriosm.settings.gdal_configurations`
     :type max_tmpfile_size: int or None
     :return: parsed OSM PBF data
     :rtype: dict
@@ -1242,6 +1242,10 @@ class GeofabrikReader:
     """
     A class representation of a tool for reading Geofabrik data extracts.
 
+    :param max_tmpfile_size: defaults to ``5000``,
+        see also :py:func:`pydriosm.settings.gdal_configurations`
+    :type max_tmpfile_size: int or None
+
     **Example**::
 
         >>> from pydriosm.reader import GeofabrikReader
@@ -1252,15 +1256,16 @@ class GeofabrikReader:
         Geofabrik OpenStreetMap data extracts
     """
 
-    def __init__(self):
+    def __init__(self, max_tmpfile_size=5000):
         """
         Constructor method.
         """
-        gdal_configurations(reset=False, max_tmpfile_size=5000)
-
         self.Downloader = GeofabrikDownloader()
         self.Name = copy.copy(self.Downloader.Name)
         self.URL = copy.copy(self.Downloader.URL)
+
+        if max_tmpfile_size:
+            gdal_configurations(max_tmpfile_size=max_tmpfile_size)
 
     def get_path_to_osm_pbf(self, subregion_name, data_dir=None):
         """
@@ -2101,6 +2106,10 @@ class BBBikeReader:
     """
     A class representation of a tool for reading BBBike data extracts.
 
+    :param max_tmpfile_size: defaults to ``5000``,
+        see also :py:func:`pydriosm.settings.gdal_configurations`
+    :type max_tmpfile_size: int or None
+
     **Example**::
 
         >>> from pydriosm.reader import BBBikeReader
@@ -2111,15 +2120,16 @@ class BBBikeReader:
         BBBike OpenStreetMap data extracts
     """
 
-    def __init__(self):
+    def __init__(self, max_tmpfile_size=5000):
         """
         Constructor method.
         """
-        gdal_configurations(reset=False, max_tmpfile_size=5000)
-
         self.Downloader = BBBikeDownloader()
         self.Name = copy.copy(self.Downloader.Name)
         self.URL = copy.copy(self.Downloader.URL)
+
+        if max_tmpfile_size:
+            gdal_configurations(max_tmpfile_size=max_tmpfile_size)
 
     def get_path_to_osm_file(self, subregion_name, osm_file_format, data_dir=None):
         """
