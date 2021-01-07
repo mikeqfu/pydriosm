@@ -23,7 +23,7 @@ imagesize==1.2.0
 jdcal==1.4.1
 Jinja2==2.11.2
 keyring==21.5.0
-lxml==4.6.1
+lxml==4.6.2
 MarkupSafe==1.1.1
 more-itertools==8.6.0
 munch==2.5.0
