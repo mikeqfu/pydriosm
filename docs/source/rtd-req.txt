@@ -1,7 +1,5 @@
-beautifulsoup4~=4.9.3
-numpy~=1.19.4
-pandas~=1.1.4
-pyhelpers>=1.2.7
-python-rapidjson~=0.9.4
-Sphinx~=3.3.1
-sphinx-rtd-theme==0.5.0
+beautifulsoup4
+numpy
+pandas~=1.1.5
+pyhelpers>=1.2.9
+Sphinx~=3.4.3
