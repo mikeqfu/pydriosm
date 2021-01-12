@@ -2,7 +2,7 @@
 Configuration file for the Sphinx documentation builder.
 """
 
-# Path setup ===========================================================================
+# Path setup ================================================================================
 import os
 import sys
 
@@ -12,9 +12,10 @@ sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../pydriosm'))
 
 # A list of modules to be mocked up
-autodoc_mock_imports = ['bs4', 'numpy', 'pandas', 'rapidjson', 'requests', 'gdal']
+autodoc_mock_imports = ['beautifulsoup4', 'gdal', 'humanfriendly', 'more-itertools', 'numpy',
+                        'pandas', 'python-rapidjson', 'requests']
 
-# Project information ==================================================================
+# Project information =======================================================================
 import datetime
 import pydriosm
 
@@ -26,7 +27,7 @@ copyright = u'2019-{}, {}'.format(datetime.datetime.now().year, pydriosm.__autho
 version = pydriosm.__version__  # The short X.Y.Z version.
 release = version  # The full version, including alpha/beta/rc tags.
 
-# General configuration ================================================================
+# General configuration =====================================================================
 import sphinx_rtd_theme
 
 _ = sphinx_rtd_theme.get_html_theme_path()
@@ -75,7 +76,7 @@ autodoc_member_order = 'bysource'
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
-# Options for HTML and HTMLHelp output =================================================
+# Options for HTML and HTMLHelp output ======================================================
 html_theme = 'sphinx_rtd_theme'  # The theme to use for HTML and HTML Help pages.
 
 html_theme_options = {
@@ -98,7 +99,7 @@ html_js_files = ['copybutton.js']
 # Output file base name for HTML help builder. Default is 'pydoc'.
 htmlhelp_basename = project + 'doc'
 
-# Options for LaTeX output =============================================================
+# Options for LaTeX output ==================================================================
 from pygments.formatters.latex import LatexFormatter
 from sphinx.highlighting import PygmentsBridge
 
@@ -166,7 +167,7 @@ latex_elements = {
         warningBorderColor={HTML}{E0E0E0},
         warningborder=1.5pt,
         warningBgColor={HTML}{FBFBFB},
-        hmargin={1.0in,1.0in}, vmargin={0.9in,0.9in},
+        hmargin={0.9in,0.9in}, vmargin={0.8in,0.8in},
         ''',
     'printindex': r'''
         \IfFileExists{\jobname.ind}
@@ -181,7 +182,7 @@ latex_elements = {
 # The theme that the LaTeX output should use
 latex_theme = 'manual'
 
-# Options for manual page output =======================================================
+# Options for manual page output ============================================================
 
 man_pages = [  # How to group the document tree into manual pages
     ('index',  # startdocname
@@ -192,7 +193,7 @@ man_pages = [  # How to group the document tree into manual pages
      )
 ]
 
-# Options for Texinfo output ===========================================================
+# Options for Texinfo output ================================================================
 
 texinfo_documents = [  # Grouping the document tree into Texinfo files
     (master_doc,  # source start file
