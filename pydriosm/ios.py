@@ -3,6 +3,8 @@ I/O and storage of `OSM <https://www.openstreetmap.org/>`_ data extracts
 with `PostgreSQL <https://www.postgresql.org/>`_.
 """
 
+import sqlalchemy.engine.reflection
+import sqlalchemy.types
 from pyhelpers.sql import PostgreSQL
 from pyhelpers.text import remove_punctuation
 
@@ -12,8 +14,8 @@ from .utils import convert_dtype_dict
 
 def get_default_layer_name(schema_name):
     """
-    Get default name (as an input schema name) of an OSM layer for
-    the class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>`.
+    Get default name (as an input schema name) of an OSM layer
+    for the class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>`.
 
     See, for example, the method :py:meth:`pydriosm.ios.PostgresOSM.import_osm_layer`.
 
@@ -33,8 +35,7 @@ def get_default_layer_name(schema_name):
         points
     """
 
-    valid_layer_names = \
-        list(get_pbf_layer_feat_types_dict().keys()) + get_valid_shp_layer_names()
+    valid_layer_names = list(get_pbf_layer_feat_types_dict().keys()) + get_valid_shp_layer_names()
 
     layer_name_ = find_similar_str(schema_name, valid_layer_names)
 
@@ -45,11 +46,10 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
     """
     Validate schema names for importing data into a PostgreSQL database.
 
-    :param schema_names: one or multiple names of layers, e.g. 'points', 'lines',
-        defaults to ``None``
+    :param schema_names: one or multiple names of layers, e.g. 'points', 'lines', defaults to ``None``
     :type schema_names: list or None
-    :param schema_named_as_layer: whether to use default PBF layer name
-        as the schema name, defaults to ``False``
+    :param schema_named_as_layer: whether to use default PBF layer name as the schema name,
+        defaults to ``False``
     :type schema_named_as_layer: bool
     :return: valid names of the schemas in the database
     :rtype: list
@@ -69,8 +69,7 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
         >>> print(schemas_names)
         ['point', 'polygon']
 
-        >>> schemas_names = validate_schema_names(schemas_names_,
-        ...                                       schema_named_as_layer=True)
+        >>> schemas_names = validate_schema_names(schemas_names_, schema_named_as_layer=True)
 
         >>> print(schemas_names)
         ['points', 'multipolygons']
@@ -143,15 +142,27 @@ class PostgresOSM:
     :type password: str or int or None
     :param database_name: database name, defaults to ``'postgres'``
     :type database_name: str
-    :param confirm_new_db: whether to impose a confirmation to create a new database,
-        defaults to ``False``
+    :param confirm_new_db: whether to impose a confirmation to create a new database, defaults to ``False``
     :type confirm_new_db: bool
-    :param data_source: source of data extracts,
+    :param data_source: name of data sources,
         including ``'Geofabrik'`` and ``'BBBike'``, defaults to ``'Geofabrik'``
     :type data_source: str
     :param verbose: whether to print relevant information in console as the function runs,
         defaults to ``True``
     :type verbose: bool
+
+    :ivar tuple ValidDataSources: valid names of data sources
+    :ivar pyhelpers.sql.PostgreSQL PostgreSQL: instance of the class `pyhelpers.sql.PostgreSQL`_
+    :ivar dict Downloaders: instances of the classes for downloading data,
+        including :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>` and
+        :py:class:`BBBikeDownloader<pydriosm.downloader.BBBikeDownloader>`
+    :ivar dict Readers: instances of the classes for downloading data,
+        including :py:class:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` and
+        :py:class:`BBBikeReader<pydriosm.reader.BBBikeReader>`
+    :ivar str DataSource: name of data sources, ``'Geofabrik'`` or ``'BBBike'``
+
+    .. _`pyhelpers.sql.PostgreSQL`:
+        https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.sql.PostgreSQL.html
 
     **Example**::
 
@@ -175,47 +186,43 @@ class PostgresOSM:
     """
 
     def __init__(self, host='localhost', port=5432, username='postgres', password=None,
-                 database_name='postgres', confirm_new_db=False, data_source='Geofabrik',
-                 verbose=True):
+                 database_name='postgres', confirm_new_db=False, data_source='Geofabrik', verbose=True):
         """
         Constructor method.
         """
-
         self.ValidDataSources = ('Geofabrik', 'BBBike')
         assert data_source in self.ValidDataSources, \
             "The argument `method` must be '%s' or '%s'." % self.ValidDataSources
 
-        self.PostgreSQL = PostgreSQL(host=host, port=port, username=username,
-                                     password=password, database_name=database_name,
-                                     confirm_new_db=confirm_new_db, verbose=verbose)
+        self.PostgreSQL = PostgreSQL(
+            host=host, port=port, username=username, password=password, database_name=database_name,
+            confirm_new_db=confirm_new_db, verbose=verbose)
 
-        self.Downloaders = dict(
-            zip(self.ValidDataSources, [GeofabrikDownloader(), BBBikeDownloader()]))
-        self.Readers = dict(
-            zip(self.ValidDataSources, [GeofabrikReader(), BBBikeReader()]))
+        self.Downloaders = dict(zip(self.ValidDataSources, [GeofabrikDownloader(), BBBikeDownloader()]))
+        self.Readers = dict(zip(self.ValidDataSources, [GeofabrikReader(), BBBikeReader()]))
 
         self.DataSource = data_source
 
     @property
     def Downloader(self):
         """
-        An instance of either
-        :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`
-        or
-        :py:class:`BBBikeDownloader<pydriosm.downloader.BBBikeDownloader>`
-        depending on the specified ``data_source`` for creating
-        a :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>` instance.
+        An instance of either :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`
+        or :py:class:`BBBikeDownloader<pydriosm.downloader.BBBikeDownloader>`,
+        depending on the specified ``data_source``
+        for creating an instance of :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>` instance.
         """
+
         assert self.DataSource in self.ValidDataSources, \
             "`.DataSource` must be '%s' or '%s'." % self.ValidDataSources
+
         return self.Downloaders[self.DataSource]
 
     @property
     def Name(self):
         """
-        Name of the current
-        :py:attr:`PostgresOSM.Downloader<pydriosm.ios.PostgresOSM.Downloader>`.
+        Name of the current :py:attr:`PostgresOSM.Downloader<pydriosm.ios.PostgresOSM.Downloader>`.
         """
+
         return copy.copy(self.Downloader.Name)
 
     @property
@@ -223,25 +230,25 @@ class PostgresOSM:
         """
         Homepage URL of data resource for current
         :py:attr:`PostgresOSM.Downloader<pydriosm.ios.PostgresOSM.Downloader>`.
-        :return:
         """
+
         return copy.copy(self.Downloader.URL)
 
     @property
     def Reader(self):
         """
-        An instance of either
-        :py:class:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` or
-        :py:class:`BBBikeReader<pydriosm.reader.BBBikeReader>`
-        depending on the specified ``data_source`` for creating
-        a :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>` instance.
+        An instance of either :py:class:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` or
+        :py:class:`BBBikeReader<pydriosm.reader.BBBikeReader>`,
+        depending on the specified ``data_source``
+        for creating an instance of :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>`.
         """
+
         assert self.DataSource in self.ValidDataSources, \
             "`.DataSource` must be '%s' or '%s'." % self.ValidDataSources
+
         return self.Readers[self.DataSource]
 
-    def get_table_name_for_subregion(self, subregion_name,
-                                     table_named_as_subregion=False):
+    def get_table_name_for_subregion(self, subregion_name, table_named_as_subregion=False):
         """
         Get the default table name for a specific geographic region.
 
@@ -296,8 +303,7 @@ class PostgresOSM:
 
         return table_name
 
-    def subregion_table_exists(self, subregion_name, layer_name,
-                               table_named_as_subregion=False,
+    def subregion_table_exists(self, subregion_name, layer_name, table_named_as_subregion=False,
                                schema_named_as_layer=False):
         """
         Check if a table (for a geographic region) exists.
@@ -400,7 +406,7 @@ class PostgresOSM:
 
             >>> type(column_info_dict)
             <class 'dict'>
-            >>> print(list(column_info_dict.keys())[:5])
+            >>> list(column_info_dict.keys())[:5]
             ['table_catalog',
              'table_schema',
              'table_name',
@@ -556,7 +562,7 @@ class PostgresOSM:
 
             >>> type(rutland_railways_shp)
             <class 'dict'>
-            >>> print(list(rutland_railways_shp.keys()))
+            >>> list(rutland_railways_shp.keys())
             # ['railways']
 
             >>> rutland_railways_shp_ = rutland_railways_shp[lyr_name]
@@ -595,9 +601,6 @@ class PostgresOSM:
                                         verbose=verbose, **kwargs)
 
         else:
-            import geopandas as gpd
-            import sqlalchemy.types
-
             lyr_dat = osm_layer_data.copy()
 
             if lyr_dat.shape[1] == 1:
@@ -856,8 +859,7 @@ class PostgresOSM:
                                  pickle_pbf_file=False, rm_osm_pbf=False,
                                  confirmation_required=True, verbose=False, **kwargs):
         """
-        Import data of geographic region(s) that do not have (sub-)subregions into
-        a database.
+        Import data of geographic region(s) that do not have (sub-)subregions into a database.
 
         :param subregion_names: name(s) of geographic region(s)
         :type subregion_names: str or list or None
@@ -1166,8 +1168,8 @@ class PostgresOSM:
         """
         Fetch OSM data (of one or multiple layers) of a geographic region.
 
-        See also [`ROP-1
-        <https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-read-sql-query>`_]
+        See also
+        [`ROP-1 <https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-read-sql-query>`_]
 
         :param subregion_name: name of a geographic region (or the corresponding table)
         :type subregion_name: str
@@ -1177,31 +1179,26 @@ class PostgresOSM:
         :param table_named_as_subregion: whether to use subregion name to be a table name,
             defaults to ``False``
         :type table_named_as_subregion: bool
-        :param schema_named_as_layer: whether a schema is named as a layer name,
-            defaults to ``False``
+        :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
         :type schema_named_as_layer: bool
-        :param chunk_size: the number of rows in each batch to be written at a time,
-            defaults to ``None``
+        :param chunk_size: the number of rows in each batch to be written at a time, defaults to ``None``
         :type chunk_size: int, None
-        :param method: method to be used for buffering temporary data,
-            defaults to ``'spooled_tempfile'``
+        :param method: method to be used for buffering temporary data, defaults to ``'spooled_tempfile'``
         :type method: str or None
-        :param max_size_spooled: ``max_size_spooled`` of
-            `pyhelpers.sql.PostgreSQL.read_sql_query`_, defaults to ``1`` (in gigabyte)
+        :param max_size_spooled: ``max_size_spooled`` of `pyhelpers.sql.PostgreSQL.read_sql_query`_,
+            defaults to ``1`` (in gigabyte)
         :type max_size_spooled: int, float
         :param decode_geojson: whether to decode textual GeoJSON, defaults to ``False``
         :type decode_geojson: bool
         :param decode_wkt: whether to decode ``'coordinates'`` (if available and)
             if it is a wkt, defaults to ``False``
         :type decode_wkt: bool
-        :param decode_other_tags: whether to decode ``'other_tags'`` (if available),
-            defaults to ``False``
+        :param decode_other_tags: whether to decode ``'other_tags'`` (if available), defaults to ``False``
         :type decode_other_tags: bool
-        :param parse_geojson: whether to parse raw GeoJSON (as it is raw feature data),
-            defaults to ``False``
+        :param parse_geojson: whether to parse raw GeoJSON (as it is raw feature data), defaults to ``False``
         :type parse_geojson: bool
-        :param sort_by: column name(s) by which the data (fetched from PostgreSQL)
-            is sorted, defaults to ``None``
+        :param sort_by: column name(s) by which the data (fetched from PostgreSQL) is sorted,
+            defaults to ``None``
         :type sort_by: str or list
         :return: PBF (.osm.pbf) data
         :rtype: dict
@@ -1228,7 +1225,7 @@ class PostgresOSM:
 
             >>> type(rutland_pbf)
             <class 'dict'>
-            >>> print(list(rutland_pbf.keys()))
+            >>> list(rutland_pbf.keys())
             ['points',
              'lines',
              'multilinestrings',
@@ -1255,7 +1252,7 @@ class PostgresOSM:
 
             >>> type(rutland_pbf)
             <class 'dict'>
-            >>> print(list(rutland_pbf.keys()))
+            >>> list(rutland_pbf.keys())
             # ['points', 'multipolygons']
 
             >>> rutland_pbf_points = rutland_pbf['points']
@@ -1515,8 +1512,6 @@ class PostgresOSM:
             ? [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
         """
-
-        import sqlalchemy.engine.reflection
 
         existing_schemas = [
             x for x in sqlalchemy.engine.reflection.Inspector.from_engine(
