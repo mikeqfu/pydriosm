@@ -21,7 +21,7 @@ humanfriendly==9.1
 idna==2.10
 imagesize==1.2.0
 jdcal==1.4.1
-Jinja2==2.11.2
+Jinja2==2.11.3
 keyring==21.5.0
 lxml==4.6.2
 MarkupSafe==1.1.1
