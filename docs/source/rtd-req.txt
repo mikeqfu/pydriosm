@@ -4,11 +4,11 @@ humanfriendly
 more-itertools
 pandas
 requests
-ogr
+osgeo
 geopandas
 python-rapidjson
 pyshp
 sqlalchemy
-pyhelpers>=1.2.13
-Sphinx~=3.5.3
-sphinx-rtd-theme~=0.5.1
+pyhelpers>=1.2.15
+Sphinx~=3.5.4
+sphinx-rtd-theme~=0.5.2
