@@ -13,14 +13,11 @@ def update_package_data(confirmation_required=True, interval_sec=2, verbose=True
     """
     Update package data.
 
-    :param confirmation_required: whether to prompt a message for confirmation to proceed,
-        defaults to ``True``
+    :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
     :type confirmation_required: bool
-    :param interval_sec: time gap (in seconds) between the updating of different classes,
-        defaults to ``5``
+    :param interval_sec: time gap (in seconds) between the updating of different classes, defaults to ``5``
     :type interval_sec: int
-    :param verbose: whether to print relevant information in console as the function runs,
-        defaults to ``True``
+    :param verbose: whether to print relevant information in console, defaults to ``True``
     :type verbose: bool, int
 
     **Example**::
@@ -34,7 +31,7 @@ def update_package_data(confirmation_required=True, interval_sec=2, verbose=True
     (**THE END OF** :ref:`Modules<modules>`.)
     """
 
-    if confirmed("To update resources (which may take a few minutes)?"):
+    if confirmed("To update resources (which may take a few minutes)\n?"):
 
         update = True
 
