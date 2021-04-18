@@ -127,7 +127,8 @@ venv.bak/
 dmypy.json
 
 # Custom
-dat_*/
+osm_geofabrik/
+osm_bbbike/
 misc/
 tests/cmd
 tests/pull*.py
