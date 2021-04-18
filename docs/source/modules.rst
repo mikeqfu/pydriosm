@@ -4,7 +4,7 @@ Modules
 
 .. py:module:: pydriosm
 
-The package includes the following 6 modules:
+The package includes the following six modules:
 
 .. autosummary::
 

@@ -12,8 +12,8 @@ PyDriosm
         :target: https://docs.python.org/3/
     .. |License| image:: https://img.shields.io/pypi/l/pydriosm?color=green&label=License
         :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
-    .. |Downloads| image:: https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads
-        :target: https://pypistats.org/packages/pydriosm
+    .. |Downloads| image:: https://static.pepy.tech/personalized-badge/pydriosm?period=total&units=international_system&left_color=grey&right_color=yellow&left_text=Downloads
+        :target: https://pepy.tech/project/pydriosm
     .. |DOI| image:: https://zenodo.org/badge/92493726.svg
         :target: https://zenodo.org/badge/latestdoi/92493726
 

@@ -6,16 +6,18 @@ Configuration file for the Sphinx documentation builder.
 import os
 import sys
 
-# If the directory is relative to the documentation root,
-# use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../pydriosm'))
 
 # A list of modules to be mocked up
-autodoc_mock_imports = ['beautifulsoup4', 'gdal', 'humanfriendly', 'more-itertools', 'numpy',
-                        'pandas', 'python-rapidjson', 'requests']
+autodoc_mock_imports = [
+    'pyhelpers', 'numpy',
+    'beautifulsoup4', 'humanfriendly', 'more-itertools', 'pandas', 'requests',
+    'osgeo', 'python-rapidjson', 'pyshp', 'Shapely', 'GDAL', 'Fiona', 'geopandas',
+    'sqlalchemy',
+]
 
-# Project information ============================================================================
+# Project information ======================================================================================
 import datetime
 import pydriosm
 
@@ -27,13 +29,12 @@ copyright = u'2019-{}, {}'.format(datetime.datetime.now().year, pydriosm.__autho
 version = pydriosm.__version__  # The short X.Y.Z version.
 release = version  # The full version, including alpha/beta/rc tags.
 
-# General configuration ==========================================================================
+# General configuration ====================================================================================
 import sphinx_rtd_theme
 
 _ = sphinx_rtd_theme.get_html_theme_path()
 
-# Sphinx extension module names,
-# which can be extensions coming with Sphinx (named 'sphinx.ext.*') or custom ones.
+# Sphinx extension module names, which can be extensions named 'sphinx.ext.*' or custom ones.
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -73,7 +74,7 @@ autodoc_member_order = 'bysource'
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
-# Options for HTML and HTMLHelp output ===========================================================
+# Options for HTML and HTMLHelp output =====================================================================
 html_theme = 'sphinx_rtd_theme'  # The theme to use for HTML and HTML Help pages.
 
 html_theme_options = {
@@ -100,7 +101,7 @@ html_js_files = ['copybutton.js']
 # Output file base name for HTML help builder. Default is 'pydoc'.
 htmlhelp_basename = project + 'doc'
 
-# Options for LaTeX output =======================================================================
+# Options for LaTeX output =================================================================================
 from pygments.formatters.latex import LatexFormatter
 from sphinx.highlighting import PygmentsBridge
 
@@ -183,7 +184,7 @@ latex_elements = {
 # The theme that the LaTeX output should use
 latex_theme = 'manual'
 
-# Options for manual page output =================================================================
+# Options for manual page output ===========================================================================
 
 man_pages = [  # How to group the document tree into manual pages
     ('index',  # startdocname
@@ -194,7 +195,7 @@ man_pages = [  # How to group the document tree into manual pages
      )
 ]
 
-# Options for Texinfo output =====================================================================
+# Options for Texinfo output ===============================================================================
 
 texinfo_documents = [  # Grouping the document tree into Texinfo files
     (master_doc,  # source start file

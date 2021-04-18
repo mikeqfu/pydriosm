@@ -31,7 +31,8 @@ utils
     :template: function.rst
 
     get_pbf_layer_feat_types_dict
-    get_osm_geom_object_dict
+    get_shp_shape_types_dict
+    get_shp_shape_types_geom_dict
     get_valid_shp_layer_names
 
 .. rubric:: Miscellaneous
