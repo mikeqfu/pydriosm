@@ -23,7 +23,7 @@ def geofabrik_homepage():
     :rtype: str
     """
 
-    return 'http://download.geofabrik.de/'
+    return 'https://download.geofabrik.de/'
 
 
 def bbbike_homepage():
@@ -34,10 +34,10 @@ def bbbike_homepage():
     :rtype: str
     """
 
-    return 'http://download.bbbike.org/osm/bbbike/'
+    return 'https://download.bbbike.org/osm/bbbike/'
 
 
-# -- Specify directory/file paths ------------------------------------------------------
+# -- Specify directory/file paths ------------------------------------------------------------
 
 def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     """
@@ -87,17 +87,17 @@ def cd_dat_geofabrik(*sub_dir, mkdir=False, **kwargs):
     Change directory to ``dat_Geofabrik`` and its sub-directories within a package.
 
     :param sub_dir: name of directory; names of directories (and/or a filename)
-    :type sub_dir: str
+    :type sub_dir: str or typing.PathLike
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
     :param kwargs: optional parameters of
         `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
         e.g. ``mode=0o777``
     :return: an absolute path to a directory (or a file) under ``data_dir``
-    :rtype: str
+    :rtype: str or typing.PathLike
     """
 
-    path = cd("dat_Geofabrik", *sub_dir, mkdir=mkdir, **kwargs)
+    path = cd("osm_geofabrik", *sub_dir, mkdir=mkdir, **kwargs)
 
     return path
 
@@ -117,12 +117,12 @@ def cd_dat_bbbike(*sub_dir, mkdir=False, **kwargs):
     :rtype: str
     """
 
-    path = cd("dat_BBBike", *sub_dir, mkdir=mkdir, **kwargs)
+    path = cd("osm_bbbike", *sub_dir, mkdir=mkdir, **kwargs)
 
     return path
 
 
-# -- Specify geometric object types/names ----------------------------------------------
+# -- Specify geometric object types/names ----------------------------------------------------
 
 def get_pbf_layer_feat_types_dict():
     """
@@ -133,38 +133,63 @@ def get_pbf_layer_feat_types_dict():
     """
 
     # {Layer name in .pbf data: the corresponding feature type}
-    pbf_layer_feat_types = {'points': 'Point',
-                            'lines': 'LineString',
-                            'multilinestrings': 'MultiLineString',
-                            'multipolygons': 'MultiPolygon',
-                            'other_relations': 'GeometryCollection'}
+    pbf_layer_feat_types = {
+        'points': 'Point',
+        'lines': 'LineString',
+        'multilinestrings': 'MultiLineString',
+        'multipolygons': 'MultiPolygon',
+        'other_relations': 'GeometryCollection',
+    }
 
     return pbf_layer_feat_types
 
 
-def get_osm_geom_object_dict():
+def get_shp_shape_types_dict():
     """
-    A dictionary for OSM geometry types.
+    A dictionary for shape types of shapefiles.
 
-    :return: a dictionary with keys and values
-        being shape types and `shapely.geometry`_ types
+    :return: a dictionary with keys and values being codes and shape types
+    :rtype: dict
+    """
+
+    shape_types = {
+        0: None,
+        1: 'Point',  # shapely.geometry.Point
+        3: 'Polyline',  # shapely.geometry.LineString
+        5: 'Polygon',  # shapely.geometry.Polygon
+        8: 'MultiPoint',  # shapely.geometry.MultiPoint
+        11: 'PointZ',
+        13: 'PolylineZ',
+        15: 'PolygonZ',
+        18: 'MultiPointZ',
+        21: 'PointM',
+        23: 'PolylineM',
+        25: 'PolygonM',
+        28: 'MultiPointM',
+        31: 'MultiPatch',
+    }
+
+    return shape_types
+
+
+def get_shp_shape_types_geom_dict():
+    """
+    A dictionary for shapefiles' shape types and their corresponding geometry objects' types.
+
+    :return: a dictionary with keys and values being shape type codes and `shapely.geometry`_ types
     :rtype: dict
 
-    .. _`shapely.geometry`:
-        https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+    .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
     """
 
-    import shapely.geometry
+    shape_types_geom = {
+        1: 'Point',
+        3: 'LineString',
+        5: 'Polygon',
+        8: 'MultiPoint',
+    }
 
-    shape_object_dict = {'Point': shapely.geometry.Point,
-                         'LineString': shapely.geometry.LineString,
-                         'LinearRing': shapely.geometry.LinearRing,
-                         'MultiLineString': shapely.geometry.MultiLineString,
-                         'Polygon': shapely.geometry.Polygon,
-                         'MultiPolygon': shapely.geometry.MultiPolygon,
-                         'GeometryCollection': shapely.geometry.GeometryCollection}
-
-    return shape_object_dict
+    return shape_types_geom
 
 
 def get_valid_shp_layer_names():
@@ -192,7 +217,7 @@ def get_valid_shp_layer_names():
     return shp_layer_names
 
 
-# -- Miscellaneous ---------------------------------------------------------------------
+# -- Miscellaneous ---------------------------------------------------------------------------
 
 def validate_shp_layer_names(layer_names):
     """
