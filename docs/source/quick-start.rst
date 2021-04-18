@@ -25,8 +25,6 @@ To start with, you could use the class :py:class:`GeofabrikDownloader<pydriosm.d
 .. code-block:: python
 
     >>> from pydriosm.downloader import GeofabrikDownloader
-    >>> # Alternatively:
-    >>> # from pydriosm import GeofabrikDownloader
 
     >>> geofabrik_downloader = GeofabrikDownloader()
 
@@ -149,8 +147,6 @@ To read/parse any of the downloaded data files above, you could use the class :p
 .. code-block:: python
 
     >>> from pydriosm.reader import GeofabrikReader
-    >>> # Alternatively,
-    >>> # from pydriosm import GeofabrikReader
 
     >>> geofabrik_reader = GeofabrikReader()
 
