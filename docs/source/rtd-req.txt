@@ -5,7 +5,6 @@ humanfriendly
 more-itertools
 pandas
 requests
-GDAL
 python-rapidjson
 pyshp
 Shapely
