@@ -11,9 +11,9 @@ sys.path.insert(0, os.path.abspath('../../pydriosm'))
 
 # A list of modules to be mocked up
 autodoc_mock_imports = [
-    'pyhelpers', 'numpy',
-    'beautifulsoup4', 'humanfriendly', 'more-itertools', 'pandas', 'requests',
-    'osgeo', 'python-rapidjson', 'pyshp', 'Shapely', 'GDAL', 'Fiona', 'geopandas',
+    'pyhelpers', 'numpy', 'pkg_resources',
+    'bs4', 'beautifulsoup4', 'humanfriendly', 'more_itertools', 'pandas', 'requests',
+    'osgeo', 'rapidjson', 'shapefile', 'shapely', 'GDAL', 'Fiona', 'geopandas',
     'sqlalchemy',
 ]
 
