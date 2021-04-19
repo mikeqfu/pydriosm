@@ -1,10 +1,10 @@
-from .downloader import BBBikeDownloader, GeofabrikDownloader
-from .ios import PostgresOSM
-from .reader import BBBikeReader, GeofabrikReader
-
-__all__ = ['downloader', 'GeofabrikDownloader', 'BBBikeDownloader',
-           'reader', 'GeofabrikReader', 'BBBikeReader',
-           'ios', 'PostgresOSM']
+# from .downloader import BBBikeDownloader, GeofabrikDownloader
+# from .ios import PostgresOSM
+# from .reader import BBBikeReader, GeofabrikReader
+#
+# __all__ = ['downloader', 'GeofabrikDownloader', 'BBBikeDownloader',
+#            'reader', 'GeofabrikReader', 'BBBikeReader',
+#            'ios', 'PostgresOSM']
 
 __package_name__ = 'pydriosm'
 __package_name_alt__ = 'PyDriosm'
