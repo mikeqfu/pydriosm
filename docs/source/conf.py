@@ -10,12 +10,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../pydriosm'))
 
 # A list of modules to be mocked up
-autodoc_mock_imports = [
-    'pyhelpers', 'numpy',
-    'beautifulsoup4', 'humanfriendly', 'more-itertools', 'pandas', 'requests',
-    'osgeo', 'GDAL', 'python-rapidjson', 'pyshp', 'shapely',
-    'sqlalchemy',
-]
+autodoc_mock_imports = ['osgeo']
 
 # Project information =======================================================================
 import datetime
