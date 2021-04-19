@@ -351,7 +351,6 @@ class GeofabrikDownloader:
     **Example**::
 
         >>> from pydriosm.downloader import GeofabrikDownloader
-        >>> # from pydriosm import GeofabrikDownloader
 
         >>> geofabrik_downloader = GeofabrikDownloader()
 
@@ -2047,7 +2046,6 @@ class BBBikeDownloader:
     **Example**::
 
         >>> from pydriosm.downloader import BBBikeDownloader
-        >>> # from pydriosm import BBBikeDownloader
 
         >>> bbbike_downloader = BBBikeDownloader()
 
