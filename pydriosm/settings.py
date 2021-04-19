@@ -2,6 +2,8 @@
 Default settings for working environment.
 """
 
+import osgeo.gdal
+
 
 def gdal_configurations(reset=False, max_tmpfile_size=5000):
     """
@@ -17,10 +19,8 @@ def gdal_configurations(reset=False, max_tmpfile_size=5000):
 
         >>> from pydriosm.settings import gdal_configurations
 
-        >>> gdal_configurations()
+        >>> gdal_configurations(max_tmpfile_size=500)
     """
-
-    import osgeo.gdal
 
     if not reset:
         # Whether to enable interleaved reading. Defaults to NO.
