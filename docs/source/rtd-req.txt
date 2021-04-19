@@ -1,3 +1,4 @@
+pyhelpers>=1.2.15
 numpy
 beautifulsoup4
 humanfriendly
@@ -5,10 +6,9 @@ more-itertools
 pandas
 requests
 osgeo
-geopandas
 python-rapidjson
 pyshp
-sqlalchemy
-pyhelpers>=1.2.15
+Shapely
+SQLAlchemy
 Sphinx~=3.5.4
 sphinx-rtd-theme~=0.5.2
