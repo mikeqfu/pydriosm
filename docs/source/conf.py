@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath('../../pydriosm'))
 autodoc_mock_imports = [
     'pyhelpers', 'numpy',
     'beautifulsoup4', 'humanfriendly', 'more-itertools', 'pandas', 'requests',
-    'GDAL', 'python-rapidjson', 'pyshp', 'shapely',
+    'osgeo', 'GDAL', 'python-rapidjson', 'pyshp', 'shapely',
     'sqlalchemy',
 ]
 
