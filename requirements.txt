@@ -67,7 +67,7 @@ prompt-toolkit==3.0.18
 psycopg2==2.8.6
 pycparser==2.20
 Pygments==2.8.1
-pyhelpers==1.2.15rc3
+pyhelpers==1.2.15
 pyparsing==2.4.7
 pyproj==3.0.1
 pyreadline==2.1
