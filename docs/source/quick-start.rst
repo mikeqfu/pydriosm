@@ -221,14 +221,14 @@ Each row of ``rutland_pbf_points`` is textual `GeoJSON`_ data, which is a nested
       'other_tags': '"odbl"=>"clean"'},
      'id': 488432}
 
-Below are charts (:numref:`points` - :numref:`other_relations`) illustrating the different geometry types and structures (i.e. all keys within the corresponding GeoJSON data) for each layer:
+The charts (:numref:`points` - :numref:`other_relations`) below illustrate the different geometry types and structures (i.e. all keys within the corresponding GeoJSON data) for each layer:
 
 .. figure:: _images/Point.*
     :name: points
     :align: center
     :width: 85%
 
-    Type of the geometry object and keys within the nested dictionary of ``'points'``
+    Type of the geometry object and keys within the nested dictionary of ``'points'``.
 
 
 .. figure:: _images/LineString.*
@@ -236,7 +236,7 @@ Below are charts (:numref:`points` - :numref:`other_relations`) illustrating the
     :align: center
     :width: 85%
 
-    Type of the geometry object and keys within the nested dictionary of ``'lines'``
+    Type of the geometry object and keys within the nested dictionary of ``'lines'``.
 
 
 .. figure:: _images/MultiLineString.*
@@ -244,7 +244,7 @@ Below are charts (:numref:`points` - :numref:`other_relations`) illustrating the
     :align: center
     :width: 85%
 
-    Type of the geometry object and keys within the nested dictionary of ``'multilinestrings'``
+    Type of the geometry object and keys within the nested dictionary of ``'multilinestrings'``.
 
 
 .. figure:: _images/MultiPolygon.*
@@ -252,7 +252,7 @@ Below are charts (:numref:`points` - :numref:`other_relations`) illustrating the
     :align: center
     :width: 85%
 
-    Type of the geometry object and keys within the nested dictionary of ``'multipolygons'``
+    Type of the geometry object and keys within the nested dictionary of ``'multipolygons'``.
 
 
 .. figure:: _images/GeometryCollection.*
@@ -260,7 +260,7 @@ Below are charts (:numref:`points` - :numref:`other_relations`) illustrating the
     :align: center
     :width: 85%
 
-    Type of the geometry object and keys within the nested dictionary of ``'other_relations'``
+    Type of the geometry object and keys within the nested dictionary of ``'other_relations'``.
 
 
 .. _parse_raw_feat:
@@ -345,7 +345,7 @@ For example, let's try to read the 'railways' layer of the shapefile data of Lon
 
     - The parameter ``feature_names`` is related to ``'fclass'`` in ``london_railways_shp``. You can specify one feature name (or multiple feature names) to get a subset of ``london_railways_shp``.
 
-    - Similar to :py:meth:`.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>`, if the method :py:meth:`.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` could not find the target *.shp* file at the default or specified directory (i.e. ``data_dir``), it will try to extract the *.shp* file from the *.shp.zip* file (or download the *.shp.zip* file first if it does not exist, in which case a confirmation to proceed is by default required as ``download_confirmation_required=True``).
+    - Similar to the method :py:meth:`.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>`, if :py:meth:`.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` could not find the target *.shp* file at the default or specified directory (i.e. ``data_dir``), it will try to extract the *.shp* file from the *.shp.zip* file (or download the *.shp.zip* file first if it does not exist, in which case a confirmation to proceed is by default required as ``download_confirmation_required=True``).
 
     - If you'd like to delete the *.shp* files and/or the downloaded data file (ending with *.shp.zip*), set the parameters ``rm_extracts=True`` and/or ``rm_shp_zip=True``.
 
@@ -387,7 +387,7 @@ For example, to merge the 'railways' layer of London and Kent:
     >>> print(os.path.relpath(path_to_merged_shp))
     tests\greater-london_kent_railways\greater-london_kent_railways.shp
 
-For more details, also check out the functions :py:func:`merge_shps()<pydriosm.reader.merge_shps>` and :py:func:`merge_layer_shps()<pydriosm.reader.merge_layer_shps>` (see also :ref:`pydriosm.reader<reader>`).
+For more details, also check out the functions: :py:func:`merge_shps()<pydriosm.reader.merge_shps>` and :py:func:`merge_layer_shps()<pydriosm.reader.merge_layer_shps>`.
 
 
 .. _qs-import-fetch-data:
@@ -414,13 +414,22 @@ To establish a connection with the server, you need to specify the username, pas
     Password (postgres@localhost:5432): ***
     Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
+The example is illustrated in :numref:`pbf_db_example`:
+
+.. figure:: _images/pbf_db_example.*
+    :name: pbf_db_example
+    :align: center
+    :width: 60%
+
+    An illustration of the database named *'osmdb_test'*.
+
 .. _qs-note-on-ios-data-source:
 
 .. note::
 
     - If you don't specify a password (for creating the instance ``osmdb_test``) as the parameter ``password`` is ``None`` by default, you'll be asked to manually type in the password to the PostgreSQL server.
 
-    - The class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>` has incorporated all available classes from the modules: :py:mod:`downloader<downloader>` and :py:mod:`pydriosm.reader<reader>` as properties. In the case of the above instance, ``osmdb_test.Downloader`` is equivalent to :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`, as the parameter ``data_source`` is ``'Geofabrik'`` by default.
+    - The class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>` has incorporated all available classes from the modules: :py:mod:`downloader<pydriosm.downloader>` and :py:mod:`reader<pydriosm.reader>` as properties. In the case of the above instance, ``osmdb_test.Downloader`` is equivalent to the class :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`, as the parameter ``data_source`` is ``'Geofabrik'`` by default.
 
     - To relate the instance ``osmdb_test`` to 'BBBike' data, you could: 1) recreate an instance by setting ``data_source='BBBike'``; or 2) set ``osmdb_test.DataSource`` to be ``'BBBike'``
 
@@ -450,22 +459,24 @@ For example, let's now try to import ``rutland_pbf_parsed`` that you have obtain
 
 .. note::
 
-    The parameter ``schema_names`` is ``None`` by default, meaning that you are going to import all of the five layers of the PBF data into the database.
+    The parameter ``schema_names`` is ``None`` by default, meaning that you are going to import all the five layers of the PBF data into the database.
 
 In the example above, five schemas, including 'points', 'lines', 'multilinestrings', 'multipolygons' and 'other_relations' are, if they do not exist, created in the database 'osmdb_test'. Each of the schemas corresponds to a key (i.e. name of a layer) of ``rutland_pbf_parsed`` (as illustrated in :numref:`pbf_schemas_example`); and the data of each layer is imported into a table named as 'Rutland' under the corresponding schema (as illustrated in :numref:`pbf_table_example`).
 
 .. figure:: _images/pbf_schemas_example.*
     :name: pbf_schemas_example
-    :width: 44%
+    :align: center
+    :width: 60%
 
-    An illustration of schemas for importing OSM PBF data into a PostgreSQL database
+    An illustration of schemas for importing OSM PBF data into a PostgreSQL database.
 
 
 .. figure:: _images/pbf_table_example.*
     :name: pbf_table_example
-    :width: 41%
+    :align: center
+    :width: 100%
 
-    An illustration of table name for storing the 'lines' layer of the OSM PBF data of Rutland
+    An illustration of table name for storing the *'points'* layer of the OSM PBF data of Rutland.
 
 
 .. _qs-fetch-data-from-the-database:
@@ -550,6 +561,16 @@ Of course, you can also import/fetch data of only a specific layer or multiple l
         "railways" ... Done: <total of rows> features.
         "roads" ... Done: <total of rows> features.
         "waterways" ... Done: <total of rows> features.
+
+As illustrated in :numref:`pbf_schemas_example_2`, three schemas: 'railways', 'roads' and 'waterways' are created in the *'osmdb_test'* database for storing the data of the three shapefile layers of Birmingham.
+
+.. figure:: _images/pbf_schemas_example_2.*
+    :name: pbf_schemas_example_2
+    :align: center
+    :width: 60%
+
+    An illustration of the newly created schemas for the selected layers of Birmingham shapefile data.
+
 
 To fetch only the 'railways' data of Birmingham:
 
