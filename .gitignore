@@ -131,4 +131,6 @@ osm_geofabrik/
 osm_bbbike/
 misc/
 tests/cmd
-tests/pull*.py
+tests/pull_requests.py
+tests/quick_start.py
+tests/update_pkg_dat.py
