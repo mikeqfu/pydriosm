@@ -4,7 +4,7 @@
 Quick start
 ===========
 
-For a demonstration of how how pydriosm works with `OpenStreetMap`_ (OSM) data, this part of the documentation provides a quick guide with some practical examples of using the package to download, parse and store the OSM data.
+For a demonstration of how pydriosm works with `OpenStreetMap`_ (OSM) data, this part of the documentation provides a quick guide with some practical examples of using the package to download, parse and store the OSM data.
 
 .. note::
 
@@ -26,12 +26,14 @@ To start with, you could use the class :py:class:`GeofabrikDownloader<pydriosm.d
 
     >>> from pydriosm.downloader import GeofabrikDownloader
 
+    >>> # Create an instance for downloading the Geofabrik data extracts
     >>> geofabrik_downloader = GeofabrikDownloader()
 
 To explore what data is available for download, you may check out a download catalogue by using the method :py:meth:`.get_download_catalogue()<pydriosm.downloader.GeofabrikDownloader.get_download_catalogue>` :
 
 .. code-block:: python
 
+    >>> # A download catalogue for all subregions
     >>> geofabrik_download_catalogue = geofabrik_downloader.get_download_catalogue()
 
     >>> # Check the column names
@@ -52,13 +54,13 @@ To explore what data is available for download, you may check out a download cat
     4  Burkina Faso  ...  https://download.geofabrik.de/africa/burkina-f...
     [5 rows x 6 columns]
 
-If you'd like to download say the `protocolbuffer binary format`_ (PBF) data of a specific geographic region, you need to specify the name of the region and the file format (e.g. ``".pbf"``). For example, to download the PBF data of ``'London'`` and save it to a local directory named ``"tests"``:
+If you'd like to download say the `protocolbuffer binary format`_ (PBF) data of a specific geographic region, you need to specify the name of the region and file format (e.g. ``".pbf"``). For example, to download the PBF data of ``'London'`` and save it to a local directory named ``"tests"``:
 
 .. code-block:: python
 
     >>> subregion_name = 'London'  # case-insensitive
     >>> osm_file_format = ".pbf"  # or ".osm.pbf"
-    >>> download_dir = "tests"
+    >>> download_dir = "tests"  # a download directory
 
     >>> # Download the OSM PBF data of London from Geofabrik
     >>> geofabrik_downloader.download_osm_data(subregion_name, osm_file_format,
@@ -72,9 +74,9 @@ If you'd like to download say the `protocolbuffer binary format`_ (PBF) data of 
 
     - If the data file does not exist at the specific directory, you'll be asked to confirm whether to proceed to download it, as a function parameter ``confirmation_required`` is ``True`` by default. To skip the confirmation, you just need to set it to be ``False``.
 
-    - If the ``download_dir`` is ``None`` by default, the downloaded data file would be saved to a default data directory, which in this case should be ``"\dat_Geofabrik\Europe\Great Britain\England\"``.
+    - If the ``download_dir`` is ``None`` by default, the downloaded data file would be saved to a default data directory, which in this case should be ``"osm_geofabrik\Europe\Great Britain\England\"``.
 
-Now you should be able to find the downloaded data file at ``<current working directory>\tests\`` and the filename is ``"greater-london-latest.osm.pbf"`` by default.
+Now you should be able to find the downloaded data file at "*<current working directory>\tests\*", and the filename is "*greater-london-latest.osm.pbf*" by default.
 
 To retrieve the default filename and the full path to the downloaded file, you could set the parameter ``ret_download_path`` to be ``True`` when executing the method:
 
@@ -146,6 +148,7 @@ To read/parse any of the downloaded data files above, you could use the class :p
 
 .. code-block:: python
 
+    >>> # Create an instance for reading the downloaded Geofabrik data extracts
     >>> from pydriosm.reader import GeofabrikReader
 
     >>> geofabrik_reader = GeofabrikReader()
@@ -340,7 +343,7 @@ For example, let's try to read the 'railways' layer of the shapefile data of Lon
 
 .. note::
 
-    - The parameter ``feature_names`` is related to ``'fclass'`` in ``london_railways_shp``. We can specify one feature name (or multiple feature names) to get a subset of ``london_railways_shp``.
+    - The parameter ``feature_names`` is related to ``'fclass'`` in ``london_railways_shp``. You can specify one feature name (or multiple feature names) to get a subset of ``london_railways_shp``.
 
     - Similar to :py:meth:`.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>`, if the method :py:meth:`.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` could not find the target *.shp* file at the default or specified directory (i.e. ``data_dir``), it will try to extract the *.shp* file from the *.shp.zip* file (or download the *.shp.zip* file first if it does not exist, in which case a confirmation to proceed is by default required as ``download_confirmation_required=True``).
 
@@ -392,7 +395,7 @@ For more details, also check out the functions :py:func:`merge_shps()<pydriosm.r
 Import and fetch data with a PostgreSQL server
 ==============================================
 
-Beyond downloading and reading OSM data, the package further provides a module :ref:`pydriosm.ios<ios>` for communicating with `PostgreSQL`_ server, that is, to import the OSM data into, and fetch it from, PostgreSQL databases.
+In addition to downloading and reading OSM data, the package further provides a module :ref:`pydriosm.ios<ios>` for communicating with `PostgreSQL`_ server, that is, to import the OSM data into, and fetch it from, PostgreSQL databases.
 
 To establish a connection with the server, you need to specify the username, password, host address of a PostgreSQL server and name of a database. For example:
 
@@ -403,7 +406,7 @@ To establish a connection with the server, you need to specify the username, pas
     >>> host = 'localhost'
     >>> port = 5432
     >>> username = 'postgres'
-    >>> password = None  # We need to type it in manually if `None`
+    >>> password = None  # You need to type it in manually if `None`
     >>> database_name = 'osmdb_test'
 
     >>> # Create an instance of a running PostgreSQL server
@@ -419,7 +422,7 @@ To establish a connection with the server, you need to specify the username, pas
 
     - The class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>` has incorporated all available classes from the modules: :py:mod:`downloader<downloader>` and :py:mod:`pydriosm.reader<reader>` as properties. In the case of the above instance, ``osmdb_test.Downloader`` is equivalent to :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`, as the parameter ``data_source`` is ``'Geofabrik'`` by default.
 
-    - To relate the instance ``osmdb_test`` to 'BBBike' data, you could *1)* recreate an instance by setting ``data_source='BBBike'``; or *2)* set ``osmdb_test.DataSource`` to be ``'BBBike'``
+    - To relate the instance ``osmdb_test`` to 'BBBike' data, you could: 1) recreate an instance by setting ``data_source='BBBike'``; or 2) set ``osmdb_test.DataSource`` to be ``'BBBike'``
 
 
 .. _qs-import-the-data-to-the-database:
@@ -470,14 +473,14 @@ In the example above, five schemas, including 'points', 'lines', 'multilinestrin
 Fetch data from the database
 ----------------------------
 
-To fetch all of the imported PBF data of Rutland, you can use the method :py:meth:`.fetch_osm_data()<pydriosm.ios.PostgresOSM.fetch_osm_data>`:
+To fetch all the imported PBF data of Rutland, you can use the method :py:meth:`.fetch_osm_data()<pydriosm.ios.PostgresOSM.fetch_osm_data>`:
 
 .. code-block:: python
 
     >>> rutland_pbf_parsed_ = osmdb_test.fetch_osm_data(subregion_name, layer_names=None,
     ...                                                 decode_wkt=True)
 
-We could find that ``rutland_pbf_parsed_`` is an equivalent of ``rutland_pbf_parsed``:
+You could find that ``rutland_pbf_parsed_`` is an equivalent of ``rutland_pbf_parsed``:
 
 .. code-block:: python
 
@@ -492,19 +495,19 @@ We could find that ``rutland_pbf_parsed_`` is an equivalent of ``rutland_pbf_par
 
     - The parameter ``layer_names`` is ``None`` by default, meaning that you're going to fetch data of all layers available from the database.
 
-    - The data stored in the database was parsed by the :py:meth:`geofabrik_reader.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>` given ``parse_raw_feat=True`` (see :ref:`above<parse_raw_feat>`). When it is being imported in the PostgreSQL server, the data type of the column 'coordinates' is converted from `list`_ to `str`_. Therefore, in the above example of using the method :py:meth:`.read_osm_pbf()<pydriosm.ios.PostgresOSM.read_osm_pbf>`, the parameter ``decode_wkt``, which defaults to ``False``, is set to be ``True``, so as to retrieve the same data.
+    - The data stored in the database was parsed by the method :py:meth:`.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>` given ``parse_raw_feat=True`` (see :ref:`above<parse_raw_feat>`). When it is being imported in the PostgreSQL server, the data type of the column 'coordinates' is converted from `list`_ to `str`_. Therefore, in the above example of using the method :py:meth:`.fetch_osm_data()<pydriosm.ios.PostgresOSM.fetch_osm_data>`, the parameter ``decode_wkt`` was set to ``True`` to retrieve the same data.
 
 
 .. _qs-import-fetch-layer-data:
 
-Import/fetch data of specific layers
--------------------------------------
+Import/fetch specific layers of shapefile
+-----------------------------------------
 
 Of course, you can also import/fetch data of only a specific layer or multiple layers (and in a customised order). For example, let's firstly import the transport-related layers of Birmingham shapefile data.
 
 .. note::
 
-    'Birmingham' is not listed on the free download catalogue of Geofabrik, but that of BBBike. We need to change the data source to 'BBBike' for the instance ``osmdb_test`` (see also the :ref:`note<qs-note-on-ios-data-source>` above).
+    'Birmingham' is not listed on the free download catalogue of Geofabrik, but that of BBBike. You need to change the data source to 'BBBike' for the instance ``osmdb_test`` (see also the :ref:`note<qs-note-on-ios-data-source>` above).
 
 .. code-block:: python
 
@@ -578,7 +581,7 @@ To fetch only the 'railways' data of Birmingham:
 
 .. note::
 
-    The data retrieved from a PostgreSQL database may not be in the same order as it is in the database (see the test code below). However, they contain exactly the same information. We may sort the data by ``id`` (or ``osm_id``) to make a comparison.
+    The data retrieved from a PostgreSQL database may not be in the same order as it is in the database (see the test code below). However, they contain exactly the same information. You may sort the data by ``id`` (or ``osm_id``) to make a comparison.
 
 .. code-block:: python
 
@@ -658,7 +661,7 @@ To also drop the 'waterways' of Birmingham and both 'lines' and 'multilinestring
         "multilinestrings"."Rutland" ... Done.
         "waterways"."Birmingham" ... Done.
 
-We could also easily drop the whole database 'osmdb_test' if you don't need it any more:
+You could also easily drop the whole database 'osmdb_test' if you don't need it anymore:
 
 .. code-block:: python
 
