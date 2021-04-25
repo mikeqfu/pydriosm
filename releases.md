@@ -1,5 +1,23 @@
 ### Release history
 
+*25 April 2021*
+
+##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/2.0.2...2.0.3) since [v2.0.2](https://github.com/mikeqfu/pydriosm/tree/d7cb423ae30dc3443139fc6063ea3ce24ed7afd9):
+
+- modified the module [downloader](https://github.com/mikeqfu/pydriosm/blob/e5f8fe491cb0bf1f7c22e6e02851c78c288327e8/pydriosm/downloader.py) with [bug fixes](https://github.com/mikeqfu/pydriosm/commit/52f76723a84cd822fc002f89bf92a744cbd88141)
+- in the module [reader](https://github.com/mikeqfu/pydriosm/blob/e5f8fe491cb0bf1f7c22e6e02851c78c288327e8/pydriosm/reader.py),
+    - renamed [get_default_shp_crs()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacL694) to [get_epsg4326_wgs84_crs_ref()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR733)
+    - added functions [get_epsg4326_wgs84_prj_ref()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR765-R791), [make_pyshp_fields()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR794-R834) and [write_to_shapefile()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR837-R917)
+  - used [pyshp](https://pypi.org/project/pyshp/) as the default tool of reading/writing shapefiles; this replaced the previous dependency GeoPandas, which would not be required for installing PyDriosm but still reserved as an alternative option if already available
+- in the module [ios](https://github.com/mikeqfu/pydriosm/blob/e5f8fe491cb0bf1f7c22e6e02851c78c288327e8/pydriosm/ios.py), let the class [PostgresOSM](https://github.com/mikeqfu/pydriosm/commit/90587bb0ab7bd26d3597481d463b280cdaf1a728#diff-c77b790ee115d5ffc02dec7d637d7d22d5e61747bc0e3c0cbc917810c8c4fb7bR126) inherit from [pyhelpers.sql.PostgreSQL](https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.sql.PostgreSQL.html) and modified the class with [bug fixes](https://github.com/mikeqfu/pydriosm/commit/90587bb0ab7bd26d3597481d463b280cdaf1a728)
+- in the module [utils](https://github.com/mikeqfu/pydriosm/blob/e5f8fe491cb0bf1f7c22e6e02851c78c288327e8/pydriosm/utils.py),
+  - removed the function [get_osm_geom_object_dict()](https://github.com/mikeqfu/pydriosm/blob/d7cb423ae30dc3443139fc6063ea3ce24ed7afd9/pydriosm/utils.py#L145-L167)
+  - added functions [get_shp_shape_types_dict()](https://github.com/mikeqfu/pydriosm/commit/1a82b3d96383500898af13f6a49023f6c88f4c06#diff-262651b10b835e2d78c1c6d4157b36f97721b7a10a13f197715ee984266c3882R147-R172) and [get_shp_shape_types_geom_dict()](https://github.com/mikeqfu/pydriosm/commit/1a82b3d96383500898af13f6a49023f6c88f4c06#diff-262651b10b835e2d78c1c6d4157b36f97721b7a10a13f197715ee984266c3882R175-R192)
+- modified default download directories
+- updated the package data
+
+**For more details, check out [PyDriosm 2.0.3 documentation](https://pydriosm.readthedocs.io/en/2.0.3/).**
+
 
 
 #### [2.0.2](https://github.com/mikeqfu/pydriosm/releases/tag/2.0.2)
@@ -34,14 +52,13 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 *Note that v2 is NOT compatible with the earlier versions labelled v1.*
 
-**Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.20...2.0.0) since [v1.0.20](https://github.com/mikeqfu/pydriosm/tree/371dbce63886cf22f8484337ed5ced826acfcf05):**
+##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.20...2.0.0) since [v1.0.20](https://github.com/mikeqfu/pydriosm/tree/371dbce63886cf22f8484337ed5ced826acfcf05):
 
 - featured with the following three new modules:
   - **[downloader](https://github.com/mikeqfu/pydriosm/blob/941e9f5b45a0a356eba5a0281307f19807955357/pydriosm/downloader.py)**, modified from the former [download_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/download_GeoFabrik.py) and [download_BBBike](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/download_BBBike.py), for downloading data
   - **[reader](https://github.com/mikeqfu/pydriosm/blob/941e9f5b45a0a356eba5a0281307f19807955357/pydriosm/reader.py)**, modified from the former [read_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/read_GeoFabrik.py), for reading the data
   - **[ios](https://github.com/mikeqfu/pydriosm/blob/941e9f5b45a0a356eba5a0281307f19807955357/pydriosm/ios.py)**, modified from the former [osm_psql](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/osm_psql.py) and [dump_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/dump_GeoFabrik.py), for PostgreSQL-based I/O and storage of the data
 - renamed the rest modules, fixed known bugs and added a number of new functions/classes
-
 - created [PyDriosm documentation](https://readthedocs.org/projects/pydriosm/) hosted at [Read the Docs](https://readthedocs.org/).
 
 
@@ -68,7 +85,7 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 *9 January 2020*
 
-**Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.17...1.0.18) since [v1.0.17](https://github.com/mikeqfu/pydriosm/tree/cc6504c11189a4ac6b42cec24b25cae079e3b715):**
+##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.17...1.0.18) since [v1.0.17](https://github.com/mikeqfu/pydriosm/tree/cc6504c11189a4ac6b42cec24b25cae079e3b715):
 
 - modified the module [download_GeoFabrik](https://github.com/mikeqfu/pydriosm/commit/af47dfb667a721be97ec9ae5eac0000b4571876b#diff-a2d854a6efc7bb0057ad30f933a3cd9ac250a85d4ab74181644827157659939e), allowing it to download data of a deep or a shallow set of subregions
 - modified the following functions with bug fixes: 
@@ -86,7 +103,7 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 *29 November 2019*
 
-**Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.16...1.0.17) since [v1.0.16](https://github.com/mikeqfu/pydriosm/tree/140d0cc85fc3d3346994d214821762465acc5aab):**
+##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.16...1.0.17) since [v1.0.16](https://github.com/mikeqfu/pydriosm/tree/140d0cc85fc3d3346994d214821762465acc5aab):
 
 - modified the following functions with bug fixes in the module [download_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/8c39e6be675f163221009b4e6c66c4db904c3ccf/pydriosm/download_GeoFabrik.py):
   - [collect_subregion_info_catalogue()](https://github.com/mikeqfu/pydriosm/commit/8c39e6be675f163221009b4e6c66c4db904c3ccf#diff-a2d854a6efc7bb0057ad30f933a3cd9ac250a85d4ab74181644827157659939eL126-R209)
@@ -103,7 +120,7 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 *6 October 2019*
 
-**Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.15...1.0.16) since [v1.0.15](https://github.com/mikeqfu/pydriosm/tree/c9faa653488036e43b332dc61a9e6614018f785f):**
+##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.15...1.0.16) since [v1.0.15](https://github.com/mikeqfu/pydriosm/tree/c9faa653488036e43b332dc61a9e6614018f785f):
 
 - fixed known bugs
 - updated the package data
@@ -116,7 +133,7 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 *(Note that [v1.0.14](https://pypi.org/project/pydriosm/1.0.14/), [v1.0.13](https://pypi.org/project/pydriosm/1.0.13/) and [v1.0.12](https://pypi.org/project/pydriosm/1.0.12/) were deprecated and removed from Releases on GitHub.)*
 
-**Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.11...1.0.15) since [v1.0.11](https://github.com/mikeqfu/pydriosm/tree/42c47d60c1a30c37c80b9757fd4c32e60f053bd3):**
+##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.11...1.0.15) since [v1.0.11](https://github.com/mikeqfu/pydriosm/tree/42c47d60c1a30c37c80b9757fd4c32e60f053bd3):
 
 - added a new method [.db_exists()](https://github.com/mikeqfu/pydriosm/commit/73ff3b2bee1d85947d86bf32421e90dcabb7d47d#diff-cb2783bddce6ef6c0d7479f7e4ada08bdcec39cb0e9d0af83a4d1398b5737491R72-R76) of the class [OSM](https://github.com/mikeqfu/pydriosm/blob/73ff3b2bee1d85947d86bf32421e90dcabb7d47d/pydriosm/osm_psql.py#L30); modified the method [.create_db()](https://github.com/mikeqfu/pydriosm/commit/73ff3b2bee1d85947d86bf32421e90dcabb7d47d#diff-cb2783bddce6ef6c0d7479f7e4ada08bdcec39cb0e9d0af83a4d1398b5737491L72-R96), allowing it to check if a database exists
 - modified the following functions with bug fixes in the module [read_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/758bcbd4dc48a03b1bb72c161ba8e87f04a80a82/pydriosm/read_GeoFabrik.py): 
@@ -133,7 +150,7 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 *(Note that [v1.0.10](https://pypi.org/project/pydriosm/1.0.10/) and [v1.0.9](https://pypi.org/project/pydriosm/1.0.9/) were deprecated and removed from Releases on GitHub.)*
 
-**Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.8...1.0.11) since [v1.0.8](https://github.com/mikeqfu/pydriosm/tree/305be3f0996be2aa3f5003c3f96b06466d769f50):**
+##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.8...1.0.11) since [v1.0.8](https://github.com/mikeqfu/pydriosm/tree/305be3f0996be2aa3f5003c3f96b06466d769f50):
 
 - added a parameter '[`database_name`](https://github.com/mikeqfu/pydriosm/commit/9846653bb2d08580b972a0dbf10c84b1e8bd9050)' that allows customised database name when dumping data to PostgreSQL
 - added a function [regulate_table_name()](https://github.com/mikeqfu/pydriosm/commit/4cfdd7ebcb489b7b618f6c6163cad9354c071b77#diff-cb2783bddce6ef6c0d7479f7e4ada08bdcec39cb0e9d0af83a4d1398b5737491R17-R27) that regulates PostgreSQL table names
