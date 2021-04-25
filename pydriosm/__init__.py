@@ -8,7 +8,7 @@ __all__ = ['downloader', 'GeofabrikDownloader', 'BBBikeDownloader',
 
 __package_name__ = 'pydriosm'
 __package_name_alt__ = 'PyDriosm'
-__version__ = '2.0.3'
+__version__ = '2.0.3rc2'
 __author__ = u'Qian Fu'
 __email__ = 'qian.fu@outlook.com'
 __description__ = \
