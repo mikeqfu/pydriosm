@@ -1,13 +1,17 @@
 ### Release history
 
+
+
+#### [2.0.3](https://github.com/mikeqfu/pydriosm/releases/tag/2.0.3)
+
 *25 April 2021*
 
 ##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/2.0.2...2.0.3) since [v2.0.2](https://github.com/mikeqfu/pydriosm/tree/d7cb423ae30dc3443139fc6063ea3ce24ed7afd9):
 
 - modified the module [downloader](https://github.com/mikeqfu/pydriosm/blob/e5f8fe491cb0bf1f7c22e6e02851c78c288327e8/pydriosm/downloader.py) with [bug fixes](https://github.com/mikeqfu/pydriosm/commit/52f76723a84cd822fc002f89bf92a744cbd88141)
 - in the module [reader](https://github.com/mikeqfu/pydriosm/blob/e5f8fe491cb0bf1f7c22e6e02851c78c288327e8/pydriosm/reader.py),
-    - renamed [get_default_shp_crs()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacL694) to [get_epsg4326_wgs84_crs_ref()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR733)
-    - added functions [get_epsg4326_wgs84_prj_ref()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR765-R791), [make_pyshp_fields()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR794-R834) and [write_to_shapefile()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR837-R917)
+  - renamed [get_default_shp_crs()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacL694) to [get_epsg4326_wgs84_crs_ref()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR733)
+  - added functions [get_epsg4326_wgs84_prj_ref()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR765-R791), [make_pyshp_fields()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR794-R834) and [write_to_shapefile()](https://github.com/mikeqfu/pydriosm/commit/5786c620fee89fa2a0db4c8329f7d9cabf7ea81d#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR837-R917)
   - used [pyshp](https://pypi.org/project/pyshp/) as the default tool of reading/writing shapefiles; this replaced the previous dependency GeoPandas, which would not be required for installing PyDriosm but still reserved as an alternative option if already available
 - in the module [ios](https://github.com/mikeqfu/pydriosm/blob/e5f8fe491cb0bf1f7c22e6e02851c78c288327e8/pydriosm/ios.py), let the class [PostgresOSM](https://github.com/mikeqfu/pydriosm/commit/90587bb0ab7bd26d3597481d463b280cdaf1a728#diff-c77b790ee115d5ffc02dec7d637d7d22d5e61747bc0e3c0cbc917810c8c4fb7bR126) inherit from [pyhelpers.sql.PostgreSQL](https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.sql.PostgreSQL.html) and modified the class with [bug fixes](https://github.com/mikeqfu/pydriosm/commit/90587bb0ab7bd26d3597481d463b280cdaf1a728)
 - in the module [utils](https://github.com/mikeqfu/pydriosm/blob/e5f8fe491cb0bf1f7c22e6e02851c78c288327e8/pydriosm/utils.py),
@@ -26,7 +30,7 @@
 
 ##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/2.0.1...2.0.2) since [v2.0.1](https://github.com/mikeqfu/pydriosm/tree/fde43179f0db724e5ff2fe69afba74f6d53d37c0):
 
-- added a parameter '[`max_tmpfile_size`](https://github.com/mikeqfu/pydriosm/commit/3b4d8c3c58f40f4a405586594fa57524a8e825e8)' to the classes [GeofabrikDownloader](https://pydriosm.readthedocs.io/en/2.0.2/_generated/pydriosm.downloader.GeofabrikDownloader.html) and [BBBikeDownloader](https://pydriosm.readthedocs.io/en/2.0.2/_generated/pydriosm.downloader.BBBikeDownloader.html), to set the maximum size (which defaults to 100 MB) of in-memory temporary file while instantiating both the classes
+- added a parameter '[max_tmpfile_size](https://github.com/mikeqfu/pydriosm/commit/3b4d8c3c58f40f4a405586594fa57524a8e825e8)' to the classes [GeofabrikDownloader](https://pydriosm.readthedocs.io/en/2.0.2/_generated/pydriosm.downloader.GeofabrikDownloader.html) and [BBBikeDownloader](https://pydriosm.readthedocs.io/en/2.0.2/_generated/pydriosm.downloader.BBBikeDownloader.html), to set the maximum size (which defaults to 100 MB) of in-memory temporary file while instantiating both the classes
 - added a new function [validate_shp_layer_names()](https://pydriosm.readthedocs.io/en/2.0.2/_generated/pydriosm.utils.validate_shp_layer_names.html) to the module [utils](https://pydriosm.readthedocs.io/en/2.0.2/utils.html)
 - optimised import statements for all modules
 
@@ -58,7 +62,7 @@ This release introduces a brand new PyDriosm, which is a highly modified version
   - **[downloader](https://github.com/mikeqfu/pydriosm/blob/941e9f5b45a0a356eba5a0281307f19807955357/pydriosm/downloader.py)**, modified from the former [download_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/download_GeoFabrik.py) and [download_BBBike](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/download_BBBike.py), for downloading data
   - **[reader](https://github.com/mikeqfu/pydriosm/blob/941e9f5b45a0a356eba5a0281307f19807955357/pydriosm/reader.py)**, modified from the former [read_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/read_GeoFabrik.py), for reading the data
   - **[ios](https://github.com/mikeqfu/pydriosm/blob/941e9f5b45a0a356eba5a0281307f19807955357/pydriosm/ios.py)**, modified from the former [osm_psql](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/osm_psql.py) and [dump_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/371dbce63886cf22f8484337ed5ced826acfcf05/pydriosm/dump_GeoFabrik.py), for PostgreSQL-based I/O and storage of the data
-- renamed the rest modules, fixed known bugs and added a number of new functions/classes
+- renamed the rest of the modules, fixed known bugs and added a number of new functions/classes
 - created [PyDriosm documentation](https://readthedocs.org/projects/pydriosm/) hosted at [Read the Docs](https://readthedocs.org/).
 
 
@@ -152,7 +156,7 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 ##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.8...1.0.11) since [v1.0.8](https://github.com/mikeqfu/pydriosm/tree/305be3f0996be2aa3f5003c3f96b06466d769f50):
 
-- added a parameter '[`database_name`](https://github.com/mikeqfu/pydriosm/commit/9846653bb2d08580b972a0dbf10c84b1e8bd9050)' that allows customised database name when dumping data to PostgreSQL
+- added a parameter '[database_name](https://github.com/mikeqfu/pydriosm/commit/9846653bb2d08580b972a0dbf10c84b1e8bd9050)' that allows customised database name when dumping data to PostgreSQL
 - added a function [regulate_table_name()](https://github.com/mikeqfu/pydriosm/commit/4cfdd7ebcb489b7b618f6c6163cad9354c071b77#diff-cb2783bddce6ef6c0d7479f7e4ada08bdcec39cb0e9d0af83a4d1398b5737491R17-R27) that regulates PostgreSQL table names
 - removed duplicates from the list of the smallest subregions
 - fixed [a minor bug](https://github.com/mikeqfu/pydriosm/commit/f2b22a5af3e7026c7c0810b1857550249c9fc61a) for creating a default data directory
@@ -190,7 +194,7 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 ##### Main [changes](https://github.com/mikeqfu/pydriosm/compare/1.0.0...1.0.5) since [v1.0.0](https://github.com/mikeqfu/pydriosm/tree/5dfa679abc6645570752d5332acd8e9dd467df53):
 
-- added a parameter '`chunk_size`' to the function [dump_osm_pbf_data()](https://github.com/mikeqfu/pydriosm/commit/cd209d985a3270b90d22501fdc5e3a8e8b142ac4#diff-cb2783bddce6ef6c0d7479f7e4ada08bdcec39cb0e9d0af83a4d1398b5737491L173-R204) in the module [osm_psql](https://github.com/mikeqfu/pydriosm/blob/cd209d985a3270b90d22501fdc5e3a8e8b142ac4/pydriosm/osm_psql.py), which allows users to parse/read/dump data in a chunk-wise way
+- added a parameter 'chunk_size' to the function [dump_osm_pbf_data()](https://github.com/mikeqfu/pydriosm/commit/cd209d985a3270b90d22501fdc5e3a8e8b142ac4#diff-cb2783bddce6ef6c0d7479f7e4ada08bdcec39cb0e9d0af83a4d1398b5737491L173-R204) in the module [osm_psql](https://github.com/mikeqfu/pydriosm/blob/cd209d985a3270b90d22501fdc5e3a8e8b142ac4/pydriosm/osm_psql.py), which allows users to parse/read/dump data in a chunk-wise way
 - in the module [dump_GeoFabrik](https://github.com/mikeqfu/pydriosm/blob/4558a89938fa6f28ab105a6ee5d54a95745302e2/pydriosm/dump_GeoFabrik.py):
   - added a new function [retrieve_subregions()](https://github.com/mikeqfu/pydriosm/commit/4558a89938fa6f28ab105a6ee5d54a95745302e2#diff-06caa7c5b7806a98b9c915f4b9e44a9b7c305ead0c66e31baae94a58370c4615R19-R40), which retrieves a list of subregions of a given region name from the 'region-subregion index'
   - added a '[sleeping time](https://github.com/mikeqfu/pydriosm/commit/9b37bbe76223332b037f12a8fa49d1fdb24c7262)' to the function [psql_subregion_osm_data_extracts()](https://github.com/mikeqfu/pydriosm/blob/9b37bbe76223332b037f12a8fa49d1fdb24c7262/pydriosm/dump_GeoFabrik.py#L45-L152)
