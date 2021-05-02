@@ -210,4 +210,6 @@ This release introduces a brand new PyDriosm, which is a highly modified version
 
 **Initial release.**
 
-*All earlier versions (up to v0.2.9) have been deprecated.*
+
+
+The earlier versions up to v0.2.9 have been deprecated.
