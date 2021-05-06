@@ -18,7 +18,7 @@ PyDriosm
         :target: https://zenodo.org/badge/latestdoi/92493726
 
 | **Author**: Qian Fu
-| **Email**: qian.fu@outlook.com
+| **Email**: q.fu@bham.ac.uk
 
 PyDriosm is an open-source tool for researchers/practitioners to easily download and read `OpenStreetMap`_ (OSM) data in popular file formats such as `protocolbuffer binary format`_ (PBF) and `shapefile`_, which are available for free download on `Geofabrik`_ and `BBBike`_ websites. The package also provides a convenient way for `PostgreSQL`_-based I/O and storage of parsed OSM data.
 
