@@ -10,6 +10,6 @@ __package_name__ = 'pydriosm'
 __package_name_alt__ = 'PyDriosm'
 __version__ = '2.0.3'
 __author__ = u'Qian Fu'
-__email__ = 'qian.fu@outlook.com'
+__email__ = 'q.fu@bham.ac.uk'
 __description__ = \
     'An open-source tool for downloading, reading and PostgreSQL-based I/O of OpenStreetMap data.'
