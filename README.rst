@@ -17,7 +17,6 @@ PyDriosm
     :alt: PyPI - Downloads
     :target: https://pypistats.org/packages/pydriosm
 .. |DOI| image:: https://zenodo.org/badge/92493726.svg
-    :alt: DOI
     :target: https://zenodo.org/badge/latestdoi/92493726
 
 | **Author**: Qian Fu
