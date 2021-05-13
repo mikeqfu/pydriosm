@@ -5,17 +5,23 @@ PyDriosm
 |PyPI| |Python| |License| |Downloads| |DOI|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm?color=important&label=PyPI
+    :alt: PyPI
     :target: https://pypi.org/project/pydriosm/
 .. |Python| image:: https://img.shields.io/pypi/pyversions/pydriosm?color=informational&label=Python
+    :alt: PyPI - Python Version
     :target: https://docs.python.org/3/
 .. |License| image:: https://img.shields.io/pypi/l/pydriosm?color=green&label=License
+    :alt: PyPI - License
     :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
-.. |Downloads| image:: https://static.pepy.tech/personalized-badge/pydriosm?period=total&units=international_system&left_color=grey&right_color=yellow&left_text=Downloads
-    :target: https://pepy.tech/project/pydriosm
+.. |Downloads| image:: https://img.shields.io/pypi/dm/pydriosm?color=yellow&label=Downloads
+    :alt: PyPI - Downloads
+    :target: https://pypistats.org/packages/pydriosm
 .. |DOI| image:: https://zenodo.org/badge/92493726.svg
+    :alt: DOI:10.5281/zenodo.4281194
     :target: https://zenodo.org/badge/latestdoi/92493726
 
-**Author**: Qian Fu
+| **Author**: Qian Fu
+| **Email**: q.fu@bham.ac.uk
 
 PyDriosm is an open-source tool for researchers/practitioners to easily download and read `OpenStreetMap`_ (OSM) data in popular file formats such as `protobuf binary format`_ (PBF) and `shapefile`_, which are available for free download from `Geofabrik`_ and `BBBike`_. The package also provides a convenient way for `PostgreSQL`_-based I/O and storage of parsed OSM data.
 
