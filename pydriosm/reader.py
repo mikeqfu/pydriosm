@@ -9,8 +9,8 @@ import itertools
 import lzma
 import zipfile
 
+import orjson
 import osgeo.ogr
-import rapidjson
 import shapefile as pyshp
 import shapely.geometry
 from pyhelpers.ops import split_list
@@ -1370,7 +1370,8 @@ def parse_geojson_xz(path_to_geojson_xz, fmt_geom=False):
     <pydriosm.reader.BBBikeReader.read_geojson_xz>`.
     """
 
-    geojson_xz_raw = rapidjson.load(lzma.open(path_to_geojson_xz, mode='rt', encoding='utf-8'))
+    raw_obj = lzma.open(path_to_geojson_xz, mode='rt', encoding='utf-8')
+    geojson_xz_raw = orjson.loads(raw_obj.read())
 
     geojson_xz_dat = pd.DataFrame.from_dict(geojson_xz_raw)
 

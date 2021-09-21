@@ -1416,18 +1416,18 @@ class PostgresOSM(PostgreSQL):
                 geo_typ = lyr_dat_.columns[0]
 
                 if decode_geojson:
-                    lyr_dat_ = lyr_dat_[geo_typ].map(rapidjson.loads).to_frame(name=geo_typ)
+                    lyr_dat_ = lyr_dat_[geo_typ].map(orjson.loads).to_frame(name=geo_typ)
 
                 if decode_wkt or decode_other_tags:
                     lyr_dat_ = pd.DataFrame.from_records(
-                        lyr_dat_[geo_typ] if decode_geojson else lyr_dat_[geo_typ].map(rapidjson.loads))
+                        lyr_dat_[geo_typ] if decode_geojson else lyr_dat_[geo_typ].map(orjson.loads))
 
                     lyr_dat_ = parse_osm_pbf_layer(
                         pbf_layer_data=lyr_dat_, geo_typ=geo_typ, transform_geom=decode_wkt,
                         transform_other_tags=decode_other_tags)
 
                 elif parse_geojson:
-                    lyr_dat_ = pd.DataFrame.from_records(lyr_dat_[geo_typ].map(rapidjson.loads))
+                    lyr_dat_ = pd.DataFrame.from_records(lyr_dat_[geo_typ].map(orjson.loads))
 
             else:
                 import shapely.wkt
