@@ -1,24 +1,25 @@
 import setuptools
 
-import pydriosm
+# noinspection PyProtectedMember
+from pydriosm import __author__, __description__, __email__, __package__, __version__
 
 with open("README.rst", 'r', encoding='utf-8') as readme:
     long_description = readme.read()
 
 setuptools.setup(
 
-    name=pydriosm.__package_name__,
+    name=__package__,
 
-    version=pydriosm.__version__,
+    version=__version__,
 
-    description=pydriosm.__description__,
+    description=__description__,
     long_description=long_description,
     long_description_content_type="text/x-rst",
 
     url='https://github.com/mikeqfu/pydriosm',
 
-    author=pydriosm.__author__,
-    author_email=pydriosm.__email__,
+    author=__author__,
+    author_email=__email__,
 
     license='GPLv3',
 
@@ -46,7 +47,7 @@ setuptools.setup(
               'Shapefile', 'Shapefiles'],
 
     project_urls={
-        'Documentation': 'https://pydriosm.readthedocs.io/en/latest/',
+        'Documentation': 'https://pydriosm.readthedocs.io/en/{}/'.format(__version__),
         'Source': 'https://github.com/mikeqfu/pydriosm',
         'Tracker': 'https://github.com/mikeqfu/pydriosm/issues',
     },
@@ -55,23 +56,23 @@ setuptools.setup(
 
     install_requires=[
         'beautifulsoup4',
+        'lxml',
         'GDAL>=3.0',
         'html5lib',
         'humanfriendly',
         'lxml',
         'more-itertools',
         'pyshp',
-        'pyhelpers>=1.2.15',
         'tqdm',
-        # 'Fiona>=1.8',
+        # 'Fiona',
         # 'geopandas',
+        'pyhelpers>=1.2.17',  # which requires the following dependencies:
         # 'Shapely',
-        # 'fuzzywuzzy',
-        # 'pandas',
-        # 'psycopg2',
         # 'pyproj',
         # 'requests',
-        # 'Shapely',
+        # 'pandas',
+        # 'fuzzywuzzy',
+        # 'psycopg2',
         # 'SQLAlchemy',
     ],
 
