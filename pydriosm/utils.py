@@ -1,43 +1,19 @@
 """
-Helper functions.
+Provide various helper functions across the package.
 """
 
-import math
 import os
 import re
 import shutil
 
 import numpy as np
 import pkg_resources
+import shapely.geometry
 from pyhelpers.dir import cd
 from pyhelpers.text import find_similar_str
 
 
-# -- Specify resource homepages --------------------------------------------------------
-
-def geofabrik_homepage():
-    """
-    Specify the homepage URL of the free Geofabrik data extracts.
-
-    :return: URL of the data source homepage
-    :rtype: str
-    """
-
-    return 'https://download.geofabrik.de/'
-
-
-def bbbike_homepage():
-    """
-    Specify the homepage URL of the free BBBike data extracts.
-
-    :return: URL of the data source homepage
-    :rtype: str
-    """
-
-    return 'https://download.bbbike.org/osm/bbbike/'
-
-
-# -- Specify directory/file paths ------------------------------------------------------------
+# == Data directories ========================================================================
 
 def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     """
@@ -49,21 +25,21 @@ def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     :type dat_dir: str
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of
-        `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
-        e.g. ``mode=0o777``
+    :param kwargs: [optional] parameters of `os.makedirs`_, e.g. ``mode=0o777``
     :return: an absolute path to a directory (or a file) under ``data_dir``
     :rtype: str
+
+    .. _`os.makedirs`: https://docs.python.org/3/library/os.html#os.makedirs
 
     **Example**::
 
         >>> import os
-        >>> from pydriosm.utils import cd_dat
+        >>> from pydriosm.downloader import cd_dat
 
         >>> path_to_dat = cd_dat()
 
-        >>> print(os.path.relpath(path_to_dat))
-        pydriosm\\dat
+        >>> os.path.relpath(path_to_dat)
+        'pydriosm\\dat'
     """
 
     path = pkg_resources.resource_filename(__name__, dat_dir)
@@ -82,58 +58,107 @@ def cd_dat(*sub_dir, dat_dir="dat", mkdir=False, **kwargs):
     return path
 
 
-def cd_dat_geofabrik(*sub_dir, mkdir=False, **kwargs):
+def cd_dat_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
     """
-    Change directory to ``dat_Geofabrik`` and its sub-directories within a package.
+    Change directory to ``osm_geofabrik\\`` and its sub-directories within a package.
 
     :param sub_dir: name of directory; names of directories (and/or a filename)
     :type sub_dir: str or typing.PathLike
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of
-        `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
-        e.g. ``mode=0o777``
+    :param default_dir: default folder name of the root directory for downloading data from Geofabrik,
+        defaults to ``"osm_geofabrik"``
+    :type default_dir: str
+    :param kwargs: [optional] parameters of `pyhelpers.dir.cd`_
     :return: an absolute path to a directory (or a file) under ``data_dir``
     :rtype: str or typing.PathLike
+
+    .. _`pyhelpers.dir.cd`: https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dir.cd.html
+
+    **Examples**::
+
+        >>> import os
+        >>> from pydriosm.utils import cd_dat_geofabrik
+
+        >>> os.path.relpath(cd_dat_geofabrik())
+        'osm_geofabrik'
     """
 
-    path = cd("osm_geofabrik", *sub_dir, mkdir=mkdir, **kwargs)
+    path = cd(default_dir, *sub_dir, mkdir=mkdir, **kwargs)
 
     return path
 
 
-def cd_dat_bbbike(*sub_dir, mkdir=False, **kwargs):
+def cd_dat_bbbike(*sub_dir, mkdir=False, default_dir="osm_bbbike", **kwargs):
     """
-    Change directory to ``dat_BBBike`` and its sub-directories.
+    Change directory to ``osm_bbbike\\`` and its sub-directories.
 
     :param sub_dir: name of directory; names of directories (and/or a filename)
     :type sub_dir: str
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
-    :param kwargs: optional parameters of
-        `os.makedirs <https://docs.python.org/3/library/os.html#os.makedirs>`_,
-        e.g. ``mode=0o777``
+    :param default_dir: default folder name of the root directory for downloading data from BBBike,
+        defaults to ``"osm_bbbike"``
+    :type default_dir: str
+    :param kwargs: [optional] parameters of `pyhelpers.dir.cd`_
     :return: an absolute path to a directory (or a file) under ``data_dir``
     :rtype: str
+
+    .. _`pyhelpers.dir.cd`: https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dir.cd.html
+
+    **Examples**::
+
+        >>> import os
+        >>> from pydriosm.utils import cd_dat_bbbike
+
+        >>> os.path.relpath(cd_dat_bbbike())
+        'osm_bbbike'
     """
 
-    path = cd("osm_bbbike", *sub_dir, mkdir=mkdir, **kwargs)
+    path = cd(default_dir, *sub_dir, mkdir=mkdir, **kwargs)
 
     return path
 
 
-# -- Specify geometric object types/names ----------------------------------------------------
+# == Specifications and cross-references =====================================================
 
-def get_pbf_layer_feat_types_dict():
+def pbf_layer_geom_type_dict(geom=False):
     """
-    A dictionary for PBF layers and the corresponding geometry types.
+    A dictionary cross-referencing the names of PBF layers and their corresponding names (or classes) of
+    `geometric objects <https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects>`_
+    defined in `Shapely <https://pypi.org/project/Shapely/>`_.
 
-    :return: a dictionary with keys and values being PBF layers and geometry types
+    :param geom: whether to return `geometric objects`_ classes, defaults to ``False``
+    :type geom: bool
+    :return: a dictionary with keys and values being, respectively,
+        PBF layers and (names of) `geometric objects`_ defined in `Shapely`_
     :rtype: dict
+
+    .. _`geometric objects`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+    .. _`Shapely`: https://pypi.org/project/Shapely/
+
+    **Examples**::
+
+        >>> from pydriosm.utils import pbf_layer_geom_type_dict
+
+        >>> pbf_layer_geom_type_dict()
+        {'points': 'Point',
+         'lines': 'LineString',
+         'multilinestrings': 'MultiLineString',
+         'multipolygons': 'MultiPolygon',
+         'other_relations': 'GeometryCollection'}
+
+        >>> pbf_layer_geom_type_dict(geom=True)
+        {'points': shapely.geometry.point.Point,
+         'lines': shapely.geometry.linestring.LineString,
+         'multilinestrings': shapely.geometry.multilinestring.MultiLineString,
+         'multipolygons': shapely.geometry.multipolygon.MultiPolygon,
+         'other_relations': shapely.geometry.collection.GeometryCollection}
     """
 
     # {Layer name in .pbf data: the corresponding feature type}
-    pbf_layer_feat_types = {
+
+    pbf_feat_geom_dict = {
         'points': 'Point',
         'lines': 'LineString',
         'multilinestrings': 'MultiLineString',
@@ -141,15 +166,38 @@ def get_pbf_layer_feat_types_dict():
         'other_relations': 'GeometryCollection',
     }
 
-    return pbf_layer_feat_types
+    if geom:
+        pbf_feat_geom_dict = {k: getattr(shapely.geometry, v) for k, v in pbf_feat_geom_dict.items()}
+
+    return pbf_feat_geom_dict
 
 
-def get_shp_shape_types_dict():
+def shp_shape_types_dict():
     """
     A dictionary for shape types of shapefiles.
 
     :return: a dictionary with keys and values being codes and shape types
     :rtype: dict
+
+    **Example**::
+
+        >>> from pydriosm.utils import shp_shape_types_dict
+
+        >>> shp_shape_types_dict()
+        {0: None,
+         1: 'Point',
+         3: 'Polyline',
+         5: 'Polygon',
+         8: 'MultiPoint',
+         11: 'PointZ',
+         13: 'PolylineZ',
+         15: 'PolygonZ',
+         18: 'MultiPointZ',
+         21: 'PointM',
+         23: 'PolylineM',
+         25: 'PolygonM',
+         28: 'MultiPointM',
+         31: 'MultiPatch'}
     """
 
     shape_types = {
@@ -172,52 +220,126 @@ def get_shp_shape_types_dict():
     return shape_types
 
 
-def get_shp_shape_types_geom_dict():
+def shp_shape_types_geom_dict(geom=False):
     """
-    A dictionary for shapefiles' shape types and their corresponding geometry objects' types.
+    A dictionary cross-referencing the shape types of shapefiles and their corresponding names (or classes)
+    of `geometric objects`_ defined in `Shapely`_.
 
-    :return: a dictionary with keys and values being shape type codes and `shapely.geometry`_ types
+    :param geom: whether to return
+        `geometric objects <https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects>`_
+        classes, defaults to ``False``
+    :type geom: bool
+    :return: a dictionary with keys and values being, respectively,
+        shape-type codes of shapefiles and names (or classes) of
+        `geometric objects <https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects>`_
+        defined in `Shapely <https://pypi.org/project/Shapely/>`_
     :rtype: dict
 
-    .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+    .. _`geometric objects`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+    .. _`Shapely`: https://pypi.org/project/Shapely/
+
+    **Examples**::
+
+        >>> from pydriosm.utils import shp_shape_types_geom_dict
+
+        >>> shp_shape_types_geom_dict()
+        {1: 'Point', 3: 'LineString', 5: 'Polygon', 8: 'MultiPoint'}
+
+        >>> shp_shape_types_geom_dict(geom=True)
+        {1: shapely.geometry.point.Point,
+         3: shapely.geometry.linestring.LineString,
+         5: shapely.geometry.polygon.Polygon,
+         8: shapely.geometry.multipoint.MultiPoint}
     """
 
-    shape_types_geom = {
+    shp_geom_dict = {
         1: 'Point',
         3: 'LineString',
         5: 'Polygon',
         8: 'MultiPoint',
     }
 
-    return shape_types_geom
+    if geom:
+        shp_geom_dict = {k: getattr(shapely.geometry, v) for k, v in shp_geom_dict.items()}
+
+    return shp_geom_dict
 
 
-def get_valid_shp_layer_names():
+def valid_shapefile_layer_names():
     """
     Get valid layer names of OSM shapefiles.
 
     :return: a list of valid layer names of OSM shapefiles
     :rtype: list
+
+    **Example**::
+
+        >>> from pydriosm.utils import valid_shapefile_layer_names
+
+        >>> valid_shapefile_layer_names()
+        ['buildings',
+         'landuse',
+         'natural',
+         'places',
+         'points',
+         'pofw',
+         'pois',
+         'railways',
+         'roads',
+         'traffic',
+         'transport',
+         'water',
+         'waterways']
     """
 
-    shp_layer_names = ['buildings',
-                       'landuse',
-                       'natural',
-                       'places',
-                       'points',
-                       'pofw',
-                       'pois',
-                       'railways',
-                       'roads',
-                       'traffic',
-                       'transport',
-                       'water',
-                       'waterways']
+    valid_shp_layer_names = [
+        'buildings',
+        'landuse',
+        'natural',
+        'places',
+        'points',
+        'pofw',
+        'pois',
+        'railways',
+        'roads',
+        'traffic',
+        'transport',
+        'water',
+        'waterways',
+    ]
 
-    return shp_layer_names
+    return valid_shp_layer_names
 
 
-# -- Miscellaneous ---------------------------------------------------------------------------
+def postgres_pd_dtype_dict():
+    """
+    Specify data-type dictionary for
+    `PostgreSQL data types <https://www.postgresql.org/docs/current/datatype.html>`_ and
+    `pandas.read_csv <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html>`_.
+
+    :return: a dictionary as data-type convertor between PostgreSQL and `pandas.read_csv`_
+    :rtype: dict
+
+    .. _`pandas.read_csv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
+
+    **Example**::
+
+        >>> from pydriosm.utils import postgres_pd_dtype_dict
+
+        >>> postgres_pd_dtype_dict()
+        {'text': str, 'bigint': numpy.int64, 'json': str}
+    """
+
+    data_types = {
+        'text': str,
+        'bigint': np.int64,
+        'json': str,
+    }
+
+    return data_types
+
+
+# == Miscellaneous helpers ===================================================================
 
 def validate_shp_layer_names(layer_names):
     """
@@ -225,7 +347,7 @@ def validate_shp_layer_names(layer_names):
 
     :param layer_names: name of a shapefile layer, e.g. 'railways',
         or names of multiple layers; if ``None`` (default), returns an empty list;
-        if ``'all'``, returns a list of all available layers
+        if ``layer_names='all'``, the function returns a list of all available layers
     :type layer_names: str or list or None
     :return: valid layer names to be input
     :rtype: list
@@ -269,11 +391,11 @@ def validate_shp_layer_names(layer_names):
 
     if layer_names:
         if layer_names == 'all':
-            layer_names_ = get_valid_shp_layer_names()
+            layer_names_ = valid_shapefile_layer_names()
         else:
             layer_names_ = [layer_names] if isinstance(layer_names, str) \
                 else layer_names.copy()
-            layer_names_ = [find_similar_str(x, get_valid_shp_layer_names())
+            layer_names_ = [find_similar_str(x, valid_shapefile_layer_names())
                             for x in layer_names_]
     else:
         layer_names_ = []
@@ -289,14 +411,34 @@ def find_shp_layer_name(shp_filename):
     :type shp_filename: str
     :return: layer name of the .shp file
     :rtype: str
+
+    **Examples**::
+
+        >>> from pydriosm.utils import find_shp_layer_name
+
+        >>> lyr_name = find_shp_layer_name(shp_filename="")
+        >>> print(lyr_name)
+        None
+
+        >>> lyr_name = find_shp_layer_name(shp_filename="gis_osm_railways_free_1.shp")
+        >>> lyr_name
+        'railways'
+
+        >>> lyr_name = find_shp_layer_name(shp_filename="gis_osm_transport_a_free_1.shp")
+        >>> lyr_name
+        'transport'
     """
 
     try:
-        layer_name = re.search(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)',
-                               shp_filename).group(0).replace("_a", "")
+        pattern = re.compile(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)')
+        layer_name = re.search(pattern=pattern, string=shp_filename)
 
     except AttributeError:
-        layer_name = re.search(r'(?<=(\\shape)\\)\w+(?=\.*)', shp_filename).group(0)
+        pattern = re.compile(r'(?<=(\\shape)\\)\w+(?=\.*)')
+        layer_name = re.search(pattern=pattern, string=shp_filename)
+
+    if layer_name:
+        layer_name = layer_name.group(0).replace("_a", "")
 
     return layer_name
 
@@ -307,26 +449,35 @@ def append_fclass_to_filename(shp_filename, feature_names):
 
     :param shp_filename: original .shp filename
     :type shp_filename: str
-    :param feature_names: name (or names) of a ``fclass``
-        (or multiple ``fclass``) in .shp data
+    :param feature_names: name (or names) of a ``fclass`` (or multiple ``fclass``) in .shp data
     :type feature_names: str or list
-    :return: updated filename used for saving only the ``fclass`` data
-        of the original .shp data file
+    :return: updated filename used for saving only the ``fclass`` data of the original .shp data file
     :rtype: str
+
+    **Examples**::
+
+        >>> from pydriosm.utils import append_fclass_to_filename
+
+        >>> new_shp_fn = append_fclass_to_filename("gis_osm_railways_free_1.shp", 'transport')
+        >>> new_shp_fn
+        'gis_osm_railways_free_1_transport.shp'
+
+        >>> new_shp_fn = append_fclass_to_filename("gis_osm_transport_a_free_1.shp", 'railways')
+        >>> new_shp_fn
+        'gis_osm_transport_a_free_1_railways.shp'
     """
 
     filename, ext = os.path.splitext(shp_filename)
 
-    feature_names_ = [feature_names] if isinstance(feature_names, str) \
-        else feature_names.copy()
+    feature_names_ = [feature_names] if isinstance(feature_names, str) else feature_names.copy()
+
     new_shp_filename = "{filename}_{feature_names}{ext}".format(
         filename=filename, feature_names='_'.join(feature_names_), ext=ext)
 
     if os.path.dirname(new_shp_filename):
         layer_name = find_shp_layer_name(shp_filename)
-        new_shp_filename = \
-            cd(os.path.dirname(new_shp_filename), layer_name,
-               os.path.basename(new_shp_filename), mkdir=True)
+        new_shp_filename = cd(
+            os.path.dirname(new_shp_filename), layer_name, os.path.basename(new_shp_filename), mkdir=True)
 
     return new_shp_filename
 
@@ -355,55 +506,7 @@ def remove_subregion_osm_file(path_to_osm_file, verbose=True):
 
         else:
             if verbose:
-                print("File not found at {}.".format(
-                    *os.path.split(path_to_osm_file)[::-1]))
+                print("File not found at {}.".format(*os.path.split(path_to_osm_file)[::-1]))
 
     except Exception as e:
         print("Failed. {}".format(e))
-
-
-def get_number_of_chunks(path_to_file, chunk_size_limit=50):
-    """
-    Compute number of chunks for parsing OSM (mainly PBF) data file
-    in a chunk-wise manner.
-
-    :param path_to_file: absolute path to a file
-    :type path_to_file: str
-    :param chunk_size_limit: threshold (in MB) above which
-        the data file is split into chunks, defaults to ``50``;
-    :type chunk_size_limit: int
-    :return: number of chunks
-    :rtype: int or None
-    """
-
-    file_size_in_mb = round(os.path.getsize(path_to_file) / (1024 ** 2), 1)
-
-    if chunk_size_limit and file_size_in_mb > chunk_size_limit:
-        number_of_chunks = math.ceil(file_size_in_mb / chunk_size_limit)
-    else:
-        number_of_chunks = None
-
-    return number_of_chunks
-
-
-def convert_dtype_dict():
-    """
-    Specify data-type dictionary for data types of
-    `PostgreSQL <https://www.postgresql.org/docs/9.5/datatype.html>`_ and
-    `pandas.read_csv()
-    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html>`_.
-
-    :return: a dictionary as data-type convertor
-        between PostgreSQL and `pandas.read_csv()`_
-    :rtype: dict
-
-    .. _`pandas.read_csv()`:
-        https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
-    """
-
-    data_types = {'text': str,
-                  'bigint': np.int64,
-                  'json': str
-                  }
-
-    return data_types
