@@ -42,7 +42,7 @@ jupyter-core==4.7.1
 jupyterlab-pygments==0.1.2
 jupyterlab-widgets==1.0.0
 keyring==23.0.1
-lxml==4.6.3
+lxml==4.9.1
 MarkupSafe==2.0.1
 matplotlib-inline==0.1.2
 mistune==0.8.4
