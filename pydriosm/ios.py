@@ -1,48 +1,69 @@
-"""
-I/O and storage of `OSM <https://www.openstreetmap.org/>`_ data extracts
+"""Implement storage I/O of (parsed) `OSM <https://www.openstreetmap.org/>`_ data extracts
 with `PostgreSQL <https://www.postgresql.org/>`_.
 """
 
+import ast
+import collections
+import copy
+import gc
+import itertools
+import os
+
+import numpy as np
+import pandas as pd
+import shapely.wkt
 import sqlalchemy.engine.reflection
 import sqlalchemy.types
-from pyhelpers.sql import PostgreSQL
-from pyhelpers.text import remove_punctuation
+from pyhelpers._cache import _check_dependency
+from pyhelpers.dbms import PostgreSQL
+from pyhelpers.ops import confirmed, get_number_of_chunks, split_list
+from pyhelpers.store import save_pickle
+from pyhelpers.text import find_similar_str, remove_punctuation
 
-from .reader import *
+from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader
+from pydriosm.reader import BBBikeReader, GeofabrikReader, PBFReadParse, SHPReadParse
+from pydriosm.utils import remove_osm_file
 
+
+# == Module-specific utilities =====================================================================
 
 def get_default_layer_name(schema_name):
     """
     Get default name (as an input schema name) of an OSM layer
     for the class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>`.
 
-    See, for example, the method :py:meth:`pydriosm.ios.PostgresOSM.import_osm_layer`.
+    See, for example, the method :meth:`pydriosm.ios.PostgresOSM.import_osm_layer`.
 
     :param schema_name: name of a schema (or name of an OSM layer)
     :type schema_name: str
     :return: default name of the layer
     :rtype: str
 
-    **Example**::
+    **Examples**::
 
         >>> from pydriosm.ios import get_default_layer_name
 
         >>> lyr_name = get_default_layer_name(schema_name='point')
+        >>> lyr_name
+        'points'
 
-        >>> print(lyr_name)
-        points
+        >>> lyr_name = get_default_layer_name(schema_name='land')
+        >>> lyr_name
+        'landuse'
     """
 
-    valid_layer_names = list(get_pbf_layer_feat_types_dict().keys()) + get_valid_shp_layer_names()
+    valid_layer_names = set(PBFReadParse.LAYER_GEOM.keys()).union(SHPReadParse.LAYER_NAMES)
 
-    layer_name_ = find_similar_str(str_x=schema_name, lookup_list=valid_layer_names)
+    layer_name_ = find_similar_str(x=schema_name, lookup_list=valid_layer_names)
 
     return layer_name_
 
 
 def validate_schema_names(schema_names=None, schema_named_as_layer=False):
     """
-    Validate schema names for importing data into a PostgreSQL database.
+    Validate schema names for importing data into a `PostgreSQL`_ database.
+
+    .. _`PostgreSQL`: https://www.postgresql.org/
 
     :param schema_names: one or multiple names of layers, e.g. 'points', 'lines', defaults to ``None``
     :type schema_names: typing.Iterable or None
@@ -57,28 +78,29 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
         >>> from pydriosm.ios import validate_schema_names
 
         >>> valid_names = validate_schema_names()
-
-        >>> print(valid_names)
+        >>> valid_names
         []
 
         >>> input_schema_names = ['point', 'polygon']
-
         >>> valid_names = validate_schema_names(input_schema_names)
-        >>> print(valid_names)
+        >>> valid_names
         ['point', 'polygon']
 
         >>> valid_names = validate_schema_names(input_schema_names, schema_named_as_layer=True)
-        >>> print(valid_names)
+        >>> valid_names
         ['points', 'multipolygons']
     """
 
     if schema_names:
         if isinstance(schema_names, str):
-            schema_names_ = [get_default_layer_name(schema_names) if schema_named_as_layer else schema_names]
+            schema_names_ = [
+                get_default_layer_name(schema_names) if schema_named_as_layer else schema_names]
             # assert schema_names_[0] in valid_layer_names, assertion_msg
         else:  # isinstance(schema_names, list) is True
-            schema_names_ = [
-                get_default_layer_name(x) for x in schema_names] if schema_named_as_layer else schema_names
+            if schema_named_as_layer:
+                schema_names_ = [get_default_layer_name(x) for x in schema_names]
+            else:
+                schema_names_ = schema_names
     else:
         schema_names_ = []
 
@@ -87,11 +109,13 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
 
 def validate_table_name(table_name, sub_space=''):
     """
-    Validate a table name for importing OSM data into a PostgreSQL database.
+    Validate a table name for importing OSM data into a `PostgreSQL`_ database.
+
+    .. _`PostgreSQL`: https://www.postgresql.org/
 
     :param table_name: name as input of a table in a PostgreSQL database
     :type table_name: str
-    :param sub_space: substitute for space
+    :param sub_space: substitute for space, defaults to ``''``
     :type sub_space: str
     :return: valid name of the table in the database
     :rtype: str
@@ -100,20 +124,18 @@ def validate_table_name(table_name, sub_space=''):
 
         >>> from pydriosm.ios import validate_table_name
 
-        >>> region_name = 'greater london'
+        >>> subrgn_name = 'greater london'
+        >>> valid_table_name = validate_table_name(subrgn_name)
+        >>> valid_table_name
+        'greater london'
 
-        >>> valid_table_name = validate_table_name(region_name)
-        >>> print(valid_table_name)
-        greater london
-
-        >>> region_name = 'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Wales'
-
-        >>> valid_table_name = validate_table_name(region_name, sub_space='_')
-        >>> print(valid_table_name)
-        Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch_W..
+        >>> subrgn_name = 'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Wales'
+        >>> valid_table_name = validate_table_name(subrgn_name, sub_space='_')
+        >>> valid_table_name
+        'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch_W..'
     """
 
-    table_name_ = remove_punctuation(raw_txt=table_name, rm_whitespace=True)
+    table_name_ = remove_punctuation(x=table_name, rm_whitespace=True)
 
     if sub_space:
         table_name_ = table_name_.replace(' ', sub_space)
@@ -123,194 +145,271 @@ def validate_table_name(table_name, sub_space=''):
     return table_name_
 
 
+# == Storage I/O of data ===========================================================================
+
 class PostgresOSM(PostgreSQL):
     """
-    I/O and storage of OSM data extracts with `PostgreSQL <https://www.postgresql.org/>`_.
+    Implement storage I/O of `OSM`_ data with `PostgreSQL`_.
 
-    :param host: host address, defaults to ``'localhost'`` (or ``'127.0.0.1'``)
-    :type host: str or None
-    :param port: port, defaults to ``5432``
-    :type port: int or None
-    :param username: database username, defaults to ``'postgres'``
-    :type username: str or None
-    :param password: database password, defaults to ``None``
-    :type password: str or int or None
-    :param database_name: database name, defaults to ``'postgres'``
-    :type database_name: str
-    :param data_source: name of data sources; options include ``'Geofabrik'`` (default) and ``'BBBike'``
-    :type data_source: str
-    :param kwargs: optional parameters of the class `pyhelpers.sql.PostgreSQL`_
-
-    :ivar tuple ValidDataSources: valid names of data sources
-    :ivar dict Downloaders: instances of the classes for downloading data,
-        including :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>` and
-        :py:class:`BBBikeDownloader<pydriosm.downloader.BBBikeDownloader>`
-    :ivar dict Readers: instances of the classes for downloading data,
-        including :py:class:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` and
-        :py:class:`BBBikeReader<pydriosm.reader.BBBikeReader>`
-    :ivar str DataSource: name of data sources, options include ``'Geofabrik'`` and ``'BBBike'``
-
-    .. _`pyhelpers.sql.PostgreSQL`:
-        https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.sql.PostgreSQL.html
-
-    **Example**::
-
-        >>> from pydriosm.ios import PostgresOSM
-
-        >>> database_name = 'osmdb_test'
-
-        >>> osmdb_test = PostgresOSM(database_name=database_name)
-        Password (postgres@localhost:5432): ***
-        Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-        >>> print(osmdb_test.DataSource)
-        Geofabrik
-        >>> type(osmdb_test.Downloader)
-        pydriosm.downloader.GeofabrikDownloader
-        >>> type(osmdb_test.Reader)
-        pydriosm.reader.GeofabrikReader
-
-        >>> # Change the data source:
-        >>> osmdb_test.DataSource = 'BBBike'
-        >>> type(osmdb_test.Downloader)
-        pydriosm.downloader.BBBikeDownloader
-        >>> type(osmdb_test.Reader)
-        pydriosm.reader.BBBikeReader
+    .. _`OSM`: https://www.openstreetmap.org/
+    .. _`PostgreSQL`: https://www.postgresql.org/
     """
 
-    def __init__(self, host='localhost', port=5432, username='postgres', password=None,
-                 database_name='postgres', data_source='Geofabrik', data_dir=None, max_tmpfile_size=5000,
-                 **kwargs):
+    #: dict: Specify a data-type dictionary for data or columns in
+    #: `PostgreSQL database <https://www.postgresql.org/docs/current/datatype.html>`_ and
+    #: `Pandas <https://pandas.pydata.org/docs/user_guide/basics.html#basics-dtypes>`_.
+    DATA_TYPES = {
+        'text': str,
+        'bigint': np.int64,
+        'json': str,
+    }
+
+    #: list: Names of the data sources.
+    DATA_SOURCES = ['Geofabrik', 'BBBike']
+
+    def __init__(self, host=None, port=None, username=None, password=None, database_name=None,
+                 data_source='Geofabrik', max_tmpfile_size=None, data_dir=None, **kwargs):
         """
-        Constructor method.
-        """
-        super().__init__(host=host, port=port, username=username, password=password,
-                         database_name=database_name, **kwargs)
+        :param host: host name/address of a PostgreSQL server,
+            e.g. ``'localhost'`` or ``'127.0.0.1'`` (default by installation of PostgreSQL);
+            when ``host=None`` (default), it is initialized as ``'localhost'``
+        :type host: str or None
+        :param port: listening port used by PostgreSQL; when ``port=None`` (default),
+            it is initialized as ``5432`` (default by installation of PostgreSQL)
+        :type port: int or None
+        :param username: username of a PostgreSQL server; when ``username=None`` (default),
+            it is initialized as ``'postgres'`` (default by installation of PostgreSQL)
+        :type username: str or None
+        :param password: user password; when ``password=None`` (default),
+            it is required to mannually type in the correct password to connect the PostgreSQL server
+        :type password: str or int or None
+        :param database_name: name of a database; when ``database=None`` (default),
+            it is initialized as ``'postgres'`` (default by installation of PostgreSQL)
+        :type database_name: str or None
+        :param confirm_db_creation: whether to prompt a confirmation before creating a new database
+            (if the specified database does not exist), defaults to ``False``
+        :param data_source: name of data source, defaults to ``'Geofabrik'``;
+            options include ``{'Geofabrik', 'BBBike'}``
+        :type data_source: str
+        :param max_tmpfile_size: defaults to ``None``,
+            see also the function `pyhelpers.settings.gdal_configurations()`_
+        :type max_tmpfile_size: int or None
+        :param data_dir: directory where the data file is located/saved, defaults to ``None``;
+            when ``data_dir=None``, it should be the same as the directory specified by
+            the corresponding
+            :attr:`~pydriosm.ios.PostgresOSM.downloader`/:attr:`~pydriosm.ios.PostgresOSM.reader`
+        :type data_dir: str or None
+        :param kwargs: [optional] parameters of the class `pyhelpers.sql.PostgreSQL`_
 
-        self.ValidDataSources = ('Geofabrik', 'BBBike')
-        assert data_source in self.ValidDataSources, \
-            "The argument `method` must be '%s' or '%s'." % self.ValidDataSources
+        :ivar str data_source: name of data sources, options include ``{'Geofabrik', 'BBBike'}``
 
-        self.Downloaders = dict(
-            zip(self.ValidDataSources,
-                [GeofabrikDownloader(download_dir=data_dir), BBBikeDownloader(download_dir=data_dir)])
-        )
-        self.Readers = dict(
-            zip(self.ValidDataSources,
-                [GeofabrikReader(max_tmpfile_size=max_tmpfile_size, data_dir=data_dir),
-                 BBBikeReader(max_tmpfile_size=max_tmpfile_size, data_dir=data_dir)])
-        )
+        .. _`pyhelpers.settings.gdal_configurations()`:
+            https://pyhelpers.readthedocs.io/en/latest/_generated/
+            pyhelpers.settings.gdal_configurations.html
+        .. _`pyhelpers.sql.PostgreSQL`:
+            https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.sql.PostgreSQL.html
 
-        self.DataSource = data_source
-
-    # noinspection PyPep8Naming
-    @property
-    def Downloader(self):
-        """
-        An instance of either :py:class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`
-        or :py:class:`BBBikeDownloader<pydriosm.downloader.BBBikeDownloader>`,
-        depending on the specified ``data_source``
-        for creating an instance of :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>` instance.
-
-        **Example**::
+        **Examples**::
 
             >>> from pydriosm.ios import PostgresOSM
 
-            >>> database_name = 'osmdb_test'
-
-            >>> osmdb_test = PostgresOSM(database_name=database_name)
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
             Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> type(osmdb_test.Downloader)
+            >>> osmdb.data_source
+            'Geofabrik'
+            >>> type(osmdb.downloader)
             pydriosm.downloader.GeofabrikDownloader
-        """
-
-        assert self.DataSource in self.ValidDataSources, \
-            "`.DataSource` must be '%s' or '%s'." % self.ValidDataSources
-
-        return self.Downloaders[self.DataSource]
-
-    # noinspection PyPep8Naming
-    @property
-    def Name(self):
-        """
-        Name of the current :py:attr:`PostgresOSM.Downloader<pydriosm.ios.PostgresOSM.Downloader>`.
-
-        **Example**::
-
-            >>> from pydriosm.ios import PostgresOSM
-
-            >>> database_name = 'osmdb_test'
-
-            >>> osmdb_test = PostgresOSM(database_name=database_name)
-            Password (postgres@localhost:5432): ***
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> print(osmdb_test.Name)
-            Geofabrik OpenStreetMap data extracts
-        """
-
-        return copy.copy(self.Downloader.Name)
-
-    # noinspection PyPep8Naming
-    @property
-    def URL(self):
-        """
-        Homepage URL of data resource for current
-        :py:attr:`PostgresOSM.Downloader<pydriosm.ios.PostgresOSM.Downloader>`.
-
-        **Example**::
-
-            >>> from pydriosm.ios import PostgresOSM
-
-            >>> database_name = 'osmdb_test'
-
-            >>> osmdb_test = PostgresOSM(database_name=database_name)
-            Password (postgres@localhost:5432): ***
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> print(osmdb_test.URL)
-            https://download.geofabrik.de/
-        """
-
-        return copy.copy(self.Downloader.URL)
-
-    # noinspection PyPep8Naming
-    @property
-    def Reader(self):
-        """
-        An instance of either :py:class:`GeofabrikReader<pydriosm.reader.GeofabrikReader>` or
-        :py:class:`BBBikeReader<pydriosm.reader.BBBikeReader>`,
-        depending on the specified ``data_source``
-        for creating an instance of :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>`.
-
-        **Example**::
-
-            >>> from pydriosm.ios import PostgresOSM
-
-            >>> database_name = 'osmdb_test'
-
-            >>> osmdb_test = PostgresOSM(database_name=database_name)
-            Password (postgres@localhost:5432): ***
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> type(osmdb_test.Reader)
+            >>> type(osmdb.reader)
             pydriosm.reader.GeofabrikReader
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> type(osmdb.downloader)
+            pydriosm.downloader.BBBikeDownloader
+            >>> type(osmdb.reader)
+            pydriosm.reader.BBBikeReader
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
         """
 
-        assert self.DataSource in self.ValidDataSources, \
-            "`.DataSource` must be '%s' or '%s'." % self.ValidDataSources
+        # valid_source_names = set(self.DATA_SOURCES).union({s.lower() for s in self.DATA_SOURCES})
+        # assert data_source in valid_source_names, f"`data_source` must be one of {valid_source_names}."
+        self.data_source = find_similar_str(data_source, self.DATA_SOURCES)
 
-        return self.Readers[self.DataSource]
+        super().__init__(
+            host=host, port=port, username=username, password=password, database_name=database_name,
+            **kwargs)
 
-    def get_table_name_for_subregion(self, subregion_name, table_named_as_subregion=False):
+        self.data_dir = data_dir
+        setattr(self, 'data_dir', self.downloader.download_dir)
+
+        self.max_tmpfile_size = max_tmpfile_size
+        setattr(self, 'max_tmpfile_size', self.reader.max_tmpfile_size)
+
+    @property
+    def downloader(self):
         """
-        Get the default table name for a specific geographic region.
+        Instance of either the class :class:`~pydriosm.downloader.GeofabrikDownloader` or
+        :class:`~pydriosm.downloader.BBBikeDownloader`, depending on the specified ``data_source``
+        for creating an instance of the class :class:`~pydriosm.ios.PostgresOSM`.
 
-        :param subregion_name: name of a geographic region, which acts as a table name
+        **Examples**::
+
+            >>> from pydriosm.ios import PostgresOSM
+
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> osmdb.data_source
+            'Geofabrik'
+            >>> type(osmdb.downloader)
+            pydriosm.downloader.GeofabrikDownloader
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> type(osmdb.downloader)
+            pydriosm.downloader.BBBikeDownloader
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
+        """
+
+        downloader_args = {'download_dir': self.data_dir}
+
+        if self.data_source == 'Geofabrik':
+            downloader_ = GeofabrikDownloader(**downloader_args)
+        else:
+            downloader_ = BBBikeDownloader(**downloader_args)
+
+        return downloader_
+
+    @property
+    def name(self):
+        """
+        Name of the current property :attr:`~pydriosm.ios.PostgresOSM.downloader`.
+
+        **Examples**::
+
+            >>> from pydriosm.ios import PostgresOSM
+
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> osmdb.data_source
+            'Geofabrik'
+            >>> osmdb.name
+            'Geofabrik OpenStreetMap data extracts'
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> osmdb.name
+            'BBBike exports of OpenStreetMap data'
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
+        """
+
+        return self.downloader.LONG_NAME
+
+    @property
+    def url(self):
+        """
+        Homepage URL of data resource for current property :attr:`~pydriosm.ios.PostgresOSM.downloader`.
+
+        **Examples**::
+
+            >>> from pydriosm.ios import PostgresOSM
+
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> osmdb.url
+            'https://download.geofabrik.de/'
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> osmdb.url
+            'https://download.bbbike.org/osm/bbbike/'
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
+        """
+
+        return self.downloader.URL
+
+    @property
+    def reader(self):
+        """
+        Instance of either :class:`~pydriosm.reader.GeofabrikReader` or
+        :class:`~pydriosm.reader.BBBikeReader`, depending on the specified ``data_source``
+        for creating an instance of the calss :class:`~pydriosm.ios.PostgresOSM`.
+
+        **Examples**::
+
+            >>> from pydriosm.ios import PostgresOSM
+
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> type(osmdb.reader)
+            pydriosm.reader.GeofabrikReader
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> type(osmdb.reader)
+            pydriosm.reader.BBBikeReader
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
+        """
+
+        reader_args = {
+            'max_tmpfile_size': self.max_tmpfile_size,
+            'data_dir': self.downloader.download_dir,
+        }
+
+        if self.data_source == 'Geofabrik':
+            reader_ = GeofabrikReader(**reader_args)
+        else:
+            reader_ = BBBikeReader(**reader_args)
+
+        return reader_
+
+    def get_table_name(self, subregion_name, table_named_as_subregion=False):
+        """
+        Get the default table name for a specific geographic (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region, which acts as a table name
         :type subregion_name: str
-        :param table_named_as_subregion: whether to use subregion name as table name, defaults to ``False``
+        :param table_named_as_subregion: whether to use subregion name as table name,
+            defaults to ``False``
         :type table_named_as_subregion: bool
         :return: default table name for storing the subregion data into the database
         :rtype: str
@@ -319,38 +418,43 @@ class PostgresOSM(PostgreSQL):
 
             >>> from pydriosm.ios import PostgresOSM
 
-            >>> osmdb_test = PostgresOSM(database_name='osmdb_test')
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
             Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> region_name = 'London'
+            >>> subrgn_name = 'london'
 
-            >>> tbl_name = osmdb_test.get_table_name_for_subregion(region_name)
+            >>> tbl_name = osmdb.get_table_name(subrgn_name)
+            >>> tbl_name
+            'london'
 
-            >>> print(tbl_name)
-            London
+            >>> tbl_name = osmdb.get_table_name(subrgn_name, table_named_as_subregion=True)
+            >>> tbl_name
+            'Greater London'
 
-            >>> use_region_name = True
-            >>> tbl_name = osmdb_test.get_table_name_for_subregion(region_name, use_region_name)
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> tbl_name = osmdb.get_table_name(subrgn_name, table_named_as_subregion=True)
+            >>> tbl_name
+            'London'
 
-            >>> print(tbl_name)
-            Greater London
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
 
         .. note::
 
             In the examples above, the default data source is 'Geofabrik'.
-            Changing it to 'BBBike', the function may possibly produce a different output for the same input,
-            as a geographic region that is included in one data source may not always be available
+            Changing it to 'BBBike', the function may produce a different output for the same input,
+            as a geographic (sub)region that is included in one data source may not always be available
             from the other.
         """
 
         if table_named_as_subregion:
-            if self.DataSource == 'Geofabrik':
-                subregion_name_ = self.Downloader.validate_input_subregion_name(subregion_name)
-            else:  # self.DataSource == 'BBBike':
-                subregion_name_, _, _, _ = self.Downloader.get_valid_download_info(
-                    subregion_name=subregion_name, osm_file_format='pbf')
-
+            subregion_name_ = self.downloader.validate_subregion_name(subregion_name)
         else:
             subregion_name_ = subregion_name
 
@@ -361,13 +465,15 @@ class PostgresOSM(PostgreSQL):
     def subregion_table_exists(self, subregion_name, layer_name, table_named_as_subregion=False,
                                schema_named_as_layer=False):
         """
-        Check if a table (for a geographic region) exists.
+        Check if a table (for a geographic (sub)region) exists.
 
-        :param subregion_name: name of a geographic region, which acts as a table name
+        :param subregion_name: name of a geographic (sub)region, which acts as a table name
         :type subregion_name: str
-        :param layer_name: name of an OSM layer (e.g. 'points', 'railways', ...), which acts as a schema name
+        :param layer_name: name of an OSM layer (e.g. 'points', 'railways', ...),
+            which acts as a schema name
         :type layer_name: str
-        :param table_named_as_subregion: whether to use subregion name as table name, defaults to ``False``
+        :param table_named_as_subregion: whether to use subregion name as table name,
+            defaults to ``False``
         :type table_named_as_subregion: bool
         :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
         :type schema_named_as_layer: bool
@@ -378,43 +484,52 @@ class PostgresOSM(PostgreSQL):
 
             >>> from pydriosm.ios import PostgresOSM
 
-            >>> osmdb_test = PostgresOSM(database_name='osmdb_test')
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
             Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> region_name = 'London'
+            >>> subrgn_name = 'London'
             >>> lyr_name = 'pt'
 
-            >>> # (Suppose the table, pt."London" is available.)
-            >>> osmdb_test.subregion_table_exists(region_name, lyr_name)
-            True
+            >>> # Check whether the table "pt"."london" is available
+            >>> osmdb.subregion_table_exists(subregion_name=subrgn_name, layer_name=lyr_name)
+            False
 
-            >>> # (Suppose the table, points."Greater London" is available.)
-            >>> osmdb_test.subregion_table_exists(region_name, lyr_name,
-            ...                                   table_named_as_subregion=True,
-            ...                                   schema_named_as_layer=True)
-            True
+            >>> # Check whether the table "points"."greater_london" is available
+            >>> osmdb.subregion_table_exists(
+            ...     subregion_name=subrgn_name, layer_name=lyr_name, table_named_as_subregion=True,
+            ...     schema_named_as_layer=True)
+            False
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
         """
 
-        table_name_ = self.get_table_name_for_subregion(subregion_name, table_named_as_subregion)
+        table_name_ = self.get_table_name(subregion_name, table_named_as_subregion)
         schema_name_ = get_default_layer_name(layer_name) if schema_named_as_layer else layer_name
 
         res = self.table_exists(table_name=table_name_, schema_name=schema_name_)
 
         return res
 
-    def get_subregion_table_column_info(self, subregion_name, layer_name, as_dict=False,
-                                        table_named_as_subregion=False, schema_named_as_layer=False):
+    def get_table_column_info(self, subregion_name, layer_name, as_dict=False,
+                              table_named_as_subregion=False, schema_named_as_layer=False):
         """
-        Get information about columns of a specific schema and table data of a geographic region.
+        Get information about columns of a specific schema and table data of a geographic (sub)region.
 
-        :param subregion_name: name of a geographic region, which acts as a table name
+        :param subregion_name: name of a geographic (sub)region, which acts as a table name
         :type subregion_name: str
-        :param layer_name: name of an OSM layer (e.g. 'points', 'railways', ...), which acts as a schema name
+        :param layer_name: name of an OSM layer (e.g. 'points', 'railways', ...),
+            which acts as a schema name
         :type layer_name: str
         :param as_dict: whether to return the column information as a dictionary, defaults to ``True``
         :type as_dict: bool
-        :param table_named_as_subregion: whether to use subregion name as table name, defaults to ``False``
+        :param table_named_as_subregion: whether to use subregion name as table name,
+            defaults to ``False``
         :type table_named_as_subregion: bool
         :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
         :type schema_named_as_layer: bool
@@ -425,16 +540,16 @@ class PostgresOSM(PostgreSQL):
 
             >>> from pydriosm.ios import PostgresOSM
 
-            >>> osmdb_test = PostgresOSM(database_name='osmdb_test')
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
             Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> region_name = 'London'
+            >>> subrgn_name = 'London'
             >>> lyr_name = 'points'
 
             >>> # Take for example a table named "points"."London"
-            >>> tbl_col_info = osmdb_test.get_subregion_table_column_info(region_name, lyr_name)
-
+            >>> tbl_col_info = osmdb.get_table_column_info(subrgn_name, lyr_name)
             >>> type(tbl_col_info)
             pandas.core.frame.DataFrame
             >>> tbl_col_info.index.to_list()[:5]
@@ -445,10 +560,9 @@ class PostgresOSM(PostgreSQL):
              'ordinal_position']
 
             >>> # Another example of a table named "points"."Greater London"
-            >>> tbl_col_info_dict = osmdb_test.get_subregion_table_column_info(
-            ...     region_name, lyr_name, as_dict=True, table_named_as_subregion=True,
+            >>> tbl_col_info_dict = osmdb.get_table_column_info(
+            ...     subrgn_name, lyr_name, as_dict=True, table_named_as_subregion=True,
             ...     schema_named_as_layer=True)
-
             >>> type(tbl_col_info_dict)
             dict
             >>> list(tbl_col_info_dict.keys())[:5]
@@ -457,33 +571,64 @@ class PostgresOSM(PostgreSQL):
              'table_name',
              'column_name',
              'ordinal_position']
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
         """
 
-        table_name_ = self.get_table_name_for_subregion(subregion_name, table_named_as_subregion)
+        table_name_ = self.get_table_name(subregion_name, table_named_as_subregion)
         schema_name_ = get_default_layer_name(layer_name) if schema_named_as_layer else layer_name
 
-        column_info = self.get_column_info(table_name=table_name_, schema_name=schema_name_, as_dict=as_dict)
+        column_info = self.get_column_info(
+            table_name=table_name_, schema_name=schema_name_, as_dict=as_dict)
 
         return column_info
 
-    def import_osm_layer(self, osm_layer_data, table_name, schema_name,
+    @classmethod
+    def _preprocess_layer_data(cls, layer_data, layer_name):
+        if isinstance(layer_data, list):
+            # osgeo_ogr = _check_dependency('osgeo.ogr')
+            # if all(isinstance(f, osgeo_ogr.Feature) for f in layer_data):
+            lyr_dat = pd.DataFrame([f.ExportToJson() for f in layer_data], columns=[layer_name])
+
+        else:
+            lyr_dat = layer_data.copy()
+            if isinstance(lyr_dat, pd.Series):
+                lyr_dat = pd.DataFrame(lyr_dat)
+
+            if 'coordinates' in lyr_dat.columns:
+                if not isinstance(lyr_dat.coordinates[0], list):
+                    lyr_dat.coordinates = lyr_dat.coordinates.map(lambda x: x.wkt)
+
+            if 'geometry' in [x.name for x in lyr_dat.dtypes]:
+                geom_col_name = lyr_dat.dtypes[lyr_dat.dtypes == 'geometry'].index[0]
+                lyr_dat[geom_col_name] = lyr_dat[geom_col_name].map(lambda x: x.wkt)
+
+        return lyr_dat
+
+    def import_osm_layer(self, layer_data, table_name, schema_name,
                          table_named_as_subregion=False, schema_named_as_layer=False,
-                         if_exists='replace', force_replace=False, chunk_size=None,
+                         if_exists='fail', force_replace=False, chunk_size=None,
                          confirmation_required=True, verbose=False, **kwargs):
         """
         Import one layer of OSM data into a table.
 
-        :param osm_layer_data: one layer of OSM data
-        :type osm_layer_data: pandas.DataFrame or geopandas.GeoDataFrame
+        :param layer_data: one layer of OSM data
+        :type layer_data: pandas.DataFrame or geopandas.GeoDataFrame
         :param schema_name: name of a schema (or name of a PBF layer)
         :type schema_name: str
         :param table_name: name of a table
         :type table_name: str
-        :param table_named_as_subregion: whether to use subregion name as a table name, defaults to ``False``
+        :param table_named_as_subregion: whether to use subregion name as a table name,
+            defaults to ``False``
         :type table_named_as_subregion: bool
         :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
         :type schema_named_as_layer: bool
-        :param if_exists: if the table already exists, to ``'replace'`` (default), ``'append'`` or ``'fail'``
+        :param if_exists: if the table already exists, defaults to ``'fail'``;
+            valid options include ``{'replace', 'append', 'fail'}``
         :type if_exists: str
         :param force_replace: whether to force to replace existing table, defaults to ``False``
         :type force_replace: bool
@@ -495,65 +640,57 @@ class PostgresOSM(PostgreSQL):
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
         :type verbose: bool
-        :param kwargs: optional parameters of `pyhelpers.sql.PostgreSQL.dump_data`_
+        :param kwargs: [optional] parameters of `pyhelpers.sql.PostgreSQL.dump_data()`_
 
-        .. _`pyhelpers.sql.PostgreSQL.dump_data`:
+        .. _`pyhelpers.sql.PostgreSQL.dump_data()`:
             https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-dump-data
 
         .. _pydriosm-PostgresOSM-import_osm_layer:
 
         **Examples**::
 
-            >>> import os
-            >>> from pyhelpers.dir import cd
             >>> from pydriosm.ios import PostgresOSM
+            >>> from pyhelpers.dirs import delete_dir
 
-            >>> osmdb_test = PostgresOSM(database_name='osmdb_test')
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
             Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> sr_name = 'Rutland'  # name of a subregion
-            >>> dat_dir = "tests"  # name of a data directory where the subregion data is
+            >>> subrgn_name = 'Rutland'  # name of a subregion
+            >>> dat_dir = "tests\\osm_data"  # name of a data directory where the subregion data is
 
-            >>> # -- Example 1: Import data of the 'points' layer of a PBF file --------------
+        *Example 1* - Import data of the 'points' layer of a PBF file::
 
             >>> # First, read the PBF data of Rutland (from Geofabrik free download server)
             >>> # (If the data file is not available, it'll be downloaded by confirmation)
-            >>> rutland_pbf_raw = osmdb_test.Reader.read_osm_pbf(sr_name, dat_dir, verbose=True)
-            To download .pbf data of the following geographic region(s):
-                London
-            ? [No]|Yes: yes
-            Downloading "rutland-latest.osm.pbf" to "tests\\" ... Done.
-
-            >>> # A quick view of the PBF data
-            >>> type(rutland_pbf_raw)
+            >>> raw_pbf = osmdb.reader.read_osm_pbf(subrgn_name, data_dir=dat_dir, verbose=True)
+            Downloading "rutland-latest.osm.pbf"
+                to "tests\\osm_data\\rutland\\" ... Done.
+            Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            >>> type(raw_pbf)
             dict
-            >>> list(rutland_pbf_raw.keys())
+            >>> list(raw_pbf.keys())
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
 
             >>> # Get the data of 'points' layer
-            >>> rutland_pbf_raw_points = rutland_pbf_raw['points']
-            >>> rutland_pbf_raw_points.head()
-                                                          points
-            0  {"type": "Feature", "geometry": {"type": "Poin...
-            1  {"type": "Feature", "geometry": {"type": "Poin...
-            2  {"type": "Feature", "geometry": {"type": "Poin...
-            3  {"type": "Feature", "geometry": {"type": "Poin...
-            4  {"type": "Feature", "geometry": {"type": "Poin...
-
-            >>> # Use the region name as a table name for storing the data in PostgreSQL server
-            >>> tbl = sr_name
-            >>> # Use a default layer (key) name as a schema name
-            >>> schema = list(rutland_pbf_raw.keys())[0]  # 'points'
+            >>> points_key = 'points'
+            >>> raw_pbf_points = raw_pbf[points_key]
+            >>> type(raw_pbf_points)
+            list
+            >>> type(raw_pbf_points[0])
+            osgeo.ogr.Feature
 
             >>> # Now import the data of 'points' into the PostgreSQL server
-            >>> osmdb_test.import_osm_layer(rutland_pbf_raw_points, tbl, schema, verbose=True)
+            >>> osmdb.import_osm_layer(
+            ...     layer_data=raw_pbf_points, table_name=subrgn_name, schema_name=points_key,
+            ...     verbose=True)
             To import data into "points"."Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Creating a schema: "points" ... Done.
             Importing the data into the table "points"."Rutland" ... Done.
 
-            >>> tbl_col_info = osmdb_test.get_subregion_table_column_info(tbl, schema)
+            >>> tbl_col_info = osmdb.get_table_column_info(subrgn_name, points_key)
             >>> tbl_col_info.head()
                                 column_0
             table_catalog     osmdb_test
@@ -562,77 +699,86 @@ class PostgresOSM(PostgreSQL):
             column_name           points
             ordinal_position           1
 
-            >>> rutland_pbf_parsed = osmdb_test.Reader.read_osm_pbf(sr_name, dat_dir,
-            ...                                                     parse_raw_feat=True,
-            ...                                                     transform_geom=True)
+            >>> # Parse the 'geometry' of the PBF data of Rutland
+            >>> parsed_pbf = osmdb.reader.read_osm_pbf(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True, parse_geometry=True)
+            >>> type(parsed_pbf)
+            dict
+            >>> list(parsed_pbf.keys())
+            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+            >>> parsed_pbf_points = parsed_pbf[points_key]  # Get the parsed data of 'points' layer
+            >>> type(parsed_pbf_points)
+            pandas.core.series.Series
+            >>> parsed_pbf_points.head()
+                     id  ...                                         properties
+            0    488432  ...  {'osm_id': '488432', 'name': None, 'barrier': ...
+            1    488658  ...  {'osm_id': '488658', 'name': 'Tickencote Inter...
+            2  13883868  ...  {'osm_id': '13883868', 'name': None, 'barrier'...
+            3  14049101  ...  {'osm_id': '14049101', 'name': None, 'barrier'...
+            4  14558402  ...  {'osm_id': '14558402', 'name': None, 'barrier'...
+            [5 rows x 3 columns]
 
-            >>> # Get the parsed data of 'points' layer
-            >>> rutland_pbf_points = rutland_pbf_parsed[schema]
-            >>> rutland_pbf_points.head()
-                     id  ...                    other_tags
-            0    488432  ...               "odbl"=>"clean"
-            1    488658  ...                          None
-            2  13883868  ...                          None
-            3  14049101  ...  "traffic_calming"=>"cushion"
-            4  14558402  ...      "direction"=>"clockwise"
-            [5 rows x 12 columns]
-
-            >>> # Import the parsed 'points' data into the PostgreSQL server
-            >>> osmdb_test.import_osm_layer(rutland_pbf_points, tbl, schema, verbose=True)
+            >>> # Import the parsed 'points' data into the PostgreSQL database
+            >>> osmdb.import_osm_layer(
+            ...     layer_data=parsed_pbf_points, table_name=subrgn_name, schema_name=points_key,
+            ...     verbose=True, if_exists='replace')
             To import data into "points"."Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             The table "points"."Rutland" already exists and is replaced.
             Importing the data into the table "points"."Rutland" ... Done.
 
-            >>> # Delete the downloaded PBF data file
-            >>> os.remove(cd(dat_dir, "rutland-latest.osm.pbf"))
+            >>> # Get the information of the table "points"."Rutland"
+            >>> tbl_col_info = osmdb.get_table_column_info(subrgn_name, points_key)
+            >>> tbl_col_info.head()
+                                column_0    column_1    column_2
+            table_catalog     osmdb_test  osmdb_test  osmdb_test
+            table_schema          points      points      points
+            table_name           Rutland     Rutland     Rutland
+            column_name               id    geometry  properties
+            ordinal_position           1           2           3
 
-            >>> # -- Example 2: Import data of the 'railways' layer of a shapefile -----------
+        *Example 2* - Import data of the 'railways' layer of a shapefile*::
 
-            >>> # Read the data of 'railways' layer
-            >>> # (without retaining any downloaded shapefile and extracts)
+            >>> # Read the data of 'railways' layer and delete the extracts
             >>> lyr_name = 'railways'
-
-            >>> rutland_railways_shp = osmdb_test.Reader.read_shp_zip(
-            ...     subregion_name=sr_name, layer_names=lyr_name, data_dir=dat_dir,
-            ...     rm_extracts=True, rm_shp_zip=True, verbose=True)
-            To download .shp.zip data of the following geographic region(s):
-                Rutland
-            ? [No]|Yes: yes
-            Downloading "rutland-latest-free.shp.zip" to "tests\\" ... Done.
+            >>> rutland_railways_shp = osmdb.reader.read_shp_zip(
+            ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir,
+            ...     rm_extracts=True, verbose=True)
+            Downloading "rutland-latest-free.shp.zip"
+                to "tests\\osm_data\\rutland\\" ... Done.
             Extracting the following layer(s):
                 'railways'
-            from "tests\\rutland-latest-free.shp.zip" ...
-            to "tests\\rutland-latest-free-shp\\"
-            Done.
-            Deleting the extracts "tests\\rutland-latest-free-shp\\"  ... Done.
-            Deleting "tests\\rutland-latest-free.shp.zip" ... Done.
-
+                from "tests\\osm_data\\rutland\\rutland-latest-free.shp.zip"
+                  to "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+            Reading "tests\\osm_data\\rutland\\rutland-latest-free-shp\\gis_osm_railways_free_1.s...
+            Deleting the extracts "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
             >>> type(rutland_railways_shp)
-            dict
+            collections.OrderedDict
             >>> list(rutland_railways_shp.keys())
-            # ['railways']
+            ['railways']
 
             >>> # Get the data of 'railways' layer
             >>> rutland_railways_shp_ = rutland_railways_shp[lyr_name]
-
             >>> rutland_railways_shp_.head()
                 osm_id  code  ...                                        coordinates shape_type
-            0  2162114  6101  ...  [(-0.4528083, 52.6993402), (-0.4518933, 52.698...          3
+            0  2162114  6101  ...  [(-0.4528083, 52.6993402), (-0.4521571, 52.698...          3
             1  3681043  6101  ...  [(-0.6531215, 52.5730787), (-0.6531793, 52.572...          3
             2  3693985  6101  ...  [(-0.7323403, 52.6782102), (-0.7319059, 52.678...          3
             3  3693986  6101  ...  [(-0.6173072, 52.6132317), (-0.6241869, 52.614...          3
             4  4806329  6101  ...  [(-0.4576926, 52.7035194), (-0.4565358, 52.702...          3
             [5 rows x 9 columns]
 
-            >>> osmdb_test.import_osm_layer(rutland_railways_shp_, table_name=sr_name,
-            ...                             schema_name=lyr_name, verbose=True)
+            >>> # Import the 'railways' data into the PostgreSQL database
+            >>> osmdb.import_osm_layer(
+            ...     layer_data=rutland_railways_shp_, table_name=subrgn_name, schema_name=lyr_name,
+            ...     verbose=True)
             To import data into "railways"."Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Creating a schema: "railways" ... Done.
             Importing the data into the table "railways"."Rutland" ... Done.
 
-            >>> tbl_col_info = osmdb_test.get_subregion_table_column_info(tbl, lyr_name)
+            >>> # Get the information of the table "railways"."Rutland"
+            >>> tbl_col_info = osmdb.get_table_column_info(subrgn_name, lyr_name)
             >>> tbl_col_info.head()
                                 column_0    column_1  ...     column_7    column_8
             table_catalog     osmdb_test  osmdb_test  ...   osmdb_test  osmdb_test
@@ -642,275 +788,44 @@ class PostgresOSM(PostgreSQL):
             ordinal_position           1           2  ...            8           9
             [5 rows x 9 columns]
 
+        Delete the test database and downloaded data files::
+
             >>> # Delete the database 'osmdb_test'
-            >>> osmdb_test.drop_database(verbose=True)
+            >>> osmdb.drop_database(verbose=True)
             To drop the database "osmdb_test" from postgres:***@localhost:5432
             ? [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
+
+            >>> # Delete the downloaded data files
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "tests\\osm_data\\" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "tests\\osm_data\\" ... Done.
         """
 
-        table_name_ = self.get_table_name_for_subregion(table_name, table_named_as_subregion)
+        table_name_ = self.get_table_name(table_name, table_named_as_subregion)
 
         schema_name_ = get_default_layer_name(schema_name) if schema_named_as_layer else schema_name
 
-        if osm_layer_data.empty:
-            self.import_data(
-                data=osm_layer_data, table_name=table_name_, schema_name=schema_name_, if_exists=if_exists,
-                force_replace=force_replace, method=self.psql_insert_copy,
-                confirmation_required=confirmation_required, verbose=2 if verbose else False,
-                **kwargs)
+        import_args = {
+            'table_name': table_name_,
+            'schema_name': schema_name_,
+            'if_exists': if_exists,
+            'force_replace': force_replace,
+            'method': self.psql_insert_copy,
+            'confirmation_required': confirmation_required,
+            'verbose': 2 if verbose else False,
+        }
 
-        else:
-            lyr_dat = osm_layer_data.copy()
+        lyr_dat = self._preprocess_layer_data(layer_data=layer_data, layer_name=schema_name_)
 
-            if lyr_dat.shape[1] == 1:
-                col_type = {lyr_dat.columns[0]: sqlalchemy.types.JSON}
-            else:
-                col_type = None
-                if 'coordinates' in lyr_dat.columns:
-                    if not isinstance(lyr_dat.coordinates[0], list):
-                        lyr_dat.coordinates = lyr_dat.coordinates.map(lambda x: x.wkt)
+        import_args.update({'data': lyr_dat, 'chunk_size': chunk_size})
 
-            if not isinstance(lyr_dat, pd.DataFrame):
-                lyr_dat = pd.DataFrame(lyr_dat)
-                data_types = lyr_dat.dtypes
-                if 'geometry' in [x.name for x in data_types]:
-                    geom_col_name = data_types[data_types == 'geometry'].index[0]
-                    lyr_dat[geom_col_name] = lyr_dat[geom_col_name].map(lambda x: x.wkt)
+        kwargs.update(import_args)
+        self.import_data(**kwargs)
 
-            self.import_data(
-                data=lyr_dat, table_name=table_name_, schema_name=schema_name_, if_exists=if_exists,
-                force_replace=force_replace, chunk_size=chunk_size, col_type=col_type,
-                method=self.psql_insert_copy, confirmation_required=confirmation_required,
-                verbose=2 if verbose else False, **kwargs)
-
-    def import_osm_data(self, osm_data, table_name, schema_names=None,
-                        table_named_as_subregion=False, schema_named_as_layer=False,
-                        if_exists='replace', force_replace=False, chunk_size=None,
-                        confirmation_required=True, verbose=False, **kwargs):
-        """
-        Import OSM data into a database.
-
-        :param osm_data: OSM data of a geographic region
-        :type osm_data: dict
-        :param table_name: name of a table
-        :type table_name: str
-        :param schema_names: names of schemas for each layer of the PBF data,
-            if ``None`` (default), the default layer names as schema names
-        :type schema_names: list or dict or None
-        :param table_named_as_subregion: whether to use subregion name as a table name, defaults to ``False``
-        :type table_named_as_subregion: bool
-        :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
-        :type schema_named_as_layer: bool
-        :param if_exists: if the table already exists, to ``'replace'`` (default), ``'append'`` or ``'fail'``
-        :type if_exists: str
-        :param force_replace: whether to force to replace existing table, defaults to ``False``
-        :type force_replace: bool
-        :param chunk_size: the number of rows in each batch to be written at a time, defaults to ``None``
-        :type chunk_size: int or None
-        :param confirmation_required: whether to prompt a message for confirmation to proceed,
-            defaults to ``True``
-        :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console as the function runs,
-            defaults to ``False``
-        :type verbose: bool
-        :param kwargs: optional parameters of ``.import_osm_pbf_layer()``
-
-        **Examples**::
-
-            >>> import os
-            >>> from pyhelpers.dir import cd
-            >>> from pydriosm.ios import PostgresOSM
-
-            >>> osmdb_test = PostgresOSM(database_name='osmdb_test')
-            Password (postgres@localhost:5432): ***
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> sr_name = 'Rutland'  # name of a subregion
-            >>> dat_dir = "tests"  # name of a data directory where the subregion data is
-
-            >>> # -- Example 1: Import data of a PBF file ------------------------------------
-
-            >>> # First, read the PBF data of Rutland
-            >>> # (If the data file is not available, it'll be downloaded by confirmation)
-            >>> rutland_pbf_raw = osmdb_test.Reader.read_osm_pbf(sr_name, dat_dir, verbose=True)
-            To download .pbf data of the following geographic region(s):
-                Rutland
-            ? [No]|Yes: yes
-            Downloading "rutland-latest.osm.pbf" to "tests\\" ... Done.
-
-            >>> # A quick view of the PBF data
-            >>> type(rutland_pbf_raw)
-            dict
-            >>> list(rutland_pbf_raw.keys())
-            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
-
-            >>> # Data of 'points' layer
-            >>> rutland_pbf_raw_points = rutland_pbf_raw['points']
-            >>> rutland_pbf_raw_points.head()
-                                                          points
-            0  {"type": "Feature", "geometry": {"type": "Poin...
-            1  {"type": "Feature", "geometry": {"type": "Poin...
-            2  {"type": "Feature", "geometry": {"type": "Poin...
-            3  {"type": "Feature", "geometry": {"type": "Poin...
-            4  {"type": "Feature", "geometry": {"type": "Poin...
-
-            >>> # Import all layers of the raw PBF data of Rutland
-            >>> osmdb_test.import_osm_data(rutland_pbf_raw, table_name=sr_name, verbose=True)
-            To import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
-            Importing the data ...
-                "points" ... Done: <total of rows> features.
-                "lines" ... Done: <total of rows> features.
-                "multilinestrings" ... Done: <total of rows> features.
-                "multipolygons" ... Done: <total of rows> features.
-                "other_relations" ... Done: <total of rows> features.
-
-            >>> # Get further-parsed PBF data
-            >>> rutland_pbf = osmdb_test.Reader.read_osm_pbf(sr_name, dat_dir,
-            ...                                              parse_raw_feat=True,
-            ...                                              transform_geom=True,
-            ...                                              transform_other_tags=True)
-
-            >>> type(rutland_pbf)
-            dict
-            >>> list(rutland_pbf.keys())
-            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
-
-            >>> # Import data of selected layers into specific schemas
-
-            >>> schemas = {"schema_0": 'lines',
-            ...            "schema_1": 'points',
-            ...            "schema_2": 'multipolygons'}
-
-            >>> osmdb_test.import_osm_data(rutland_pbf, sr_name, schemas, verbose=True)
-            To import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
-            Importing the data ...
-                "schema_0" ... Done: <total of rows> features.
-                "schema_1" ... Done: <total of rows> features.
-                "schema_2" ... Done: <total of rows> features.
-
-            >>> # To drop the schemas "schema_0", "schema_1" and "schema_2"
-            >>> osmdb_test.drop_schema(schemas.keys(), verbose=True)
-            To drop the following schemas from postgres:***@localhost:5432/osmdb_test:
-                "schema_0"
-                "schema_1"
-                "schema_2"
-            ? [No]|Yes: yes
-            Dropping ...
-                "schema_0" ... Done.
-                "schema_1" ... Done.
-                "schema_2" ... Done.
-
-            >>> # Delete the downloaded PBF data file
-            >>> os.remove(cd(dat_dir, "rutland-latest.osm.pbf"))
-
-            >>> # -- Example 2: Import data of a shapefile -----------------------------------
-
-            >>> # Read shapefile data of Rutland
-            >>> rutland_shp = osmdb_test.Reader.read_shp_zip(sr_name, data_dir=dat_dir,
-            ...                                              rm_extracts=True,
-            ...                                              rm_shp_zip=True,
-            ...                                              verbose=True)
-            To download .shp.zip data of the following geographic region(s):
-                Rutland
-            ? [No]|Yes: yes
-            Downloading "rutland-latest-free.shp.zip" to "tests\\" ... Done.
-            Extracting "tests\\rutland-latest-free.shp.zip" ...
-            to "tests\\rutland-latest-free-shp\\"
-            Done.
-            Deleting the extracts "tests\\rutland-latest-free-shp\\"  ... Done.
-            Deleting "tests\\rutland-latest-free.shp.zip" ... Done.
-
-            >>> # A quick view of the shapefile data
-            >>> type(rutland_shp)
-            dict
-            >>> list(rutland_shp.keys())
-            ['transport',
-             'railways',
-             'roads',
-             'places',
-             'landuse',
-             'pofw',
-             'natural',
-             'traffic',
-             'pois',
-             'water',
-             'buildings',
-             'waterways']
-
-            >>> # Import all layers of the shapefile data of Rutland
-            >>> osmdb_test.import_osm_data(rutland_shp, table_name=sr_name, verbose=True)
-            To import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
-            Importing the data ...
-                "transport" ... Done: <total of rows> features.
-                "railways" ... Done: <total of rows> features.
-                "roads" ... Done: <total of rows> features.
-                "places" ... Done: <total of rows> features.
-                "landuse" ... Done: <total of rows> features.
-                "pofw" ... Done: <total of rows> features.
-                "natural" ... Done: <total of rows> features.
-                "traffic" ... Done: <total of rows> features.
-                "pois" ... Done: <total of rows> features.
-                "water" ... Done: <total of rows> features.
-                "buildings" ... Done: <total of rows> features.
-                "waterways" ... Done: <total of rows> features.
-
-            >>> # -- Example 3: Import BBBike shapefile data file of Leeds -------------------
-
-            >>> osmdb_test.DataSource = 'BBBike'
-            >>> sr_name = 'Leeds'
-
-            >>> leeds_shp = osmdb_test.Reader.read_shp_zip(sr_name, data_dir=dat_dir,
-            ...                                            rm_extracts=True, rm_shp_zip=True,
-            ...                                            verbose=True)
-            To download .shp.zip data of the following geographic region(s):
-                Leeds
-            ? [No]|Yes: yes
-            Downloading "Leeds.osm.shp.zip" to "tests\\" ... Done.
-            Extracting "tests\\Leeds.osm.shp.zip" ...
-            to "tests\\"
-            Done.
-            Parsing files at "tests\\Leeds-shp\\shape\\" ... Done.
-            Deleting the extracts "tests\\Leeds-shp\\" ... Done.
-            Deleting "tests\\Leeds.osm.shp.zip" ... Done.
-
-            >>> # A quick view of the shapefile data
-            >>> type(leeds_shp)
-            dict
-            >>> list(leeds_shp.keys())
-            ['points',
-             'railways',
-             'roads',
-             'places',
-             'landuse',
-             'natural',
-             'buildings',
-             'waterways']
-
-            >>> # Import all layers of the shapefile data of Leeds
-            >>> osmdb_test.import_osm_data(leeds_shp, table_name=sr_name, verbose=True)
-            To import data into table "Leeds" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
-            Importing the data ...
-                "points" ... Done: <total of rows> features.
-                "railways" ... Done: <total of rows> features.
-                "roads" ... Done: <total of rows> features.
-                "places" ... Done: <total of rows> features.
-                "landuse" ... Done: <total of rows> features.
-                "natural" ... Done: <total of rows> features.
-                "buildings" ... Done: <total of rows> features.
-                "waterways" ... Done: <total of rows> features.
-
-            >>> # Delete the database 'osmdb_test'
-            >>> osmdb_test.drop_database(verbose=True)
-            To drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
-            Dropping "osmdb_test" ... Done.
-        """
-
+    @classmethod
+    def _make_data_items(cls, osm_data, schema_names):
         if isinstance(schema_names, list):
             schema_names_ = validate_schema_names(schema_names=schema_names, schema_named_as_layer=True)
             assert all(x in osm_data.keys() for x in schema_names)
@@ -926,415 +841,848 @@ class PostgresOSM(PostgreSQL):
         else:
             data_items = osm_data.items()
 
-        table_name_ = self.get_table_name_for_subregion(
-            subregion_name=table_name, table_named_as_subregion=table_named_as_subregion)
-        tbl_name = '"{}"'.format(table_name_)
+        return data_items
 
-        if confirmed("To import data into table {} at {}\n?".format(tbl_name, self.address),
+    def import_osm_data(self, osm_data, table_name, schema_names=None,
+                        table_named_as_subregion=False, schema_named_as_layer=False,
+                        if_exists='fail', force_replace=False, chunk_size=None,
+                        confirmation_required=True, verbose=False, **kwargs):
+        """
+        Import OSM data into a database.
+
+        :param osm_data: OSM data of a geographic (sub)region
+        :type osm_data: dict
+        :param table_name: name of a table
+        :type table_name: str
+        :param schema_names: names of schemas for each layer of the PBF data, defaults to ``None``;
+            when ``schema_names=None``, the default layer names as schema names
+        :type schema_names: list or dict or None
+        :param table_named_as_subregion: whether to use subregion name as a table name,
+            defaults to ``False``
+        :type table_named_as_subregion: bool
+        :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
+        :type schema_named_as_layer: bool
+        :param if_exists: if the table already exists, defaults to ``'fail'``;
+            valid options include ``{'replace', 'append', 'fail'}``
+        :type if_exists: str
+        :param force_replace: whether to force to replace existing table, defaults to ``False``
+        :type force_replace: bool
+        :param chunk_size: the number of rows in each batch to be written at a time, defaults to ``None``
+        :type chunk_size: int or None
+        :param confirmation_required: whether to prompt a message for confirmation to proceed,
+            defaults to ``True``
+        :type confirmation_required: bool
+        :param verbose: whether to print relevant information in console as the function runs,
+            defaults to ``False``
+        :type verbose: bool
+        :param kwargs: [optional] parameters of the method
+            :meth:`~pydriosm.ios.PostgresOSM.import_osm_layer`
+
+        **Examples**::
+
+            >>> from pydriosm.ios import PostgresOSM
+            >>> from pyhelpers.dirs import delete_dir
+
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> subrgn_name = 'Rutland'  # name of a subregion
+            >>> dat_dir = "tests\\osm_data"  # name of a data directory where the subregion data is
+
+        *Example 1* - Import data of a PBF file::
+
+            >>> # First, read the PBF data of Rutland
+            >>> # (If the data file is not available, it'll be downloaded by confirmation)
+            >>> raw_rutland_pbf = osmdb.reader.read_osm_pbf(subrgn_name, dat_dir, verbose=True)
+            Downloading "rutland-latest.osm.pbf"
+                to "tests\\osm_data\\rutland\\" ... Done.
+            Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            >>> type(raw_rutland_pbf)
+            dict
+            >>> list(raw_rutland_pbf.keys())
+            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+
+            >>> # Import all layers of the raw PBF data of Rutland
+            >>> osmdb.import_osm_data(raw_rutland_pbf, table_name=subrgn_name, verbose=True)
+            To import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Importing the data ...
+                "points" ... Done. (<total of rows> features)
+                "lines" ... Done. (<total of rows> features)
+                "multilinestrings" ... Done. (<total of rows> features)
+                "multipolygons" ... Done. (<total of rows> features)
+                "other_relations" ... Done. (<total of rows> features)
+
+            >>> # Get parsed PBF data
+            >>> parsed_rutland_pbf = osmdb.reader.read_osm_pbf(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True, parse_geometry=True,
+            ...     parse_other_tags=True, verbose=True)
+            Parsing "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            >>> type(parsed_rutland_pbf)
+            dict
+            >>> list(parsed_rutland_pbf.keys())
+            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+
+            >>> # Import data of selected layers into specific schemas
+            >>> schemas = {
+            ...     "schema_0": 'lines',
+            ...     "schema_1": 'points',
+            ...     "schema_2": 'multipolygons',
+            ... }
+            >>> osmdb.import_osm_data(parsed_rutland_pbf, subrgn_name, schemas, verbose=True)
+            To import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Importing the data ...
+                "schema_0" ... Done. (<total of rows> features)
+                "schema_1" ... Done. (<total of rows> features)
+                "schema_2" ... Done. (<total of rows> features)
+
+            >>> # To drop the schemas "schema_0", "schema_1" and "schema_2"
+            >>> osmdb.drop_schema(schemas.keys(), confirmation_required=False, verbose=True)
+            Dropping the following schemas from postgres:***@localhost:5432/osmdb_test:
+                "schema_0" ... Done.
+                "schema_1" ... Done.
+                "schema_2" ... Done.
+
+        *Example 2* - Import data of a shapefile::
+
+            >>> # Read shapefile data of Rutland
+            >>> rutland_shp = osmdb.reader.read_shp_zip(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
+            Downloading "rutland-latest-free.shp.zip"
+                to "tests\\osm_data\\rutland\\" ... Done.
+            Extracting "tests\\osm_data\\rutland\\rutland-latest-free.shp.zip"
+                to "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+            Reading the shapefile(s) at
+                "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+            Deleting the extracts "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+            >>> type(rutland_shp)
+            collections.OrderedDict
+            >>> list(rutland_shp.keys())
+            ['buildings',
+             'landuse',
+             'natural',
+             'places',
+             'pofw',
+             'pois',
+             'railways',
+             'roads',
+             'traffic',
+             'transport',
+             'water',
+             'waterways']
+
+            >>> # Import all layers of the shapefile data of Rutland
+            >>> osmdb.import_osm_data(osm_data=rutland_shp, table_name=subrgn_name, verbose=True)
+            To import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Importing the data ...
+                "buildings" ... Done. (<total of rows> features)
+                "landuse" ... Done. (<total of rows> features)
+                "natural" ... Done. (<total of rows> features)
+                "places" ... Done. (<total of rows> features)
+                "pofw" ... Done. (<total of rows> features)
+                "pois" ... Done. (<total of rows> features)
+                "railways" ... Done. (<total of rows> features)
+                "roads" ... Done. (<total of rows> features)
+                "traffic" ... Done. (<total of rows> features)
+                "transport" ... Done. (<total of rows> features)
+                "water" ... Done. (<total of rows> features)
+                "waterways" ... Done. (<total of rows> features)
+
+        *Example 3* - Import BBBike shapefile data file of Leeds::
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> subrgn_name = 'Leeds'
+
+            >>> # Read shapefile data of Leeds
+            >>> leeds_shp = osmdb.reader.read_shp_zip(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
+            Downloading "Leeds.osm.shp.zip"
+                to "tests\\osm_data\\leeds\\" ... Done.
+            Extracting "tests\\osm_data\\leeds\\Leeds.osm.shp.zip"
+                to "tests\\osm_data\\leeds\\" ... Done.
+            Reading the shapefile(s) at
+                "tests\\osm_data\\leeds\\Leeds-shp\\shape\\" ... Done.
+            Deleting the extracts "tests\\osm_data\\leeds\\Leeds-shp\\" ... Done.
+            >>> type(leeds_shp)
+            collections.OrderedDict
+            >>> list(leeds_shp.keys())
+            ['buildings',
+             'landuse',
+             'natural',
+             'places',
+             'points',
+             'railways',
+             'roads',
+             'waterways']
+
+            >>> # Import all layers of the shapefile data of Leeds
+            >>> osmdb.import_osm_data(osm_data=leeds_shp, table_name=subrgn_name, verbose=True)
+            To import data into table "Leeds" at postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Importing the data ...
+                "buildings" ... Done. (<total of rows> features)
+                "landuse" ... Done. (<total of rows> features)
+                "natural" ... Done. (<total of rows> features)
+                "places" ... Done. (<total of rows> features)
+                "points" ... Done. (<total of rows> features)
+                "railways" ... Done. (<total of rows> features)
+                "roads" ... Done. (<total of rows> features)
+                "waterways" ... Done. (<total of rows> features)
+
+        Delete the test database and downloaded data files::
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
+
+            >>> # Delete the downloaded data files
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "tests\\osm_data\\" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "tests\\osm_data\\" ... Done.
+        """
+
+        data_items = self._make_data_items(osm_data=osm_data, schema_names=schema_names)
+
+        table_name_ = self.get_table_name(
+            subregion_name=table_name, table_named_as_subregion=table_named_as_subregion)
+        tbl_name = f'"{table_name_}"'
+
+        if confirmed(f"To import data into table {tbl_name} at {self.address}\n?",
                      confirmation_required=confirmation_required):
 
             if verbose:
-                if confirmation_required:
-                    status_msg = "Importing the data"
-                else:
-                    if verbose == 2:
-                        status_msg = "Importing the data into table {}".format(tbl_name)
-                    else:
-                        status_msg = "Importing the data into table {} at {}".format(tbl_name, self.address)
+                status_msg = "Importing the data"
+                if not confirmation_required:
+                    status_msg += f" into table {tbl_name}"
+                    if verbose != 2:
+                        status_msg += f" at {self.address}"
                 print(status_msg, end=" ... \n")
 
             for geom_type, osm_layer in data_items:
-
                 if verbose:
-                    print("\t\"{}\"".format(geom_type), end=" ... ")
+                    print(f"\t\"{geom_type}\"", end=" ... ")
 
-                if osm_layer.empty:
-                    if verbose:
-                        print("The layer is empty. The corresponding table in the database is thus empty.")
+                    if len(osm_layer) == 0:
+                        print("The layer is empty. "
+                              "The corresponding table in the database is thus empty.")
 
                 try:
-                    self.import_osm_layer(
-                        osm_layer_data=osm_layer, schema_name=geom_type, table_name=table_name_,
-                        table_named_as_subregion=table_named_as_subregion,
-                        schema_named_as_layer=schema_named_as_layer,
-                        if_exists=if_exists, force_replace=force_replace,
-                        chunk_size=chunk_size, confirmation_required=False, verbose=False,
-                        **kwargs)
+                    import_args = {
+                        'layer_data': osm_layer,
+                        'schema_name': geom_type,
+                        'table_name': table_name_,
+                        'table_named_as_subregion': table_named_as_subregion,
+                        'schema_named_as_layer': schema_named_as_layer,
+                        'if_exists': if_exists,
+                        'force_replace': force_replace,
+                        'chunk_size': chunk_size,
+                        'confirmation_required': False,
+                        'verbose': False,
+                    }
+                    kwargs.update(import_args)
+                    self.import_osm_layer(**kwargs)
 
                     if verbose:
-                        print("Done: {} features.".format(len(osm_layer)))
+                        print(f"Done. ({len(osm_layer)} features)")
 
                 except Exception as e:
                     if verbose:
-                        print("Failed. {}".format(e))
+                        fail_msg = f"Failed. {e}"
+                    else:
+                        fail_msg = f"Failed on the layer \"{geom_type}\". {e}"
+                    print(fail_msg)
 
                 del osm_layer
                 gc.collect()
 
-    def import_subregion_osm_pbf(self, subregion_names, data_dir=None, update_osm_pbf=False,
-                                 if_exists='replace', chunk_size_limit=50, parse_raw_feat=False,
-                                 transform_geom=False, transform_other_tags=False, pickle_pbf_file=False,
-                                 rm_osm_pbf=False, confirmation_required=True, verbose=False, **kwargs):
-        """
-        Import data of geographic region(s) that do not have (sub-)subregions into a database.
+    def _import_subregion_osm_pbf(self, subregion_name_, osm_file_format, path_to_osm_pbf,
+                                  chunk_size_limit, expand, parse_geometry, parse_properties,
+                                  parse_other_tags, if_exists, pickle_pbf_file, verbose,
+                                  **kwargs):
+        number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
 
-        :param subregion_names: name(s) of geographic region(s)
+        if verbose:
+            print(f"Reading \"{os.path.relpath(path_to_osm_pbf)}\"", end=" ... ")
+
+        osm_pbf_data = PBFReadParse.read_pbf(
+            pbf_pathname=path_to_osm_pbf, number_of_chunks=number_of_chunks, expand=expand,
+            parse_geometry=parse_geometry, parse_properties=parse_properties,
+            parse_other_tags=parse_other_tags)
+
+        if verbose:
+            print("Done.")
+
+        if osm_pbf_data is not None:
+            import_args = {
+                'osm_data': osm_pbf_data,
+                'table_name': subregion_name_,
+                'if_exists': if_exists,
+                'confirmation_required': False,
+                'verbose': 2 if verbose else False,
+            }
+            kwargs.update(import_args)
+            self.import_osm_data(**kwargs)
+
+            if pickle_pbf_file:
+                path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")
+                save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
+
+        del osm_pbf_data
+        gc.collect()
+
+    def _import_pbf_layer_chunk_wisely(self, layer, layer_name, subregion_name_, number_of_chunks,
+                                       expand, parse_geometry, parse_properties, parse_other_tags,
+                                       pickle_pbf_file, verbose, **kwargs):
+        if verbose:
+            print(f'\t"{layer_name}"', end=" ... ")
+
+        features = [feat for feat in layer]
+        count_of_features = len(features)
+
+        list_of_chunks = split_list(lst=features, num_of_sub=number_of_chunks)
+
+        del features
+        gc.collect()
+
+        layer_dat_list = []
+        try:
+            for chunk in list_of_chunks:  # Loop through all chunks
+                if expand:
+                    lyr_dat = pd.DataFrame(f.ExportToJson(as_object=True) for f in chunk)
+                else:
+                    lyr_dat = pd.DataFrame([f.ExportToJson() for f in chunk], columns=[layer_name])
+
+                layer_dat = PBFReadParse.transform_pbf_layer_field(
+                    layer_data=lyr_dat, layer_name=layer_name, parse_geometry=parse_geometry,
+                    parse_properties=parse_properties, parse_other_tags=parse_other_tags)
+
+                import_args = {
+                    'layer_data': layer_dat,
+                    'table_name': subregion_name_,
+                    'schema_name': layer_name,
+                    'if_exists': 'append',  # if_exists if if_exists == 'fail' else 'append'
+                    'confirmation_required': False,
+                }
+                kwargs.update(import_args)
+                self.import_osm_layer(**kwargs)
+
+                if pickle_pbf_file:
+                    layer_dat_list.append(layer_dat)
+
+                del layer_dat
+                gc.collect()
+
+            if verbose:
+                print(f"Done. ({count_of_features} features)")
+
+        except Exception as e:
+            print(f"Failed. {e}")
+
+        return layer_dat_list
+
+    def _import_subregion_osm_pbf_chunk_wisely(self, subregion_name_, osm_file_format, path_to_osm_pbf,
+                                               chunk_size_limit, expand, parse_geometry,
+                                               parse_properties, parse_other_tags, if_exists,
+                                               pickle_pbf_file, verbose, **kwargs):
+        # Reference: https://gdal.org/python/osgeo.ogr.Feature-class.html
+
+        if verbose:
+            print(f'Importing the data of "{subregion_name_}" chunk-wisely\n'
+                  f'  into {self.address} ... ')
+
+        osgeo_ogr = _check_dependency(name='osgeo.ogr')
+        raw_osm_pbf = osgeo_ogr.Open(path_to_osm_pbf)
+        layer_count = raw_osm_pbf.GetLayerCount()
+
+        number_of_chunks = get_number_of_chunks(
+            file_or_obj=path_to_osm_pbf, chunk_size_limit=chunk_size_limit)
+
+        layer_names, layer_data_list = [], []
+        for i in range(layer_count):
+            layer = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
+            layer_name = layer.GetName()
+
+            tbl_exists = self.subregion_table_exists(
+                subregion_name=subregion_name_, layer_name=layer_name)
+
+            if tbl_exists:
+                if if_exists == 'fail':
+                    if verbose:
+                        print(f'\tTable "{subregion_name_}" already exists.')
+
+                    lyr_dat = PBFReadParse._read_pbf_layer_chunkwise(
+                        layer, number_of_chunks=number_of_chunks, readable=True, expand=expand,
+                        parse_geometry=parse_geometry, parse_properties=parse_properties,
+                        parse_other_tags=parse_other_tags)
+
+                    if pickle_pbf_file:
+                        layer_names.append(layer_name)
+                        layer_data_list.append(lyr_dat)
+
+                    continue
+
+                elif if_exists == 'replace':
+                    self.drop_subregion_tables(
+                        subregion_names=subregion_name_, schema_names=layer_name,
+                        confirmation_required=False)
+
+            layer_dat_list = self._import_pbf_layer_chunk_wisely(
+                layer=layer, layer_name=layer_name, subregion_name_=subregion_name_,
+                number_of_chunks=number_of_chunks, expand=expand, parse_geometry=parse_geometry,
+                parse_properties=parse_properties, parse_other_tags=parse_other_tags,
+                pickle_pbf_file=pickle_pbf_file, verbose=verbose, **kwargs)
+
+            if pickle_pbf_file:
+                layer_names.append(layer_name)
+                layer_data_list.append(pd.concat(layer_dat_list, axis=0, ignore_index=True))
+
+        raw_osm_pbf.Release()
+
+        del raw_osm_pbf
+        gc.collect()
+
+        if pickle_pbf_file:
+            osm_pbf_data = dict(zip(layer_names, layer_data_list))
+            path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")
+            save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
+
+        del osm_pbf_data
+        gc.collect()
+
+    def import_subregion_osm_pbf(self, subregion_names, data_dir=None, update_osm_pbf=False,
+                                 if_exists='fail', chunk_size_limit=50, expand=False,
+                                 parse_geometry=False, parse_properties=False, parse_other_tags=False,
+                                 pickle_pbf_file=False, rm_pbf_file=False, confirmation_required=True,
+                                 verbose=False, **kwargs):
+        """
+        Import data of geographic (sub)region(s) that do not have (sub-)subregions
+        into a database.
+
+        :param subregion_names: name(s) of geographic (sub)region(s)
         :type subregion_names: str or list or None
         :param data_dir: directory where the PBF data file is located/saved;
             if ``None`` (default), the default directory
         :type data_dir: str or None
         :param update_osm_pbf: whether to update .osm.pbf data file (if available), defaults to ``False``
         :type update_osm_pbf: bool
-        :param if_exists: if the table already exists, to ``'replace'`` (default), ``'append'`` or ``'fail'``
+        :param if_exists: if the table already exists, defaults to ``'fail'``;
+            valid options include ``{'replace', 'append', 'fail'}``
         :type if_exists: str
-        :param chunk_size_limit: threshold (in MB) that triggers the use of chunk parser, defaults to ``50``;
+        :param chunk_size_limit: threshold (in MB) that triggers the use of chunk parser,
+            defaults to ``50``;
             if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``,
             it will be parsed in a chunk-wise way
         :type chunk_size_limit: int
-        :param parse_raw_feat: whether to parse each feature in the raw data, defaults to ``False``
-        :type parse_raw_feat: bool
-        :param transform_geom: whether to transform a single coordinate
-            (or a collection of coordinates) into a geometric object, defaults to ``False``
-        :type transform_geom: bool
-        :param transform_other_tags: whether to transform ``'other_tags'`` into a dictionary,
-            defaults to ``False``
-        :type transform_other_tags: bool
+        :param expand: whether to expand dict-like data into separate columns, defaults to ``False``
+        :type expand: bool
+        :param parse_geometry: whether to represent the ``'geometry'`` field
+            in a `shapely.geometry`_ format, defaults to ``False``
+        :type parse_geometry: bool
+        :param parse_properties: whether to represent the ``'properties'`` field
+            in a tabular format, defaults to ``False``
+        :type parse_properties: bool
+        :param parse_other_tags: whether to represent a ``'other_tags'`` (of ``'properties'``)
+            in a `dict`_ format, defaults to ``False``
+        :type parse_other_tags: bool
         :param pickle_pbf_file: whether to save the .pbf data as a .pickle file, defaults to ``False``
         :type pickle_pbf_file: bool
-        :param rm_osm_pbf: whether to delete the downloaded .osm.pbf file, defaults to ``False``
-        :type rm_osm_pbf: bool
+        :param rm_pbf_file: whether to delete the downloaded .osm.pbf file, defaults to ``False``
+        :type rm_pbf_file: bool
         :param confirmation_required: whether to ask for confirmation to proceed, defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
         :type verbose: bool or int
-        :param kwargs: optional parameters of ``.import_osm_pbf_layer()``
+        :param kwargs: [optional] parameters of the method
+            :meth:`~pydriosm.ios.PostgresOSM._import_subregion_osm_pbf` or
+            :meth:`~pydriosm.ios.PostgresOSM._import_subregion_osm_pbf_chunk_wisely`
+
+        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`dict`: https://docs.python.org/3/library/stdtypes.html#dict
 
         **Examples**::
 
-            >>> import os
-            >>> from pyhelpers.dir import cd
-            >>> from pyhelpers.store import load_pickle
             >>> from pydriosm.ios import PostgresOSM
+            >>> from pyhelpers.dirs import cd, delete_dir
+            >>> from pyhelpers.store import load_pickle
 
-            >>> osmdb_test = PostgresOSM(database_name='osmdb_test')
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
             Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> # -- Example 1: Import PBF data of Rutland -----------------------------------
+        *Example 1* - Import PBF data of Rutland::
 
-            >>> sr_name = 'Rutland'  # name of a subregion
-            >>> dat_dir = "tests"  # name of a data directory where the subregion data is
+            >>> subrgn_name = 'Rutland'  # name of a subregion
+            >>> dat_dir = "tests\\osm_data"  # name of a data directory where the subregion data is
 
-            >>> osmdb_test.import_subregion_osm_pbf(sr_name, dat_dir, rm_osm_pbf=True,
-            ...                                     verbose=True)
-            To import .osm.pbf data of the following geographic region(s) into postgres:***@...:
-                Rutland
+            >>> osmdb.import_subregion_osm_pbf(subrgn_name, data_dir=dat_dir, verbose=True)
+            To import .osm.pbf data of the following geographic (sub)region(s):
+                "Rutland"
+              into postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
-            Downloading "rutland-latest.osm.pbf" to "tests\\" ... Done.
-            mporting the data into table "Rutland" ...
-                "points" ... Done: <total of rows> features.
-                "lines" ... Done: <total of rows> features.
-                "multilinestrings" ... Done: <total of rows> features.
-                "multipolygons" ... Done: <total of rows> features.
-                "other_relations" ... Done: <total of rows> features.
-            Deleting "tests\\rutland-latest.osm.pbf" ... Done.
+            Downloading "rutland-latest.osm.pbf"
+                to "tests\\osm_data\\rutland\" ... Done.
+            Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            Importing the data into table "Rutland" ...
+                "points" ... Done. (<total of rows> features)
+                "lines" ... Done. (<total of rows> features)
+                "multilinestrings" ... Done. (<total of rows> features)
+                "multipolygons" ... Done. (<total of rows> features)
+                "other_relations" ... Done. (<total of rows> features)
 
-            >>> # -- Example 2: Import PBF data of Victoria and Waterloo ---------------------
+        *Example 2* - Import PBF data of Leeds and London::
 
-            >>> # The PBF data of Victoria and Waterloo is available on BBBike download server
-            >>> osmdb_test.DataSource = 'BBBike'
-            >>> sr_names = ['Victoria', 'Waterloo']
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> subrgn_names = ['Leeds', 'London']
 
-            >>> # Note this may take a few minutes or even longer
-            >>> osmdb_test.import_subregion_osm_pbf(
-            ...     sr_names, dat_dir, parse_raw_feat=True, transform_geom=True,
-            ...     transform_other_tags=True, pickle_pbf_file=True, rm_osm_pbf=True,
-            ...     verbose=True)
-            To import .osm.pbf data of the following geographic region(s) into postgres:***@...:
-                Victoria
-                Waterloo
+            >>> # Note this may take a few minutes (or longer)
+            >>> osmdb.import_subregion_osm_pbf(
+            ...     subregion_names=subrgn_names, data_dir=dat_dir, expand=True,
+            ...     parse_geometry=True, parse_properties=True, parse_other_tags=True,
+            ...     pickle_pbf_file=True, rm_pbf_file=True, verbose=True)
+            To import .osm.pbf data of the following geographic (sub)region(s):
+                "Leeds"
+                "London"
+              into postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
-            Downloading "Victoria.osm.pbf" to "tests\\" ... Done.
-            Parsing "tests\\Victoria.osm.pbf" ... Done.
-            Importing the data into table "Victoria" ...
-                "points" ... Done: <total of rows> features.
-                "lines" ... Done: <total of rows> features.
-                "multilinestrings" ... Done: <total of rows> features.
-                "multipolygons" ... Done: <total of rows> features.
-                "other_relations" ... Done: <total of rows> features.
-            Saving "Victoria-pbf.pickle" to "tests\" ... Done.
-            Deleting "tests\\Victoria.osm.pbf" ... Done.
-            Downloading "Waterloo.osm.pbf" to "tests\\" ... Done.
-            Parsing "tests\\Waterloo.osm.pbf" ... Done.
-            Importing the data into table "Waterloo" ...
-                "points" ... Done: <total of rows> features.
-                "lines" ... Done: <total of rows> features.
-                "multilinestrings" ... Done: <total of rows> features.
-                "multipolygons" ... Done: <total of rows> features.
-                "other_relations" ... Done: <total of rows> features.
-            Saving "Waterloo-pbf.pickle" to "tests\\" ... Done.
-            Deleting "tests\\Waterloo.osm.pbf" ... Done.
+            Downloading "Leeds.osm.pbf"
+                to "tests\\osm_data\\leeds\\" ... Done.
+            Reading "tests\\osm_data\\leeds\\Leeds.osm.pbf" ... Done.
+            Importing the data into table "Leeds" ...
+                "points" ... Done. (82137 features)
+                "lines" ... Done. (164411 features)
+                "multilinestrings" ... Done. (390 features)
+                "multipolygons" ... Done. (439144 features)
+                "other_relations" ... Done. (6938 features)
+            Saving "Leeds-pbf.pickle" to "tests\\osm_data\\leeds\\" ... Done.
+            Deleting "tests\\osm_data\\leeds\\Leeds.osm.pbf" ... Done.
+            Downloading "London.osm.pbf"
+                to "tests\\osm_data\\london\\" ... Done.
+            Importing the data of "London" chunk-wisely
+              into postgres:***@localhost:5432/osmdb_test ...
+                "points" ... Done. (654517 features)
+                "lines" ... Done. (769631 features)
+                "multilinestrings" ... Done. (7241 features)
+                "multipolygons" ... Done. (5432 features)
+                "other_relations" ... Done. (21792 features)
+            Saving "London-pbf.pickle" to "tests\\osm_data\\london\\" ... Done.
+            Deleting "tests\\osm_data\\london\\London.osm.pbf" ... Done.
 
-            >>> # Since `pickle_pbf_file` was set to be True,
-            >>> # the parsed PBF data have been saved as Pickle files
+            >>> # As `pickle_pbf_file=True`, the parsed PBF data have been saved as pickle files
 
-            >>> # Data of Victoria
-            >>> victoria_pbf = load_pickle(cd(dat_dir, "Victoria-pbf.pickle"))
+            >>> # Data of Leeds
+            >>> leeds_pbf = load_pickle(cd(dat_dir, "leeds", "Leeds-pbf.pickle"))
+            >>> type(leeds_pbf)
+            dict
+            >>> list(leeds_pbf.keys())
+            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+            >>> # Data of the 'points' layer of Leeds
+            >>> leeds_pbf_points = leeds_pbf['points']
+            >>> leeds_pbf_points.head()
+                   id                       geometry  ... man_made             other_tags
+            0  154941  POINT (-1.5560511 53.6879848)  ...     None                   None
+            1  154962     POINT (-1.34293 53.844618)  ...     None  {'name:signed': 'no'}
+            2  155014   POINT (-1.517335 53.7499667)  ...     None  {'name:signed': 'no'}
+            3  155023   POINT (-1.514124 53.7416937)  ...     None  {'name:signed': 'no'}
+            4  155035   POINT (-1.516511 53.7256632)  ...     None  {'name:signed': 'no'}
+            [5 rows x 11 columns]
 
-            >>> # Data of the 'points' layer of Victoria
-            >>> victoria_pbf_points = victoria_pbf['points']
-            >>> victoria_pbf_points.head()
-                     id                      coordinates  ... man_made other_tags
-            0  25832817  POINT (-123.3101944 48.4351988)  ...     None       None
-            1  25832849  POINT (-123.3162637 48.4336654)  ...     None       None
-            2  25832953  POINT (-123.3157486 48.4309841)  ...     None       None
-            3  25832954  POINT (-123.3209478 48.4324002)  ...     None       None
-            4  25832995    POINT (-123.322405 48.432167)  ...     None       None
-            [5 rows x 12 columns]
+            >>> # Data of London
+            >>> london_pbf = load_pickle(cd(dat_dir, "london", "London-pbf.pickle"))
+            >>> type(london_pbf)
+            dict
+            >>> list(london_pbf.keys())
+            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+            >>> # Data of the 'points' layer of London
+            >>> london_pbf_points = london_pbf['points']
+            >>> london_pbf_points.head()
+                  id  ...                                         other_tags
+            0  99878  ...  {'access': 'permissive', 'bicycle': 'no', 'mot...
+            1  99880  ...  {'crossing': 'unmarked', 'crossing:island': 'n...
+            2  99884  ...                        {'amenity': 'waste_basket'}
+            3  99918  ...                         {'emergency': 'life_ring'}
+            4  99939  ...           {'traffic_signals:direction': 'forward'}
+            [5 rows x 11 columns]
 
-            >>> # Data of Waterloo
-            >>> waterloo_pbf = load_pickle(cd(dat_dir, "Waterloo-pbf.pickle"))
-
-            >>> # Data of the 'points' layer of Victoria
-            >>> waterloo_pbf_points = waterloo_pbf['points']
-            >>> waterloo_pbf_points.head()
-                     id  ...                                 other_tags
-            0  10782939  ...                                       None
-            1  10782965  ...                                       None
-            2  14509209  ...                                       None
-            3  14657092  ...  {'traffic_signals:direction': 'backward'}
-            4  14657140  ...                                       None
-            [5 rows x 12 columns]
-
-            >>> # Delete the Pickle files
-            >>> os.remove(cd(dat_dir, "Victoria-pbf.pickle"))
-            >>> os.remove(cd(dat_dir, "Waterloo-pbf.pickle"))
+        Delete the test database and downloaded data files::
 
             >>> # Delete the database 'osmdb_test'
-            >>> osmdb_test.drop_database(verbose=True)
+            >>> osmdb.drop_database(verbose=True)
             To drop the database "osmdb_test" from postgres:***@localhost:5432
             ? [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
+
+            >>> # Delete the downloaded data files
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "tests\\osm_data\\" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "tests\\osm_data\\" ... Done.
         """
 
         osm_file_format = ".osm.pbf"
 
         if subregion_names is None:
-            subregion_names_ = self.Downloader.get_list_of_subregion_names()
-            confirm_msg = "To import all {} data available on {} into {}\n?".format(
-                osm_file_format, self.DataSource, self.address)
+            subregion_names_ = self.downloader.get_valid_subregion_names()
+            confirm_msg = \
+                f"To import all {osm_file_format} data available on {self.data_source} " \
+                f"  into {self.address}\n?"
 
         else:
-            sr_names_ = [subregion_names] if isinstance(subregion_names, str) else subregion_names.copy()
-            subregion_names_ = [self.Downloader.validate_input_subregion_name(x) for x in sr_names_]
+            subregion_names_ = [
+                self.downloader.validate_subregion_name(x)
+                for x in self.reader.validate_input_dtype(subregion_names)]
 
-            if self.DataSource == 'Geofabrik':
-                subregion_names_ = self.Downloader.search_for_subregions(*subregion_names_)
+            if self.data_source == 'Geofabrik':
+                subregion_names_ = self.downloader.get_subregions(*subregion_names_)
 
-            confirm_msg = "To import {} data of the following geographic region(s) into {}:\n" \
-                          "\t{}\n?".format(osm_file_format, self.address, "\n\t".join(subregion_names_))
+            subrgn_names_msg = '"\n\t"'.join(subregion_names_)
+            confirm_msg = \
+                f"To import {osm_file_format} data of the following geographic (sub)region(s):\n" \
+                f"\t\"{subrgn_names_msg}\"\n" \
+                f"  into {self.address}\n?"
 
         if confirmed(confirm_msg, confirmation_required=confirmation_required):
             err_subregion_names = []
 
-            for subregion_name in subregion_names_:
-                path_to_osm_pbf = self.Downloader.download_osm_data(
-                    subregion_names=subregion_name, osm_file_format=osm_file_format, download_dir=data_dir,
-                    update=update_osm_pbf, confirmation_required=False, verbose=verbose,
-                    ret_download_path=True)
-
-                file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
+            for subregion_name_ in subregion_names_:
+                path_to_osm_pbf_ = self.downloader.download_osm_data(
+                    subregion_names=subregion_name_, osm_file_format=osm_file_format,
+                    download_dir=data_dir, update=update_osm_pbf, confirmation_required=False,
+                    verbose=verbose, ret_download_path=True)
+                path_to_osm_pbf = path_to_osm_pbf_[0]
 
                 try:
+                    read_pbf_args = {
+                        'expand': expand,
+                        'parse_geometry': parse_geometry,
+                        'parse_properties': parse_properties,
+                        'parse_other_tags': parse_other_tags,
+                    }
+                    import_args = {
+                        'subregion_name_': subregion_name_,
+                        'osm_file_format': osm_file_format,
+                        'path_to_osm_pbf': path_to_osm_pbf,
+                        'chunk_size_limit': chunk_size_limit,
+                        'pickle_pbf_file': pickle_pbf_file,
+                        'verbose': verbose,
+                        # 'if_exists': if_exists,
+                    }
+                    import_args.update(read_pbf_args)
+
+                    file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
                     if file_size_in_mb <= chunk_size_limit:
-                        number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
-
-                        if verbose and parse_raw_feat:
-                            print("Parsing \"{}\"".format(os.path.relpath(path_to_osm_pbf)), end=" ... ")
-
-                        subregion_osm_pbf = parse_osm_pbf(
-                            path_to_osm_pbf=path_to_osm_pbf, parse_raw_feat=parse_raw_feat,
-                            transform_geom=transform_geom, transform_other_tags=transform_other_tags,
-                            number_of_chunks=number_of_chunks)
-
-                        if verbose and parse_raw_feat:
-                            print("Done. ")
-
-                        if subregion_osm_pbf is not None:
-                            self.import_osm_data(
-                                osm_data=subregion_osm_pbf, table_name=subregion_name,
-                                if_exists=if_exists, confirmation_required=False,
-                                verbose=2 if verbose else False, **kwargs)
-
-                            if pickle_pbf_file:
-                                path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")
-                                save_pickle(subregion_osm_pbf, path_to_pickle, verbose=verbose)
-
-                            del subregion_osm_pbf
-                            gc.collect()
-
+                        import_args.update({'if_exists': if_exists})
+                        self._import_subregion_osm_pbf(**import_args, **kwargs)
                     else:
-                        if verbose:
-                            print("Importing the data of \"{}\" feature-wisely into {} ... ".format(
-                                subregion_name, self.address))
+                        import_args.update({'if_exists': 'append'})
+                        self._import_subregion_osm_pbf_chunk_wisely(**import_args, **kwargs)
 
-                        # Reference: https://gdal.org/python/osgeo.ogr.Feature-class.html
-                        raw_osm_pbf = osgeo.ogr.Open(path_to_osm_pbf)
-                        layer_count = raw_osm_pbf.GetLayerCount()
-
-                        layer_names, all_layer_data, layer_data = [], [], None
-
-                        for i in range(layer_count):
-                            layer = raw_osm_pbf.GetLayerByIndex(i)  # Hold the i-th layer
-                            layer_name = layer.GetName()
-
-                            if pickle_pbf_file:
-                                layer_names.append(layer_name)
-
-                            if verbose:
-                                print("                       {}".format(layer_name), end=" ... ")
-                            try:
-                                features = [feature for _, feature in enumerate(layer)]
-                                feats_no = len(features)
-                                chunks_no = math.ceil(file_size_in_mb / chunk_size_limit)
-                                feats = split_list(lst=features, num_of_sub=chunks_no)
-
-                                del features
-                                gc.collect()
-
-                                if self.subregion_table_exists(subregion_name, layer_name) \
-                                        and if_exists == 'replace':
-                                    self.drop_subregion_table(
-                                        subregion_name, layer_name, confirmation_required=False)
-
-                                all_lyr_dat = []
-                                # Loop through all available features
-                                for feat in feats:
-                                    if parse_raw_feat:
-                                        lyr_dat = pd.DataFrame(f.ExportToJson(as_object=True) for f in feat)
-                                        lyr_dat = parse_osm_pbf_layer(
-                                            pbf_layer_data=lyr_dat, geo_typ=layer_name,
-                                            transform_geom=transform_geom,
-                                            transform_other_tags=transform_other_tags)
-
-                                    else:
-                                        lyr_dat = pd.DataFrame(f.ExportToJson() for f in feat)
-                                        lyr_dat.columns = ['{}_data'.format(layer_name)]
-
-                                    if_exists_ = if_exists if if_exists == 'fail' else 'append'
-                                    self.import_osm_layer(
-                                        osm_layer_data=lyr_dat, table_name=subregion_name,
-                                        schema_name=layer_name, if_exists=if_exists_,
-                                        confirmation_required=False)
-
-                                    if pickle_pbf_file:
-                                        all_lyr_dat.append(lyr_dat)
-
-                                    del lyr_dat
-                                    gc.collect()
-
-                                if pickle_pbf_file:
-                                    all_layer_data.append(
-                                        pd.concat(all_lyr_dat, ignore_index=True, sort=False))
-
-                                if verbose:
-                                    print("Done: {} features.".format(feats_no))
-
-                            except Exception as e:
-                                print("Failed. {}".format(e))
-
-                        raw_osm_pbf.Release()
-
-                        del raw_osm_pbf
-                        gc.collect()
-
-                        if pickle_pbf_file:
-                            osm_pbf_data = dict(zip(layer_names, all_layer_data))
-                            path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")
-                            save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
-
-                    if rm_osm_pbf:
-                        remove_subregion_osm_file(path_to_osm_pbf, verbose=verbose)
+                    if rm_pbf_file:
+                        remove_osm_file(path_to_file=path_to_osm_pbf, verbose=verbose)
 
                 except Exception as e:
                     print(e)
-                    err_subregion_names.append(subregion_name)
+                    err_subregion_names.append(subregion_name_)
 
             if len(err_subregion_names) > 0:
-                print("Errors occurred when parsing data of the following subregion(s):")
-                print(*err_subregion_names, sep=", ")
+                print("Errors occurred when parsing data of the following subregion(s):", end="\n\t")
+                print('"' + '"\n\t"'.join(err_subregion_names) + '"')
 
-    def fetch_osm_data(self, subregion_name, layer_names=None,
-                       table_named_as_subregion=False, schema_named_as_layer=False,
-                       chunk_size=None, method='tempfile', max_size_spooled=1,
-                       decode_geojson=False, decode_wkt=False, decode_other_tags=False,
-                       parse_geojson=False, sort_by='id', **kwargs):
+    @staticmethod
+    def _decode_layer_dat(dat, possible_col_names):
+        col_names = [x for x in possible_col_names if x in dat.columns]
+        if len(col_names) >= 1:
+            # noinspection PyBroadException
+            try:
+                dat[col_names] = dat[col_names].applymap(ast.literal_eval)
+            except Exception:  # SyntaxError
+                dat[col_names] = dat[col_names].applymap(shapely.wkt.loads)
+
+    def decode_pbf_layer(self, layer_dat, decode_geojson=True):
         """
-        Fetch OSM data (of one or multiple layers) of a geographic region.
+        Process raw data of a PBF layer retrieved from database.
+
+        .. seealso::
+
+            - Examples of the method :meth:`~pydriosm.ios.PostgresOSM.fetch_osm_data`.
+        """
+
+        # if engine:
+        #     valid_methods = {'ujson', 'orjson', 'rapidjson', 'json'}
+        #     assert engine in valid_methods, f"`method` must be on one of {valid_methods}."
+        #     json_mod_name = engine
+        # else:
+        #     json_mod_name = 'json'
+        # json_mod = _check_dependency(name=json_mod_name)
+
+        layer_dat_ = layer_dat.replace({np.nan: None})
+
+        if decode_geojson:
+            if layer_dat_.shape[1] == 1:
+                col_name = layer_dat_.columns[0]
+                temp = layer_dat_[col_name]
+
+                if temp.map(type).eq(str).any():
+                    temp = temp.map(ast.literal_eval)
+
+                layer_dat_ = temp.to_frame(name=col_name)
+
+            else:
+                possible_col_names = {
+                    'coordinates', 'geometries', 'geometry', 'other_tags', 'properties'}
+                self._decode_layer_dat(layer_dat_, possible_col_names=possible_col_names)
+
+        return layer_dat_
+
+    def fetch_osm_data(self, subregion_name, layer_names=None, chunk_size=None, method='tempfile',
+                       max_size_spooled=1, decode_geojson=True, sort_by='id',
+                       table_named_as_subregion=False, schema_named_as_layer=False, verbose=False,
+                       **kwargs):
+        """
+        Fetch OSM data (of one or multiple layers) of a geographic (sub)region.
 
         See also
-        [`ROP-1 <https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-read-sql-query>`_]
+        [`ROP-1 <https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-read-sql-query>`_].
 
-        :param subregion_name: name of a geographic region (or the corresponding table)
+        :param subregion_name: name of a geographic (sub)region (or the corresponding table)
         :type subregion_name: str
         :param layer_names: names of schemas for each layer of the PBF data,
             if ``None`` (default), the default layer names as schema names
         :type layer_names: list or None
-        :param table_named_as_subregion: whether to use subregion name as a table name, defaults to ``False``
-        :type table_named_as_subregion: bool
-        :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
-        :type schema_named_as_layer: bool
         :param chunk_size: the number of rows in each batch to be written at a time, defaults to ``None``
         :type chunk_size: int or None
         :param method: method to be used for buffering temporary data, defaults to ``'tempfile'``
         :type method: str or None
-        :param max_size_spooled: see `pyhelpers.sql.PostgreSQL.read_sql_query`_, defaults to ``1`` (in GB)
+        :param max_size_spooled: see `pyhelpers.sql.PostgreSQL.read_sql_query()`_,
+            defaults to ``1`` (in GB)
         :type max_size_spooled: int, float
-        :param decode_geojson: whether to decode textual GeoJSON, defaults to ``False``
+        :param decode_geojson: whether to decode string GeoJSON data, defaults to ``True``
         :type decode_geojson: bool
-        :param decode_wkt: whether to decode ``'coordinates'`` (if it is wkt), defaults to ``False``
-        :type decode_wkt: bool
-        :param decode_other_tags: whether to decode ``'other_tags'`` (if available), defaults to ``False``
-        :type decode_other_tags: bool
-        :param parse_geojson: whether to parse raw GeoJSON (as it is raw feature data), defaults to ``False``
-        :type parse_geojson: bool
         :param sort_by: column name(s) by which the data (fetched from PostgreSQL) is sorted,
-            defaults to ``None``
+            defaults to ``'id'``
         :type sort_by: str or list
+        :param table_named_as_subregion: whether to use subregion name as a table name,
+            defaults to ``False``
+        :type table_named_as_subregion: bool
+        :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
+        :type schema_named_as_layer: bool
+        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :type verbose: bool or int
         :return: PBF (.osm.pbf) data
-        :rtype: dict
+        :rtype: dict or collections.OrderedDict
 
-        .. _`pyhelpers.sql.PostgreSQL.read_sql_query`:
+        .. _`pyhelpers.sql.PostgreSQL.read_sql_query()`:
             https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-read-sql-query
 
-        **Example**::
+        **Examples**::
 
             >>> from pydriosm.ios import PostgresOSM
+            >>> from pyhelpers.dirs import delete_dir
 
-            >>> osmdb_test = PostgresOSM(database_name='osmdb_test')
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
             Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> # Import example data into the database:
+            >>> subrgn_name = 'Rutland'  # name of a subregion
+            >>> dat_dir = "tests\\osm_data"  # name of a data directory where the subregion data is
 
-            >>> sr_name = 'Rutland'
-            >>> dat_dir = "tests"  # a temporary data directory
+            >>> # Import PBF data of Rutland
+            >>> osmdb.import_subregion_osm_pbf(subrgn_name, data_dir=dat_dir, verbose=True)
+            To import .osm.pbf data of the following geographic (sub)region(s):
+                "Rutland"
+              into postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Downloading "rutland-latest.osm.pbf"
+                to "tests\\osm_data\\rutland\\" ... Done.
+            Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            Importing the data into table "Rutland" ...
+                "points" ... Done. (<total of rows> features)
+                "lines" ... Done. (<total of rows> features)
+                "multilinestrings" ... Done. (<total of rows> features)
+                "multipolygons" ... Done. (<total of rows> features)
+                "other_relations" ... Done. (<total of rows> features)
 
-            >>> osmdb_test.import_subregion_osm_pbf(
-            ...     subregion_names=sr_name, data_dir=dat_dir, rm_osm_pbf=True,
-            ...     confirmation_required=False)
+            >>> # Import shapefile data of Rutland
+            >>> rutland_shp = osmdb.reader.read_shp_zip(
+            ...     subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
+            Downloading "rutland-latest-free.shp.zip"
+                to "tests\\osm_data\\rutland\\" ... Done.
+            Extracting "tests\\osm_data\\rutland\\rutland-latest-free.shp.zip"
+                to "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+            Reading the shapefile(s) at
+                "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+            Deleting the extracts "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+            >>> osmdb.import_osm_data(rutland_shp, table_name=subrgn_name, verbose=True)
+            To import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Importing the data ...
+                "buildings" ... Done. (<total of rows> features)
+                "landuse" ... Done. (<total of rows> features)
+                "natural" ... Done. (<total of rows> features)
+                "places" ... Done. (<total of rows> features)
+                "pofw" ... Done. (<total of rows> features)
+                "pois" ... Done. (<total of rows> features)
+                "railways" ... Done. (<total of rows> features)
+                "roads" ... Done. (<total of rows> features)
+                "traffic" ... Done. (<total of rows> features)
+                "transport" ... Done. (<total of rows> features)
+                "water" ... Done. (<total of rows> features)
+                "waterways" ... Done. (<total of rows> features)
 
-            >>> rutland_shp = osmdb_test.Reader.read_shp_zip(
-            ...     subregion_name=sr_name, data_dir=dat_dir, rm_extracts=True,
-            ...     rm_shp_zip=True, download_confirmation_required=False)
-            >>> osmdb_test.import_osm_data(rutland_shp, sr_name, confirmation_required=False)
+            >>> # Retrieve the data of specific layers
+            >>> lyr_names = ['points', 'multipolygons']
+            >>> rutland_data_ = osmdb.fetch_osm_data(subrgn_name, lyr_names, verbose=True)
+            Fetching the data of "Rutland" ...
+                "points" ... Done.
+                "multipolygons" ... Done.
+            >>> type(rutland_data_)
+            collections.OrderedDict
+            >>> list(rutland_data_.keys())
+            ['points', 'multipolygons']
 
-            >>> # Fetch data of all available layers from the database
-            >>> rutland_pbf = osmdb_test.fetch_osm_data(sr_name, table_named_as_subregion=True)
+            >>> # Data of the 'points' layer
+            >>> rutland_points = rutland_data_['points']
+            >>> rutland_points.head()
+                                                          points
+            0  {'type': 'Feature', 'geometry': {'type': 'Poin...
+            1  {'type': 'Feature', 'geometry': {'type': 'Poin...
+            2  {'type': 'Feature', 'geometry': {'type': 'Poin...
+            3  {'type': 'Feature', 'geometry': {'type': 'Poin...
+            4  {'type': 'Feature', 'geometry': {'type': 'Poin...
 
-            >>> type(rutland_pbf)
-            dict
-            >>> list(rutland_pbf.keys())
+            >>> # Retrieve the data of all the layers from the database
+            >>> rutland_data = osmdb.fetch_osm_data(subrgn_name, layer_names=None, verbose=True)
+            Fetching the data of "Rutland" ...
+                "points" ... Done.
+                "lines" ... Done.
+                "multilinestrings" ... Done.
+                "multipolygons" ... Done.
+                "other_relations" ... Done.
+                "buildings" ... Done.
+                "landuse" ... Done.
+                "natural" ... Done.
+                "places" ... Done.
+                "pofw" ... Done.
+                "pois" ... Done.
+                "railways" ... Done.
+                "roads" ... Done.
+                "traffic" ... Done.
+                "transport" ... Done.
+                "water" ... Done.
+                "waterways" ... Done.
+            >>> type(rutland_data)
+            collections.OrderedDict
+            >>> list(rutland_data.keys())
             ['points',
              'lines',
              'multilinestrings',
@@ -1353,166 +1701,129 @@ class PostgresOSM(PostgreSQL):
              'water',
              'waterways']
 
-            >>> # Fetch data of specific layers
+            >>> # Data of the 'waterways' layer
+            >>> rutland_waterways = rutland_data['waterways']
+            >>> rutland_waterways.head()
+                osm_id  code  ...                                        coordinates  shape_type
+            0  3701346  8102  ...  [(-0.7536654, 52.6495358), (-0.7536236, 52.649...           3
+            1  3701347  8102  ...  [(-0.7948821, 52.6569468), (-0.7946128, 52.656...           3
+            2  3707149  8103  ...  [(-0.7262381, 52.6790459), (-0.7258244, 52.680...           3
+            3  3707303  8102  ...  [(-0.7213277, 52.6765954), (-0.7206778, 52.676...           3
+            4  4470795  8101  ...  [(-0.4995349, 52.6418825), (-0.4984075, 52.642...           3
+            [5 rows x 7 columns]
 
-            >>> lyr_names = ['points', 'multipolygons']
-
-            >>> rutland_pbf_ = osmdb_test.fetch_osm_data(sr_name, lyr_names, sort_by='id')
-
-            >>> type(rutland_pbf_)
-            dict
-            >>> list(rutland_pbf_.keys())
-            # ['points', 'multipolygons']
-
-            >>> # Data of the 'points' layer
-            >>> rutland_pbf_points = rutland_pbf_['points']
-            >>> rutland_pbf_points.head()
-                                                          points
-            0  {"type": "Feature", "geometry": {"type": "Poin...
-            1  {"type": "Feature", "geometry": {"type": "Poin...
-            2  {"type": "Feature", "geometry": {"type": "Poin...
-            3  {"type": "Feature", "geometry": {"type": "Poin...
-            4  {"type": "Feature", "geometry": {"type": "Poin...
-
-            >>> # Parsed data
-            >>> rutland_pbf_parsed_ = osmdb_test.fetch_osm_data(
-            ...     sr_name, lyr_names, decode_geojson=True, decode_wkt=True,
-            ...     decode_other_tags=True, sort_by='id')
-
-            >>> # Parsed data of the 'points' layer
-            >>> rutland_pbf_parsed_points = rutland_pbf_parsed_['points']
-            >>> rutland_pbf_parsed_points.head()
-                     id  ...                      other_tags
-            0    488432  ...               {'odbl': 'clean'}
-            1    488658  ...                            None
-            2  13883868  ...                            None
-            3  14049101  ...  {'traffic_calming': 'cushion'}
-            4  14558402  ...      {'direction': 'clockwise'}
-            [5 rows x 12 columns]
+        Delete the test database and downloaded data files::
 
             >>> # Delete the database 'osmdb_test'
-            >>> osmdb_test.drop_database(verbose=True)
+            >>> osmdb.drop_database(verbose=True)
             To drop the database "osmdb_test" from postgres:***@localhost:5432
             ? [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
 
+            >>> # Delete the downloaded data files
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "tests\\osm_data\\" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "tests\\osm_data\\" ... Done.
+
         .. seealso::
 
             - More details of the above data can be found in the examples for the methods
-              :py:meth:`.import_osm_data()<pydriosm.ios.PostgresOSM.import_osm_data>`
-              and :py:meth:`.import_subregion_osm_pbf()<pydriosm.ios.PostgresOSM.import_subregion_osm_pbf>`.
-            - Similar examples about :ref:`fetching data from the database<qs-fetch-data-from-the-database>`
-              are available in :ref:`Quick start<pydriosm-quick-start>`.
+              :meth:`~pydriosm.ios.PostgresOSM.import_osm_data`
+              and :meth:`~pydriosm.ios.PostgresOSM.import_subregion_osm_pbf`.
+            - Similar examples about
+              :ref:`fetching data from the database<tutorial-ios-fetch-data>`
+              are available in :ref:`Quick start<pydriosm-tutorial>`.
         """
 
-        def decode_osm_pbf_layer(lyr_dat_):
-            """
-            Process raw data of a PBF layer retrieved from database.
-            """
-
-            lyr_dat_.replace({np.nan: None}, inplace=True)
-
-            if lyr_dat_.shape[1] == 1:
-                geo_typ = lyr_dat_.columns[0]
-
-                if decode_geojson:
-                    lyr_dat_ = lyr_dat_[geo_typ].map(orjson.loads).to_frame(name=geo_typ)
-
-                if decode_wkt or decode_other_tags:
-                    lyr_dat_ = pd.DataFrame.from_records(
-                        lyr_dat_[geo_typ] if decode_geojson else lyr_dat_[geo_typ].map(orjson.loads))
-
-                    lyr_dat_ = parse_osm_pbf_layer(
-                        pbf_layer_data=lyr_dat_, geo_typ=geo_typ, transform_geom=decode_wkt,
-                        transform_other_tags=decode_other_tags)
-
-                elif parse_geojson:
-                    lyr_dat_ = pd.DataFrame.from_records(lyr_dat_[geo_typ].map(orjson.loads))
-
-            else:
-                import shapely.wkt
-
-                if decode_wkt:
-                    if 'coordinates' in lyr_dat_.columns:
-                        try:
-                            lyr_dat_.coordinates = lyr_dat_.coordinates.map(eval)
-                        except SyntaxError:
-                            lyr_dat_.coordinates = lyr_dat_.coordinates.map(shapely.wkt.loads)
-                    elif 'geometries' in lyr_dat_.columns:
-                        lyr_dat_.geometries = lyr_dat_.geometries.map(lambda x: eval(x))
-                    elif 'geometry' in lyr_dat_.columns:
-                        lyr_dat_.geometry = lyr_dat_.geometry.map(shapely.wkt.loads)
-
-                if decode_other_tags and 'other_tags' in lyr_dat_:
-                    try:
-                        lyr_dat_.other_tags = lyr_dat_.other_tags.map(lambda x: x if x is None else eval(x))
-                    except SyntaxError:
-                        pass
-
-            return lyr_dat_
-
-        table_name_ = self.get_table_name_for_subregion(subregion_name, table_named_as_subregion)
+        table_name_ = self.get_table_name(subregion_name, table_named_as_subregion)
         schema_names_ = validate_schema_names(layer_names, schema_named_as_layer)
 
         if not schema_names_:
-            schema_names_ = list(get_pbf_layer_feat_types_dict().keys()) + get_valid_shp_layer_names()
+            schema_names_ = list(dict.fromkeys(
+                list(PBFReadParse.LAYER_GEOM.keys()) + sorted(list(SHPReadParse.LAYER_NAMES))))
 
-        avail_schemas, layer_data = schema_names_.copy(), []
+        if any(self.subregion_table_exists(table_name_, x) for x in schema_names_):
 
-        for schema_name_ in schema_names_:
+            if verbose:
+                print(f'Fetching the data of "{table_name_}" ... ')
 
-            if self.subregion_table_exists(table_name_, schema_name_):
+            existing_schemas, layer_data = schema_names_.copy(), []
 
-                tbl_name = '"{}"."{}"'.format(schema_name_, table_name_)
-                sql_query = 'SELECT * FROM {}'.format(tbl_name)
+            for schema_name_ in schema_names_:
+                if self.subregion_table_exists(table_name_, schema_name_):
+                    tbl_name = f'"{schema_name_}"."{table_name_}"'
+                    sql_query = f'SELECT * FROM {tbl_name}'
 
-                if method is not None:
-                    column_info_table = self.get_column_info(table_name_, schema_name=schema_name_)
+                    if verbose:
+                        print(f'\t"{schema_name_}"', end=" ... ")
 
-                    repl = convert_dtype_dict()
-                    dtype_ = column_info_table['data_type']
-                    dtype = dict(zip(column_info_table['column_name'], map(repl.get, dtype_, dtype_)))
+                    try:
+                        if method is not None:
+                            column_info_table = self.get_column_info(
+                                table_name=table_name_, schema_name=schema_name_)
 
-                    lyr_dat = self.read_sql_query(
-                        sql_query=sql_query, method=method,
-                        max_size_spooled=max_size_spooled, chunksize=chunk_size,
-                        dtype=dtype, **kwargs)
+                            dtype_ = column_info_table['data_type']
+                            dtype = dict(
+                                zip(column_info_table['column_name'], map(self.DATA_TYPES.get, dtype_)))
+
+                            layer_dat = self.read_sql_query(
+                                sql_query=sql_query, method=method, max_size_spooled=max_size_spooled,
+                                chunksize=chunk_size, dtype=dtype, **kwargs)
+
+                        else:
+                            layer_dat = pd.read_sql(
+                                sql_query, con=self.engine, chunksize=chunk_size, **kwargs)
+
+                        if isinstance(layer_dat, pd.DataFrame):
+                            layer_dat = self.decode_pbf_layer(
+                                layer_dat=layer_dat, decode_geojson=decode_geojson)
+
+                        else:
+                            lyr_dat_ = [
+                                self.decode_pbf_layer(layer_dat=dat, decode_geojson=decode_geojson)
+                                for dat in layer_dat]
+                            layer_dat = pd.concat(lyr_dat_, ignore_index=True)
+
+                        if sort_by:
+                            sort_by_ = [sort_by] if isinstance(sort_by, str) else copy.copy(sort_by)
+                            if all(x in layer_dat.columns for x in sort_by_):
+                                layer_dat.sort_values(sort_by, ignore_index=True, inplace=True)
+
+                        if verbose:
+                            print("Done.")
+
+                        layer_data.append(layer_dat)
+
+                    except Exception as e:
+                        print(f"Failed. {e}")
+                        pass
+
                 else:
-                    lyr_dat = pd.read_sql(sql_query, con=self.engine, chunksize=chunk_size, **kwargs)
+                    existing_schemas.remove(schema_name_)
 
-                if isinstance(lyr_dat, pd.DataFrame):
-                    lyr_dat = decode_osm_pbf_layer(lyr_dat)
-                else:
-                    lyr_dat_temp = [decode_osm_pbf_layer(lyr_dat_) for lyr_dat_ in lyr_dat]
-                    lyr_dat = pd.concat(lyr_dat_temp, ignore_index=True)
+            osm_data = collections.OrderedDict(zip(existing_schemas, layer_data))
 
-                if sort_by:
-                    sort_by_ = [sort_by] if isinstance(sort_by, str) else copy.copy(sort_by)
-                    if all(x in lyr_dat.columns for x in sort_by_):
-                        lyr_dat.sort_values(sort_by, inplace=True)
-                        lyr_dat.index = range(len(lyr_dat))
+        else:
+            if verbose:
+                print("No data is available for the given input `subregion_name`.")
+            osm_data = None
 
-                layer_data.append(lyr_dat)
+        return osm_data
 
-            else:
-                avail_schemas.remove(schema_name_)
-
-        osm_pbf_data = dict(zip(avail_schemas, layer_data))
-
-        return osm_pbf_data
-
-    def drop_subregion_table(self, subregion_table_names, schema_names=None,
-                             table_named_as_subregion=False, schema_named_as_layer=False,
-                             confirmation_required=True, verbose=False):
+    def drop_subregion_tables(self, subregion_names, schema_names=None,
+                              table_named_as_subregion=False, schema_named_as_layer=False,
+                              confirmation_required=True, verbose=False):
         """
         Delete all or specific schemas/layers of subregion data from the database being connected.
 
-        :param subregion_table_names: name of table for a subregion (or name of a subregion)
-        :type subregion_table_names: str or list
+        :param subregion_names: name of table for a subregion (or name of a subregion)
+        :type subregion_names: str or list
         :param schema_names: names of schemas for each layer of the PBF data,
             if ``None`` (default), the default layer names as schema names
-        :type schema_names: list or None
-        :param table_named_as_subregion: whether to use subregion name as a table name, defaults to ``False``
+        :type schema_names: str or list or None
+        :param table_named_as_subregion: whether to use subregion name as a table name,
+            defaults to ``False``
         :type table_named_as_subregion: bool
         :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
         :type schema_named_as_layer: bool
@@ -1524,190 +1835,315 @@ class PostgresOSM(PostgreSQL):
         **Examples**::
 
             >>> from pydriosm.ios import PostgresOSM
+            >>> from pyhelpers.dirs import delete_dir
 
-            >>> osmdb_test = PostgresOSM(database_name='osmdb_test')
+            >>> osmdb = PostgresOSM(database_name='osmdb_test')
             Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> # -- Import example data into the database ----------------------------------
+        Import example data into the database::
 
-            >>> dat_dir = "tests"  # Specify a temporary data directory
+            >>> dat_dir = "tests\\osm_data"  # Specify a temporary data directory
 
-            >>> # Import PBF data of 'Rutland' (from Geofabrik free download server)
-            >>> osmdb_test.import_subregion_osm_pbf(
-            ...     subregion_names='Rutland', data_dir=dat_dir, rm_osm_pbf=True,
-            ...     confirmation_required=False)
-
-            >>> # (from BBBike free download server)
-            >>> osmdb_test.DataSource = 'BBBike'
-
-            >>> # Import PBF data of 'Victoria' and 'Waterloo'
-            >>> osmdb_test.import_subregion_osm_pbf(
-            ...     subregion_names=['Victoria', 'Waterloo'], data_dir=dat_dir,
-            ...     parse_raw_feat=True, transform_geom=True, transform_other_tags=True,
-            ...     rm_osm_pbf=True, confirmation_required=False)
-
-            >>> # Import shapefile data of 'Leeds' (from BBBike free download server)
-            >>> leeds_shp = osmdb_test.Reader.read_shp_zip(
-            ...     subregion_name='Leeds', data_dir=dat_dir, rm_extracts=True,
-            ...     rm_shp_zip=True, download_confirmation_required=False)
-
-            >>> osmdb_test.import_osm_data(leeds_shp, 'Leeds', confirmation_required=False)
-
-            >>> # -- Delete all data of Rutland and Leeds -----------------------------------
-            >>> subregion_tbl_names = ['Rutland', 'Leeds']
-
-            >>> osmdb_test.drop_subregion_table(subregion_tbl_names, verbose=True)
-            To drop tables from postgres:***@localhost:5432/osmdb_test:
-                "Leeds"
+            >>> # Import PBF data of 'Rutland' and 'Isle of Wight'
+            >>> subrgn_name_1 = ['Rutland', 'Isle of Wight']
+            >>> osmdb.import_subregion_osm_pbf(
+            ...     subrgn_name_1, data_dir=dat_dir, expand=True, parse_geometry=True,
+            ...     parse_properties=True, parse_other_tags=True, verbose=True)
+            To import .osm.pbf data of the following geographic (sub)region(s):
                 "Rutland"
-             under the schemas:
-                "buildings"
-                "landuse"
+                "Isle of Wight"
+              into postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Downloading "rutland-latest.osm.pbf"
+                to "tests\\osm_data\\rutland\\" ... Done.
+            Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            Importing the data into table "Rutland" ...
+                "points" ... Done. (<total of rows> features)
+                "lines" ... Done. (<total of rows> features)
+                "multilinestrings" ... Done. (<total of rows> features)
+                "multipolygons" ... Done. (<total of rows> features)
+                "other_relations" ... Done. (<total of rows> features)
+            Downloading "isle-of-wight-latest.osm.pbf"
+                to "tests\\osm_data\\isle-of-wight\\" ... Done.
+            Reading "tests\\osm_data\\isle-of-wight\\isle-of-wight-latest.osm.pbf" ... Done.
+            Importing the data into table "Isle of Wight" ...
+                "points" ... Done. (<total of rows> features)
+                "lines" ... Done. (<total of rows> features)
+                "multilinestrings" ... Done. (<total of rows> features)
+                "multipolygons" ... Done. (<total of rows> features)
+                "other_relations" ... Done. (<total of rows> features)
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> subrgn_name_2 = 'London'
+
+            >>> # An alternative way to import the shapefile data of 'London'
+            >>> london_shp = osmdb.reader.read_shp_zip(
+            ...     subrgn_name_2, data_dir=dat_dir, rm_extracts=True, download=True, verbose=True)
+            Downloading "London.osm.shp.zip"
+                to "tests\\osm_data\\london\\" ... Done.
+            Extracting "tests\\osm_data\\london\\London.osm.shp.zip"
+                to "tests\\osm_data\\london\\" ... Done.
+            Reading the shapefile(s) at
+                "tests\\osm_data\\london\\London-shp\\shape\\" ... Done.
+            Deleting the extracts "tests\\osm_data\\london\\London-shp\\" ... Done.
+            >>> osmdb.import_osm_data(london_shp, table_name=subrgn_name_2, verbose=True)
+            To import data into table "London" at postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Importing the data ...
+                "buildings" ... Done. (<total of rows> features)
+                "landuse" ... Done. (<total of rows> features)
+                "natural" ... Done. (<total of rows> features)
+                "places" ... Done. (<total of rows> features)
+                "points" ... Done. (<total of rows> features)
+                "railways" ... Done. (<total of rows> features)
+                "roads" ... Done. (<total of rows> features)
+                "waterways" ... Done. (<total of rows> features)
+
+        Delete data of 'Rutland'::
+
+            >>> subrgn_name = 'Rutland'
+
+            >>> # Delete data of Rutland under the schemas 'buildings' and 'landuse'
+            >>> lyr_name = ['buildings', 'landuse']
+            >>> osmdb.drop_subregion_tables(subrgn_name, lyr_name, verbose=True)
+            None of the data exists.
+
+            >>> # Delete 'points' layer data of Rutland
+            >>> lyr_name = 'points'
+            >>> osmdb.drop_subregion_tables(subrgn_name, lyr_name, verbose=True)
+            To drop table "points"."Rutland"
+              from postgres:***@localhost:5432/osmdb_test
+            ? [No]|Yes: yes
+            Dropping the table ...
+                "points"."Rutland" ... Done.
+
+            >>> # Delete all available tables of Rutland
+            >>> osmdb.drop_subregion_tables(subrgn_name, verbose=True)
+            To drop table from postgres:***@localhost:5432/osmdb_test: "Rutland"
+              under the schemas:
                 "lines"
                 "multilinestrings"
                 "multipolygons"
-                "natural"
                 "other_relations"
-                "places"
-                "points"
-                "railways"
-                "roads"
-                "waterways"
             ? [No]|Yes: yes
             Dropping the tables ...
-                "buildings"."Leeds" ... Done.
-                "landuse"."Leeds" ... Done.
                 "lines"."Rutland" ... Done.
                 "multilinestrings"."Rutland" ... Done.
                 "multipolygons"."Rutland" ... Done.
-                "natural"."Leeds" ... Done.
                 "other_relations"."Rutland" ... Done.
-                "places"."Leeds" ... Done.
-                "points"."Leeds" ... Done.
-                "points"."Rutland" ... Done.
-                "railways"."Leeds" ... Done.
-                "roads"."Leeds" ... Done.
-                "waterways"."Leeds" ... Done.
 
-            >>> # -- Delete 'points' and 'other_relations' of Waterloo and Victoria ---------
+        Delete 'buildings' and 'points' data of London and Isle of Wight::
 
-            >>> subregion_tbl_names = ['Waterloo', 'Victoria']
-            >>> lyr_schema_names = ['points', 'other_relations']
-
-            >>> osmdb_test.drop_subregion_table(subregion_tbl_names, lyr_schema_names,
-            ...                                 verbose=True)
+            >>> # Delete 'buildings' and 'points' layers of London and Isle of Wight
+            >>> subrgn_names = ['London', 'Isle of Wight']
+            >>> lyr_names = ['buildings', 'points']
+            >>> osmdb.drop_subregion_tables(subrgn_names, schema_names=lyr_names, verbose=True)
             To drop tables from postgres:***@localhost:5432/osmdb_test:
-                "Victoria"
-                "Waterloo"
-             under the schemas:
-                "other_relations"
+                "Isle of Wight"
+                "London"
+              under the schemas:
                 "points"
+                "buildings"
             ? [No]|Yes: yes
             Dropping the tables ...
-                "other_relations"."Victoria" ... Done.
-                "other_relations"."Waterloo" ... Done.
-                "points"."Victoria" ... Done.
-                "points"."Waterloo" ... Done.
+                "points"."Isle of Wight" ... Done.
+                "points"."London" ... Done.
+                "buildings"."London" ... Done.
+
+            >>> # Delete the rest of the data of London and Isle of Wight
+            >>> osmdb.drop_subregion_tables(subrgn_names, verbose=True)
+            To drop tables from postgres:***@localhost:5432/osmdb_test:
+                "Isle of Wight"
+                "London"
+              under the schemas:
+                "railways"
+                "landuse"
+                "other_relations"
+                "lines"
+                "multilinestrings"
+                "waterways"
+                "roads"
+                "multipolygons"
+                "natural"
+                "places"
+            ? [No]|Yes: yes
+            Dropping the tables ...
+                "railways"."London" ... Done.
+                "landuse"."London" ... Done.
+                "other_relations"."Isle of Wight" ... Done.
+                "lines"."Isle of Wight" ... Done.
+                "multilinestrings"."Isle of Wight" ... Done.
+                "waterways"."London" ... Done.
+                "roads"."London" ... Done.
+                "multipolygons"."Isle of Wight" ... Done.
+                "natural"."London" ... Done.
+                "places"."London" ... Done.
+
+        Delete the test database and downloaded data files::
 
             >>> # Delete the database 'osmdb_test'
-            >>> osmdb_test.drop_database(verbose=True)
+            >>> osmdb.drop_database(verbose=True)
             To drop the database "osmdb_test" from postgres:***@localhost:5432
             ? [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
+
+            >>> # Delete the downloaded data files
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "tests\\osm_data\\" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "tests\\osm_data\\" ... Done.
         """
 
-        existing_schemas = [
-            x for x in sqlalchemy.inspect(self.engine).get_schema_names()
-            if x != 'public' and x != 'information_schema']
-        # existing_schemas.sort()
+        table_names = self.reader.validate_input_dtype(subregion_names)
+        table_names_ = sorted([self.get_table_name(x, table_named_as_subregion) for x in table_names])
 
-        if isinstance(subregion_table_names, str):
-            sr_tbl_names = [subregion_table_names]
+        # Validate the input `schema_names`
+        if schema_names is None:
+            schema_names_ = [
+                x for x in sqlalchemy.inspect(self.engine).get_schema_names()
+                if x not in {'public', 'information_schema'}]
         else:
-            sr_tbl_names = subregion_table_names.copy()
-        table_names_ = [self.get_table_name_for_subregion(x, table_named_as_subregion) for x in sr_tbl_names]
-        table_names_.sort()
+            schema_names_ = validate_schema_names(
+                schema_names=schema_names, schema_named_as_layer=schema_named_as_layer)
 
-        schema_names_ = validate_schema_names(
-            schema_names=schema_names, schema_named_as_layer=schema_named_as_layer)
-
-        if not schema_names_:
-            tables = list(itertools.product(existing_schemas, table_names_))
-            schema_names_ = list(set(
-                s for s, t in tables
+        if len(schema_names_) > 0:
+            existing_schema_names_ = list(set(
+                schema_name
+                for schema_name, table_name in itertools.product(schema_names_, table_names_)
                 if self.subregion_table_exists(
-                    subregion_name=t, layer_name=s, table_named_as_subregion=table_named_as_subregion,
+                    subregion_name=table_name, layer_name=schema_name,
+                    table_named_as_subregion=table_named_as_subregion,
                     schema_named_as_layer=schema_named_as_layer)))
+        else:
+            existing_schema_names_ = schema_names_
 
-        if not schema_names_:
+        if not existing_schema_names_:
             print("None of the data exists.")
 
         else:
-            schema_names_.sort()
-            _, schema_pl, prt_schema = self._msg_for_multi_items(schema_names_, desc='schema')
+            # existing_schema_names_.sort()
+            _, schema_pl, prt_schema = self._msg_for_multi_items(existing_schema_names_, desc='schema')
             _, tbl_pl, prt_tbl = self._msg_for_multi_items(table_names_, desc='table')
 
-            if len(table_names_) == 1 and len(schema_names_) == 1:
-                cfm_msg = "To drop {} {}.{} from {}\n?".format(tbl_pl, prt_schema, prt_tbl, self.address)
+            table_list = list(itertools.product(existing_schema_names_, table_names_))
+
+            if len(table_list) == 1:
+                cfm_msg = f'To drop {tbl_pl} {prt_schema}.{prt_tbl}\n' \
+                          f'  from {self.address}\n?'
             else:
-                cfm_msg = "To drop {} from {}: {}\n under the {}: {}\n?".format(
-                    tbl_pl, self.address, prt_tbl, schema_pl, prt_schema)
+                cfm_msg = f'To drop {tbl_pl} from {self.address}: {prt_tbl}\n' \
+                          f'  under the {schema_pl}: {prt_schema}\n?'
 
             if confirmed(cfm_msg, confirmation_required=confirmation_required):
+                if_tables_exist = any(
+                    self.table_exists(table_name=table, schema_name=schema)
+                    for schema, table in table_list)
 
-                table_list = list(itertools.product(schema_names_, table_names_))
+                if if_tables_exist:
+                    if verbose:
+                        drop_msg = "table" if len(table_list) == 1 else "tables"
+                        print(f"Dropping the {drop_msg} ... ")
 
-                if verbose:
-                    t_msg = "table" if (len(table_names_) == 1 and len(schema_names_) == 1) else "tables"
-                    print("Dropping the {} ... ".format(t_msg))
+                    for schema, table in table_list:
+                        schema_table = f'"{schema}"."{table}"'
 
-                for schema, table in table_list:
-                    table_ = '"{}"."{}"'.format(schema, table)
-
-                    if not self.table_exists(table_name=table, schema_name=schema):  # The table doesn't exist
-                        if verbose == 2:
-                            print("\t{} does not exist.".format(table_))
-
-                    else:
-                        if verbose:
-                            print("\t{}".format(table_), end=" ... ")
-
-                        try:
-                            self.engine.execute('DROP TABLE IF EXISTS {} CASCADE;'.format(table_))
+                        if self.table_exists(table_name=table, schema_name=schema):
                             if verbose:
-                                print("Done. ")
-                        except Exception as e:
-                            if verbose:
-                                print("Failed. {}".format(e))
+                                print(f"\t{schema_table}", end=" ... ")
 
-# class GeoFabrikIOS:
-#     """
-#     A class representation of a tool for storage of Geofabrik data extracts
-#     with PostgreSQL.
-#     """
-#
-#     def __init__(self):
-#         """
-#         Constructor method.
-#         """
-#         self.Downloader = GeofabrikDownloader()
-#         self.Reader = GeofabrikReader()
-#         self.Name = copy.copy(self.Downloader.Name)
-#         self.URL = copy.copy(self.Downloader.URL)
-#
-#
-# class BBBikeIOS:
-#     """
-#     A class representation of a tool for storage of BBBike data extracts
-#     with PostgreSQL.
-#     """
-#
-#     def __init__(self):
-#         """
-#         Constructor method.
-#         """
-#         self.Downloader = BBBikeDownloader()
-#         self.Reader = BBBikeReader()
-#         self.Name = copy.copy(self.Downloader.Name)
-#         self.URL = copy.copy(self.Downloader.URL)
+                            try:
+                                self.engine.execute(f'DROP TABLE IF EXISTS {schema_table} CASCADE;')
+                                if verbose:
+                                    print("Done.")
+                            except Exception as e:
+                                print(f"Failed. {e}")
+
+                        else:  # The table doesn't exist
+                            if verbose == 2:
+                                print(f"\t{schema_table} does not exist.")
+
+
+class GeofabrikIOS:
+    """
+    Implement storage I/O of `Geofabrik OpenStreetMap data extracts <https://download.geofabrik.de/>`_
+    with `PostgreSQL`_.
+
+    .. _`PostgreSQL`: https://www.postgresql.org/
+    """
+
+    def __init__(self, **kwargs):
+        """
+        :param kwargs: [optional] parameters of the class :class:`~pydriosm.downloader.PostgresOSM`
+
+        :ivar PostgresOSM postgres: instance of the class :class:`~pydriosm.downloader.PostgresOSM`
+        :ivar GeofabrikDownloader downloader: instance of the class
+            :class:`~pydriosm.downloader.GeofabrikDownloader`
+        :ivar GeofabrikReader reader: instance of the class
+            :class:`~pydriosm.downloader.GeofabrikReader`
+
+        **Examples**::
+
+            >>> from pydriosm.ios import GeofabrikIOS
+
+            >>> gfi = GeofabrikIOS(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> type(gfi.dbms)
+            pydriosm.ios.PostgresOSM
+
+            >>> gfi.dbms.name
+            'Geofabrik OpenStreetMap data extracts'
+
+        .. seealso::
+
+            - Examples for all the methods of the class :class:`~pydriosm.ios.PostgresOSM`.
+        """
+
+        kwargs.update({'data_source': 'Geofabrik'})
+        self.dbms = PostgresOSM(**kwargs)
+
+
+class BBBikeIOS:
+    """
+    Implement storage I/O of `BBBike exports of OpenStreetMap data <https://download.bbbike.org/>`_
+    with `PostgreSQL`_.
+
+    .. _`PostgreSQL`: https://www.postgresql.org/
+    """
+
+    def __init__(self, **kwargs):
+        """
+        :param kwargs: [optional] parameters of the class :class:`~pydriosm.downloader.PostgresOSM`
+
+        :ivar BBBikeDownloader downloader: instance of the class
+            :class:`~pydriosm.downloader.BBBikeDownloader`
+        :ivar BBBikeReader reader: instance of the class
+            :class:`~pydriosm.downloader.BBBikeReader`
+
+        **Examples**::
+
+            >>> from pydriosm.ios import BBBikeIOS
+
+            >>> bbi = BBBikeIOS(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> type(bbi.dbms)
+            pydriosm.ios.PostgresOSM
+
+            >>> bbi.dbms.name
+            'BBBike exports of OpenStreetMap data'
+
+        .. seealso::
+
+            - Examples for all the methods of the class :class:`~pydriosm.ios.PostgresOSM`.
+        """
+
+        kwargs.update({'data_source': 'BBBike'})
+        self.dbms = PostgresOSM(**kwargs)
