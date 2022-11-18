@@ -6,16 +6,28 @@ ios
 .. automodule:: pydriosm.ios
     :noindex:
     :no-members:
+    :no-undoc-members:
     :no-inherited-members:
 
-.. rubric:: Classes
+Storage I/O of data
+-------------------
+
+.. autosummary::
+    :toctree: _generated/
+    :template: class2.rst
+
+    GeofabrikIOS
+    BBBikeIOS
+
 .. autosummary::
     :toctree: _generated/
     :template: class.rst
 
     PostgresOSM
 
-.. rubric:: Functions
+Other utilities
+---------------
+
 .. autosummary::
     :toctree: _generated/
     :template: function.rst

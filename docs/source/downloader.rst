@@ -6,12 +6,16 @@ downloader
 .. automodule:: pydriosm.downloader
     :noindex:
     :no-members:
+    :no-undoc-members:
     :no-inherited-members:
 
-.. rubric:: Classes
+Downloading data
+----------------
+
 .. autosummary::
     :toctree: _generated/
     :template: class.rst
 
+    _Downloader
     GeofabrikDownloader
     BBBikeDownloader

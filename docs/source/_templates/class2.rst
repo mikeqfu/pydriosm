@@ -5,7 +5,6 @@
 .. autoclass:: {{ module }}.{{ objname }}
     {% block attributes %}
     {% if attributes %}
-    .. rubric:: {{ _('Attributes') }}
     .. autosummary::
         :template: base.rst
         :toctree:
@@ -18,7 +17,6 @@
     {% endblock %}
     {% block methods %}
     {% if methods %}
-    .. rubric:: {{ _('Methods') }}
     .. autosummary::
         :template: base.rst
         :toctree:

@@ -7,42 +7,25 @@ utils
     :noindex:
     :no-members:
     :no-undoc-members:
+    :no-inherited-members:
 
-.. rubric:: Specify resource homepages
+Data directories
+----------------
+
 .. autosummary::
     :toctree: _generated/
     :template: function.rst
 
-    geofabrik_homepage
-    bbbike_homepage
+    cdd_geofabrik
+    cdd_bbbike
 
-.. rubric:: Specify directory/file paths
+General utilities
+-----------------
+
 .. autosummary::
     :toctree: _generated/
     :template: function.rst
 
-    cd_dat
-    cd_dat_geofabrik
-    cd_dat_bbbike
-
-.. rubric:: Specify geometric object types/names
-.. autosummary::
-    :toctree: _generated/
-    :template: function.rst
-
-    get_pbf_layer_feat_types_dict
-    get_shp_shape_types_dict
-    get_shp_shape_types_geom_dict
-    get_valid_shp_layer_names
-
-.. rubric:: Miscellaneous
-.. autosummary::
-    :toctree: _generated/
-    :template: function.rst
-
-    validate_shp_layer_names
-    find_shp_layer_name
-    append_fclass_to_filename
-    remove_subregion_osm_file
-    get_number_of_chunks
-    convert_dtype_dict
+    first_unique
+    check_json_engine
+    remove_osm_file

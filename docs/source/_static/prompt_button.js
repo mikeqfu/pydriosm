@@ -1,7 +1,6 @@
 $(document).ready(function() {
-    /* Add a [>>>] button on the top-right corner of code samples to hide
-     * the >>> and ... prompts and the output and thus make the code
-     * copyable.
+    /* Add a [>>>] button on the top-right corner of code samples to hide the >>> and ... prompts
+     * and the output, thus making the code copyable.
      * Resource: https://docs.python.org/3/_static/copybutton.js */
     let div = $('.highlight-python .highlight,' +
                 '.highlight-python3 .highlight,' +
@@ -9,7 +8,7 @@ $(document).ready(function() {
                 '.highlight-default .highlight');
     let pre = div.find('pre');
 
-    // get the styles from the current theme
+    // Get the styles from the current theme
     pre.parent().parent().css('position', 'relative');
     let hide_text = 'Hide the prompts and output';
     let show_text = 'Show the prompts and output';
@@ -17,32 +16,40 @@ $(document).ready(function() {
     let border_style = pre.css('border-top-style');
     let border_color = pre.css('border-top-color');
     let button_styles = {
-        'cursor':'pointer', 'position': 'absolute', 'top': '0', 'right': '0',
-        'border-color': border_color, 'border-style': border_style,
-        'border-width': border_width, 'color': border_color, 'text-size': '75%',
-        'font-family': 'monospace', 'padding-left': '0.2em', 'padding-right': '0.2em',
+        'cursor':'pointer',
+        'position': 'absolute',
+        'top': '0',
+        'right': '0',
+        'border-color': border_color,
+        'border-style': border_style,
+        'border-width': border_width,
+        'color': border_color,
+        'text-size': '75%',
+        'font-family': 'monospace',
+        'padding-left': '0.2em',
+        'padding-right': '0.2em',
         'border-radius': '0 3px 0 0'
     }
 
-    // create and add the button to all the code blocks that contain >>>
+    // Create and add the button to all the code blocks that contain >>>
     div.each(function() {
         let jthis = $(this);
         if (jthis.find('.gp').length > 0) {
-            let button = $('<span class="copybutton">&gt;&gt;&gt;</span>');
+            let button = $('<span class="promptbutton">&gt;&gt;&gt;</span>');
             button.css(button_styles)
             button.attr('title', hide_text);
             button.data('hidden', 'false');
             jthis.prepend(button);
         }
-        // tracebacks (.gt) contain bare text elements that need to be
-        // wrapped in a span to work with .nextUntil() (see later)
+        /* tracebacks (.gt) contain bare text elements that need to be wrapped
+         * in a span to work with .nextUntil() (see later) */
         jthis.find('pre:has(.gt)').contents().filter(function() {
             return ((this.nodeType === 3) && (this.data.trim().length > 0));
         }).wrap('<span>');
     });
 
-    // define the behavior of the button when it's clicked
-    $('.copybutton').click(function(e){
+    // Define the behavior of the button when it's clicked
+    $('.promptbutton').click(function(e){
         e.preventDefault();
         let button = $(this);
         if (button.data('hidden') === 'false') {

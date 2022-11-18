@@ -6,10 +6,10 @@
 <%- elif table.align == 'right' -%>
   [r]
 <%- endif -%>
-<%= table.get_colspec() %>  % {\X{4}{9}\X{5}{9}}
+<%= table.get_colspec() %>  % {\X{6}{9}\X{3}{9}}
 <%- if table.caption -%>
 \sphinxthelongtablecaptionisattop
-\caption{<%= ''.join(table.caption) %>\strut}<%= labels %>\\*[\sphinxlongtablecapskipadjust]
+\caption*{<%= ''.join(table.caption) %>\strut}<%= labels %>\\*[\sphinxlongtablecapskipadjust]
 \hline
 <% elif labels -%>
 \hline\noalign{\phantomsection<%= labels %>}%
@@ -19,14 +19,13 @@
 <%= ''.join(table.header) %>
 \endfirsthead
 
-\multicolumn{<%= table.colcount %>}{c}%
-{\makebox[0pt]{\sphinxtablecontinued{\tablename\ \thetable{} \textendash{} <%= _('continued from previous page') %>}}}\\
+\multicolumn{<%= table.colcount %>}{l}%
+{\makebox[0pt][l]{\sphinxtablecontinued{<%= _('(continued from previous page)') %>}}}\\
 \hline
-<%= ''.join(table.header) %>
 \endhead
 
 \hline
-\multicolumn{<%= table.colcount %>}{r}{\makebox[0pt][r]{\sphinxtablecontinued{<%= _('continues on next page') %>}}}\\
+\multicolumn{<%= table.colcount %>}{r}{\makebox[0pt][r]{\sphinxtablecontinued{<%= _('(continues on next page)') %>}}}\\
 \endfoot
 
 \endlastfoot

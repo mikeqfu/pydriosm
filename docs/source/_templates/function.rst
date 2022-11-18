@@ -1,6 +1,6 @@
 {{ objname | escape | underline }}
 
-.. currentmodule:: {{ module }}
+.. currentmodule:: {{module}}
 
-.. autofunction:: {{ objname }}
+.. autofunction:: {{objname}}
 

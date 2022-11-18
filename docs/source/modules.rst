@@ -4,23 +4,22 @@ Modules
 
 .. py:module:: pydriosm
 
-The package includes the following six modules:
+The package includes the following five modules:
 
 .. autosummary::
 
     downloader
     reader
     ios
+    errors
     utils
-    settings
-    updater
 
 .. toctree::
+    :maxdepth: 2
     :hidden:
 
     downloader
     reader
     ios
+    errors
     utils
-    settings
-    updater
