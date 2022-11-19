@@ -2,9 +2,10 @@
     "Project": "PyDriosm",
     "Package": "pydriosm",
     "Author": "Qian Fu",
-    "Affiliation": "School of Engineering, University of Birmingham",
+    "Affiliation": "Birmingham Centre for Railway Research and Education, School of Engineering, University of Birmingham",
     "Email": "q.fu@bham.ac.uk",
     "Description": "An open-source tool for downloading, reading and PostgreSQL-based I/O of OpenStreetMap data.",
-    "Version": "2.1.0a1",
-    "License": "GPLv3+"
+    "Version": "2.1.0rc1",
+    "License": "GPLv3+",
+    "First release": "September 2019"
 }
