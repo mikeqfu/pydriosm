@@ -1,8 +1,0 @@
-# Include the license file
-include LICENSE
-
-# Include requirements
-include requirements.txt
-
-# Include package data
-recursive-include pydriosm/dat *
