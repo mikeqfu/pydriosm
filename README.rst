@@ -2,7 +2,7 @@
 PyDriosm
 ########
 
-|PyPI| |Python| |Documentation| |License| |DOI|
+|PyPI| |Python| |Documentation| |License| |Codacy grade| |DOI|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm
     :alt: PyPI - Release
@@ -16,6 +16,9 @@ PyDriosm
 .. |License| image:: https://img.shields.io/pypi/l/pydriosm
     :alt: PyPI - License
     :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
+.. |Codacy grade| image:: https://app.codacy.com/project/badge/Grade/b411ce89cbc445f58377a5799646d4cb
+    :alt: Codacy grade (Code quality)
+    :target: https://www.codacy.com/gh/mikeqfu/pydriosm/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mikeqfu/pydriosm&amp;utm_campaign=Badge_Grade
 .. |DOI| image:: https://zenodo.org/badge/92493726.svg
     :alt: Zenodo - DOI
     :target: https://zenodo.org/badge/latestdoi/92493726
