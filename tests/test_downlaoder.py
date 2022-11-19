@@ -14,7 +14,8 @@ gfd, bbd = GeofabrikDownloader(), BBBikeDownloader()
 
 class TestDownloader:
 
-    def test_init(self):
+    @staticmethod
+    def test_init():
         d = _Downloader()
 
         assert d.NAME == 'OSM Downloader'
@@ -25,14 +26,17 @@ class TestDownloader:
         d = _Downloader(download_dir="tests\\osm_data")
         assert os.path.relpath(d.download_dir) == 'tests\\osm_data'
 
-    def test_cdd(self):
+    @staticmethod
+    def test_cdd():
         assert os.path.relpath(_Downloader.cdd()) == 'osm_data'
 
-    def test_compose_cfm_msg(self):
+    @staticmethod
+    def test_compose_cfm_msg():
         assert _Downloader.compose_cfm_msg() == 'To compile data of <data_name>\n?'
         assert _Downloader.compose_cfm_msg(update=True) == 'To update the data of <data_name>\n?'
 
-    def test_print_act_msg(self, capfd):
+    @staticmethod
+    def test_print_act_msg(capfd):
         assert _Downloader.print_act_msg(verbose=False) is None
 
         _Downloader.print_act_msg(verbose=True)
@@ -50,7 +54,8 @@ class TestDownloader:
         out, err = capfd.readouterr()
         assert out == 'Compiling data of <data_name> ... Done.\n'
 
-    def test_print_otw_msg(self, capfd):
+    @staticmethod
+    def test_print_otw_msg(capfd):
         assert _Downloader.print_otw_msg() is None
 
         _Downloader.print_otw_msg(verbose=True)
@@ -65,18 +70,20 @@ class TestDownloader:
         out, err = capfd.readouterr()
         assert out == 'Failed. Errors.\n'
 
+    @staticmethod
     @pytest.mark.parametrize('data_name', [None, '<data_name>'])
-    def test_get_prepacked_data(self, data_name, monkeypatch, capfd):
+    def test_get_prepacked_data(data_name, monkeypatch, capfd):
         rslt = _Downloader.get_prepacked_data(callable, data_name=data_name, confirmation_required=False)
         assert rslt is None
 
         monkeypatch.setattr('builtins.input', lambda _: "No")
         rslt = _Downloader.get_prepacked_data(callable, verbose=True)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert 'Cancelled.' in out
         assert rslt is None
 
-    def test_validate_subregion_name(self):
+    @staticmethod
+    def test_validate_subregion_name():
         with pytest.raises(InvalidSubregionNameError) as e:
             _Downloader.validate_subregion_name('abc')
             assert '1)' in e and '2)' in e
@@ -99,7 +106,8 @@ class TestDownloader:
         subrgn_name_ = _Downloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
         assert subrgn_name_ == 'Greater London'
 
-    def test_validate_file_format(self):
+    @staticmethod
+    def test_validate_file_format():
         with pytest.raises(InvalidFileFormatError) as e:
             file_fmt = 'abc'
             _Downloader.validate_file_format(file_fmt)  # Raise an error
@@ -113,24 +121,28 @@ class TestDownloader:
         file_fmt = 'shp'
         assert _Downloader.validate_file_format(file_fmt, avail_file_fmts) == '.shp.zip'
 
-    def test_get_default_sub_path(self):
+    @staticmethod
+    def test_get_default_sub_path():
         subrgn_name_ = 'London'
         dwnld_url = 'https://download.bbbike.org/osm/bbbike/London/London.osm.pbf'
 
         assert _Downloader.get_default_sub_path(subrgn_name_, dwnld_url) == '\\london'
 
-    def test_make_subregion_dirname(self):
+    @staticmethod
+    def test_make_subregion_dirname():
         subrgn_name_ = 'England'
         assert _Downloader.make_subregion_dirname(subrgn_name_) == 'england'
 
         subrgn_name_ = 'Greater London'
         assert _Downloader.make_subregion_dirname(subrgn_name_) == 'greater-london'
 
-    def test_get_subregion_download_url(self):
+    @staticmethod
+    def test_get_subregion_download_url():
         rslt = _Downloader.get_subregion_download_url('<subregion_name_>', '<download_url>')
         assert rslt == ('<subregion_name_>', '<download_url>')
 
-    def test_get_valid_download_info(self):
+    @staticmethod
+    def test_get_valid_download_info():
         d = _Downloader()
 
         subregion_name, osm_file_format = 'subregion_name', 'osm_file_format'
@@ -155,7 +167,8 @@ class TestDownloader:
             subregion_name=subregion_name, osm_file_format=osm_file_format)
         assert osm_filename is None and file_pathname is None
 
-    def test_file_exists(self, capfd):
+    @staticmethod
+    def test_file_exists(capfd):
         d = _Downloader()
 
         subregion_name = '<subregion_name>'
@@ -165,11 +178,12 @@ class TestDownloader:
 
         subregion_name, osm_file_format = '', ''
         rslt = d.file_exists(subregion_name=subregion_name, osm_file_format=osm_file_format, verbose=2)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert 'None data for "None" is not available' in out
         assert not rslt
 
-    def test_file_exists_and_more(self):
+    @staticmethod
+    def test_file_exists_and_more():
         subrgn_names, file_format = 'London', ".pbf"
 
         rslt = gfd.file_exists_and_more(subregion_names=subrgn_names, osm_file_format=file_format)
@@ -188,7 +202,8 @@ class TestDownloader:
         rslt = bbd.file_exists_and_more(subregion_names=subrgn_names, osm_file_format=file_format)
         assert rslt == (['Birmingham', 'Leeds'], '.pbf', True, 'download', ['Birmingham', 'Leeds'], [])
 
-    def test_verify_download_dir(self):
+    @staticmethod
+    def test_verify_download_dir():
         d = _Downloader()
         assert os.path.relpath(d.download_dir) == 'osm_data'
 
@@ -197,8 +212,9 @@ class TestDownloader:
 
 
 class TestGeofabrikDownloader:
-
-    def test_init(self):
+    
+    @staticmethod
+    def test_init():
         assert gfd.NAME == 'Geofabrik'
         assert gfd.URL == 'https://download.geofabrik.de/'
         assert gfd.DOWNLOAD_INDEX_URL == 'https://download.geofabrik.de/index-v1.json'
@@ -214,9 +230,10 @@ class TestGeofabrikDownloader:
         assert isinstance(gfd.having_no_subregions, list)
         assert isinstance(gfd.catalogue, pd.DataFrame)
 
-    def test_get_raw_directory_index(self, capfd):
+    @staticmethod
+    def test_get_raw_directory_index(capfd):
         raw_index = gfd.get_raw_directory_index(gfd.URL, verbose=True)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == \
                "Collecting the raw directory index on 'https://download.geofabrik.de/' ... Failed.\n" \
                "No raw directory index is available on the web page.\n"
@@ -227,7 +244,8 @@ class TestGeofabrikDownloader:
         assert isinstance(raw_index, pd.DataFrame)
         assert raw_index.columns.to_list() == ['file', 'date', 'size', 'metric_file_size', 'url']
 
-    def test_get_download_index(self):
+    @staticmethod
+    def test_get_download_index():
         geofabrik_dwnld_idx = gfd.get_download_index()
 
         assert isinstance(geofabrik_dwnld_idx, pd.DataFrame)
@@ -246,7 +264,8 @@ class TestGeofabrikDownloader:
             'taginfo',
             'updates']
 
-    def test_get_subregion_table(self, capfd):
+    @staticmethod
+    def test_get_subregion_table(capfd):
         homepage = gfd.get_subregion_table(url=gfd.URL)
 
         assert homepage.columns.to_list() == [
@@ -263,18 +282,19 @@ class TestGeofabrikDownloader:
 
         antarctica_url = 'https://download.geofabrik.de/antarctica.html'
         antarctica = gfd.get_subregion_table(antarctica_url, verbose=True)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == 'Compiling information about subregions of "Antarctica" ... Failed.\n'
         assert antarctica is None
 
         antarctica2 = gfd.get_subregion_table(antarctica_url, verbose=2)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == \
                "Compiling information about subregions of \"Antarctica\" ... Failed.\n" \
                "No subregion data is available for \"Antarctica\" on Geofabrik's free download server.\n"
         assert antarctica2 is None
 
-    def test_get_continent_tables(self):
+    @staticmethod
+    def test_get_continent_tables():
         continent_tables = gfd.get_continent_tables()
         assert isinstance(continent_tables, dict)
 
@@ -287,12 +307,14 @@ class TestGeofabrikDownloader:
             '.shp.zip',
             '.osm.bz2']
 
-    def test_get_region_subregion_tier(self):
+    @staticmethod
+    def test_get_region_subregion_tier():
         rgn_subrgn_tier, no_subrgn_list = gfd.get_region_subregion_tier()
         assert isinstance(rgn_subrgn_tier, dict)
         assert isinstance(no_subrgn_list, list)
 
-    def test_get_catalogue(self):
+    @staticmethod
+    def test_get_catalogue():
         dwnld_catalog = gfd.get_catalogue()
         assert isinstance(dwnld_catalog, pd.DataFrame)
         assert len(dwnld_catalog) >= 474
@@ -304,11 +326,13 @@ class TestGeofabrikDownloader:
             '.shp.zip',
             '.osm.bz2']
 
-    def test_get_valid_subregion_names(self):
+    @staticmethod
+    def test_get_valid_subregion_names():
         valid_subrgn_names = gfd.get_valid_subregion_names()
         assert isinstance(valid_subrgn_names, set)
 
-    def test_validate_subregion_name(self):
+    @staticmethod
+    def test_validate_subregion_name():
         input_subrgn_name = 'london'
         valid_subrgn_name = gfd.validate_subregion_name(subregion_name=input_subrgn_name)
         assert valid_subrgn_name == 'Greater London'
@@ -317,7 +341,8 @@ class TestGeofabrikDownloader:
         valid_subrgn_name = gfd.validate_subregion_name(subregion_name=input_subrgn_name)
         assert valid_subrgn_name == 'Great Britain'
 
-    def test_validate_file_format(self):
+    @staticmethod
+    def test_validate_file_format():
         input_file_format = ".pbf"
         valid_file_format = gfd.validate_file_format(osm_file_format=input_file_format)
         assert valid_file_format == '.osm.pbf'
@@ -326,7 +351,8 @@ class TestGeofabrikDownloader:
         valid_file_format = gfd.validate_file_format(osm_file_format=input_file_format)
         assert valid_file_format == '.shp.zip'
 
-    def test_get_subregion_download_url(self):
+    @staticmethod
+    def test_get_subregion_download_url():
         subrgn_name = 'England'
         file_format = ".pbf"
         valid_name, dwnld_link = gfd.get_subregion_download_url(subrgn_name, file_format)
@@ -339,18 +365,20 @@ class TestGeofabrikDownloader:
         assert valid_name == 'Great Britain'
         assert dwnld_link is None
 
-    def test_get_default_filename(self, capfd):
+    @staticmethod
+    def test_get_default_filename(capfd):
         subrgn_name, file_format = 'london', ".pbf"
         default_fn = gfd.get_default_filename(subrgn_name, file_format)
         assert default_fn == 'greater-london-latest.osm.pbf'
 
         subrgn_name, file_format = 'britain', ".shp"
         default_fn = gfd.get_default_filename(subrgn_name, file_format)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == 'No .shp.zip data is available to download for Great Britain.\n'
         assert default_fn is None
 
-    def test_get_default_pathname(self):
+    @staticmethod
+    def test_get_default_pathname():
         subrgn_name, file_format = 'london', ".pbf"
 
         pathname, filename = gfd.get_default_pathname(subrgn_name, file_format)
@@ -358,7 +386,8 @@ class TestGeofabrikDownloader:
                'osm_data\\geofabrik\\europe\\great-britain\\england\\greater-london'
         assert filename == 'greater-london-latest.osm.pbf'
 
-    def test_get_subregions(self):
+    @staticmethod
+    def test_get_subregions():
         all_subrgn_names = gfd.get_subregions()
         assert isinstance(all_subrgn_names, list)
 
@@ -372,7 +401,8 @@ class TestGeofabrikDownloader:
         gb_subrgn_names_ = gfd.get_subregions('britain', deep=True)
         assert len(gb_subrgn_names_) >= len(gb_subrgn_names)
 
-    def test_specify_sub_download_dir(self):
+    @staticmethod
+    def test_specify_sub_download_dir():
         subrgn_name = 'london'
         file_format = ".pbf"
 
@@ -393,7 +423,8 @@ class TestGeofabrikDownloader:
         assert os.path.relpath(dwnld_pathname_) == \
                'tests\\osm_data\\europe\\great-britain\\great-britain-shp-zip'
 
-    def test_get_valid_download_info(self):
+    @staticmethod
+    def test_get_valid_download_info():
         subrgn_name = 'london'
         file_format = "pbf"
 
@@ -426,13 +457,14 @@ class TestGeofabrikDownloader:
                'tests\\osm_data\\europe\\great-britain\\england\\greater-london\\' \
                'greater-london-latest.osm.pbf'
 
-    def test_download_osm_data(self, capfd):
+    @staticmethod
+    def test_download_osm_data(capfd):
         gfd_ = GeofabrikDownloader()
 
         subrgn_names = ['london', 'rutland']
         file_format = ".pbf"
         gfd_.download_osm_data(subrgn_names, file_format, verbose=True, confirmation_required=False)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert "Downloading " in out and "Done." in out
         assert len(gfd_.data_paths) == 2
         assert os.path.relpath(gfd_.download_dir) == 'osm_data\\geofabrik'
@@ -452,7 +484,8 @@ class TestGeofabrikDownloader:
 
         delete_dir([dwnld_dir, new_dwnld_dir], confirmation_required=False)
 
-    # def test_download_subregion_data(self):
+    # @staticmethod
+    # def test_download_subregion_data():
     #     gfd_ = GeofabrikDownloader()
     #
     #     subrgn_name = 'England'
@@ -471,7 +504,8 @@ class TestGeofabrikDownloader:
 
 class TestBBBikeDownloader:
 
-    def test_init(self):
+    @staticmethod
+    def test_init():
         assert bbd.NAME == 'BBBike'
         assert bbd.LONG_NAME == 'BBBike exports of OpenStreetMap data'
         assert bbd.URL == 'https://download.bbbike.org/osm/bbbike/'
@@ -485,11 +519,13 @@ class TestBBBikeDownloader:
         assert isinstance(bbd.subregion_index, pd.DataFrame)
         assert isinstance(bbd.catalogue, dict)
 
-    def test_get_names_of_cities(self):
+    @staticmethod
+    def test_get_names_of_cities():
         bbbike_cities = bbd.get_names_of_cities()
         assert isinstance(bbbike_cities, list)
 
-    def test_get_coordinates_of_cities(self):
+    @staticmethod
+    def test_get_coordinates_of_cities():
         coords_of_cities = bbd.get_coordinates_of_cities()
 
         assert isinstance(coords_of_cities, pd.DataFrame)
@@ -508,35 +544,40 @@ class TestBBBikeDownloader:
             'ur_longitude',
             'ur_latitude']
 
-    def test_get_subregion_index(self):
+    @staticmethod
+    def test_get_subregion_index():
         subrgn_idx = bbd.get_subregion_index()
 
         assert isinstance(subrgn_idx, pd.DataFrame)
         assert subrgn_idx.columns.to_list() == ['name', 'last_modified', 'url']
 
-    def test_get_valid_subregion_names(self):
+    @staticmethod
+    def test_get_valid_subregion_names():
         subrgn_names = bbd.get_valid_subregion_names()
 
         assert isinstance(subrgn_names, list)
 
-    def test_validate_subregion_name(self):
+    @staticmethod
+    def test_validate_subregion_name():
         subrgn_name = 'birmingham'
 
         valid_name = bbd.validate_subregion_name(subregion_name=subrgn_name)
         assert valid_name == 'Birmingham'
 
-    def test_get_subregion_catalogue(self, capfd):
+    @staticmethod
+    def test_get_subregion_catalogue(capfd):
         subrgn_name = 'birmingham'
 
         bham_dwnld_cat = bbd.get_subregion_catalogue(
             subregion_name=subrgn_name, confirmation_required=False, verbose=True)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert 'Compiling the data of a download catalogue for "Birmingham" ... Done.\n' == out
         assert isinstance(bham_dwnld_cat, pd.DataFrame)
         assert bham_dwnld_cat.columns.to_list() == [
             'filename', 'url', 'data_type', 'size', 'last_update']
 
-    def test_get_catalogue(self):
+    @staticmethod
+    def test_get_catalogue():
         bbbike_catalogue = bbd.get_catalogue()
         assert list(bbbike_catalogue.keys()) == ['FileFormat', 'DataType', 'Catalogue']
 
@@ -546,14 +587,16 @@ class TestBBBikeDownloader:
         bham_catalogue = catalogue['Birmingham']
         assert isinstance(bham_catalogue, pd.DataFrame)
 
-    def test_validate_file_format(self):
+    @staticmethod
+    def test_validate_file_format():
         valid_file_format = bbd.validate_file_format(osm_file_format='PBF')
         assert valid_file_format == '.pbf'
 
         valid_file_format = bbd.validate_file_format(osm_file_format='.osm.pbf')
         assert valid_file_format == '.pbf'
 
-    def test_get_subregion_download_url(self):
+    @staticmethod
+    def test_get_subregion_download_url():
         subrgn_name = 'birmingham'
         file_format = "pbf"
 
@@ -567,7 +610,8 @@ class TestBBBikeDownloader:
         assert subrgn_name_ == 'Birmingham'
         assert dwnld_url == 'https://download.bbbike.org/osm/bbbike/Birmingham/Birmingham.osm.csv.xz'
 
-    def test_get_valid_download_info(self):
+    @staticmethod
+    def test_get_valid_download_info():
         subrgn_name = 'birmingham'
         file_format = "pbf"
 
@@ -583,7 +627,8 @@ class TestBBBikeDownloader:
         _, _, _, pbf_pathname = bbd_.get_valid_download_info(subrgn_name, file_format)
         assert os.path.relpath(pbf_pathname) == 'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
 
-    def test_file_exists(self):
+    @staticmethod
+    def test_file_exists():
         subrgn_name = 'birmingham'
         file_format = ".pbf"
         dwnld_dir = "tests\\osm_data"
@@ -591,17 +636,19 @@ class TestBBBikeDownloader:
         pbf_exists = bbd.file_exists(subrgn_name, file_format, dwnld_dir)
         assert not pbf_exists
 
-    # def test_download_subregion_data(self, capfd):
+    # @staticmethod
+    # def test_download_subregion_data(capfd):
     #     subrgn_name = 'leeds'
     #     dwnld_dir = "tests\\osm_data"
     #
     #     bbd.download_subregion_data(
     #         subregion_name=subrgn_name, download_dir=dwnld_dir, ret_download_path=True, verbose=True,
     #         confirmation_required=False)
-    #     out, err = capfd.readouterr()
+    #     out, _ = capfd.readouterr()
     #     assert 'Check out the downloaded OSM data at "tests\\osm_data\\leeds\\".' in out
 
-    def test_download_osm_data(self):
+    @staticmethod
+    def test_download_osm_data():
         subrgn_name = 'London'
         file_format = "pbf"
 

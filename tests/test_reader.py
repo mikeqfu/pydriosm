@@ -64,7 +64,8 @@ class TestTransformer:
         'id': 256254
     }
 
-    def test_point_as_polygon(self):
+    @staticmethod
+    def test_point_as_polygon():
         geometry = {
             'type': 'MultiPolygon',
             'coordinates': [[[[-0.6920145, 52.6753268], [-0.6920145, 52.6753268]]]]
@@ -80,14 +81,13 @@ class TestTransformer:
     def test_transform_unitary_geometry(self):
         g1_dat = self.test_point_1.copy()
         g1_data = Transformer.transform_unitary_geometry(g1_dat)
-        assert type(g1_data) == shapely.geometry.Point
+        assert isinstance(g1_data, shapely.geometry.Point)
         assert g1_data.wkt == 'POINT (-0.5134241 52.6555853)'
 
         g2_dat = self.test_point_2.copy()
         g2_data = Transformer.transform_unitary_geometry(g2_dat, mode=2)
 
-        assert type(g2_data) == dict
-
+        assert isinstance(g2_data, dict)
         assert list(g2_data.keys()) == ['type', 'geometry', 'properties', 'id']
         assert g2_data['geometry'] == 'POINT (-0.5134241 52.6555853)'
 
@@ -95,13 +95,13 @@ class TestTransformer:
         g1_dat_ = self.test_collection_1.copy()
         g1_dat = g1_dat_['geometries']
         g1_data = Transformer.transform_geometry_collection(g1_dat)
-        assert type(g1_data) == shapely.geometry.base.HeterogeneousGeometrySequence
+        assert isinstance(g1_data, shapely.geometry.base.HeterogeneousGeometrySequence)
         assert shapely.geometry.GeometryCollection(list(g1_data)).wkt == \
                'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))'
 
         g2_dat = self.test_collection_2.copy()
         g2_data = Transformer.transform_geometry_collection(g2_dat, mode=2)
-        assert type(g2_data) == dict
+        assert isinstance(g2_data, dict)
         assert list(g2_data.keys()) == ['type', 'geometry', 'properties', 'id']
         assert g2_data['geometry'] == \
                'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))'
@@ -116,11 +116,13 @@ class TestTransformer:
         assert isinstance(geom_dat, pd.Series)
         assert geom_dat.values[0].wkt == 'POINT (-0.5134241 52.6555853)'
 
-    def test_transform_other_tags(self):
+    @staticmethod
+    def test_transform_other_tags():
         other_tags_dat = Transformer.transform_other_tags(other_tags='"odbl"=>"clean"')
         assert other_tags_dat == {'odbl': 'clean'}
 
-    def test_update_other_tags(self):
+    @staticmethod
+    def test_update_other_tags():
         prop_dat = {
             'properties': {
                 'osm_id': '488432',
@@ -153,7 +155,8 @@ class TestTransformer:
 class TestPBFReadParse:
     path_to_osm_pbf = "tests\\data\\rutland\\rutland-latest.osm.pbf"
 
-    def test_get_pbf_layer_geom_types(self):
+    @staticmethod
+    def test_get_pbf_layer_geom_types():
         pbf_layer_geom_dict = PBFReadParse.get_pbf_layer_geom_types(shape_name=True)
         assert pbf_layer_geom_dict == {
             'points': 'Point',
@@ -162,12 +165,13 @@ class TestPBFReadParse:
             'multipolygons': 'MultiPolygon',
             'other_relations': 'GeometryCollection'}
 
+    @staticmethod
     @pytest.mark.parametrize('layer_name', ['points', 'other_relations'])
     @pytest.mark.parametrize('dat_id', [1, 2])
     @pytest.mark.parametrize('parse_geometry', [True, False])
     @pytest.mark.parametrize('parse_properties', [True, False])
     @pytest.mark.parametrize('parse_other_tags', [True, False])
-    def test_transform_pbf_layer_field(self, layer_name, dat_id, parse_geometry, parse_properties,
+    def test_transform_pbf_layer_field(layer_name, dat_id, parse_geometry, parse_properties,
                                        parse_other_tags):
         layer_data = load_pickle(f"tests\\data\\rutland\\{layer_name}_{dat_id}.pkl")
         lyr_dat = PBFReadParse.transform_pbf_layer_field(layer_data=layer_data, layer_name=layer_name)
@@ -193,13 +197,15 @@ class TestSHPReadParse:
     path_to_shp_zip = "tests\\data\\rutland\\rutland-latest-free.shp.zip"
     extract_to_dir = "tests\\data\\rutland\\temp"
 
-    def test_validate_shp_layer_names(self):
+    @staticmethod
+    def test_validate_shp_layer_names():
         assert SHPReadParse.validate_shp_layer_names(None) == []
         assert SHPReadParse.validate_shp_layer_names('point') == ['points']
         assert SHPReadParse.validate_shp_layer_names(['point', 'land']) == ['points', 'landuse']
         assert len(SHPReadParse.validate_shp_layer_names('all')) >= 13
 
-    def test_find_shp_layer_name(self):
+    @staticmethod
+    def test_find_shp_layer_name():
         assert SHPReadParse.find_shp_layer_name("") is None
         assert SHPReadParse.find_shp_layer_name("gis_osm_railways_free_1.shp") == 'railways'
         assert SHPReadParse.find_shp_layer_name("gis_osm_transport_a_free_1.shp") == 'transport'
@@ -259,17 +265,19 @@ class TestSHPReadParse:
 
 class TestReader:
 
-    def test_init(self):
+    @staticmethod
+    def test_init():
         r = _Reader()
 
         assert r.NAME == 'OSM Reader'
         assert isinstance(r.SHP, type) and r.SHP == SHPReadParse
-    
-    def test_cdd(self):
+
+    @staticmethod
+    def test_cdd():
         assert os.path.relpath(_Reader.cdd()) == 'osm_data'
 
-    # noinspection PyTypeChecker
-    def test_data_dir(self):
+    @staticmethod
+    def test_data_dir():
         from pydriosm.downloader import GeofabrikDownloader, BBBikeDownloader
 
         r = _Reader()
@@ -280,8 +288,9 @@ class TestReader:
 
         r = _Reader(downloader=BBBikeDownloader)
         assert os.path.relpath(r.data_dir) == 'osm_data\\bbbike'
-        
-    def test_data_paths(self):
+
+    @staticmethod
+    def test_data_paths():
         r = _Reader()
         assert r.data_paths == []
 

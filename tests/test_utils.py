@@ -61,7 +61,7 @@ def test_remove_osm_file(capfd):
     path_to_pseudo_pbf_file = os.path.join("tests\\data\\pseudo\\pseudo.osm.pbf")
 
     remove_osm_file(path_to_pseudo_pbf_file, verbose=True)
-    out, err = capfd.readouterr()
+    out, _ = capfd.readouterr()
     assert 'The file "pseudo.osm.pbf" is not found' in out
 
     pseudo_dir = os.path.dirname(path_to_pseudo_pbf_file)
@@ -76,7 +76,7 @@ def test_remove_osm_file(capfd):
     f.close()
 
     remove_osm_file(path_to_pseudo_pbf_file, verbose=True)
-    out, err = capfd.readouterr()
+    out, _ = capfd.readouterr()
     assert "Deleting" in out and path_to_pseudo_pbf_file in out
     assert not os.path.exists(path_to_pseudo_pbf_file)
 

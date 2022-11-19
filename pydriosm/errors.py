@@ -114,7 +114,7 @@ class InvalidFileFormatError(Exception):
 
         self.osm_file_format = osm_file_format
 
-        self.message = f"The input `osm_file_format` is unidentifiable."
+        self.message = "The input `osm_file_format` is unidentifiable."
         if valid_file_formats:
             self.message += f"\n\tValid options include: {valid_file_formats}."
 

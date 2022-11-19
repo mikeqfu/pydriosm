@@ -11,7 +11,7 @@ def test_get_default_layer_name():
 
     lyr_name = get_default_layer_name(schema_name='land')
     assert lyr_name == 'landuse'
-    
+
 
 def test_validate_schema_names():
     from pydriosm.ios import validate_schema_names

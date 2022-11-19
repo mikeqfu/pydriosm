@@ -8,7 +8,7 @@ def test__update_prepacked_data(monkeypatch, capfd):
 
     monkeypatch.setattr('builtins.input', lambda _: "Yes")
     _update_prepacked_data(verbose=True)
-    out, err = capfd.readouterr()
+    out, _ = capfd.readouterr()
     assert "Done." in out and "Update finished." in out and "Failed." not in out
 
 

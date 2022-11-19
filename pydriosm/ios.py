@@ -1797,7 +1797,6 @@ class PostgresOSM(PostgreSQL):
 
                     except Exception as e:
                         print(f"Failed. {e}")
-                        pass
 
                 else:
                     existing_schemas.remove(schema_name_)
