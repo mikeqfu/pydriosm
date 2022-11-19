@@ -46,12 +46,12 @@ class TestDownloader:
 
         _Downloader.print_act_msg(verbose=True, note="(Some notes here.)")
         print("Done.")
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == 'Compiling the data (Some notes here.) ... Done.\n'
 
         _Downloader.print_act_msg(verbose=True, confirmation_required=False)
         print("Done.")
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == 'Compiling data of <data_name> ... Done.\n'
 
     @staticmethod
@@ -59,15 +59,15 @@ class TestDownloader:
         assert _Downloader.print_otw_msg() is None
 
         _Downloader.print_otw_msg(verbose=True)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == 'Cancelled.\n'
 
         _Downloader.print_otw_msg(verbose=2)
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == 'The collecting of <data_name> is cancelled, or no data is available.\n'
 
         _Downloader.print_otw_msg(verbose=True, error_message="Errors.")
-        out, err = capfd.readouterr()
+        out, _ = capfd.readouterr()
         assert out == 'Failed. Errors.\n'
 
     @staticmethod
@@ -212,7 +212,7 @@ class TestDownloader:
 
 
 class TestGeofabrikDownloader:
-    
+
     @staticmethod
     def test_init():
         assert gfd.NAME == 'Geofabrik'
