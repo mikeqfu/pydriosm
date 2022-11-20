@@ -2,6 +2,23 @@
 
 <br/>
 
+#### **[2.1.0](https://github.com/mikeqfu/pydriosm/releases/tag/2.1.0)**
+
+(*20 November 2022*)
+
+***Note that this release is a highly modified version and not compatible with any previous versions.***
+
+##### **Notable [changes](https://github.com/mikeqfu/pydriosm/compare/2.0.3...2.1.0) since [2.0.3](https://pypi.org/project/pydriosm/2.0.3/):**
+
+- Made major modifications and sweeping changes to the modules: [downloader](https://github.com/mikeqfu/pydriosm/commit/2761bc7f3cf265ca9621dc10f46ef6dcbcedf263), [reader](https://github.com/mikeqfu/pydriosm/commit/2e4befe4ea7847cba889aa4f983355db717e59e4), [ios](https://github.com/mikeqfu/pydriosm/commit/e508b11cf121d25356a02975481c4aaabf4ada56) and [utils](https://github.com/mikeqfu/pydriosm/commit/c69fe4f5a863eda4f925904afdf2daa2b6390c60).
+- Removed the module [settings](https://github.com/mikeqfu/pydriosm/commit/2916dc938a5890b0a19cd4431fd00f9292c7ec65).
+- Replaced the module [updater](https://github.com/mikeqfu/pydriosm/commit/ab6ec0ec4689bc719716ba36f9259834bb269a94) with [_updater](https://github.com/mikeqfu/pydriosm/commit/159ba27ff3410ff53ca4210409da02d03cdc2b7e).
+- Added a new module [errors](https://github.com/mikeqfu/pydriosm/commit/d9f60388bd085c375873bfc2f8cc395a6f111de3).
+
+**For more information and detailed specifications, check out [PyDriosm 2.1.0 documentation](https://pydriosm.readthedocs.io/en/2.1.0/).**
+
+<br/>
+
 #### **[2.0.3](https://github.com/mikeqfu/pydriosm/releases/tag/2.0.3)**
 
 (*25 April 2021*)
