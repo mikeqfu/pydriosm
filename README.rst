@@ -23,7 +23,7 @@ PyDriosm
     :alt: Zenodo - DOI
     :target: https://zenodo.org/badge/latestdoi/92493726
 
-PyDriosm is an open-source tool for researchers/practitioners to easily download and read `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data in popular file formats such as `protobuf binary format <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ (PBF) and `shapefile <https://wiki.openstreetmap.org/wiki/Shapefiles>`_, which are available for free download from `Geofabrik <https://download.geofabrik.de/>`_ and `BBBike <https://www.bbbike.org/>`_. The package also provides a convenient way for `PostgreSQL <https://www.postgresql.org/>`_-based I/O and storage of parsed OSM data.
+PyDriosm is an open-source tool for researchers/practitioners to easily download and read `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data in popular file formats such as `protobuf binary format <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ (PBF) and `shapefile <https://wiki.openstreetmap.org/wiki/Shapefiles>`_, which are available for free download from `Geofabrik <https://download.geofabrik.de/>`_ and `BBBike <https://download.bbbike.org/>`_. The package also provides a convenient way for `PostgreSQL <https://www.postgresql.org/>`_-based I/O and storage of parsed OSM data.
 
 Installation
 ############
