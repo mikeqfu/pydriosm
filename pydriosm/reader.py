@@ -1438,6 +1438,7 @@ class SHPReadParse:
         """
 
         lookup_dict = {v: k for k, v in cls.SHAPE_TYPE_NAME_LOOKUP.items()}
+        lookup_dict.update({'LineString': 3})
         shape_type = lookup_dict[x.geom_type]
 
         # try:
