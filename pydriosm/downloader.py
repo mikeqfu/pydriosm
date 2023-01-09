@@ -917,7 +917,7 @@ class _Downloader:
                 print("Done.")
 
         except Exception as e:
-            print("Failed. {}".format(e))
+            print(f"Failed. {e}")
 
         if file_pathname not in self.data_paths:
             self.data_paths.append(file_pathname)
@@ -990,11 +990,15 @@ class GeofabrikDownloader(_Downloader):
 
         super().__init__(download_dir=download_dir)
 
-        self.valid_subregion_names = self.get_valid_subregion_names()
         self.download_index = self.get_download_index()
+
         self.continent_tables = self.get_continent_tables()
+
         self.region_subregion_tier, self.having_no_subregions = self.get_region_subregion_tier()
+
         self.catalogue = self.get_catalogue()
+
+        self.valid_subregion_names = self.get_valid_subregion_names()
 
     @classmethod
     def get_raw_directory_index(cls, url, verbose=False):
@@ -1143,7 +1147,7 @@ class GeofabrikDownloader(_Downloader):
         geometry_ = pd.DataFrame(raw_data['geometry'].to_list())
         geometry = geometry_.apply(
             lambda x: getattr(shapely.geometry, x['type'])(
-                [shapely.geometry.Polygon(x['coordinates'][0][0])]).geoms, axis=1)
+                [shapely.geometry.Polygon(x['coordinates'][0][0])]), axis=1)
         geometry = pd.DataFrame(geometry, columns=['geometry'])
 
         dwnld_idx = pd.concat(objs=[properties, geometry], axis=1)
@@ -2504,7 +2508,7 @@ class GeofabrikDownloader(_Downloader):
             defaults to ``False``
         :type deep_retry: bool
         :param interval: interval (in sec) between downloading two subregions, defaults to ``None``
-        :type interval: int or None
+        :type interval: int or float or None
         :param verify_download_dir: whether to verify the pathname of the current download directory,
             defaults to ``True``
         :type verify_download_dir: bool
@@ -2709,8 +2713,8 @@ class GeofabrikDownloader(_Downloader):
                     if os.path.isfile(file_pathname):
                         download_paths.append(file_pathname)
 
-                if isinstance(interval, int):
-                    time.sleep(secs=interval)
+                if isinstance(interval, (int, float)):
+                    time.sleep(interval)
 
             self.verify_download_dir(download_dir=download_dir, verify_download_dir=verify_download_dir)
 
@@ -3437,7 +3441,7 @@ class BBBikeDownloader(_Downloader):
                     print("Done.")
 
             except Exception as e:
-                print("Failed. {}".format(e))
+                print(f"Failed. {e}")
                 download_catalogue = None
 
             return download_catalogue
@@ -3769,7 +3773,7 @@ class BBBikeDownloader(_Downloader):
         :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
         :type confirmation_required: bool
         :param interval: interval (in second) between downloading two subregions, defaults to ``None``
-        :type interval: int or None
+        :type interval: int or float or None
         :param verify_download_dir: whether to verify the pathname of the current download directory,
             defaults to ``True``
         :type verify_download_dir: bool
@@ -3917,14 +3921,15 @@ class BBBikeDownloader(_Downloader):
                         if verbose and verbose != 2:
                             print("Done.")
 
-                        if isinstance(interval, int):  # os.path.getsize(path_to_file)/(1024**2)<=5:
-                            time.sleep(secs=interval)
+                        if isinstance(interval, (int, float)):
+                            # os.path.getsize(path_to_file)/(1024**2)<=5:
+                            time.sleep(interval)
 
                     if os.path.isfile(path_to_file):
                         download_paths.append(path_to_file)
 
                 except Exception as e:
-                    print("Failed. {}".format(e))
+                    print(f"Failed. {e}")
 
             if verbose and len(download_paths) > 1:
                 rel_path = os.path.relpath(os.path.commonpath(download_paths))
@@ -3962,7 +3967,7 @@ class BBBikeDownloader(_Downloader):
         :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
         :type confirmation_required: bool
         :param interval: interval (in second) between downloading two subregions, defaults to ``None``
-        :type interval: int or None
+        :type interval: int or float or None
         :param verify_download_dir: whether to verify the pathname of the current download directory,
             defaults to ``True``
         :type verify_download_dir: bool
@@ -4065,8 +4070,9 @@ class BBBikeDownloader(_Downloader):
                 if os.path.isfile(file_pathname):
                     download_paths.append(file_pathname)
 
-                if isinstance(interval, int):  # or os.path.getsize(path_to_file) / (1024 ** 2) <= 5:
-                    time.sleep(secs=interval)
+                if isinstance(interval, (int, float)):
+                    # or os.path.getsize(path_to_file) / (1024 ** 2) <= 5:
+                    time.sleep(interval)
 
             self.verify_download_dir(download_dir=download_dir, verify_download_dir=verify_download_dir)
 

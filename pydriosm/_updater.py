@@ -7,15 +7,15 @@ from pyhelpers.ops import confirmed
 from .downloader import BBBikeDownloader, GeofabrikDownloader
 
 
-def _update_prepacked_data(verbose=True, interval_sec=5):
+def _update_prepacked_data(verbose=True, interval=5):
     """
     Update prepacked data used by the downloader classes.
 
     :param verbose: whether to print relevant information in console, defaults to ``True``
     :type verbose: bool or int
-    :param interval_sec: time gap (in seconds) between the updating of different classes,
+    :param interval: time gap (in seconds) between the updating of different classes,
         defaults to ``5`` (seconds)
-    :type interval_sec: int
+    :type interval: int or float
 
     **Examples**::
 
@@ -39,42 +39,42 @@ def _update_prepacked_data(verbose=True, interval_sec=5):
 
         _ = gfd.get_download_index(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         _ = gfd.get_continent_tables(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         _ = gfd.get_region_subregion_tier(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         _ = gfd.get_catalogue(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         _ = gfd.get_valid_subregion_names(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         # -- BBBike --------------------------------------------------------------------------------
         bbd = BBBikeDownloader()
 
         _ = bbd.get_names_of_cities(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         _ = bbd.get_coordinates_of_cities(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         _ = bbd.get_subregion_index(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         _ = bbd.get_valid_subregion_names(**meth_args)
 
-        time.sleep(interval_sec)
+        time.sleep(interval)
 
         _ = bbd.get_catalogue(**meth_args)
 
