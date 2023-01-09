@@ -595,7 +595,7 @@ class PBFReadParse(Transformer):
             return layer_idx_names
 
         except Exception as e:
-            print("Failed. {}".format(e))
+            print(f"Failed. {e}")
 
     @classmethod
     def transform_pbf_layer_field(cls, layer_data, layer_name, parse_geometry=False,
@@ -1408,7 +1408,7 @@ class SHPReadParse:
                     print("Done.")
 
         except Exception as e:
-            print("Failed. {}".format(e))
+            print(f"Failed. {e}")
 
         if ret_extract_dir:
             return extract_dir
@@ -1790,19 +1790,20 @@ class SHPReadParse:
                 return f"{write_to_}.shp"
 
         except Exception as e:
-            print("Failed. {}".format(e))
+            print(f"Failed. {e}")
 
     @classmethod
-    def _make_feat_shp_pathname(cls, shp_filename, feature_names):
+    def _make_feat_shp_pathname(cls, shp_pathname, feature_names_):
         """
-        Append a ``'fclass'`` name to the original filename of shapefile.
+        Specify a pathname(s) for saving data of one (or multiple) given feature(s)
+        by appending the feature name(s) to the filename of its (or their) parent layer's shapefile).
 
-        :param shp_filename: original .shp filename
-        :type shp_filename: str
-        :param feature_names: name (or names) of a ``fclass`` (or multiple ``fclass``) in .shp data
-        :type feature_names: str or list
-        :return: updated filename used for saving only the ``fclass`` data of the original .shp data file
-        :rtype: str
+        :param shp_pathname: pathname of a shapefile of a layer
+        :type shp_pathname: str or os.PathLike[str]
+        :param feature_names_: name (or names) of one (or multiple) feature(s) in a shapefile of a layer
+        :type feature_names_: list
+        :return: pathname(s) of the data of the given ``feature_names``
+        :rtype: list
 
         **Examples**::
 
@@ -1810,31 +1811,40 @@ class SHPReadParse:
             >>> import os
 
             >>> fn = "gis_osm_railways_free_1.shp"
-            >>> feat = 'rail'
-            >>> pn = SHPReadParse._make_feat_shp_pathname(fn, feat)
-            >>> os.path.relpath(pn)
-            'railways\\rail.shp'
+            >>> feats = ['rail']
+            >>> pn = SHPReadParse._make_feat_shp_pathname(shp_pathname=fn, feature_names_=feats)
+            >>> len(pn)
+            1
+            >>> os.path.relpath(pn[0])
+            'gis_osm_railways_free_1_rail.shp'
 
-            >>> fn = "gis_osm_transport_a_free_1.shp"
-            >>> feat = 'railways'
-            >>> pn = SHPReadParse._make_feat_shp_pathname(fn, feat)
+            >>> fn = "tests\\osm_data\\greater-london\\gis_osm_transport_free_1.shp"
+            >>> feats = ['railway_station', 'bus_stop', 'bus_station']
+            >>> pn = SHPReadParse._make_feat_shp_pathname(shp_pathname=fn, feature_names_=feats)
+            >>> len(pn)
+            3
             >>> pn
-            'transport\\railways.shp'
+            ['tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_railway_station.shp',
+             'tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_bus_stop.shp',
+             'tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_bus_station.shp']
         """
 
-        shp_dirname_, shp_fn = os.path.dirname(shp_filename), os.path.basename(shp_filename)
+        shp_dir_path, shp_filename_ = os.path.split(shp_pathname)
+        shp_filename, ext = os.path.splitext(shp_filename_)
 
-        fn_for_dir_, ext = os.path.splitext(shp_fn)
-        # filename_for_dir = re.search('gis_osm_(.*?)_(a_)?', fn_for_dir_).group(1)
-        filename_for_dir = cls.find_shp_layer_name(fn_for_dir_)
-        feature_names_ = feature_names if isinstance(feature_names, str) else '_'.join(feature_names)
+        # # filename_for_dir = re.search('gis_osm_(.*?)_(a_)?', fn_for_dir_).group(1)
+        # layer_name = cls.find_shp_layer_name(shp_filename_)
 
-        feat_shp_pathname = os.path.join(shp_dirname_, filename_for_dir, f"{feature_names_}{ext}")
+        if len(feature_names_) > 0:
+            feat_shp_pathnames = [
+                os.path.join(shp_dir_path, f"{shp_filename}_{f}{ext}") for f in feature_names_]
+        else:
+            feat_shp_pathnames = []
 
-        return feat_shp_pathname
+        return feat_shp_pathnames
 
     @classmethod
-    def _write_lyr_feat_shp(cls, data, feat_col_name, lyr_feat_shp_path):
+    def _write_feat_shp(cls, data, feat_col_name, feat_shp_pathnames_):
         """
         Write the data of selected features of a layer to a shapefile
         (or shapefiles given multiple shape types).
@@ -1844,37 +1854,40 @@ class SHPReadParse:
         :param feat_col_name: name of the column that contains feature names;
             valid values can include ``'fclass'`` and ``'type'``
         :type feat_col_name: str
-        :param lyr_feat_shp_path: (temporary) pathname for the output shapefile(s)
-        :type lyr_feat_shp_path: str
+        :param feat_shp_pathnames_: (temporary) pathname for the output shapefile(s)
+        :type feat_shp_pathnames_: str
         :return: pathnames of the output shapefiles
         :rtype: list
         """
 
-        if hasattr(data, 'geom_type'):
-            k = data.geom_type
-        else:
-            if 'geometry' in data.columns:
-                k = data['geometry'].map(lambda x: x.geom_type)
-            else:
-                k = 'shape_type'
+        # if hasattr(data, 'geom_type'):
+        #     type_col_name = data.geom_type
+        # else:
+        #     if 'geometry' in data.columns:
+        #         type_col_name = data['geometry'].map(lambda x: x.geom_type)
+        #     else:
+        #         type_col_name = 'shape_type'
 
-        shp_pathnames = []
+        feat_shp_pathnames = []
 
-        for _, dat in data.groupby(k):
-            # f_shp_fn = '_'.join(dat[feat_col_name].unique())[:20] + ".shp"
-            f_shp_fn = '_'.join(dat[feat_col_name].unique()) + ".shp"
-            pathname = os.path.join(os.path.dirname(lyr_feat_shp_path), f_shp_fn)
+        for feat_name, dat in data.groupby(feat_col_name):
+            feat_shp_pathname = [
+                x for x in feat_shp_pathnames_ if os.path.splitext(x)[0].endswith(feat_name)][0]
+            # feat_shp_pathname_, ext = os.path.splitext(feat_shp_pathname)
+            # shape_type_ = cls.SHAPE_TYPE_GEOM_NAME[shape_type].lower()
+            # feat_shp_pathname = f"{feat_shp_pathname_}-{shape_type_}{ext}"
 
             if isinstance(dat, pd.DataFrame) and not hasattr(dat, 'crs'):
-                cls.write_to_shapefile(data=dat, write_to=pathname)
+                cls.write_to_shapefile(data=dat, write_to=feat_shp_pathname)
+            else:
+                gpd = _check_dependency('geopandas')
+                assert isinstance(dat, gpd.GeoDataFrame)
+                # os.makedirs(os.path.dirname(feat_shp_pathnames), exist_ok=True)
+                dat.to_file(feat_shp_pathname, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
 
-            else:  # assert isinstance(shp_data, gpd.GeoDataFrame)
-                os.makedirs(os.path.dirname(pathname), exist_ok=True)
-                dat.to_file(pathname, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
+            feat_shp_pathnames.append(feat_shp_pathname)
 
-            shp_pathnames.append(pathname)
-
-        return shp_pathnames
+        return feat_shp_pathnames
 
     @classmethod
     def read_layer_shps(cls, shp_pathnames, feature_names=None, save_feat_shp=False,
@@ -1927,7 +1940,14 @@ class SHPReadParse:
             'tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip'
 
             >>> # Extract the downloaded .shp.zip file
-            >>> london_shp_dir = SHPReadParse.unzip_shp_zip(london_shp_zip, ret_extract_dir=True)
+            >>> london_shp_dir = SHPReadParse.unzip_shp_zip(
+            ...     london_shp_zip, layer_names='railways', ret_extract_dir=True)
+            >>> os.listdir(london_shp_dir)
+            ['gis_osm_railways_free_1.cpg',
+             'gis_osm_railways_free_1.dbf',
+             'gis_osm_railways_free_1.prj',
+             'gis_osm_railways_free_1.shp',
+             'gis_osm_railways_free_1.shx']
             >>> london_railways_shp_path = cd(london_shp_dir, "gis_osm_railways_free_1.shp")
 
             >>> # Read the 'railways' layer
@@ -1952,46 +1972,58 @@ class SHPReadParse:
             list
             >>> len(railways_rail_shp_path)
             1
-            >>> os.path.relpath(railways_rail_shp_path[0])
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\railways\\rail.shp'
+            >>> os.path.basename(railways_rail_shp_path[0])
+            'gis_osm_railways_free_1_rail.shp'
 
             >>> # Delete the download/data directory
-            >>> delete_dir(gfd.download_dir, verbose=True)
+            >>> delete_dir(dwnld_dir, verbose=True)
             To delete the directory "tests\\osm_data\\" (Not empty)
             ? [No]|Yes: yes
             Deleting "tests\\osm_data\\" ... Done.
         """
 
-        lyr_shp_paths = [shp_pathnames] if isinstance(shp_pathnames, str) else shp_pathnames
+        lyr_shp_pathnames = [shp_pathnames] if isinstance(shp_pathnames, str) else shp_pathnames
 
-        if len(lyr_shp_paths) == 0:
+        feat_shp_pathnames = None
+
+        if len(lyr_shp_pathnames) == 0:
             data = None
 
         else:
-            if len(lyr_shp_paths) == 1:
-                data = cls.read_shp(shp_pathname=lyr_shp_paths[0], **kwargs)
-            else:
-                data = pd.concat(
-                    [cls.read_shp(shp_pathname=pathname, **kwargs) for pathname in lyr_shp_paths],
-                    axis=0, ignore_index=True)
+            dat_dict = {
+                lyr_shp_pathname: cls.read_shp(shp_pathname=lyr_shp_pathname, **kwargs)
+                for lyr_shp_pathname in lyr_shp_pathnames}
+            data = pd.concat(dat_dict.values(), axis=0, ignore_index=True)
 
             if feature_names:
                 feat_names = [feature_names] if isinstance(feature_names, str) else feature_names
                 feat_col_name = [x for x in data.columns if x in {'type', 'fclass'}][0]
-                feature_names_ = [find_similar_str(x, data[feat_col_name].unique()) for x in feat_names]
+                feat_names_ = [find_similar_str(x, data[feat_col_name].unique()) for x in feat_names]
 
-                data = data.query(f'{feat_col_name} in @feature_names_')
+                data = data.query(f'{feat_col_name} in @feat_names_')
 
-                if save_feat_shp:
-                    if isinstance(save_feat_shp, bool):
-                        lyr_feat_shp_path = cls._make_feat_shp_pathname(lyr_shp_paths[0], feature_names_)
-                    else:  # assert os.path.isabs(cd(save_feat_shp))
-                        lyr_feat_shp_path = copy.copy(save_feat_shp)
+                if data.empty:
+                    data = None
 
-                    lyr_feat_shp_path = cls._write_lyr_feat_shp(data, feat_col_name, lyr_feat_shp_path)
+                elif save_feat_shp:
+                    feat_shp_pathnames = []
 
-                    if ret_feat_shp_path:
-                        data = data, lyr_feat_shp_path
+                    for lyr_shp_pathname in lyr_shp_pathnames:
+                        dat = dat_dict[lyr_shp_pathname]
+                        valid_feature_names = dat[feat_col_name].unique()
+                        feature_names_ = [x for x in feat_names_ if x in valid_feature_names]
+
+                        feat_shp_pathnames_ = cls._make_feat_shp_pathname(
+                            shp_pathname=lyr_shp_pathname, feature_names_=feature_names_)
+
+                        feat_shp_pathnames_temp = cls._write_feat_shp(
+                            data=dat.query(f'{feat_col_name} in @feature_names_'),
+                            feat_col_name=feat_col_name, feat_shp_pathnames_=feat_shp_pathnames_)
+
+                        feat_shp_pathnames += feat_shp_pathnames_temp
+
+        if ret_feat_shp_path:
+            data = data, feat_shp_pathnames
 
         return data
 
@@ -2050,6 +2082,7 @@ class SHPReadParse:
             #                 w.record(*shaperec.record)
             #                 w.shape(shaperec.shape)
 
+            kwargs.update({'ret_feat_shp_path': False})
             shp_data = cls.read_layer_shps(shp_pathnames, **kwargs)
             if 'geometry' in shp_data.columns:
                 k = shp_data['geometry'].map(lambda x: x.geom_type)
@@ -2068,6 +2101,68 @@ class SHPReadParse:
                 # Write .prj
                 with open(out_fn.replace(".shp", ".prj"), mode="w") as prj:
                     prj.write(cls.EPSG4326_WGS84_ESRI_WKT)
+
+    @classmethod
+    def _extract_files(cls, shp_zip_pathnames, layer_name, verbose=False):
+        path_to_extract_dirs = []
+        for zfp in shp_zip_pathnames:
+            extract_dir = cls.unzip_shp_zip(
+                shp_zip_pathname=zfp, layer_names=layer_name, verbose=True if verbose == 2 else False,
+                ret_extract_dir=True)
+            path_to_extract_dirs.append(extract_dir)
+
+        return path_to_extract_dirs
+
+    @classmethod
+    def _copy_tempfiles(cls, subrgn_names_, layer_name, path_to_extract_dirs, path_to_merged_dir_temp):
+        # Copy files into a temp directory
+        paths_to_temp_files = []
+        for subregion_name, path_to_extract_dir in zip(subrgn_names_, path_to_extract_dirs):
+            orig_filename_list = glob.glob1(path_to_extract_dir, f"*{layer_name}*")
+            for orig_filename in orig_filename_list:
+                orig = os.path.join(path_to_extract_dir, orig_filename)
+                dest = os.path.join(
+                    path_to_merged_dir_temp,
+                    f"{subregion_name.lower().replace(' ', '-')}_{orig_filename}")
+                shutil.copyfile(orig, dest)
+                paths_to_temp_files.append(dest)
+
+        return paths_to_temp_files
+
+    @classmethod
+    def _make_merged_dir(cls, output_dir, path_to_data_dir, merged_dirname_temp, suffix):
+        if output_dir:
+            path_to_merged_dir = validate_dir(path_to_dir=output_dir)
+        else:
+            path_to_merged_dir = os.path.join(
+                path_to_data_dir, merged_dirname_temp.replace(suffix, "", -1))
+        os.makedirs(path_to_merged_dir, exist_ok=True)
+
+        return path_to_merged_dir
+
+    @classmethod
+    def _transfer_files(cls, engine, path_to_merged_dir, path_to_merged_dir_temp, prefix, suffix):
+        if engine in {'geopandas', 'gpd'}:
+            if not os.listdir(path_to_merged_dir):
+                temp_dirs = []
+                for temp_output_f in glob.glob(os.path.join(path_to_merged_dir + "*", f"{prefix}-*")):
+                    output_file = path_to_merged_dir_temp.replace(suffix, "")
+                    shutil.move(temp_output_f, output_file)
+                    temp_dirs.append(os.path.dirname(temp_output_f))
+
+                for temp_dir in set(temp_dirs):
+                    shutil.rmtree(temp_dir)
+
+        else:  # engine == 'pyshp': (default)
+            temp_dir = os.path.dirname(path_to_merged_dir)
+            paths_to_output_files_temp_ = [
+                glob.glob(os.path.join(temp_dir, f"{prefix}-*.{ext}")) for ext in {"dbf", "shp", "shx"}]
+            paths_to_output_files_temp = itertools.chain.from_iterable(paths_to_output_files_temp_)
+
+            for temp_output_f in paths_to_output_files_temp:
+                output_file = os.path.join(
+                    path_to_merged_dir, os.path.basename(temp_output_f).replace(suffix, ""))
+                shutil.move(temp_output_f, output_file)
 
     @classmethod
     def merge_layer_shps(cls, shp_zip_pathnames, layer_name, engine='pyshp', rm_zip_extracts=True,
@@ -2097,7 +2192,7 @@ class SHPReadParse:
         :param verbose: whether to print relevant information in console, defaults to ``False``
         :type verbose: bool or int
         :return: the path to the merged file when ``ret_merged_shp_path=True``
-        :rtype: list or str
+        :rtype: list
 
         .. _`geopandas.GeoDataFrame.to_file()`:
             https://geopandas.org/reference.html#geopandas.GeoDataFrame.to_file
@@ -2154,11 +2249,15 @@ class SHPReadParse:
                     Find the merged shapefile at "tests\\osm_data\\gre_man-wes_yor-railways\\".
 
             >>> # Check the pathname of the merged shapefile
-            >>> os.path.relpath(merged_shp_path)
+            >>> type(merged_shp_path)
+            list
+            >>> len(merged_shp_path)
+            1
+            >>> os.path.relpath(merged_shp_path[0])
             'tests\\osm_data\\gre_man-wes_yor-railways\\linestring.shp'
 
             >>> # Read the merged .shp file
-            >>> merged_shp_data = SHPReadParse.read_shp(merged_shp_path, emulate_gpd=True)
+            >>> merged_shp_data = SHPReadParse.read_shp(merged_shp_path[0], emulate_gpd=True)
             >>> merged_shp_data.head()
                 osm_id  code  ... tunnel                                           geometry
             0   928999  6101  ...      F  LINESTRING (-2.2844621 53.4802635, -2.2851997 ...
@@ -2181,39 +2280,25 @@ class SHPReadParse:
               <pydriosm.reader.GeofabrikReader.merge_subregion_layer_shp>`.
         """
 
-        verbose_ = True if verbose == 2 else False
+        path_to_extract_dirs = cls._extract_files(
+            shp_zip_pathnames=shp_zip_pathnames, layer_name=layer_name, verbose=verbose)
 
-        path_to_extract_dirs = []
-        for zfp in shp_zip_pathnames:
-            extract_dir = cls.unzip_shp_zip(
-                shp_zip_pathname=zfp, layer_names=layer_name, verbose=verbose_,
-                ret_extract_dir=True)
-            path_to_extract_dirs.append(extract_dir)
-
-        rgn_names = [
+        # Specify a directory that stores files for the specific layer
+        subrgn_names_ = [
             re.search(r'.*(?=\.shp\.zip)', os.path.basename(x).replace("-latest-free", "")).group(0)
             for x in shp_zip_pathnames]
 
-        # Specify a directory that stores files for the specific layer
-        path_to_data_dir = os.path.commonpath(shp_zip_pathnames)
         suffix = "_temp"
+        prefix = "-".join(["_".join([y[:3] for y in re.split(r'[- ]', x)]) for x in subrgn_names_])
         # prefix = "_".join([x.lower().replace(' ', '-') for x in region_names]) + "_"
-        prefix = "-".join(["_".join([y[:3] for y in re.split(r'[- ]', x)]) for x in rgn_names]) + "-"
-        merged_dirname_temp = f"{prefix}{layer_name}{suffix}"
+        path_to_data_dir = os.path.commonpath(shp_zip_pathnames)
+        merged_dirname_temp = f"{prefix}-{layer_name}{suffix}"
         path_to_merged_dir_temp = os.path.join(path_to_data_dir, merged_dirname_temp)
         os.makedirs(path_to_merged_dir_temp, exist_ok=True)
 
-        # Copy files into a temp directory
-        paths_to_temp_files = []
-        for subregion_name, path_to_extract_dir in zip(rgn_names, path_to_extract_dirs):
-            orig_filename_list = glob.glob1(path_to_extract_dir, f"*{layer_name}*")
-            for orig_filename in orig_filename_list:
-                orig = os.path.join(path_to_extract_dir, orig_filename)
-                dest = os.path.join(
-                    path_to_merged_dir_temp,
-                    f"{subregion_name.lower().replace(' ', '-')}_{orig_filename}")
-                shutil.copyfile(orig, dest)
-                paths_to_temp_files.append(dest)
+        paths_to_temp_files = cls._copy_tempfiles(
+            subrgn_names_=subrgn_names_, layer_name=layer_name,
+            path_to_extract_dirs=path_to_extract_dirs, path_to_merged_dir_temp=path_to_merged_dir_temp)
 
         # Get the paths to the target .shp files
         paths_to_shp_files = [x for x in paths_to_temp_files if x.endswith(".shp")]
@@ -2224,38 +2309,16 @@ class SHPReadParse:
             print("\t\tIn progress ... ", end="")
 
         try:
-            if output_dir:
-                path_to_merged_dir = validate_dir(path_to_dir=output_dir)
-            else:
-                path_to_merged_dir = os.path.join(
-                    path_to_data_dir, merged_dirname_temp.replace(suffix, "", -1))
-            os.makedirs(path_to_merged_dir, exist_ok=True)
+            path_to_merged_dir = cls._make_merged_dir(
+                output_dir=output_dir, path_to_data_dir=path_to_data_dir,
+                merged_dirname_temp=merged_dirname_temp, suffix=suffix)
 
             cls.merge_shps(
                 shp_pathnames=paths_to_shp_files, path_to_merged_dir=path_to_merged_dir, engine=engine)
 
-            if engine in {'geopandas', 'gpd'}:
-                if not os.listdir(path_to_merged_dir):
-                    temp_dirs = []
-                    for temp_output_f in glob.glob(os.path.join(path_to_merged_dir + "*", f"{prefix}*")):
-                        output_file = path_to_merged_dir_temp.replace(suffix, "")
-                        shutil.move(temp_output_f, output_file)
-                        temp_dirs.append(os.path.dirname(temp_output_f))
-
-                    for temp_dir in set(temp_dirs):
-                        shutil.rmtree(temp_dir)
-
-            else:  # method == 'pyshp': (default)
-                temp_dir = os.path.dirname(path_to_merged_dir)
-                paths_to_output_files_temp_ = [
-                    glob.glob(os.path.join(temp_dir, f"{prefix}*.{ext}"))
-                    for ext in ("dbf", "shp", "shx")]
-                paths_to_output_files_temp = itertools.chain.from_iterable(paths_to_output_files_temp_)
-
-                for temp_output_f in paths_to_output_files_temp:
-                    output_file = os.path.join(
-                        path_to_merged_dir, os.path.basename(temp_output_f).replace(suffix, ""))
-                    shutil.move(temp_output_f, output_file)
+            cls._transfer_files(
+                engine=engine, path_to_merged_dir=path_to_merged_dir,
+                path_to_merged_dir_temp=path_to_merged_dir_temp, prefix=prefix, suffix=suffix)
 
             if verbose:
                 print("Done.")
@@ -2272,12 +2335,12 @@ class SHPReadParse:
 
             if ret_shp_pathname:
                 path_to_merged_shp = glob.glob(os.path.join(f"{path_to_merged_dir}*", "*.shp"))
-                if len(path_to_merged_shp) == 1:
-                    path_to_merged_shp = path_to_merged_shp[0]
+                # if len(path_to_merged_shp) == 1:
+                #     path_to_merged_shp = path_to_merged_shp[0]
                 return path_to_merged_shp
 
         except Exception as e:
-            print("Failed. {}".format(e))
+            print(f"Failed. {e}")
 
 
 class VarReadParse(Transformer):
@@ -2874,7 +2937,7 @@ class _Reader:
             >>> dat_dir = "tests\\osm_data"
 
             >>> # Try to get the shapefiles' pathnames
-            >>> london_shp_path = gfr.get_shp_pathname(subrgn_name, data_dir=dat_dir)
+            >>> london_shp_path = gfr.get_shp_pathname(subregion_name=subrgn_name, data_dir=dat_dir)
             >>> london_shp_path  # An empty list if no data is available
             []
 
@@ -2890,8 +2953,7 @@ class _Reader:
             >>> # Extract the downloaded .zip file
             >>> gfr.SHP.unzip_shp_zip(path_to_london_shp_zip[0], verbose=True)
             Extracting "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-              to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\"
-            Done.
+                to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
 
             >>> # Try again to get the shapefiles' pathnames
             >>> london_shp_path = gfr.get_shp_pathname(subrgn_name, data_dir=dat_dir)
@@ -2909,8 +2971,8 @@ class _Reader:
 
             >>> # Get/save shapefile data of features labelled 'rail' only
             >>> feat_name = 'rail'
-            >>> railways_shp = gfr.SHP.read_layer_shps(railways_shp_path, feature_names=feat_name,
-            ...                                        save_feat_shp=True)
+            >>> railways_shp = gfr.SHP.read_layer_shps(
+            ...     railways_shp_path, feature_names=feat_name, save_feat_shp=True)
             >>> railways_shp.head()
                 osm_id  code  ...                                        coordinates shape_type
             0    30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
@@ -2953,6 +3015,8 @@ class _Reader:
         shp_dir = os.path.splitext(path_to_shp_zip)[0].replace(".", "-")
 
         available_pathnames = glob.glob(os.path.join(shp_dir, f"*{shp_file_ext}"))
+        if not available_pathnames:
+            available_pathnames = glob.glob(os.path.join(shp_dir, "*", f"*{shp_file_ext}"))
 
         if layer_name is None:
             path_to_osm_shp_file = available_pathnames
@@ -2960,17 +3024,18 @@ class _Reader:
         else:
             layer_name_ = find_similar_str(x=layer_name, lookup_list=self.SHP.LAYER_NAMES)
 
+            pat_ = f'gis_osm_{layer_name_}(_a)?(_free)?(_1)?'
             if feature_name is None:
-                pat = re.compile(f'gis_osm_{layer_name_}(_a)?(_free)?(_1)?{shp_file_ext}')
+                pat = re.compile(f"{pat_}{shp_file_ext}")
                 lookup = available_pathnames
             else:
                 ft_name = feature_name if isinstance(feature_name, str) else "_".join(list(feature_name))
-                pat = re.compile(ft_name + shp_file_ext)
+                pat = re.compile(f"{pat_}_{ft_name}{shp_file_ext}")
                 lookup = glob.glob(os.path.join(shp_dir, layer_name_, f"*{shp_file_ext}"))
+
             path_to_osm_shp_file = [f for f in lookup if re.search(pat, f)]
 
         # if not path_to_osm_shp_file: print("The required file is not found.")
-
         # if len(path_to_osm_shp_file) == 1: path_to_osm_shp_file = path_to_osm_shp_file[0]
 
         return path_to_osm_shp_file
@@ -3131,9 +3196,8 @@ class _Reader:
             print(f'Reading {msg_}"{files_dir}\\"', end=" ... ")
 
         try:
-            kwargs.update({'feature_names': feature_names_})
-            shp_dat_list = [
-                self.SHP.read_layer_shps(shp_pathnames=x, **kwargs) for x in shp_pathnames]
+            kwargs.update({'feature_names': feature_names_, 'ret_feat_shp_path': False})
+            shp_dat_list = [self.SHP.read_layer_shps(shp_pathnames=x, **kwargs) for x in shp_pathnames]
 
             shp_data = collections.OrderedDict(zip(layer_name_list, shp_dat_list))
 
@@ -3318,7 +3382,7 @@ class _Reader:
                     print("Done.")
 
             except Exception as e:
-                print("Failed. {}".format(e))
+                print(f"Failed. {e}")
                 osm_var_data = None
 
             return osm_var_data
@@ -3932,11 +3996,11 @@ class GeofabrikReader(_Reader):
 
         osm_file_format = ".shp.zip"
 
-        # Download the files (if not available)
+        # Download the files if not available
         paths_to_shp_zip_files = self.downloader.download_osm_data(
             subregion_names_, osm_file_format=osm_file_format, download_dir=data_dir,
-            update=update, confirmation_required=download,
-            deep_retry=True, interval=None, verbose=verbose, ret_download_path=True)
+            update=update, confirmation_required=False if download else True,
+            deep_retry=True, interval=1, verbose=verbose, ret_download_path=True)
 
         if all(os.path.isfile(shp_zip_path_file) for shp_zip_path_file in paths_to_shp_zip_files):
             path_to_merged_shp = self.SHP.merge_layer_shps(
