@@ -2,6 +2,20 @@
 
 <br/>
 
+#### **[2.1.1](https://github.com/mikeqfu/pydriosm/releases/tag/2.1.1)**
+
+(*9 January 2022*)
+
+##### **Notable [changes](https://github.com/mikeqfu/pydriosm/compare/2.1.0...2.1.1) since [2.1.0](https://pypi.org/project/pydriosm/2.1.0/):**
+
+- Improved the following methods/modules (with bug fixes): 
+  - the methods [.write_to_shapefile()](https://github.com/mikeqfu/pydriosm/commit/57baec84a3d8366f6d8f6f324fbcbdf6e7f67fa6), [.read_layer_shps()](https://github.com/mikeqfu/pydriosm/commit/bec76cb0fc21b152849cbc8cccb2634b04dd59f8#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacL1795-R2028), and [.merge_layer_shps()](https://github.com/mikeqfu/pydriosm/commit/bec76cb0fc21b152849cbc8cccb2634b04dd59f8#diff-fc8bd4c3f1ee495f89956160ebf3736c1b8f8021e61f3eb14662439f8a781aacR2105-R2343) of the class [SHPReadParse](https://github.com/mikeqfu/pydriosm/blob/7d2aa13c30c9df324a431567da69c7813e706c94/pydriosm/reader.py#L1030);  
+  - the modules [downloader](https://github.com/mikeqfu/pydriosm/commit/3404a8ad46b03e921110e695005bd47510c8a4f2#diff-5b569a7b9029a0d3c195aacccacf61b1f151777568a288bbd8703a88f67fc2f3) and [_updater](https://github.com/mikeqfu/pydriosm/commit/3404a8ad46b03e921110e695005bd47510c8a4f2#diff-3464d30b2db28f204143ad7f953d55614ece799bc0ae918cc0ad42c6497b39cf). 
+
+**For more information and detailed specifications, check out [PyDriosm 2.1.1 documentation](https://pydriosm.readthedocs.io/en/2.1.1/).**
+
+<br/>
+
 #### **[2.1.0](https://github.com/mikeqfu/pydriosm/releases/tag/2.1.0)**
 
 (*20 November 2022*)
