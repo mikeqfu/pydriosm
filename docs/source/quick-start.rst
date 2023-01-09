@@ -975,6 +975,8 @@ Now we are approaching the end of this tutorial. The final task we may want to d
 
 Let's delete the directory **"tests\\osm_data\\"**:
 
+.. code-block:: python
+
     >>> from pyhelpers.dirs import delete_dir
 
     >>> delete_dir(dat_dir, verbose=True)

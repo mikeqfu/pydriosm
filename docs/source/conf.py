@@ -162,7 +162,7 @@ latex_maketitle = r'''
         \Large {{First release:}} \large \textbf{{%s}} \par
         \Large {{Last updated:}} \large \textbf{{\MonthYearFormat\today}} \par
     
-        \vspace{20mm}
+        \vspace{15mm}
         \large \textcopyright \space Copyright %s \par
 
     \end{titlepage}
