@@ -64,4 +64,4 @@ Fu, Q. (2020). PyDriosm: an open-source tool for downloading, reading and Postgr
       url       = {https://doi.org/10.5281/zenodo.4281194}
     }
 
-**Note:** Please also refer to the export options from `Zenodo <https://zenodo.org/search?page=1&size=20&q=conceptrecid:4281194&all_versions&sort=-version>`_ to reference the specific version as appropriate for the use of PyDriosm.
+**Note:** Please also refer to the export options from `Zenodo <https://zenodo.org/search?page=1&size=20&q=conceptrecid:4281194&all_versions&sort=-version>`_ to reference the specific version of PyDriosm as appropriate.
