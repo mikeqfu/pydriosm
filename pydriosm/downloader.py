@@ -3194,10 +3194,11 @@ class BBBikeDownloader(_Downloader):
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-            subregion_index.loc[:, 'name'] = subregion_index['name'].map(lambda x: x.rstrip('/'))
-            subregion_index.loc[:, 'last_modified'] = pd.to_datetime(subregion_index['last_modified'])
-            subregion_index.loc[:, 'url'] = [
+            subregion_index['name'] = subregion_index['name'].map(lambda x: x.rstrip('/'))
+            subregion_index['last_modified'] = pd.to_datetime(subregion_index['last_modified'])
+            subregion_index['url'] = [
                 urllib.parse.urljoin(cls.URL, x.get('href')) for x in soup.find_all('a')[1:]]
 
         if verbose:
