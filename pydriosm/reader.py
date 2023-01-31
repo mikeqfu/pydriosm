@@ -2118,7 +2118,7 @@ class SHPReadParse:
         # Copy files into a temp directory
         paths_to_temp_files = []
         for subregion_name, path_to_extract_dir in zip(subrgn_names_, path_to_extract_dirs):
-            orig_filename_list = glob.glob1(path_to_extract_dir, f"*{layer_name}*")
+            orig_filename_list = glob.glob1(path_to_extract_dir, f"*_{layer_name}_*")
             for orig_filename in orig_filename_list:
                 orig = os.path.join(path_to_extract_dir, orig_filename)
                 dest = os.path.join(
