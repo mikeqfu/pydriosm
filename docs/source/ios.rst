@@ -14,16 +14,19 @@ Storage I/O of data
 
 .. autosummary::
     :toctree: _generated/
+    :template: class.rst
+
+    PostgresOSM
+
+Customised alternatives (Optional)
+----------------------------------
+
+.. autosummary::
+    :toctree: _generated/
     :template: class2.rst
 
     GeofabrikIOS
     BBBikeIOS
-
-.. autosummary::
-    :toctree: _generated/
-    :template: class.rst
-
-    PostgresOSM
 
 Other utilities
 ---------------

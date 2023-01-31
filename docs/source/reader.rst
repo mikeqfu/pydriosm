@@ -21,6 +21,15 @@ Parsing / transforming data
     SHPReadParse
     VarReadParse
 
+Base reader class
+-----------------
+
+.. autosummary::
+    :toctree: _generated/
+    :template: class.rst
+
+    _Reader
+
 Reading data
 ------------
 

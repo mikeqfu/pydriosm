@@ -9,6 +9,15 @@ downloader
     :no-undoc-members:
     :no-inherited-members:
 
+Base downloader class
+---------------------
+
+.. autosummary::
+    :toctree: _generated/
+    :template: class.rst
+
+    _Downloader
+
 Downloading data
 ----------------
 
@@ -16,6 +25,5 @@ Downloading data
     :toctree: _generated/
     :template: class.rst
 
-    _Downloader
     GeofabrikDownloader
     BBBikeDownloader
