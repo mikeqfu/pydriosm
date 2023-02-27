@@ -2,6 +2,19 @@
 
 <br/>
 
+#### **[2.1.2](https://github.com/mikeqfu/pydriosm/releases/tag/2.1.2)**
+
+(*27 February 2023*)
+
+##### **Notable [changes](https://github.com/mikeqfu/pydriosm/compare/2.1.1...2.1.2) since [2.1.1](https://pypi.org/project/pydriosm/2.1.1/):**
+
+- Improved the following methods: [SHPReadParse.merge_layer_shps()](https://github.com/mikeqfu/pydriosm/commit/392d759ae4504c5ebb9d8f1dab6471bf5743a7ff) and [BBBikeDownloader.get_subregion_index()](https://github.com/mikeqfu/pydriosm/commit/57b128310b89e40a12d72a0d72e34597d381ed2b).
+- Updated requirements on dependencies to adapt to SQLAlchemy 2.0+.
+
+**For more information and detailed specifications, check out [PyDriosm 2.1.2 documentation](https://pydriosm.readthedocs.io/en/2.1.2/).**
+
+<br/>
+
 #### **[2.1.1](https://github.com/mikeqfu/pydriosm/releases/tag/2.1.1)**
 
 (*9 January 2022*)
