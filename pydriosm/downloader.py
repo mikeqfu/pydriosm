@@ -1,4 +1,5 @@
-"""Download `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data from free download servers:
+"""
+Download `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data from free download servers:
 `Geofabrik <https://download.geofabrik.de/>`_ and `BBBike <https://download.bbbike.org/>`_.
 """
 
@@ -12,11 +13,11 @@ import re
 import string
 import time
 import urllib.parse
-import warnings
 
 import pandas as pd
 import requests
 import shapely.geometry
+from pyhelpers._cache import _format_err_msg
 from pyhelpers.dirs import cd, validate_dir
 from pyhelpers.ops import confirmed, download_file_from_url, fake_requests_headers, is_url, \
     parse_size, update_dict
@@ -65,9 +66,10 @@ class _Downloader:
         :param download_dir: name or pathname of a directory for saving downloaded data files,
             defaults to ``None``; when ``download_dir=None``, downloaded data files are saved to a
             folder named 'osm_data' under the current working directory
-        :type download_dir: str or os.PathLike[str] or None
+        :type download_dir: str | os.PathLike[str] | None
 
-        :ivar str or None download_dir: name or pathname of a directory for saving downloaded data files
+        :ivar str | None download_dir: name or pathname of a directory
+            for saving downloaded data files
         :ivar list data_paths: pathnames of all downloaded data files
 
         **Tests**::
@@ -103,12 +105,12 @@ class _Downloader:
         Change directory to default download directory and its subdirectories or a specific file.
 
         :param sub_dir: name of directory; names of directories (and/or a filename)
-        :type sub_dir: str or os.PathLike[str]
+        :type sub_dir: str | os.PathLike[str]
         :param mkdir: whether to create a directory, defaults to ``False``
         :type mkdir: bool
         :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_
         :return: an absolute pathname to a directory (or a file)
-        :rtype: str or os.PathLike[str]
+        :rtype: str | os.PathLike[str]
 
         .. _`pyhelpers.dirs.cd()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dirs.cd.html
@@ -127,14 +129,15 @@ class _Downloader:
         return pathname
 
     @classmethod
-    def compose_cfm_msg(cls, data_name='<data_name>', file_path="<file_path>", update=False, note=""):
+    def compose_cfm_msg(cls, data_name='<data_name>', file_path="<file_path>", update=False,
+                        note=""):
         """
         Compose a short message to be printed for confirmation.
 
         :param data_name: name of the prepacked data, defaults to ``'<data_name>'``
         :type data_name: str
         :param file_path: pathname of the prepacked data file, defaults to ``"<file_path>"``
-        :type file_path: str or os.PathLike[str]
+        :type file_path: str | os.PathLike[str]
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
         :param note: additional message, defaults to ``""``
@@ -167,8 +170,9 @@ class _Downloader:
         :param data_name: name of the prepacked data, defaults to ``'<data_name>'``
         :type data_name: str
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :type verbose: bool | int
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param note: additional message, defaults to ``""``
         :type note: str
@@ -207,12 +211,12 @@ class _Downloader:
         :param data_name: name of the prepacked data, defaults to ``'<name_of_data>'``
         :type data_name: str
         :param path_to_file: pathname of the prepacked data file, defaults to ``"<file_path>"``
-        :type path_to_file: str or os.PathLike[str]
+        :type path_to_file: str | os.PathLike[str]
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param error_message: message of an error detected during execution of a function,
             defaults to ``None``
-        :type error_message: Exception or str or None
+        :type error_message: Exception | str | None
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
 
@@ -246,8 +250,9 @@ class _Downloader:
                 print(f"Cancelled.")
 
     @classmethod
-    def get_prepacked_data(cls, meth, data_name='<data_name>', update=False, confirmation_required=True,
-                           verbose=False, cfm_msg_note="", act_msg_note="", act_msg_end=" ... "):
+    def get_prepacked_data(cls, meth, data_name='<data_name>', update=False,
+                           confirmation_required=True, verbose=False, cfm_msg_note="",
+                           act_msg_note="", act_msg_end=" ... "):
         """
         Get auxiliary data (that is to be prepacked in the package).
 
@@ -257,10 +262,11 @@ class _Downloader:
         :type data_name: str
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param cfm_msg_note: additional message for the method
             :meth:`~pydriosm.downloader._Downloader.compose_cfm_msg`, defaults to ``""``
         :type cfm_msg_note: str
@@ -284,7 +290,7 @@ class _Downloader:
         if data_name is None:
             data_name = cls.NAME
 
-        path_to_pickle = _cdd(data_name.replace(" ", "_").lower() + ".pickle")
+        path_to_pickle = _cdd(data_name.replace(" ", "_").lower() + ".pkl")
 
         if os.path.isfile(path_to_pickle) and not update:
             data = load_pickle(path_to_pickle)
@@ -297,8 +303,8 @@ class _Downloader:
 
             if confirmed(cfm_msg, confirmation_required=confirmation_required):
                 cls.print_act_msg(
-                    data_name=data_name, verbose=verbose, confirmation_required=confirmation_required,
-                    note=act_msg_note, end=act_msg_end)
+                    data_name=data_name, verbose=verbose,
+                    confirmation_required=confirmation_required, note=act_msg_note, end=act_msg_end)
 
                 try:
                     data = meth(path_to_pickle, verbose)
@@ -310,7 +316,8 @@ class _Downloader:
 
             else:
                 cls.print_otw_msg(
-                    data_name=data_name, path_to_file=path_to_pickle, verbose=verbose, update=update)
+                    data_name=data_name, path_to_file=path_to_pickle, verbose=verbose,
+                    update=update)
 
         return data
 
@@ -335,7 +342,8 @@ class _Downloader:
         :rtype: str
 
         .. _`pyhelpers.text.find_similar_str()`:
-            https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.text.find_similar_str.html
+            https://pyhelpers.readthedocs.io/en/latest/_generated/
+            pyhelpers.text.find_similar_str.html
 
         **Tests**::
 
@@ -386,7 +394,8 @@ class _Downloader:
                 subrgn_name_ = subregion_name
 
             # kwargs.update({'cutoff': 0.6})
-            subregion_name_ = find_similar_str(subrgn_name_, lookup_list=valid_subregion_names, **kwargs)
+            subregion_name_ = find_similar_str(
+                x=subrgn_name_, lookup_list=valid_subregion_names, **kwargs)
 
             if raise_err:
                 if subregion_name_ is None:
@@ -406,7 +415,8 @@ class _Downloader:
         The validation is done by matching the input to a filename extension available on
         a free download server.
 
-        :param osm_file_format: file format/extension of the data available on a free download server
+        :param osm_file_format: file format/extension of the data
+            available on a free download server
         :type osm_file_format: str
         :param valid_file_formats: fil extensions of the data available on a free download server
         :type valid_file_formats: typing.Iterable
@@ -418,7 +428,8 @@ class _Downloader:
         :rtype: str
 
         .. _`pyhelpers.text.find_similar_str()`:
-            https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.text.find_similar_str.html
+            https://pyhelpers.readthedocs.io/en/latest/_generated/
+            pyhelpers.text.find_similar_str.html
 
         **Tests**::
 
@@ -476,7 +487,7 @@ class _Downloader:
         :param download_url: download URL of a geographic (sub)region
         :type download_url: str
         :return: default sub path
-        :rtype: str or os.PathLike[str]
+        :rtype: str | os.PathLike[str]
 
         **Tests**::
 
@@ -492,7 +503,8 @@ class _Downloader:
         sub_pathname, folder_name = "", "\\" + subregion_name_.lower().replace(" ", "-")
 
         if cls.NAME == 'Geofabrik':
-            sub_pathname = os.path.dirname(urllib.parse.urlparse(download_url).path.replace("/", "\\"))
+            sub_pathname = os.path.dirname(
+                urllib.parse.urlparse(download_url).path.replace("/", "\\"))
 
         sub_pathname += folder_name
 
@@ -501,7 +513,8 @@ class _Downloader:
     @classmethod
     def make_subregion_dirname(cls, subregion_name_):
         """
-        Make the name of the directory one level up from an OSM data file of a geographic (sub)region.
+        Make the name of the directory one level up
+        from an OSM data file of a geographic (sub)region.
 
         :param subregion_name_: validated name of a (sub)region available on a free download server
         :type subregion_name_: str
@@ -521,14 +534,16 @@ class _Downloader:
             'greater-london'
         """
 
-        # Method 1:
-        # sub_dirname = '-'.join(re.findall('[A-Z][^A-Z]*', subregion_name_.replace(' ', ''))).lower()
+        # # Method 1:
+        # sub_dirname = '-'.join(
+        #     re.findall('[A-Z][^A-Z]*', subregion_name_.replace(' ', ''))).lower()
 
-        # Method 2:
+        # # Method 2:
         # sub_dirname = '-'.join(subregion_name_.split()).lower()
 
         # Method 3:
-        sub_dirname = '-'.join([x.strip(string.punctuation) for x in subregion_name_.split()]).lower()
+        sub_dirname = '-'.join(
+            [x.strip(string.punctuation) for x in subregion_name_.split()]).lower()
 
         return sub_dirname
 
@@ -538,8 +553,9 @@ class _Downloader:
         Get a download URL of a geographic (sub)region.
 
         :param subregion_name: name of a (sub)region available on a free download server
-        :type subregion_name: str or None
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :type subregion_name: str | None
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :return: validated subregion name and the corresponding download URL
         :rtype: tuple
@@ -567,12 +583,13 @@ class _Downloader:
 
         :param subregion_name: name of a (sub)region available on a free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
             when ``download_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.BBBike.cdd`
-        :type download_dir: str or None
+        :type download_dir: str | None
         :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_,
             including ``mkdir``(default: ``False``)
         :return: valid subregion name, filename, download url and absolute file path
@@ -600,12 +617,11 @@ class _Downloader:
 
         .. seealso::
 
-            Examples for the methods:
-
-                - :meth:`GeofabrikDownloader.get_valid_download_info()
-                  <pydriosm.downloader.GeofabrikDownloader.get_valid_download_info>`
-                - :meth:`BBBikeDownloader.get_valid_download_info()
-                  <pydriosm.downloader.BBBikeDownloader.get_valid_download_info>`
+            - Examples for the methods:
+              :meth:`GeofabrikDownloader.get_valid_download_info()
+              <pydriosm.downloader.GeofabrikDownloader.get_valid_download_info>` and
+              :meth:`BBBikeDownloader.get_valid_download_info()
+              <pydriosm.downloader.BBBikeDownloader.get_valid_download_info>`.
         """
 
         subregion_name_, download_url = self.get_subregion_download_url(
@@ -637,8 +653,8 @@ class _Downloader:
 
         return subregion_name_, osm_filename, download_url, file_pathname
 
-    def file_exists(self, subregion_name, osm_file_format, data_dir=None, update=False, verbose=True,
-                    ret_file_path=False):
+    def file_exists(self, subregion_name, osm_file_format, data_dir=None, update=False,
+                    verbose=True, ret_file_path=False):
         """
         Check if the data file of a queried geographic (sub)region already exists locally,
         given its default filename.
@@ -650,16 +666,16 @@ class _Downloader:
         :param data_dir: directory where the data file (or files) is (or are) stored,
             defaults to ``None``; when ``data_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader._Downloader.cdd`
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param update: whether to (check and) update the data, defaults to ``False``
         :type update: bool
         :param verbose: whether to print relevant information in console, defaults to ``True``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param ret_file_path: whether to return the pathname of the data file (if it exists),
             defaults to ``False``
         :type ret_file_path: bool
         :return: whether the requested data file exists; or the path to the data file
-        :rtype: bool or str
+        :rtype: bool | str
 
         **Tests**::
 
@@ -709,21 +725,24 @@ class _Downloader:
     def file_exists_and_more(self, subregion_names, osm_file_format, data_dir=None, update=False,
                              confirmation_required=True, verbose=True):
         """
-        Check if a requested data file already exists and compile information for downloading the data.
+        Check if a requested data file already exists and compile information
+        for downloading the data.
 
-        :param subregion_names: name(s) of geographic (sub)region(s) available on a free download server
-        :type subregion_names: str or list
+        :param subregion_names: name(s) of geographic (sub)region(s)
+            available on a free download server
+        :type subregion_names: str | list
         :param osm_file_format: file format of the OSM data available on the free download server
         :type osm_file_format: str
         :param data_dir: directory where the data file (or files) is (or are) stored,
             defaults to ``None``
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param update: whether to (check on and) update the data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``True``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: whether the requested data file exists; or the path to the data file
         :rtype: tuple
 
@@ -782,7 +801,7 @@ class _Downloader:
                 if verbose:
                     osm_filename = os.path.basename(path_to_file)
                     rel_path = os.path.relpath(os.path.dirname(path_to_file))
-                    print("\"{}\" is already available\n\tat \"{}\\\".".format(osm_filename, rel_path))
+                    print(f'"{osm_filename}" is already available\n\tat "{rel_path}\\".')
 
         if not dwnld_list:
             if update:
@@ -801,15 +820,6 @@ class _Downloader:
                 action_ = "download/update the"
                 dwnld_list_ = subrgn_names_.copy()
 
-        # result = {
-        #     'subregion_names': subregion_names_,
-        #     'osm_file_format': file_fmt_,
-        #     'confirmation_required': cfm_req_,
-        #     'update_msg': action_,
-        #     'downloads_list': downloads_list,
-        #     'existing_file_paths': existing_file_paths,
-        # }
-
         return subrgn_names_, file_fmt_, cfm_req_, action_, dwnld_list_, existing_file_paths
 
     def verify_download_dir(self, download_dir, verify_download_dir):
@@ -817,7 +827,7 @@ class _Downloader:
         Verify the pathname of the current download directory.
 
         :param download_dir: directory for saving the downloaded file(s)
-        :type download_dir: str or os.PathLike[str] or None
+        :type download_dir: str | os.PathLike[str] | None
         :param verify_download_dir: whether to verify the pathname of the current download directory
         :type verify_download_dir: bool
 
@@ -852,7 +862,7 @@ class _Downloader:
         :param file_pathname: path where the downloaded OSM data file is saved
         :type file_pathname: str
         :param verbose: whether to print relevant information in console
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param kwargs: optional parameters of `pyhelpers.ops.download_file_from_url()`_
 
         .. _`pyhelpers.ops.download_file_from_url()`:
@@ -905,19 +915,21 @@ class _Downloader:
                 status_msg, prep = "Downloading", "to"
             rel_path = os.path.relpath(os.path.dirname(file_pathname))
 
-            prt_msg = f"{status_msg} \"{os.path.basename(file_pathname)}\"\n\t{prep} \"{rel_path}\\\""
+            prt_msg = \
+                f"{status_msg} \"{os.path.basename(file_pathname)}\"\n\t{prep} \"{rel_path}\\\""
             print(prt_msg, end=" ... \n" if verbose == 2 else " ... ")
 
         try:
             verbose_ = True if verbose == 2 else False
-            download_file_from_url(download_url, path_to_file=file_pathname, verbose=verbose_, **kwargs)
+            download_file_from_url(
+                url=download_url, path_to_file=file_pathname, verbose=verbose_, **kwargs)
 
             if verbose:
                 time.sleep(0.5)
                 print("Done.")
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")
 
         if file_pathname not in self.data_paths:
             self.data_paths.append(file_pathname)
@@ -951,7 +963,7 @@ class GeofabrikDownloader(_Downloader):
         :param download_dir: name or pathname of a directory for saving downloaded data files,
             defaults to ``None``; when ``download_dir=None``, downloaded data files are saved to a
             folder named 'osm_data' under the current working directory
-        :type download_dir: str or os.PathLike[str] or None
+        :type download_dir: str | os.PathLike[str] | None
 
         :ivar set valid_subregion_names: names of (sub)regions available on the free download server
         :ivar set valid_file_formats: filename extensions of the data files available
@@ -961,7 +973,8 @@ class GeofabrikDownloader(_Downloader):
         :ivar list having_no_subregions: all (sub)regions that have no subregions
         :ivar pandas.DataFrame catalogue: a catalogue (index) of all available downloads
             (similar to :py:attr:`~pydriosm.downloader.GeofabrikDownloader.download_index`)
-        :ivar str or None download_dir: name or pathname of a directory for saving downloaded data files
+        :ivar str | None download_dir: name or pathname of a directory
+            for saving downloaded data files
         :ivar list data_pathnames: list of pathnames of all downloaded data files
 
         **Examples**::
@@ -1008,9 +1021,9 @@ class GeofabrikDownloader(_Downloader):
         :param url: URL of a web page of a data resource (e.g. a subregion)
         :type url: str
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: information of raw directory index
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         **Examples**::
 
@@ -1116,9 +1129,9 @@ class GeofabrikDownloader(_Downloader):
         Get the official index of downloads for all available geographic (sub)regions.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: the official index of all downloads
         :rtype: pandas.DataFrame
 
@@ -1177,7 +1190,7 @@ class GeofabrikDownloader(_Downloader):
             print("Done.")
 
         if path_to_pickle:
-            save_pickle(download_index, path_to_pickle=path_to_pickle, verbose=verbose)
+            save_pickle(download_index, path_to_file=path_to_pickle, verbose=verbose)
 
         return download_index
 
@@ -1189,12 +1202,13 @@ class GeofabrikDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: the official index of all downloads
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         **Examples**::
 
@@ -1290,9 +1304,9 @@ class GeofabrikDownloader(_Downloader):
         :param url: URL of a subregion's web page
         :type url: str
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: download information of all available subregions on the given ``url``
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         **Examples**::
 
@@ -1373,11 +1387,9 @@ class GeofabrikDownloader(_Downloader):
                     trs = table_tag.findChildren(name='tr', onmouseover=True)
                     tr_data += [cls._parse_subregion_table_tr(tr=tr, url=url) for tr in trs]
 
-            # Specify column names
-            column_names = ['subregion', 'subregion-url', '.osm.pbf', '.shp.zip', '.osm.bz2']
-            column_names.insert(3, '.osm.pbf-size')
-            # column_names == [
-            #     'subregion', 'subregion-url', '.osm.pbf', '.osm.pbf-size', '.shp.zip', '.osm.bz2']
+            column_names = [  # Specify column names
+                'subregion', 'subregion-url', '.osm.pbf', '.osm.pbf-size', '.shp.zip', '.osm.bz2']
+
             tbl = pd.DataFrame(data=tr_data, columns=column_names)
             table = tbl.where(pd.notnull(tbl), None)
 
@@ -1409,9 +1421,9 @@ class GeofabrikDownloader(_Downloader):
         Get download catalogues for each continent.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: download catalogues for each continent
         :rtype: dict
 
@@ -1438,7 +1450,7 @@ class GeofabrikDownloader(_Downloader):
             print("Done.")
 
         if path_to_pickle:
-            save_pickle(continent_tables, path_to_pickle=path_to_pickle, verbose=verbose)
+            save_pickle(continent_tables, path_to_file=path_to_pickle, verbose=verbose)
 
         return continent_tables
 
@@ -1448,12 +1460,13 @@ class GeofabrikDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: download catalogues for each continent
-        :rtype: dict or None
+        :rtype: dict | None
 
         **Examples**::
 
@@ -1531,7 +1544,8 @@ class GeofabrikDownloader(_Downloader):
         for k, v in subregion_tables.items():
             if isinstance(v, pd.DataFrame):  # and v is not None
                 update_dict(
-                    dictionary=region_subregion_tier, updates={k: set(v['subregion'])}, inplace=True)
+                    dictionary=region_subregion_tier, updates={k: set(v['subregion'])},
+                    inplace=True)
             else:
                 having_no_subregions.append(k)
                 having_subregions.pop(k)
@@ -1544,8 +1558,8 @@ class GeofabrikDownloader(_Downloader):
                     cls.get_subregion_table(url=url) for url in subregion_table['subregion-url']]
                 sub_subregion_tables = dict(zip(subregion_table['subregion'], subregion_tbls))
 
-                region_subregion_tiers_, having_no_subregions_ = cls._compile_region_subregion_tier(
-                    subregion_tables=sub_subregion_tables)
+                region_subregion_tiers_, having_no_subregions_ = \
+                    cls._compile_region_subregion_tier(subregion_tables=sub_subregion_tables)
 
                 having_no_subregions += having_no_subregions_
 
@@ -1561,9 +1575,9 @@ class GeofabrikDownloader(_Downloader):
         Get region-subregion tier.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: region-subregion tier and all that have no subregions
         :rtype: tuple[dict, list]
 
@@ -1590,7 +1604,7 @@ class GeofabrikDownloader(_Downloader):
             print("Done.")
 
         if path_to_pickle:
-            save_pickle((tiers, having_no_subregions), path_to_pickle=path_to_pickle, verbose=verbose)
+            save_pickle((tiers, having_no_subregions), path_to_file=path_to_pickle, verbose=verbose)
 
         return tiers, having_no_subregions
 
@@ -1602,12 +1616,13 @@ class GeofabrikDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: region-subregion tier and all (sub)regions that have no subregions
-        :rtype: tuple[dict, list] or tuple[None, None]
+        :rtype: tuple[dict, list] | tuple[None, None]
 
         **Examples**::
 
@@ -1665,9 +1680,9 @@ class GeofabrikDownloader(_Downloader):
         Get a catalogue (index) of all available downloads.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: a catalogue for all subregion downloads
         :rtype: pandas.DataFrame
 
@@ -1720,7 +1735,8 @@ class GeofabrikDownloader(_Downloader):
         downloads_catalogue.drop_duplicates(inplace=True, ignore_index=True)
 
         temp = (k for k, v in collections.Counter(downloads_catalogue.subregion).items() if v > 1)
-        duplicates = {i: x for k in temp for i, x in enumerate(downloads_catalogue.subregion) if x == k}
+        duplicates = {
+            i: x for k in temp for i, x in enumerate(downloads_catalogue.subregion) if x == k}
 
         for dk in duplicates.keys():
             if os.path.dirname(downloads_catalogue.loc[dk, 'subregion-url']).endswith('us'):
@@ -1730,7 +1746,7 @@ class GeofabrikDownloader(_Downloader):
             print("Done.")
 
         if path_to_pickle:
-            save_pickle(downloads_catalogue, path_to_pickle=path_to_pickle, verbose=verbose)
+            save_pickle(downloads_catalogue, path_to_file=path_to_pickle, verbose=verbose)
 
         return downloads_catalogue
 
@@ -1742,12 +1758,13 @@ class GeofabrikDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: a catalogue for all subregion downloads
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         **Examples**::
 
@@ -1780,7 +1797,8 @@ class GeofabrikDownloader(_Downloader):
         .. note::
 
             - Information of
-              `London\\Enfield <https://download.geofabrik.de/europe/great-britain/england/london/>`_
+              `London\\Enfield
+              <https://download.geofabrik.de/europe/great-britain/england/london/>`_
               is not directly available from the web page of `Greater London
               <https://download.geofabrik.de/europe/great-britain/england/greater-london.html>`_.
             - Two subregions have the same name 'Georgia':
@@ -1808,9 +1826,9 @@ class GeofabrikDownloader(_Downloader):
         Get names of all available geographic (sub)regions.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: names of all geographic (sub)regions available on Geofabrik free download server
         :rtype: set
 
@@ -1820,7 +1838,8 @@ class GeofabrikDownloader(_Downloader):
               :meth:`~pydriosm.downloader.GeofabrikDownloader.get_valid_subregion_names`.
         """
 
-        dwnld_index = self.get_download_index(update=False, confirmation_required=False, verbose=False)
+        dwnld_index = self.get_download_index(
+            update=False, confirmation_required=False, verbose=False)
 
         valid_subregion_names = set(dwnld_index['name'])
 
@@ -1828,7 +1847,7 @@ class GeofabrikDownloader(_Downloader):
             print("Done.")
 
         if path_to_pickle:
-            save_pickle(valid_subregion_names, path_to_pickle=path_to_pickle, verbose=verbose)
+            save_pickle(valid_subregion_names, path_to_file=path_to_pickle, verbose=verbose)
 
         return valid_subregion_names
 
@@ -1838,12 +1857,13 @@ class GeofabrikDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: names of all geographic (sub)regions available on Geofabrik free download server
-        :rtype: set or None
+        :rtype: set | None
 
         **Examples**::
 
@@ -1882,7 +1902,8 @@ class GeofabrikDownloader(_Downloader):
         :rtype: str
 
         .. _`pyhelpers.text.find_similar_str()`:
-            https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.text.find_similar_str.html
+            https://pyhelpers.readthedocs.io/en/latest/_generated/
+            pyhelpers.text.find_similar_str.html
 
         **Examples**::
 
@@ -1921,7 +1942,8 @@ class GeofabrikDownloader(_Downloader):
         :rtype: str
 
         .. _`pyhelpers.text.find_similar_str()`:
-            https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.text.find_similar_str.html
+            https://pyhelpers.readthedocs.io/en/latest/_generated/
+            pyhelpers.text.find_similar_str.html
 
         **Examples**::
 
@@ -1946,20 +1968,22 @@ class GeofabrikDownloader(_Downloader):
 
         return osm_file_format_
 
-    def get_subregion_download_url(self, subregion_name, osm_file_format, update=False, verbose=False):
+    def get_subregion_download_url(self, subregion_name, osm_file_format, update=False,
+                                   verbose=False):
         """
         Get a download URL of a geographic (sub)region.
 
         :param subregion_name: name of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: name and URL of the subregion
-        :rtype: typing.Tuple[str, str or None]
+        :rtype: typing.Tuple[str, str | None]
 
         **Examples**::
 
@@ -2009,12 +2033,13 @@ class GeofabrikDownloader(_Downloader):
 
         :param subregion_name: name of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
         :return: default OSM filename for the ``subregion_name``
-        :rtype: str or None
+        :rtype: str | None
 
         **Examples**::
 
@@ -2095,14 +2120,15 @@ class GeofabrikDownloader(_Downloader):
 
         :param subregion_name: name of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param mkdir: whether to create a directory, defaults to ``False``
         :type mkdir: bool
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: default filename of the subregion and default (absolute) path to the file
         :rtype: typing.Tuple[str, str]
 
@@ -2128,7 +2154,8 @@ class GeofabrikDownloader(_Downloader):
 
         if download_url is None:  # The requested data may not exist
             if verbose:
-                # osm_file_format_ = re.search(r'\.\w{3}\.\w{3}', os.path.basename(download_url)).group()
+                # osm_file_format_ = re.search(
+                #     r'\.\w{3}\.\w{3}', os.path.basename(download_url)).group()
                 osm_file_format_ = self.validate_file_format(osm_file_format=osm_file_format)
                 print(f"No {osm_file_format_} data is available to download for {subregion_name_}.")
             default_pathname, default_filename = None, None
@@ -2146,7 +2173,8 @@ class GeofabrikDownloader(_Downloader):
         :param subregion_name: name of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
         :param region_subregion_tier: region-subregion tier, defaults to ``None``;
-            when ``region_subregion_tier=None``, it defaults to the dictionary returned by the method
+            when ``region_subregion_tier=None``,
+            it defaults to the dictionary returned by the method
             :meth:`~pydriosm.downloader.GeofabrikDownloader.get_region_subregion_tier`
         :type region_subregion_tier: dict
         :return: name(s) of subregion(s) of the given geographic (sub)region
@@ -2194,7 +2222,7 @@ class GeofabrikDownloader(_Downloader):
 
         :param subregion_name: name of a (sub)region, or names of (sub)regions,
             available on Geofabrik free download server
-        :type subregion_name: str or None
+        :type subregion_name: str | None
         :param deep: whether to get subregion names of the subregions, defaults to ``False``
         :type deep: bool
         :return: name(s) of subregion(s) of the given geographic (sub)region or (sub)regions;
@@ -2259,7 +2287,8 @@ class GeofabrikDownloader(_Downloader):
 
         return subregion_names
 
-    def specify_sub_download_dir(self, subregion_name, osm_file_format, download_dir=None, **kwargs):
+    def specify_sub_download_dir(self, subregion_name, osm_file_format, download_dir=None,
+                                 **kwargs):
         """
         Specify a directory for downloading data of all subregions of a geographic (sub)region.
 
@@ -2268,12 +2297,13 @@ class GeofabrikDownloader(_Downloader):
 
         :param subregion_name: name of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
             when ``download_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
-        :type download_dir: str or None
+        :type download_dir: str | None
         :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_,
             including ``mkdir``(default: ``False``)
         :return: pathname of a download directory
@@ -2328,7 +2358,8 @@ class GeofabrikDownloader(_Downloader):
 
         else:
             file_pathname, filename = pathname_and_filename
-            sub_path, sub_dir = os.path.dirname(file_pathname), re.sub(r"[. ]", "-", filename).lower()
+            sub_path = os.path.dirname(file_pathname)
+            sub_dir = re.sub(r"[. ]", "-", filename).lower()
 
         if download_dir is None:
             if sub_path + "\\" + sub_dir in self.download_dir:
@@ -2350,12 +2381,13 @@ class GeofabrikDownloader(_Downloader):
         :param subregion_name: name of a (sub)region available on
             GeofabrikDownloader free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
             when ``download_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
-        :type download_dir: str or None
+        :type download_dir: str | None
         :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_,
             including ``mkdir``(default: ``False``)
         :return: valid subregion name, filename, download url and absolute file path
@@ -2405,35 +2437,37 @@ class GeofabrikDownloader(_Downloader):
             'tests\\osm_data\\europe\\great-britain\\england\\greater-london'
         """
 
-        subregion_name_, osm_filename, download_url, file_pathname = super().get_valid_download_info(
-            subregion_name=subregion_name, osm_file_format=osm_file_format,
-            download_dir=download_dir, **kwargs)
+        subregion_name_, osm_filename, download_url, file_pathname = \
+            super().get_valid_download_info(
+                subregion_name=subregion_name, osm_file_format=osm_file_format,
+                download_dir=download_dir, **kwargs)
 
         return subregion_name_, osm_filename, download_url, file_pathname
 
-    def file_exists(self, subregion_name, osm_file_format, data_dir=None, update=False, verbose=False,
-                    ret_file_path=False):
+    def file_exists(self, subregion_name, osm_file_format, data_dir=None, update=False,
+                    verbose=False, ret_file_path=False):
         """
         Check whether a data file of a geographic (sub)region already exists locally,
         given its default filename.
 
         :param subregion_name: name of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param data_dir: directory where the data file (or files) is (or are) stored,
             defaults to ``None``; when ``data_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param update: whether to (check and) update the data, defaults to ``False``
         :type update: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param ret_file_path: whether to return the path to the data file (if it exists),
             defaults to ``False``
         :type ret_file_path: bool
         :return: whether the requested data file exists; or the path to the data file
-        :rtype: bool or str
+        :rtype: bool | str
 
         **Examples**::
 
@@ -2492,34 +2526,37 @@ class GeofabrikDownloader(_Downloader):
         Download OSM data (in a specific format) of one (or multiple) geographic (sub)region(s).
 
         :param subregion_names: name of a geographic (sub)region
-            (or names of multiple geographic (sub)regions) available on Geofabrik free download server
-        :type subregion_names: str or list
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+            (or names of multiple geographic (sub)regions)
+            available on Geofabrik free download server
+        :type subregion_names: str | list
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
             when ``download_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
-        :type download_dir: str or None
+        :type download_dir: str | None
         :param update: whether to update the data if it already exists, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param deep_retry: whether to further check availability of sub-subregions data,
             defaults to ``False``
         :type deep_retry: bool
         :param interval: interval (in sec) between downloading two subregions, defaults to ``None``
-        :type interval: int or float or None
-        :param verify_download_dir: whether to verify the pathname of the current download directory,
-            defaults to ``True``
+        :type interval: int | float | None
+        :param verify_download_dir: whether to verify the pathname of
+            the current download directory, defaults to ``True``
         :type verify_download_dir: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param ret_download_path: whether to return the path(s) to the downloaded file(s),
             defaults to ``False``
         :type ret_download_path: bool
         :param kwargs: optional parameters of `pyhelpers.ops.download_file_from_url()`_
         :return: absolute path(s) to downloaded file(s) when ``ret_download_path`` is ``True``
-        :rtype: list or str
+        :rtype: list | str
 
         .. _`pyhelpers.ops.download_file_from_url()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/
@@ -2677,7 +2714,8 @@ class GeofabrikDownloader(_Downloader):
                 # subregion_name_, download_url = self.get_subregion_download_url(
                 #     subregion_name=subrgn_name_, osm_file_format=file_fmt_)
                 subregion_name_, _, download_url, file_pathname = self.get_valid_download_info(
-                    subregion_name=subrgn_name_, osm_file_format=file_fmt_, download_dir=download_dir)
+                    subregion_name=subrgn_name_, osm_file_format=file_fmt_,
+                    download_dir=download_dir)
 
                 if download_url is None:
                     if verbose:
@@ -2716,7 +2754,8 @@ class GeofabrikDownloader(_Downloader):
                 if isinstance(interval, (int, float)):
                     time.sleep(interval)
 
-            self.verify_download_dir(download_dir=download_dir, verify_download_dir=verify_download_dir)
+            self.verify_download_dir(
+                download_dir=download_dir, verify_download_dir=verify_download_dir)
 
         else:
             print("Cancelled.")
@@ -2728,8 +2767,8 @@ class GeofabrikDownloader(_Downloader):
         if ret_download_path:
             return download_paths
 
-    def download_subregion_data(self, subregion_names, osm_file_format, download_dir=None, deep=False,
-                                ret_download_path=False, **kwargs):
+    def download_subregion_data(self, subregion_names, osm_file_format, download_dir=None,
+                                deep=False, ret_download_path=False, **kwargs):
         """
         Download OSM data (in a specific file format) of all subregions (if available) for
         one (or multiple) geographic (sub)region(s).
@@ -2738,14 +2777,16 @@ class GeofabrikDownloader(_Downloader):
         then the data of ``subregion_names`` would be downloaded only.
 
         :param subregion_names: name of a geographic (sub)region
-            (or names of multiple geographic (sub)regions) available on Geofabrik free download server
-        :type subregion_names: str or list
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+            (or names of multiple geographic (sub)regions)
+            available on Geofabrik free download server
+        :type subregion_names: str | list
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
             when ``download_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
-        :type download_dir: str or None
+        :type download_dir: str | None
         :param deep: whether to try to search for subregions of subregion(s), defaults to ``False``
         :type deep: bool
         :param ret_download_path: whether to return the path(s) to the downloaded file(s),
@@ -2753,7 +2794,7 @@ class GeofabrikDownloader(_Downloader):
         :type ret_download_path: bool
         :param kwargs: optional parameters of `pydriosm.GeofabrikDownloader.download_osm_data()`_
         :return: the path(s) to the downloaded file(s) when ``ret_download_path=True``
-        :rtype: list or str
+        :rtype: list | str
 
         .. _`pydriosm.GeofabrikDownloader.download_osm_data()`:
             https://pydriosm.readthedocs.io/en/latest/
@@ -2882,7 +2923,10 @@ class GeofabrikDownloader(_Downloader):
             Deleting "tests\\osm_data\\" ... Done.
         """
 
-        sr_names_ = [subregion_names] if isinstance(subregion_names, str) else subregion_names.copy()
+        if isinstance(subregion_names, str):
+            sr_names_ = [subregion_names]
+        else:
+            sr_names_ = subregion_names.copy()
         sr_names_ = [self.validate_subregion_name(x) for x in sr_names_]
         subregion_names_ = self.get_subregions(*sr_names_, deep=deep)
 
@@ -2938,16 +2982,17 @@ class BBBikeDownloader(_Downloader):
         :param download_dir: (a path or a name of) a directory for saving downloaded data files;
             if ``download_dir=None`` (default), the downloaded data files are saved into a folder
             named ``'osm_data'`` under the current working directory
-        :type download_dir: str or None
+        :type download_dir: str | None
 
         :ivar set valid_subregion_names: names of (sub)regions available on
             BBBike free download server
         :ivar set valid_file_formats: filename extensions of the data files available on
             BBBike free download server
-        :ivar pandas.DataFrame subregion_index: index of download pages for all available (sub)regions
+        :ivar pandas.DataFrame subregion_index: index of download pages
+            for all available (sub)regions
         :ivar pandas.DataFrame catalogue: a catalogue (index) of all available BBBike downloads
-        :ivar str or None download_dir: name or pathname of a directory for saving downloaded data files
-            (in accordance with the parameter ``download_dir``)
+        :ivar str | None download_dir: name or pathname of a directory
+            for saving downloaded data files (in accordance with the parameter ``download_dir``)
         :ivar list data_pathnames: list of pathnames of all downloaded data files
 
         **Examples**::
@@ -2988,9 +3033,9 @@ class BBBikeDownloader(_Downloader):
         Get the names of all the available cities.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: list of names of cities available on BBBike free download server
         :rtype: list
 
@@ -3006,7 +3051,7 @@ class BBBikeDownloader(_Downloader):
         if verbose:
             print("Done.")
 
-        save_pickle(names_of_cities, path_to_pickle=path_to_pickle, verbose=verbose)
+        save_pickle(names_of_cities, path_to_file=path_to_pickle, verbose=verbose)
 
         return names_of_cities
 
@@ -3020,12 +3065,13 @@ class BBBikeDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: list of names of cities available on BBBike free download server
-        :rtype: list or None
+        :rtype: list | None
 
         **Examples**::
 
@@ -3053,9 +3099,9 @@ class BBBikeDownloader(_Downloader):
         Get location information of all cities available on the download server.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: location information of BBBike cities, i.e. geographic (sub)regions
         :rtype: pandas.DataFrame
 
@@ -3105,12 +3151,13 @@ class BBBikeDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: location information of BBBike cities, i.e. geographic (sub)regions
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         **Examples**::
 
@@ -3162,9 +3209,9 @@ class BBBikeDownloader(_Downloader):
         Get a catalogue for geographic (sub)regions.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: catalogue for subregions of BBBike data
         :rtype: pandas.DataFrame
 
@@ -3192,14 +3239,10 @@ class BBBikeDownloader(_Downloader):
 
         subregion_index = dat.copy()
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=FutureWarning)
-            warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-            subregion_index['name'] = subregion_index['name'].map(lambda x: x.rstrip('/'))
-            subregion_index['last_modified'] = pd.to_datetime(subregion_index['last_modified'])
-            subregion_index['url'] = [
-                urllib.parse.urljoin(cls.URL, x.get('href')) for x in soup.find_all('a')[1:]]
+        subregion_index['name'] = subregion_index['name'].map(lambda x: x.rstrip('/').strip())
+        subregion_index['last_modified'] = pd.to_datetime(subregion_index['last_modified'])
+        subregion_index['url'] = [
+            urllib.parse.urljoin(cls.URL, x.get('href')) for x in soup.find_all('a')[1:]]
 
         if verbose:
             print("Done.")
@@ -3215,12 +3258,13 @@ class BBBikeDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: catalogue for subregions of BBBike data
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         **Examples**::
 
@@ -3251,9 +3295,9 @@ class BBBikeDownloader(_Downloader):
         Get a list of names of all geographic (sub)regions.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: a list of geographic (sub)region names available on BBBike free download server
         :rtype: list
         """
@@ -3265,7 +3309,7 @@ class BBBikeDownloader(_Downloader):
         if verbose:
             print("Done.")
 
-        save_pickle(subregion_names, path_to_pickle=path_to_pickle, verbose=verbose)
+        save_pickle(subregion_names, path_to_file=path_to_pickle, verbose=verbose)
 
         return subregion_names
 
@@ -3279,12 +3323,13 @@ class BBBikeDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: a list of geographic (sub)region names available on BBBike free download server
-        :rtype: list or None
+        :rtype: list | None
 
         **Examples**::
 
@@ -3380,12 +3425,13 @@ class BBBikeDownloader(_Downloader):
 
         :param subregion_name: name of a (sub)region available on BBBike free download server
         :type subregion_name: str
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: a catalogues for subregion downloads
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         **Examples**::
 
@@ -3410,7 +3456,7 @@ class BBBikeDownloader(_Downloader):
 
         dat_name = f"a download catalogue for \"{subregion_name_}\""
 
-        if confirmed(f"To compile data of {dat_name}\n?", confirmation_required=confirmation_required):
+        if confirmed(f"To compile data of {dat_name}\n?", confirmation_required):
             if verbose:
                 if confirmation_required:
                     status_msg = "Compiling the data"
@@ -3429,20 +3475,18 @@ class BBBikeDownloader(_Downloader):
                 with requests.get(url=url, headers=fake_requests_headers()) as response:
                     soup = bs4_.BeautifulSoup(markup=response.content, features='html.parser')
 
-                download_link_a_tags = soup.find_all('a', attrs={'class': ['download_link', 'small']})
+                download_link_a_tags = soup.find_all(
+                    'a', attrs={'class': ['download_link', 'small']})
 
                 download_catalogue = pd.DataFrame(
                     self._parse_download_link_a_tags(x=x, url=url) for x in download_link_a_tags)
                 download_catalogue.columns = ['filename', 'url', 'data_type', 'size', 'last_update']
 
-                # file_path = cd_dat_bbbike(
-                #     subregion_name_, subregion_name_ + "-download-catalogue.pickle")
-                # save_pickle(download_catalogue, file_path, verbose=verbose)
                 if verbose:
                     print("Done.")
 
             except Exception as e:
-                print(f"Failed. {e}")
+                print(f"Failed. {_format_err_msg(e)}")
                 download_catalogue = None
 
             return download_catalogue
@@ -3452,9 +3496,9 @@ class BBBikeDownloader(_Downloader):
         Get a dict-type index of available formats, data types and a download catalogue.
 
         :param path_to_pickle: pathname of the prepacked pickle file, defaults to ``None``
-        :type path_to_pickle: str or os.PathLike[str] or None
+        :type path_to_pickle: str | os.PathLike[str] | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: a list of available formats, a list of available data types and
             a dictionary of download catalogue
         :rtype: dict
@@ -3478,7 +3522,8 @@ class BBBikeDownloader(_Downloader):
         subrgn_catalog = download_catalogue[0]
 
         # Available file formats
-        file_fmt = [re.sub('{}|CHECKSUM'.format(subrgn_name), '', f) for f in subrgn_catalog['filename']]
+        file_fmt = [
+            re.sub('{}|CHECKSUM'.format(subrgn_name), '', f) for f in subrgn_catalog['filename']]
 
         # Available data types
         data_typ = subrgn_catalog['data_type'].to_list()
@@ -3494,7 +3539,7 @@ class BBBikeDownloader(_Downloader):
         elif verbose == 2:
             print("All done.")
 
-        save_pickle(download_index, path_to_pickle=path_to_pickle, verbose=verbose)
+        save_pickle(download_index, path_to_file=path_to_pickle, verbose=verbose)
 
         return download_index
 
@@ -3504,13 +3549,14 @@ class BBBikeDownloader(_Downloader):
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: a list of available formats, a list of available data types and
             a dictionary of download catalogue
-        :rtype: dict or None
+        :rtype: dict | None
 
         **Examples**::
 
@@ -3583,9 +3629,11 @@ class BBBikeDownloader(_Downloader):
 
         :param subregion_name: name of a (sub)region available on BBBike free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
-        :return: a valid name of ``subregion_name`` and a download URL for the given ``osm_file_format``
+        :return: a valid name of ``subregion_name`` and
+            a download URL for the given ``osm_file_format``
         :rtype: tuple
 
         **Examples**::
@@ -3632,13 +3680,14 @@ class BBBikeDownloader(_Downloader):
 
         :param subregion_name: name of a (sub)region available on BBBike free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method :meth:`~pydriosm.downloader.BBBike.cdd`
-        :type download_dir: str or None
-        :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_,
-            including ``mkdir``(default: ``False``)
+            when ``download_dir=None``,
+            it refers to the method :meth:`~pydriosm.downloader.BBBike.cdd`
+        :type download_dir: str | None
+        :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_, including ``mkdir``
         :return: valid subregion name, filename, download url and absolute file path
         :rtype: tuple
 
@@ -3676,35 +3725,37 @@ class BBBikeDownloader(_Downloader):
             'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
         """
 
-        subregion_name_, osm_filename, download_url, file_pathname = super().get_valid_download_info(
-            subregion_name=subregion_name, osm_file_format=osm_file_format,
-            download_dir=download_dir, **kwargs)
+        subregion_name_, osm_filename, download_url, file_pathname = \
+            super().get_valid_download_info(
+                subregion_name=subregion_name, osm_file_format=osm_file_format,
+                download_dir=download_dir, **kwargs)
 
         return subregion_name_, osm_filename, download_url, file_pathname
 
-    def file_exists(self, subregion_name, osm_file_format, data_dir=None, update=False, verbose=False,
-                    ret_file_path=False):
+    def file_exists(self, subregion_name, osm_file_format, data_dir=None, update=False,
+                    verbose=False, ret_file_path=False):
         """
         Check if a requested data file of a geographic (sub)region already exists locally,
         given its default filename.
 
         :param subregion_name: name of a (sub)region available on BBBike free download server
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param data_dir: directory where the data file (or files) is (or are) stored,
             defaults to ``None``; when ``data_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.BBBike.cdd`
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param update: whether to (check and) update the data, defaults to ``False``
         :type update: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param ret_file_path: whether to return the path to the data file (if it exists),
             defaults to ``False``
         :type ret_file_path: bool
         :return: whether the requested data file exists; or the path to the data file
-        :rtype: bool or str
+        :rtype: bool | str
 
         **Examples**::
 
@@ -3768,24 +3819,26 @@ class BBBikeDownloader(_Downloader):
         :param subregion_name: name of a (sub)region available on BBBike free download server
         :type subregion_name: str
         :param download_dir: directory where the downloaded file is saved, defaults to ``None``
-        :type download_dir: str or None
+        :type download_dir: str | None
         :param update: whether to update the data if it already exists, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
-        :type confirmation_required: bool
-        :param interval: interval (in second) between downloading two subregions, defaults to ``None``
-        :type interval: int or float or None
-        :param verify_download_dir: whether to verify the pathname of the current download directory,
+        :param confirmation_required: whether asking for confirmation to proceed,
             defaults to ``True``
+        :type confirmation_required: bool
+        :param interval: interval (in second) between downloading two subregions,
+            defaults to ``None``
+        :type interval: int | float | None
+        :param verify_download_dir: whether to verify the pathname of the
+            current download directory, defaults to ``True``
         :type verify_download_dir: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param ret_download_path: whether to return the path(s) to the downloaded file(s),
             defaults to ``False``
         :type ret_download_path: bool
         :param kwargs: optional parameters of `pyhelpers.ops.download_file_from_url()`_
         :return: the path(s) to the downloaded file(s) when ``ret_download_path`` is ``True``
-        :rtype: list or str
+        :rtype: list | str
 
         .. _`pyhelpers.ops.download_file_from_url()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/
@@ -3899,7 +3952,10 @@ class BBBikeDownloader(_Downloader):
 
         if confirmed(f"To download {cfm_dat}\n?", confirmation_required=confirmation_required):
             if verbose:
-                print("Downloading: ") if confirmation_required else print(f"Downloading {cfm_dat}: ")
+                if confirmation_required:
+                    print("Downloading: ")
+                else:
+                    print(f"Downloading {cfm_dat}: ")
 
             download_paths = []
 
@@ -3930,7 +3986,7 @@ class BBBikeDownloader(_Downloader):
                         download_paths.append(path_to_file)
 
                 except Exception as e:
-                    print(f"Failed. {e}")
+                    print(f"Failed. {_format_err_msg(e)}")
 
             if verbose and len(download_paths) > 1:
                 rel_path = os.path.relpath(os.path.commonpath(download_paths))
@@ -3939,7 +3995,8 @@ class BBBikeDownloader(_Downloader):
 
                 print("Check out the downloaded OSM data at \"{}\\\".".format(rel_path))
 
-            self.data_paths = list(collections.OrderedDict.fromkeys(self.data_paths + download_paths))
+            self.data_paths = list(
+                collections.OrderedDict.fromkeys(self.data_paths + download_paths))
 
             if ret_download_path:
                 return download_paths
@@ -3956,29 +4013,32 @@ class BBBikeDownloader(_Downloader):
 
         :param subregion_names: name of a geographic (sub)region
             (or names of multiple geographic (sub)regions) available on BBBike free download server
-        :type subregion_names: str or list
-        :param osm_file_format: file format/extension of the OSM data available on the download server
+        :type subregion_names: str | list
+        :param osm_file_format: file format/extension of the OSM data
+            available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
             when ``download_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.BBBike.cdd`
-        :type download_dir: str or None
+        :type download_dir: str | None
         :param update: whether to update the data if it already exists, defaults to ``False``
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed, defaults to ``True``
-        :type confirmation_required: bool
-        :param interval: interval (in second) between downloading two subregions, defaults to ``None``
-        :type interval: int or float or None
-        :param verify_download_dir: whether to verify the pathname of the current download directory,
+        :param confirmation_required: whether asking for confirmation to proceed,
             defaults to ``True``
+        :type confirmation_required: bool
+        :param interval: interval (in second) between downloading two subregions,
+            defaults to ``None``
+        :type interval: int | float | None
+        :param verify_download_dir: whether to verify the pathname of the current
+            download directory, defaults to ``True``
         :type verify_download_dir: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param ret_download_path: whether to return the path(s) to the downloaded file(s),
             defaults to ``False``
         :type ret_download_path: bool
         :return: the path(s) to the downloaded file(s) when ``ret_download_path`` is ``True``
-        :rtype: list or str
+        :rtype: list | str
 
         **Examples**::
 
@@ -4075,7 +4135,8 @@ class BBBikeDownloader(_Downloader):
                     # or os.path.getsize(path_to_file) / (1024 ** 2) <= 5:
                     time.sleep(interval)
 
-            self.verify_download_dir(download_dir=download_dir, verify_download_dir=verify_download_dir)
+            self.verify_download_dir(
+                download_dir=download_dir, verify_download_dir=verify_download_dir)
 
         else:
             print("Cancelled.")
