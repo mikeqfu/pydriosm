@@ -1,4 +1,6 @@
-"""Define custom errors/exceptions."""
+"""
+Define custom errors/exceptions.
+"""
 
 
 class InvalidSubregionNameError(Exception):
@@ -11,10 +13,10 @@ class InvalidSubregionNameError(Exception):
         :param subregion_name: name of a (sub)region available on a free download server
         :type subregion_name: str
         :param msg: index of optional messages, defaults to ``None``; options include {1, 2}
-        :type msg: int or None
+        :type msg: int | None
 
         :ivar: str subregion_name: name of a (sub)region available on a free download server
-        :ivar: int or None msg: index of optional messages; options include {1, 2}
+        :ivar: int | None msg: index of optional messages; options include {1, 2}
         :ivar: str: error message
 
         **Examples**::
@@ -53,7 +55,8 @@ class InvalidSubregionNameError(Exception):
 
         if self.msg == 1:
             self.message = \
-                "\t1) `subregion_name` fails to match any in `<downloader>.valid_subregion_names`; " \
+                "\t1) `subregion_name` fails to match any in " \
+                "`<downloader>.valid_subregion_names`; " \
                 "or\n" \
                 "\t2) The queried (sub)region is not available on the free download server."
         else:
@@ -78,10 +81,11 @@ class InvalidFileFormatError(Exception):
         :type osm_file_format: str
         :param valid_file_formats: filename extensions of the data files available on
             the free download server, defaults to ``None``
-        :type valid_file_formats: typing.Iterable or None
+        :type valid_file_formats: typing.Iterable | None
 
-        :ivar: str osm_file_format: file format/extension of the OSM data on the free download server
-        :ivar: int or None message: error message
+        :ivar: str osm_file_format: file format/extension of the OSM data
+            available on the free download server
+        :ivar: int | None message: error message
 
         **Examples**::
 
@@ -132,9 +136,10 @@ class OtherTagsReformatError(Exception):
     def __init__(self, other_tags):
         """
         :param other_tags: data of ``'other_tags'`` of a single feature in a PBF data file
-        :type other_tags: str or None
+        :type other_tags: str | None
 
-        :ivar str or None other_tags: data of ``'other_tags'`` of a single feature in a PBF data file
+        :ivar str | None other_tags: data of ``'other_tags'`` of a single feature
+            in a PBF data file
         :ivar str message: error message
 
         **Examples**::

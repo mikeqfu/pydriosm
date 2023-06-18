@@ -1,4 +1,6 @@
-"""Update (prepacked) package data."""
+"""
+Update (prepacked) package data.
+"""
 
 import time
 
@@ -12,10 +14,10 @@ def _update_prepacked_data(verbose=True, interval=5):
     Update prepacked data used by the downloader classes.
 
     :param verbose: whether to print relevant information in console, defaults to ``True``
-    :type verbose: bool or int
+    :type verbose: bool | int
     :param interval: time gap (in seconds) between the updating of different classes,
         defaults to ``5`` (seconds)
-    :type interval: int or float
+    :type interval: int | float
 
     **Examples**::
 

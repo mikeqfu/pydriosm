@@ -1,10 +1,12 @@
-"""Provide various helper functions for use across the package."""
+"""
+Provide various helper functions for use across the package.
+"""
 
+import importlib.resources
 import os
 import shutil
 
-import pkg_resources
-from pyhelpers._cache import _check_dependency
+from pyhelpers._cache import _check_dependency, _format_err_msg
 from pyhelpers.dirs import cd
 
 
@@ -18,9 +20,9 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
     Specify (or change to) a directory (or any subdirectories) for backup data of the package.
 
     :param sub_dir: [optional] name of a directory; names of directories (and/or a filename)
-    :type sub_dir: str or os.PathLike[str]
+    :type sub_dir: str | os.PathLike[str]
     :param data_dir: name of a directory to store data, defaults to ``"data"``
-    :type data_dir: str or os.PathLike[str]
+    :type data_dir: str | os.PathLike[str]
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
     :param kwargs: [optional] parameters (e.g. ``mode=0o777``) of `os.makedirs`_
@@ -39,7 +41,7 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
         'pydriosm\\data'
     """
 
-    pathname = pkg_resources.resource_filename(__name__, data_dir)
+    pathname = importlib.resources.files(__package__).joinpath(data_dir)
     for x in sub_dir:
         pathname = os.path.join(pathname, x)
 
@@ -58,7 +60,7 @@ def cdd_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
     Change directory to ``osm_geofabrik\\`` and its subdirectories within a package.
 
     :param sub_dir: name of directory; names of directories (and/or a filename)
-    :type sub_dir: str or typing.PathLike
+    :type sub_dir: str | os.PathLike
     :param mkdir: whether to create a directory, defaults to ``False``
     :type mkdir: bool
     :param default_dir: default folder name of the root directory for downloading data from Geofabrik,
@@ -66,7 +68,7 @@ def cdd_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
     :type default_dir: str
     :param kwargs: [optional] parameters of `pyhelpers.dir.cd()`_
     :return: an absolute path to a directory (or a file) under ``data_dir``
-    :rtype: str or typing.PathLike
+    :rtype: str | os.PathLike
 
     .. _`pyhelpers.dir.cd()`:
         https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dir.cd.html
@@ -159,9 +161,9 @@ def check_json_engine(engine=None):
     :param engine: name of a module for loading JSON data;
         when ``engine=None`` (default), use the built-in
         `json <https://docs.python.org/3/library/json.html>`_ module;
-    :type engine: str or None
+    :type engine: str | None
     :return: the module for loading JSON data
-    :type: types.ModuleType or None
+    :type: types.ModuleType | None
 
     **Examples**::
 
@@ -241,4 +243,4 @@ def remove_osm_file(path_to_file, verbose=True):
                     print("Done.")
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")

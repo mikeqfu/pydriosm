@@ -1,4 +1,6 @@
-"""Read the `OSM <https://www.openstreetmap.org/>`_ data extracts in various file formats."""
+"""
+Read the `OSM <https://www.openstreetmap.org/>`_ data extracts in various file formats.
+"""
 
 import collections
 import copy
@@ -9,14 +11,13 @@ import multiprocessing
 import os
 import re
 import shutil
-import warnings
 import zipfile
 
 import pandas as pd
 import shapefile as pyshp
 import shapely.errors
 import shapely.geometry
-from pyhelpers._cache import _check_dependency
+from pyhelpers._cache import _check_dependency, _format_err_msg
 from pyhelpers.dirs import cd, validate_dir
 from pyhelpers.ops import get_number_of_chunks, split_list, update_dict
 from pyhelpers.settings import gdal_configurations
@@ -101,12 +102,12 @@ class Transformer:
 
         :param geometry: geometry data for a feature of one of the geometry types including
             ``'Point'``, ``'LineString'``, ``'MultiLineString'`` and ``'MultiPolygon'``
-        :type geometry: dict or pandas.DataFrame
+        :type geometry: dict | pandas.DataFrame
         :param mode: indicate the way of parsing the input;
 
-            - when ``mode=1`` **(default)**, the input ``geometry`` should be directly accessible and
-              would be in the format of ``{'type': <shape type>, 'coordinates': <coordinates>}`` or
-              as a row of a `pandas.DataFrame`_;
+            - when ``mode=1`` **(default)**, the input ``geometry`` should be directly accessible
+              and would be in the format of ``{'type': <shape type>, 'coordinates': <coordinates>}``
+              or as a row of a `pandas.DataFrame`_;
             - when ``mode=2``, the input ``geometry`` is in the `GeoJSON`_ format
 
         :type mode: int
@@ -114,11 +115,14 @@ class Transformer:
             defaults to ``False``
         :type to_wkt: bool
         :return: reformatted geometry data
-        :rtype: shapely.geometry.Point or dict or str
+        :rtype: shapely.geometry.Point | dict | str
 
-        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`pandas.DataFrame`: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html
-        .. _`GeoJSON`: https://geojson.org/
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`pandas.DataFrame`:
+            https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html
+        .. _`GeoJSON`:
+            https://geojson.org/
 
         **Examples**::
 
@@ -178,8 +182,8 @@ class Transformer:
 
         else:
             geom_data = geometry.copy()
-            geom_data.update(
-                {'geometry': cls.transform_unitary_geometry(geometry['geometry'], mode=1, to_wkt=True)})
+            dat = cls.transform_unitary_geometry(geometry['geometry'], mode=1, to_wkt=True)
+            geom_data.update({'geometry': dat})
 
         return geom_data
 
@@ -189,12 +193,12 @@ class Transformer:
         Transform a collection of geometry from dict into a `shapely.geometry`_ object.
 
         :param geometry: geometry data for a feature of ``GeometryCollection``
-        :type geometry: list or dict
+        :type geometry: list | dict
         :param mode: indicate the way of parsing the input;
 
-            - when ``mode=1`` **(default)**, the input ``geometry`` should be directly accessible and
-              would be in the format of ``{'type': <shape type>, 'coordinates': <coordinates>}`` or
-              as a row of a `pandas.DataFrame`_;
+            - when ``mode=1`` **(default)**, the input ``geometry`` should be directly accessible
+              and would be in the format of ``{'type': <shape type>, 'coordinates': <coordinates>}``
+              or as a row of a `pandas.DataFrame`_;
             - when ``mode=2``, the input ``geometry`` is in the `GeoJSON`_ format
 
         :type mode: int
@@ -202,11 +206,14 @@ class Transformer:
             defaults to ``False``
         :type to_wkt: bool
         :return: reformatted geometry data
-        :rtype: shapely.geometry.base.HeterogeneousGeometrySequence or dict or str
+        :rtype: shapely.geometry.base.HeterogeneousGeometrySequence | dict | str
 
-        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`pandas.DataFrame`: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html
-        .. _`GeoJSON`: https://geojson.org/
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`pandas.DataFrame`:
+            https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html
+        .. _`GeoJSON`:
+            https://geojson.org/
 
         **Examples**::
 
@@ -283,11 +290,11 @@ class Transformer:
         object.
 
         :param layer_data: dataframe of a specific layer of PBF data
-        :type layer_data: pandas.DataFrame or pandas.Series
+        :type layer_data: pandas.DataFrame | pandas.Series
         :param layer_name: name (geometric type) of the PBF layer
         :type layer_name: str
         :return: (OSM feature with) reformatted geometry field
-        :rtype: pandas.DataFrame or pandas.Series
+        :rtype: pandas.DataFrame | pandas.Series
 
         **Examples**::
 
@@ -352,9 +359,9 @@ class Transformer:
         Reformat a ``'other_tags'`` from string into dictionary type.
 
         :param other_tags: data of ``'other_tags'`` of a single feature in a PBF data file
-        :type other_tags: str or None
+        :type other_tags: str | None
         :return: reformatted data of ``'other_tags'``
-        :rtype: dict or None
+        :rtype: dict | None
 
         **Examples**::
 
@@ -375,7 +382,8 @@ class Transformer:
             try:
                 fltr = (re.split(r'"=>"?', x, maxsplit=1) for x in filter(None, tags))
             except OtherTagsReformatError:
-                fltr = filter(lambda x: len(x) == 2, (re.split(r'"=>"?', x) for x in filter(None, tags)))
+                fltr = filter(
+                    lambda x: len(x) == 2, (re.split(r'"=>"?', x) for x in filter(None, tags)))
             other_tags_ = {k: v.replace('<br>', ' ') for k, v in fltr}
 
         else:  # e.g. the data of 'other_tags' is None
@@ -483,8 +491,7 @@ class PBFReadParse(Transformer):
     def get_pbf_layer_geom_types(cls, shape_name=False):
         """
         A dictionary cross-referencing the names of PBF layers and their corresponding
-        `geometric objects <https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects>`_
-        defined in `Shapely <https://pypi.org/project/Shapely/>`_, or names.
+        `geometric objects`_ defined in `Shapely`_, or names.
 
         :param shape_name: whether to return the names of geometry shapes, defaults to ``False``
         :type shape_name: bool
@@ -492,8 +499,10 @@ class PBFReadParse(Transformer):
             PBF layers and their corresponding `geometric objects`_ defined in `Shapely`_
         :rtype: dict
 
-        .. _`geometric objects`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`Shapely`: https://pypi.org/project/Shapely/
+        .. _`geometric objects`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`Shapely`:
+            https://pypi.org/project/Shapely/
 
         **Examples**::
 
@@ -527,9 +536,9 @@ class PBFReadParse(Transformer):
         Get names (and indices) of all available layers in a PBF data file.
 
         :param pbf_pathname: path to a PBF data file
-        :type pbf_pathname: str or os.PathLike[str]
+        :type pbf_pathname: str | os.PathLike[str]
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: indices and names of each layer of the PBF data file
         :rtype: dict
 
@@ -595,7 +604,7 @@ class PBFReadParse(Transformer):
             return layer_idx_names
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")
 
     @classmethod
     def transform_pbf_layer_field(cls, layer_data, layer_name, parse_geometry=False,
@@ -604,7 +613,7 @@ class PBFReadParse(Transformer):
         Parse data of a layer of PBF data.
 
         :param layer_data: dataframe of a specific layer of PBF data
-        :type layer_data: pandas.DataFrame or pandas.Series
+        :type layer_data: pandas.DataFrame | pandas.Series
         :param layer_name: name (geometric type) of the PBF layer
         :type layer_name: str
         :param parse_geometry: whether to represent the ``'geometry'`` field
@@ -617,10 +626,12 @@ class PBFReadParse(Transformer):
             in a `dict`_ format, defaults to ``False``
         :type parse_other_tags: bool
         :return: readable data of the given PBF layer
-        :rtype: pandas.DataFrame or pandas.Series
+        :rtype: pandas.DataFrame | pandas.Series
 
-        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`dict`: https://docs.python.org/3/library/stdtypes.html#dict
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`dict`:
+            https://docs.python.org/3/library/stdtypes.html#dict
 
         See examples for the method
         :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
@@ -682,8 +693,8 @@ class PBFReadParse(Transformer):
         """
         Parse a layer of a PBF data file.
 
-        :param layer: a layer of a PBF data file, loaded by `GDAL/OGR <https://gdal.org>`_
-        :type layer: osgeo.ogr.Layer or list
+        :param layer: a layer of a PBF data file, loaded by `GDAL/OGR`_
+        :type layer: osgeo.ogr.Layer | list
         :param readable: whether to parse each feature in the raw data, defaults to ``False``
         :type readable: bool
         :param expand: whether to expand dict-like data into separate columns, defaults to ``False``
@@ -698,10 +709,14 @@ class PBFReadParse(Transformer):
             in a `dict`_ format
         :type parse_other_tags: bool
         :return: data of the given layer of the given OSM PBF layer
-        :rtype: pandas.DataFrame or list
+        :rtype: pandas.DataFrame | list
 
-        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`dict`: https://docs.python.org/3/library/stdtypes.html#dict
+        .. _`GDAL/OGR`:
+            https://gdal.org
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`dict`:
+            https://docs.python.org/3/library/stdtypes.html#dict
 
         See examples for the method
         :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
@@ -747,7 +762,7 @@ class PBFReadParse(Transformer):
         :param kwargs: [optional] parameters of the method
             :meth:`PBFReadParse._read_pbf_layer()<pydriosm.reader.PBFReadParse._read_pbf_layer>`
         :return: data of the given layer of the given OSM PBF layer
-        :rtype: pandas.DataFrame or list
+        :rtype: pandas.DataFrame | list
 
         See examples for the method
         :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
@@ -756,7 +771,8 @@ class PBFReadParse(Transformer):
         layer_name = layer.GetName()
         layer_chunks = split_list(lst=[f for f in layer], num_of_sub=number_of_chunks)
 
-        list_of_layer_dat = [cls._read_pbf_layer(lyr + [layer_name], **kwargs) for lyr in layer_chunks]
+        list_of_layer_dat = [
+            cls._read_pbf_layer(lyr + [layer_name], **kwargs) for lyr in layer_chunks]
 
         if kwargs['readable']:
             layer_data = pd.concat(objs=list_of_layer_dat, axis=0, ignore_index=True)
@@ -787,15 +803,19 @@ class PBFReadParse(Transformer):
             in a `dict`_ format, defaults to ``False``
         :type parse_other_tags: bool
         :param number_of_chunks: number of chunks, defaults to ``None``
-        :type number_of_chunks: int or None
+        :type number_of_chunks: int | None
         :return: parsed data of the given OSM PBF layer
         :rtype: dict
 
-        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`dict`: https://docs.python.org/3/library/stdtypes.html#dict
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`dict`:
+            https://docs.python.org/3/library/stdtypes.html#dict
 
-        See examples for the method
-        :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
+        .. seealso::
+
+            - Examples for the method
+              :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
         """
 
         layer_name = layer.GetName()  # Get the name of the i-th layer
@@ -841,11 +861,12 @@ class PBFReadParse(Transformer):
             in a `dict`_ format, defaults to ``False``
         :type parse_other_tags: bool
         :param number_of_chunks: number of chunks, defaults to ``None``
-        :type number_of_chunks: int or None
+        :type number_of_chunks: int | None
         :param max_tmpfile_size: maximum size of the temporary file, defaults to ``None``;
             when ``max_tmpfile_size=None``, it defaults to ``5000``
-        :type max_tmpfile_size: int or None
-        :param kwargs: [optional] parameters of the function `pyhelpers.settings.gdal_configurations()`_
+        :type max_tmpfile_size: int | None
+        :param kwargs: [optional] parameters of the function
+            `pyhelpers.settings.gdal_configurations()`_
         :return: parsed OSM PBF data
         :rtype: dict
 
@@ -998,13 +1019,14 @@ class PBFReadParse(Transformer):
 
         osgeo_ogr, osgeo_gdal = map(_check_dependency, ['osgeo.ogr', 'osgeo.gdal'])
 
-        gdal_configurations(max_tmpfile_size=max_tmpfile_size, **kwargs)
-
         # Reference: https://gis.stackexchange.com/questions/332327/
         # Stop GDAL printing both warnings and errors to STDERR
         osgeo_gdal.PushErrorHandler('CPLQuietErrorHandler')
         # Make GDAL raise python exceptions for errors (warnings won't raise an exception)
         osgeo_gdal.UseExceptions()
+
+        kwargs.update({'max_tmpfile_size': max_tmpfile_size})
+        gdal_configurations(**kwargs)
 
         func_args = {
             'readable': readable,
@@ -1021,7 +1043,8 @@ class PBFReadParse(Transformer):
         collection_of_layer_data = [
             cls.read_pbf_layer(f.GetLayerByIndex(i), **func_args) for i in range(f.GetLayerCount())]
 
-        # Make the output in a dictionary form: {Layer1 name: Layer1 data, Layer2 name: Layer2 data, ...}
+        # Make the output in a dictionary form:
+        # {Layer1 name: Layer1 data, Layer2 name: Layer2 data, ...}
         data = dict(collections.ChainMap(*reversed(collection_of_layer_data)))
 
         return data
@@ -1133,7 +1156,7 @@ class SHPReadParse:
         :param layer_names: name of a shapefile layer, e.g. 'railways',
             or names of multiple layers; if ``None`` (default), returns an empty list;
             if ``layer_names='all'``, the function returns a list of all available layers
-        :type layer_names: str or list or None
+        :type layer_names: str | list | None
         :return: valid layer names to be input
         :rtype: list
 
@@ -1222,13 +1245,13 @@ class SHPReadParse:
         Unzip a zipped shapefile.
 
         :param shp_zip_pathname: path to a zipped shapefile data (.shp.zip)
-        :type shp_zip_pathname: str or os.PathLike[str]
+        :type shp_zip_pathname: str | os.PathLike[str]
         :param extract_to: path to a directory where extracted files will be saved;
             when ``extract_to=None`` (default), the same directory where the .shp.zip file is saved
-        :type extract_to: str or None
+        :type extract_to: str | None
         :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
             when ``layer_names=None`` (default), all available layers
-        :type layer_names: str or list or None
+        :type layer_names: str | list | None
         :param separate: whether to put the data files of different layer in respective folders,
             defaults to ``False``
         :type separate: bool
@@ -1236,7 +1259,7 @@ class SHPReadParse:
             where extracted files are saved, defaults to ``False``
         :type ret_extract_dir: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: the path to the directory of extracted files when ``ret_extract_dir=True``
         :rtype: str
 
@@ -1349,19 +1372,23 @@ class SHPReadParse:
         if not layer_names:
             layer_names_ = layer_names
             if verbose:
-                print(f"Extracting \"{shp_zip_rel_path}\"\n\tto \"{extrdir_rel_path}\\\"", end=" ... ")
+                print(
+                    f"Extracting \"{shp_zip_rel_path}\"\n\tto \"{extrdir_rel_path}\\\"",
+                    end=" ... ")
         else:
             layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
             if verbose:
-                layer_name_list = "\t{}".format("\n\t".join([f"'{x}'" for x in layer_names_]))
+                layer_name_list = "\t" + "\n\t".join([f"'{x}'" for x in layer_names_])
                 print(f"Extracting the following layer(s):\n{layer_name_list}")
-                print(f"\tfrom \"{shp_zip_rel_path}\"\n\t  to \"{extrdir_rel_path}\\\"", end=" ... ")
+                print(
+                    f"\tfrom \"{shp_zip_rel_path}\"\n\t  to \"{extrdir_rel_path}\\\"", end=" ... ")
 
         try:
             with zipfile.ZipFile(file=shp_zip_pathname, mode='r') as sz:
                 if layer_names_:
                     extract_files = [
-                        f.filename for f in sz.filelist if any(x in f.filename for x in layer_names_)]
+                        f.filename for f in sz.filelist
+                        if any(x in f.filename for x in layer_names_)]
                 else:
                     extract_files = None
                 sz.extractall(extract_dir, members=extract_files)
@@ -1380,7 +1407,8 @@ class SHPReadParse:
                 if 'README' in file_list:
                     file_list.remove('README')
 
-                filenames, exts = map(lambda x: list(set(x)), zip(*map(os.path.splitext, file_list)))
+                filenames, exts = map(
+                    lambda x: list(set(x)), zip(*map(os.path.splitext, file_list)))
 
                 layer_names_ = [cls.find_shp_layer_name(f) for f in filenames]
 
@@ -1408,7 +1436,7 @@ class SHPReadParse:
                     print("Done.")
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")
 
         if ret_extract_dir:
             return extract_dir
@@ -1420,6 +1448,7 @@ class SHPReadParse:
         :param x: a feature (i.e. one row data) in a shapefile parsed by pyShp.
         :return: the corresponding ``shapely.geometry`` object
         """
+
         coordinates, geom_func = x['coordinates'], cls.SHAPE_TYPE_GEOM[x['shape_type']]
 
         if geom_func.__name__ == 'Point' and len(coordinates) == 1:
@@ -1459,7 +1488,8 @@ class SHPReadParse:
         :param engine: method used to read shapefiles;
             options include: ``'pyshp'`` (default) and ``'geopandas'`` (or ``'gpd'``)
             this function by default relies on `shapefile.reader()`_;
-            when ``engine='geopandas'`` (or ``engine='gpd'``), it relies on `geopandas.read_file()`_;
+            when ``engine='geopandas'`` (or ``engine='gpd'``),
+            it relies on `geopandas.read_file()`_;
         :type engine: str
         :param emulate_gpd: whether to emulate the data format produced by `geopandas.read_file()`_
             when ``engine='pyshp'``.
@@ -1467,7 +1497,7 @@ class SHPReadParse:
         :param kwargs: [optional] parameters of the function
             `geopandas.read_file()`_ or `shapefile.reader()`_
         :return: data frame of the shapefile data
-        :rtype: pandas.DataFrame or geopandas.GeoDataFrame
+        :rtype: pandas.DataFrame | geopandas.GeoDataFrame
 
         .. _`shapefile.reader()`: https://github.com/GeospatialPython/pyshp#reading-shapefiles
         .. _`geopandas.read_file()`: https://geopandas.org/reference/geopandas.read_file.html
@@ -1475,7 +1505,7 @@ class SHPReadParse:
         .. note::
 
             - If ``engine`` is set to be ``'geopandas'`` (or ``'gpd'``), it requires that
-              `GeoPandas <https://geopandas.org/>`_ is installed.
+                `GeoPandas <https://geopandas.org/>`_ is installed.
 
         **Examples**::
 
@@ -1565,7 +1595,8 @@ class SHPReadParse:
             shp_data = gpd.read_file(shp_pathname, **kwargs)
 
         else:  # method == 'pyshp':  # default
-            with pyshp.Reader(shp_pathname, **kwargs) as f:  # Read .shp file using shapefile.reader()
+            # Read .shp file using shapefile.reader()
+            with pyshp.Reader(shp_pathname, **kwargs) as f:
                 # Transform the data to a DataFrame
                 filed_names = [field[0] for field in f.fields[1:]]
                 shp_data = pd.DataFrame(data=f.records(), columns=filed_names)
@@ -1577,13 +1608,9 @@ class SHPReadParse:
                     columns=shape_geom_colnames)
 
             if emulate_gpd:
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=shapely.errors.ShapelyDeprecationWarning)
-
-                    shp_data['geometry'] = shape_geom[shape_geom_colnames].apply(
-                        cls._covert_to_geometry, axis=1)
-                    # shp_data.drop(columns=shape_geom_colnames, inplace=True)
-
+                shp_data['geometry'] = shape_geom[shape_geom_colnames].apply(
+                    cls._covert_to_geometry, axis=1)
+                # shp_data.drop(columns=shape_geom_colnames, inplace=True)
             else:
                 shp_data = pd.concat([shp_data, shape_geom], axis=1)
 
@@ -1592,19 +1619,23 @@ class SHPReadParse:
     @classmethod
     def _specify_pyshp_fields(cls, data, field_names, decimal_precision):
         """
-        Make fields data for writing shapefiles by `PyShp <https://github.com/GeospatialPython/pyshp>`_.
+        Make fields data for writing shapefiles by
+        `PyShp <https://github.com/GeospatialPython/pyshp>`_.
 
         :param data: data of a shapefile
         :type data: pandas.DataFrame
         :param field_names: names of fields to be written as shapefile records
-        :type field_names: list or pandas.Index
+        :type field_names: list | pandas.Index
         :param decimal_precision: decimal precision for writing float records
         :type decimal_precision: int
         :return: list of records in the .shp data
         :rtype: list
 
-        See examples for the method
-        :meth:`SHPReadParse.write_to_shapefile()<pydriosm.reader.SHPReadParse.write_to_shapefile>`.
+        .. seealso::
+
+            - Examples for the method
+              :meth:`SHPReadParse.write_to_shapefile()
+              <pydriosm.reader.SHPReadParse.write_to_shapefile>`.
         """
 
         dtype_shp_type = {
@@ -1646,14 +1677,14 @@ class SHPReadParse:
         :type write_to: str
         :param shp_filename: filename (or pathname) of the target .shp file, defaults to ``None``;
             when ``shp_filename=None``, it is by default the basename of ``write_to``
-        :type shp_filename: str or os.PahtLike[str] or None
+        :type shp_filename: str | os.PahtLike[str] | None
         :param decimal_precision: decimal precision for writing float records, defaults to ``5``
         :type decimal_precision: int
         :param ret_shp_pathname: whether to return the pathname of the output .shp file,
             defaults to ``False``
         :type ret_shp_pathname: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
 
         **Examples**::
 
@@ -1790,17 +1821,19 @@ class SHPReadParse:
                 return f"{write_to_}.shp"
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")
 
     @classmethod
     def _make_feat_shp_pathname(cls, shp_pathname, feature_names_):
         """
         Specify a pathname(s) for saving data of one (or multiple) given feature(s)
-        by appending the feature name(s) to the filename of its (or their) parent layer's shapefile).
+        by appending the feature name(s) to the filename of
+        its (or their) parent layer's shapefile).
 
         :param shp_pathname: pathname of a shapefile of a layer
-        :type shp_pathname: str or os.PathLike[str]
-        :param feature_names_: name (or names) of one (or multiple) feature(s) in a shapefile of a layer
+        :type shp_pathname: str | os.PathLike[str]
+        :param feature_names_: name (or names) of one (or multiple) feature(s)
+            in a shapefile of a layer
         :type feature_names_: list
         :return: pathname(s) of the data of the given ``feature_names``
         :rtype: list
@@ -1850,7 +1883,7 @@ class SHPReadParse:
         (or shapefiles given multiple shape types).
 
         :param data: data of shapefiles
-        :type data: pandas.DataFrame or geopandas.GeoDataFrame
+        :type data: pandas.DataFrame | geopandas.GeoDataFrame
         :param feat_col_name: name of the column that contains feature names;
             valid values can include ``'fclass'`` and ``'type'``
         :type feat_col_name: str
@@ -1860,22 +1893,11 @@ class SHPReadParse:
         :rtype: list
         """
 
-        # if hasattr(data, 'geom_type'):
-        #     type_col_name = data.geom_type
-        # else:
-        #     if 'geometry' in data.columns:
-        #         type_col_name = data['geometry'].map(lambda x: x.geom_type)
-        #     else:
-        #         type_col_name = 'shape_type'
-
         feat_shp_pathnames = []
 
         for feat_name, dat in data.groupby(feat_col_name):
             feat_shp_pathname = [
                 x for x in feat_shp_pathnames_ if os.path.splitext(x)[0].endswith(feat_name)][0]
-            # feat_shp_pathname_, ext = os.path.splitext(feat_shp_pathname)
-            # shape_type_ = cls.SHAPE_TYPE_GEOM_NAME[shape_type].lower()
-            # feat_shp_pathname = f"{feat_shp_pathname_}-{shape_type_}{ext}"
 
             if isinstance(dat, pd.DataFrame) and not hasattr(dat, 'crs'):
                 cls.write_to_shapefile(data=dat, write_to=feat_shp_pathname)
@@ -1883,7 +1905,8 @@ class SHPReadParse:
                 gpd = _check_dependency('geopandas')
                 assert isinstance(dat, gpd.GeoDataFrame)
                 # os.makedirs(os.path.dirname(feat_shp_pathnames), exist_ok=True)
-                dat.to_file(feat_shp_pathname, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
+                dat.to_file(
+                    feat_shp_pathname, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
 
             feat_shp_pathnames.append(feat_shp_pathname)
 
@@ -1896,9 +1919,9 @@ class SHPReadParse:
         Read a layer of OSM shapefile data.
 
         :param shp_pathnames: pathname of a .shp file, or pathnames of multiple shapefiles
-        :type shp_pathnames: str or list
+        :type shp_pathnames: str | list
         :param feature_names: class name(s) of feature(s), defaults to ``None``
-        :type feature_names: str or list or None
+        :type feature_names: str | list | None
         :param save_feat_shp: (when ``fclass`` is not ``None``)
             whether to save data of the ``fclass`` as shapefile, defaults to ``False``
         :type save_feat_shp: bool
@@ -1909,7 +1932,7 @@ class SHPReadParse:
             :meth:`SHPReadParse.read_shp()<pydriosm.reader.SHPReadParse.read_shp>`
         :return: parsed shapefile data; and optionally,
             pathnames of the shapefiles of the specified features (when ``ret_feat_shp_path=True``)
-        :rtype: pandas.DataFrame or geopandas.GeoDataFrame or tuple
+        :rtype: pandas.DataFrame | geopandas.GeoDataFrame | tuple
 
         .. _`geopandas.GeoDataFrame.to_file()`:
             https://geopandas.org/reference.html#geopandas.GeoDataFrame.to_file
@@ -1996,9 +2019,13 @@ class SHPReadParse:
             data = pd.concat(dat_dict.values(), axis=0, ignore_index=True)
 
             if feature_names:
-                feat_names = [feature_names] if isinstance(feature_names, str) else feature_names
+                if isinstance(feature_names, str):
+                    feat_names = [feature_names]
+                else:
+                    feat_names = feature_names
                 feat_col_name = [x for x in data.columns if x in {'type', 'fclass'}][0]
-                feat_names_ = [find_similar_str(x, data[feat_col_name].unique()) for x in feat_names]
+                feat_names_ = [
+                    find_similar_str(x, data[feat_col_name].unique()) for x in feat_names]
 
                 data = data.query(f'{feat_col_name} in @feat_names_')
 
@@ -2038,7 +2065,8 @@ class SHPReadParse:
         :type path_to_merged_dir: str
         :param engine: the open-source package that is used to merge/save shapefiles;
             options include: ``'pyshp'`` (default) and ``'geopandas'`` (or ``'gpd'``)
-            when ``engine='geopandas'``, this function relies on `geopandas.GeoDataFrame.to_file()`_;
+            when ``engine='geopandas'``,
+            this function relies on `geopandas.GeoDataFrame.to_file()`_;
             otherwise, it by default uses `shapefile.Writer()`_
         :type engine: str
 
@@ -2070,18 +2098,10 @@ class SHPReadParse:
             for geo_typ, shp_dat_list in shp_data.items():
                 out_fn = os.path.join(path_to_merged_dir, f"{geo_typ.lower()}.shp")
                 shp_dat = gpd.GeoDataFrame(pd.concat(shp_dat_list, ignore_index=True))
-                shp_dat.to_file(filename=out_fn, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
+                shp_dat.to_file(
+                    filename=out_fn, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
 
         else:  # method == 'pyshp': (default)
-            # with pyshp.Writer(path_to_merged_dir) as w:
-            #     for f in shp_pathnames:
-            #         with pyshp.Reader(f) as r:
-            #             w.fields = r.fields[1:]  # skip first deletion field
-            #             w.shapeType = r.shapeType
-            #             for shaperec in r.iterShapeRecords():
-            #                 w.record(*shaperec.record)
-            #                 w.shape(shaperec.shape)
-
             kwargs.update({'ret_feat_shp_path': False})
             shp_data = cls.read_layer_shps(shp_pathnames, **kwargs)
             if 'geometry' in shp_data.columns:
@@ -2107,23 +2127,28 @@ class SHPReadParse:
         path_to_extract_dirs = []
         for zfp in shp_zip_pathnames:
             extract_dir = cls.unzip_shp_zip(
-                shp_zip_pathname=zfp, layer_names=layer_name, verbose=True if verbose == 2 else False,
+                shp_zip_pathname=zfp, layer_names=layer_name,
+                verbose=True if verbose == 2 else False,
                 ret_extract_dir=True)
             path_to_extract_dirs.append(extract_dir)
 
         return path_to_extract_dirs
 
     @classmethod
-    def _copy_tempfiles(cls, subrgn_names_, layer_name, path_to_extract_dirs, path_to_merged_dir_temp):
+    def _copy_tempfiles(cls, subrgn_names_, layer_name, path_to_extract_dirs,
+                        path_to_merged_dir_temp):
         # Copy files into a temp directory
         paths_to_temp_files = []
+
         for subregion_name, path_to_extract_dir in zip(subrgn_names_, path_to_extract_dirs):
             orig_filename_list = glob.glob1(path_to_extract_dir, f"*_{layer_name}_*")
+
             for orig_filename in orig_filename_list:
                 orig = os.path.join(path_to_extract_dir, orig_filename)
                 dest = os.path.join(
                     path_to_merged_dir_temp,
                     f"{subregion_name.lower().replace(' ', '-')}_{orig_filename}")
+
                 shutil.copyfile(orig, dest)
                 paths_to_temp_files.append(dest)
 
@@ -2144,8 +2169,10 @@ class SHPReadParse:
     def _transfer_files(cls, engine, path_to_merged_dir, path_to_merged_dir_temp, prefix, suffix):
         if engine in {'geopandas', 'gpd'}:
             if not os.listdir(path_to_merged_dir):
+                temp_path = os.path.join(path_to_merged_dir + "*", f"{prefix}-*")
+
                 temp_dirs = []
-                for temp_output_f in glob.glob(os.path.join(path_to_merged_dir + "*", f"{prefix}-*")):
+                for temp_output_f in glob.glob(temp_path):
                     output_file = path_to_merged_dir_temp.replace(suffix, "")
                     shutil.move(temp_output_f, output_file)
                     temp_dirs.append(os.path.dirname(temp_output_f))
@@ -2156,7 +2183,8 @@ class SHPReadParse:
         else:  # engine == 'pyshp': (default)
             temp_dir = os.path.dirname(path_to_merged_dir)
             paths_to_output_files_temp_ = [
-                glob.glob(os.path.join(temp_dir, f"{prefix}-*.{ext}")) for ext in {"dbf", "shp", "shx"}]
+                glob.glob(os.path.join(temp_dir, f"{prefix}-*.{ext}"))
+                for ext in {"dbf", "shp", "shx"}]
             paths_to_output_files_temp = itertools.chain.from_iterable(paths_to_output_files_temp_)
 
             for temp_output_f in paths_to_output_files_temp:
@@ -2185,12 +2213,12 @@ class SHPReadParse:
         :type rm_shp_temp: bool
         :param output_dir: if ``None`` (default), use the layer name as the name of the folder
             where the merged .shp files will be saved
-        :type output_dir: str or None
+        :type output_dir: str | None
         :param ret_shp_pathname: whether to return the pathname of the merged .shp file,
             defaults to ``False``
         :type ret_shp_pathname: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: the path to the merged file when ``ret_merged_shp_path=True``
         :rtype: list
 
@@ -2202,7 +2230,8 @@ class SHPReadParse:
         .. note::
 
             - This function does not create projection (.prj) for the merged map.
-              See also [`MMS-1 <https://code.google.com/archive/p/pyshp/wikis/CreatePRJfiles.wiki>`_].
+              See also
+              [`MMS-1 <https://code.google.com/archive/p/pyshp/wikis/CreatePRJfiles.wiki>`_].
             - For valid ``layer_name``, check the function
               :func:`~pydriosm.utils.valid_shapefile_layer_names`.
 
@@ -2298,14 +2327,15 @@ class SHPReadParse:
 
         paths_to_temp_files = cls._copy_tempfiles(
             subrgn_names_=subrgn_names_, layer_name=layer_name,
-            path_to_extract_dirs=path_to_extract_dirs, path_to_merged_dir_temp=path_to_merged_dir_temp)
+            path_to_extract_dirs=path_to_extract_dirs,
+            path_to_merged_dir_temp=path_to_merged_dir_temp)
 
         # Get the paths to the target .shp files
         paths_to_shp_files = [x for x in paths_to_temp_files if x.endswith(".shp")]
 
         if verbose:
             print("Merging the following shapefiles:")
-            print("\t{}".format("\n\t".join(f"\"{os.path.basename(f)}\"" for f in paths_to_shp_files)))
+            print("\t" + "\n\t".join(f"\"{os.path.basename(f)}\"" for f in paths_to_shp_files))
             print("\t\tIn progress ... ", end="")
 
         try:
@@ -2314,7 +2344,8 @@ class SHPReadParse:
                 merged_dirname_temp=merged_dirname_temp, suffix=suffix)
 
             cls.merge_shps(
-                shp_pathnames=paths_to_shp_files, path_to_merged_dir=path_to_merged_dir, engine=engine)
+                shp_pathnames=paths_to_shp_files, path_to_merged_dir=path_to_merged_dir,
+                engine=engine)
 
             cls._transfer_files(
                 engine=engine, path_to_merged_dir=path_to_merged_dir,
@@ -2331,7 +2362,8 @@ class SHPReadParse:
                 shutil.rmtree(path_to_merged_dir_temp)
 
             if verbose:
-                print(f"\t\tFind the merged shapefile at \"{os.path.relpath(path_to_merged_dir)}\\\".")
+                m_rel_path = os.path.relpath(path_to_merged_dir)
+                print(f"\t\tFind the merged shapefile at \"{m_rel_path}\\\".")
 
             if ret_shp_pathname:
                 path_to_merged_shp = glob.glob(os.path.join(f"{path_to_merged_dir}*", "*.shp"))
@@ -2340,7 +2372,7 @@ class SHPReadParse:
                 return path_to_merged_shp
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")
 
 
 class VarReadParse(Transformer):
@@ -2353,7 +2385,7 @@ class VarReadParse(Transformer):
     #: set: Valid file formats.
     FILE_FORMATS = {'.csv.xz', 'geojson.xz'}
 
-    # == .osm.bz2 / .bz2 ===========================================================================
+    # == .osm.bz2 / .bz2 =========================================================================
 
     @classmethod
     def _read_osm_bz2(cls, bz2_pathname):
@@ -2374,7 +2406,7 @@ class VarReadParse(Transformer):
 
         return data
 
-    # == .csv.xz ===================================================================================
+    # == .csv.xz =================================================================================
 
     @classmethod
     def _prep_csv_xz(cls, x):
@@ -2389,7 +2421,7 @@ class VarReadParse(Transformer):
         :param csv_xz_pathname: path to a .csv.xz data file
         :type csv_xz_pathname: str
         :param col_names: column names of .csv.xz data, defaults to ``None``
-        :type col_names: list or None
+        :type col_names: list | None
         :return: tabular data of the CSV file
         :rtype: pandas.DataFrame
 
@@ -2407,7 +2439,7 @@ class VarReadParse(Transformer):
 
         return csv_xz
 
-    # == .geojson.xz ===============================================================================
+    # == .geojson.xz =============================================================================
 
     @classmethod
     def read_geojson_xz(cls, geojson_xz_pathname, engine=None, parse_geometry=False):
@@ -2417,10 +2449,10 @@ class VarReadParse(Transformer):
         :param geojson_xz_pathname: path to a .geojson.xz data file
         :type geojson_xz_pathname: str
         :param engine: an open-source Python package for JSON serialization, defaults to ``None``;
-            when ``engine=None``, it refers to the built-in `json`_ module; otherwise options include:
-            ``'ujson'`` (for `UltraJSON`_), ``'orjson'`` (for `orjson`_) and
-            ``'rapidjson'`` (for `python-rapidjson`_)
-        :type engine: str or None
+            when ``engine=None``, it refers to the built-in `json`_ module;
+            otherwise options include: ``'ujson'`` (for `UltraJSON`_),
+            ``'orjson'`` (for `orjson`_) and ``'rapidjson'`` (for `python-rapidjson`_)
+        :type engine: str | None
         :param parse_geometry: whether to reformat coordinates into a geometric object,
             defaults to ``False``
         :type parse_geometry: bool
@@ -2432,8 +2464,10 @@ class VarReadParse(Transformer):
         .. _`orjson`: https://pypi.org/project/orjson/
         .. _`python-rapidjson`: https://pypi.org/project/python-rapidjson/
 
-        See examples for the method
-        :meth:`BBBikeReader.read_geojson_xz()<pydriosm.reader.BBBikeReader.read_geojson_xz>`.
+        .. seealso::
+
+            - Examples for the method
+              :meth:`BBBikeReader.read_geojson_xz()<pydriosm.reader.BBBikeReader.read_geojson_xz>`.
         """
 
         engine_ = check_json_engine(engine=engine)
@@ -2449,13 +2483,10 @@ class VarReadParse(Transformer):
 
         if parse_geometry:
             # data['geometry'] = data['geometry'].map(cls.transform_unitary_geometry)
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=shapely.errors.ShapelyDeprecationWarning)
+            with multiprocessing.Pool(processes=os.cpu_count() - 1) as p:
+                geom_data = p.map(cls.transform_unitary_geometry, data['geometry'])
 
-                with multiprocessing.Pool(processes=os.cpu_count() - 1) as p:
-                    geom_data = p.map(cls.transform_unitary_geometry, data['geometry'])
-
-                data.loc[:, 'geometry'] = pd.Series(geom_data)
+            data.loc[:, 'geometry'] = pd.Series(geom_data)
 
         return data
 
@@ -2481,21 +2512,21 @@ class _Reader:
     #: VarReadParse: Read/parse `OSM`_ data of various formats (other than PBF and Shapefile).
     VAR = VarReadParse
 
-    def __init__(self, max_tmpfile_size=None, data_dir=None, downloader=None, **kwargs):
+    def __init__(self, downloader=None, data_dir=None, max_tmpfile_size=None):
         """
-        :param max_tmpfile_size: defaults to ``None``,
-            see also the function `pyhelpers.settings.gdal_configurations()`_
-        :type max_tmpfile_size: int or None
-        :param data_dir: directory where the data file is located/saved, defaults to ``None``;
-            when ``data_dir=None``, it refers to the directory specified by the corresponding downloader
-        :type data_dir: str or None
         :param downloader: class of a downloader, valid options include
             :class:`~pydriosm.downloader.GeofabrikDownloader` and
             :class:`~pydriosm.downloader.BBBikeDownloader`
-        :type downloader: GeofabrikDownloader or BBBikeDownloader or None
-        :param kwargs: [optional] parameters of the function `pyhelpers.settings.gdal_configurations()`_
+        :type downloader: GeofabrikDownloader | BBBikeDownloader | None
+        :param data_dir: directory where the data file is located/saved, defaults to ``None``;
+            when ``data_dir=None``,
+            it refers to the directory specified by the corresponding downloader
+        :type data_dir: str | None
+        :param max_tmpfile_size: defaults to ``None``,
+            see also the function `pyhelpers.settings.gdal_configurations()`_
+        :type max_tmpfile_size: int | None
 
-        :ivar GeofabrikDownloader or BBBikeDownloader or None downloader:
+        :ivar GeofabrikDownloader | BBBikeDownloader | None downloader:
             instance of the class :class:`~pydriosm.downloader.GeofabrikDownloader` or
             :class:`~pydriosm.downloader.BBBikeDownloader`
 
@@ -2516,10 +2547,6 @@ class _Reader:
             pydriosm.reader.SHPReadParse
         """
 
-        self.max_tmpfile_size = 5000 if max_tmpfile_size is None else max_tmpfile_size
-        kwargs.update({'max_tmpfile_size': self.max_tmpfile_size})
-        gdal_configurations(**kwargs)
-
         if downloader is None:
             self.downloader = _Downloader
         else:
@@ -2529,18 +2556,20 @@ class _Reader:
             for x in {'NAME', 'LONG_NAME', 'FILE_FORMATS'}:
                 setattr(self, x, getattr(self.downloader, x))
 
+        self.max_tmpfile_size = 5000 if max_tmpfile_size is None else max_tmpfile_size
+
     @classmethod
     def cdd(cls, *sub_dir, mkdir=False, **kwargs):
         """
         Change directory to default data directory and its subdirectories or a specific file.
 
         :param sub_dir: name of directory; names of directories (and/or a filename)
-        :type sub_dir: str or os.PathLike[str]
+        :type sub_dir: str | os.PathLike[str]
         :param mkdir: whether to create a directory, defaults to ``False``
         :type mkdir: bool
         :param kwargs: [optional] parameters of the function `pyhelpers.dir.cd()`_
         :return: an absolute pathname to a directory (or a file)
-        :rtype: str or os.PathLike[str]
+        :rtype: str | os.PathLike[str]
 
         .. _`pyhelpers.dir.cd()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dir.cd.html
@@ -2568,7 +2597,7 @@ class _Reader:
         Name or pathname of a data directory.
 
         :return: name or pathname of a directory for saving downloaded data files
-        :rtype: str or None
+        :rtype: str | None
 
         **Tests**::
 
@@ -2632,10 +2661,11 @@ class _Reader:
         :param osm_file_format: format (file extension) of OSM data
         :type osm_file_format: str
         :param data_dir: directory where the data file is located/saved, defaults to ``None``;
-            when ``data_dir=None``, it refers to the directory specified by the corresponding downloader
-        :type data_dir: str or None
+            when ``data_dir=None``,
+            it refers to the directory specified by the corresponding downloader
+        :type data_dir: str | None
         :return: path to the data file
-        :rtype: str or None
+        :rtype: str | None
 
         **Tests**::
 
@@ -2681,11 +2711,11 @@ class _Reader:
         Validate the pathname of an OSM data file.
 
         :param path_to_osm_file: pathname of an OSM data file
-        :type path_to_osm_file: str or os.PathLike[str]
+        :type path_to_osm_file: str | os.PathLike[str]
         :param osm_filename: filename of the OSM data file
         :type osm_filename: str
         :param data_dir: name or pathname of the data directory
-        :type data_dir: str or os.PathLike[str]
+        :type data_dir: str | os.PathLike[str]
         :return: validated pathname of the specified OSM data file
         :rtype: str
 
@@ -2707,7 +2737,10 @@ class _Reader:
 
         else:
             osm_pbf_dir = validate_dir(path_to_dir=data_dir)
-            osm_filename_ = os.path.basename(path_to_osm_file) if osm_filename is None else osm_filename
+            if osm_filename is None:
+                osm_filename_ = os.path.basename(path_to_osm_file)
+            else:
+                osm_filename_ = osm_filename
             valid_file_path = os.path.join(osm_pbf_dir, osm_filename_)
 
         return valid_file_path
@@ -2718,10 +2751,10 @@ class _Reader:
         Remove data extracts.
 
         :param path_to_extract_dir: pathname of the directory where data extracts are stored
-        :type path_to_extract_dir: str or os.PathLike[str]
+        :type path_to_extract_dir: str | os.PathLike[str]
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
 
         See examples for the methods
         :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` and
@@ -2729,7 +2762,8 @@ class _Reader:
         """
 
         if verbose:
-            print(f"Deleting the extracts \"{os.path.relpath(path_to_extract_dir)}\\\"", end=" ... ")
+            extr_dir_rel_path = os.path.relpath(path_to_extract_dir)
+            print(f"Deleting the extracts \"{extr_dir_rel_path}\\\"", end=" ... ")
 
         try:
             # for f in glob.glob(os.path.join(extract_dir, "gis_osm*")):
@@ -2741,7 +2775,7 @@ class _Reader:
                 print("Done.")
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")
 
     @classmethod
     def validate_input_dtype(cls, var_input):
@@ -2749,7 +2783,7 @@ class _Reader:
         Validate the data type of the input variable.
 
         :param var_input: a variable
-        :type var_input: str or list or None
+        :type var_input: str | list | None
         :return: validated input
         :rtype: list
 
@@ -2776,6 +2810,7 @@ class _Reader:
 
     def _read_osm_pbf(self, pbf_pathname, chunk_size_limit, readable, expand, pickle_it,
                       path_to_pickle, ret_pickle_path, rm_pbf_file, verbose, **kwargs):
+
         if verbose:
             action_msg = "Parsing" if readable or expand else "Reading"
             print(f"{action_msg} \"{os.path.relpath(pbf_pathname)}\"", end=" ... ")
@@ -2801,7 +2836,7 @@ class _Reader:
                 remove_osm_file(pbf_pathname, verbose=verbose)
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")
 
             data = None
 
@@ -2819,7 +2854,7 @@ class _Reader:
         :type subregion_name: str
         :param data_dir: directory where the .osm.pbf data file is located/saved;
             if ``None``, the default local directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param readable: whether to parse each feature in the raw data, defaults to ``False``
         :type readable: bool
         :param expand: whether to expand dict-like data into separate columns, defaults to ``False``
@@ -2849,29 +2884,37 @@ class _Reader:
             defaults to ``50``;
             if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``,
             it will be parsed in a chunk-wise way
-        :type chunk_size_limit: int or None
+        :type chunk_size_limit: int | None
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param kwargs: [optional] parameters of the method
             :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`
         :return: dictionary of the .osm.pbf data;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
-        :rtype: dict or tuple or None
+        :rtype: dict | tuple | None
 
-        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`dict`: https://docs.python.org/3/library/stdtypes.html#dict
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`dict`:
+            https://docs.python.org/3/library/stdtypes.html#dict
 
-        See examples for the methods
-        :meth:`GeofabrikReader.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>` and
-        :meth:`BBBikeReader.read_osm_pbf()<pydriosm.reader.BBBikeReader.read_osm_pbf>`.
+        .. seealso::
+
+            - Examples for the methods
+              :meth:`GeofabrikReader.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>`
+              and :meth:`BBBikeReader.read_osm_pbf()<pydriosm.reader.BBBikeReader.read_osm_pbf>`.
         """
+
+        kwargs.update({'max_tmpfile_size': self.max_tmpfile_size})
+        gdal_configurations(**kwargs)
 
         osm_file_format = ".osm.pbf"
 
         subregion_name_, osm_pbf_filename, _, path_to_osm_pbf = \
             self.downloader.get_valid_download_info(
-                subregion_name=subregion_name, osm_file_format=osm_file_format, download_dir=data_dir)
+                subregion_name=subregion_name, osm_file_format=osm_file_format,
+                download_dir=data_dir)
 
         if path_to_osm_pbf is not None:
             suffix = "-pbf.pkl" if readable else "-raw.pkl"
@@ -2896,8 +2939,7 @@ class _Reader:
                         readable=readable, expand=expand, parse_geometry=parse_geometry,
                         parse_properties=parse_properties, parse_other_tags=parse_other_tags,
                         pickle_it=pickle_it, path_to_pickle=path_to_pickle,
-                        ret_pickle_path=ret_pickle_path, rm_pbf_file=rm_pbf_file, verbose=verbose,
-                        **kwargs)
+                        ret_pickle_path=ret_pickle_path, rm_pbf_file=rm_pbf_file, verbose=verbose)
 
                 else:
                     osm_pbf_data = None
@@ -2908,19 +2950,20 @@ class _Reader:
 
     def get_shp_pathname(self, subregion_name, layer_name=None, feature_name=None, data_dir=None):
         """
-        Get path(s) to shapefile(s) for a geographic (sub)region (by searching a local data directory).
+        Get path(s) to shapefile(s) for a geographic (sub)region
+        (by searching a local data directory).
 
         :param subregion_name: name of a geographic (sub)region (case-insensitive)
             that is available on Geofabrik free download server
         :type subregion_name: str
         :param layer_name: name of a .shp layer (e.g. ``'railways'``), defaults to ``None``
-        :type layer_name: str or None
+        :type layer_name: str | None
         :param feature_name: name of a feature (e.g. ``'rail'``);
             if ``None`` (default), all available features included
-        :type feature_name: str or None
+        :type feature_name: str | None
         :param data_dir: directory where the search is conducted; if ``None`` (default),
             the default directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :return: path(s) to shapefile(s)
         :rtype: list
 
@@ -3029,7 +3072,10 @@ class _Reader:
                 pat = re.compile(f"{pat_}{shp_file_ext}")
                 lookup = available_pathnames
             else:
-                ft_name = feature_name if isinstance(feature_name, str) else "_".join(list(feature_name))
+                if isinstance(feature_name, str):
+                    ft_name = feature_name
+                else:
+                    ft_name = "_".join(list(feature_name))
                 pat = re.compile(f"{pat_}_{ft_name}{shp_file_ext}")
                 lookup = glob.glob(os.path.join(shp_dir, layer_name_, f"*{shp_file_ext}"))
 
@@ -3085,7 +3131,8 @@ class _Reader:
             lyr_names_ = [
                 self.SHP.find_shp_layer_name(x) for x in os.listdir(extract_dir_) if x != 'README']
         else:
-            lyr_names_ = [x.rsplit(".", 1)[0] for x in os.listdir(os.path.join(extract_dir_, "shape"))]
+            lyr_names_ = [
+                x.rsplit(".", 1)[0] for x in os.listdir(os.path.join(extract_dir_, "shape"))]
 
         return lyr_names_
 
@@ -3106,7 +3153,7 @@ class _Reader:
         :param osm_file_format: format (file extension) of OSM data
         :type osm_file_format: str
         :param data_dir: name or pathname of the data directory
-        :type data_dir: str or os.PathLike[str]
+        :type data_dir: str | os.PathLike[str]
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
         :param download: whether to download/update the PBF data file of the given subregion,
@@ -3114,7 +3161,7 @@ class _Reader:
         :type download: bool
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: validated shapefile layer names
         :rtype: list
 
@@ -3143,9 +3190,11 @@ class _Reader:
 
         if not os.path.exists(extract_dir_):
             if (not os.path.exists(shp_zip_pathname) or update) and download:
-                self.downloader.download_osm_data(**download_args)  # Download the requested OSM file
+                # Download the requested OSM file
+                self.downloader.download_osm_data(**download_args)
 
-            if os.path.isfile(shp_zip_pathname):  # and shp_zip_pathname in self.downloader.data_paths:
+            if os.path.isfile(shp_zip_pathname):
+                # and shp_zip_pathname in self.downloader.data_paths:
                 self.SHP.unzip_shp_zip(
                     shp_zip_pathname=shp_zip_pathname, extract_to=path_to_extract_dir,
                     layer_names=layer_names_, verbose=verbose)
@@ -3185,9 +3234,9 @@ class _Reader:
 
         return layer_name_list
 
-    def _read_shp_zip(self, shp_pathnames, feature_names_, layer_name_list, pickle_it, path_to_pickle,
-                      ret_pickle_path, rm_extracts, extract_dir, rm_shp_zip, shp_zip_pathname,
-                      verbose, **kwargs):
+    def _read_shp_zip(self, shp_pathnames, feature_names_, layer_name_list, pickle_it,
+                      path_to_pickle, ret_pickle_path, rm_extracts, extract_dir, rm_shp_zip,
+                      shp_zip_pathname, verbose, **kwargs):
         if verbose:
             # print(f'Reading the shapefile(s) data', end=" ... ")
             files_dir = os.path.relpath(
@@ -3197,7 +3246,8 @@ class _Reader:
 
         try:
             kwargs.update({'feature_names': feature_names_, 'ret_feat_shp_path': False})
-            shp_dat_list = [self.SHP.read_layer_shps(shp_pathnames=x, **kwargs) for x in shp_pathnames]
+            shp_dat_list = [
+                self.SHP.read_layer_shps(shp_pathnames=x, **kwargs) for x in shp_pathnames]
 
             shp_data = collections.OrderedDict(zip(layer_name_list, shp_dat_list))
 
@@ -3217,7 +3267,7 @@ class _Reader:
                 remove_osm_file(shp_zip_pathname, verbose=verbose)
 
         except Exception as e:
-            print(f"Failed. {e}")
+            print(f"Failed. {_format_err_msg(e)}")
             shp_data = None
 
         return shp_data
@@ -3233,13 +3283,13 @@ class _Reader:
         :type subregion_name: str
         :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
             if ``None`` (default), all available layers
-        :type layer_names: str or list or None
+        :type layer_names: str | list | None
         :param feature_names: name of a feature, e.g. 'rail', or names of multiple features;
             if ``None`` (default), all available features
-        :type feature_names: str or list or None
+        :type feature_names: str | list | None
         :param data_dir: directory where the .shp.zip data file is located/saved;
             if ``None``, the default directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
         :param download: whether to ask for confirmation
@@ -3257,13 +3307,13 @@ class _Reader:
         :type rm_shp_zip: bool
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param kwargs: [optional] parameters of the method
             :meth:`SHPReadParse.read_shp()<pydriosm.reader.SHPReadParse.read_shp>`
         :return: dictionary of the shapefile data,
             with keys and values being layer names and tabular data
             (in the format of `geopandas.GeoDataFrame`_), respectively
-        :rtype: dict or collections.OrderedDict or None
+        :rtype: dict | collections.OrderedDict | None
 
         .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
 
@@ -3330,7 +3380,8 @@ class _Reader:
     def read_osm_var(self, meth, subregion_name, osm_file_format, data_dir=None, download=False,
                      verbose=False, **kwargs):
         """
-        Read data file of various formats (other than PBF and shapefile) for a geographic (sub)region.
+        Read data file of various formats (other than PBF and shapefile)
+        for a geographic (sub)region.
 
         :param meth: name of a class method for getting (auxiliary) prepacked data
         :type meth: typing.Callable
@@ -3340,17 +3391,18 @@ class _Reader:
         :param osm_file_format: format (file extension) of OSM data
         :type osm_file_format: str
         :param data_dir: directory where the data file is located/saved, defaults to ``None``;
-            when ``data_dir=None``, it refers to the directory specified by the corresponding downloader
-        :type data_dir: str or None
+            when ``data_dir=None``,
+            it refers to the directory specified by the corresponding downloader
+        :type data_dir: str | None
         :param download: whether to download/update the PBF data file of the given subregion,
             if it is not available at the specified path, defaults to ``True``
         :type download: bool
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param kwargs: [optional] parameters of the method specified by ``meth``
         :return: data of the specified file format
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         See examples for the methods
         :meth:`BBBikeReader.read_csv_xz()<pydriosm.reader.BBBikeReader.read_csv_xz>` and
@@ -3363,8 +3415,8 @@ class _Reader:
 
         if not os.path.isfile(path_to_osm_var) and download:
             self.downloader.download_osm_data(
-                subregion_names=subregion_name_, osm_file_format=osm_file_format, download_dir=data_dir,
-                confirmation_required=False, verbose=verbose)
+                subregion_names=subregion_name_, osm_file_format=osm_file_format,
+                download_dir=data_dir, confirmation_required=False, verbose=verbose)
             downloaded = True
         else:
             downloaded = False
@@ -3382,7 +3434,7 @@ class _Reader:
                     print("Done.")
 
             except Exception as e:
-                print(f"Failed. {e}")
+                print(f"Failed. {_format_err_msg(e)}")
                 osm_var_data = None
 
             return osm_var_data
@@ -3401,15 +3453,16 @@ class GeofabrikReader(_Reader):
     #: set: Valid file formats.
     FILE_FORMATS = {'.osm.pbf', '.shp.zip', '.osm.bz2'}
 
-    def __init__(self, max_tmpfile_size=None, data_dir=None):
+    def __init__(self, data_dir=None, max_tmpfile_size=None):
         """
         :param max_tmpfile_size: defaults to ``None``,
             see also the function `pyhelpers.settings.gdal_configurations()`_
-        :type max_tmpfile_size: int or None
-        :param data_dir: (a path or a name of) a directory where a data file is, defaults to ``None``;
+        :type max_tmpfile_size: int | None
+        :param data_dir: (a path or a name of) a directory where a data file is,
+            defaults to ``None``;
             when ``data_dir=None``, it refers to a folder named ``osm_geofabrik``
             under the current working directory
-        :type data_dir: str or None
+        :type data_dir: str | None
 
         :ivar GeofabrikDownloader downloader: instance of the class
             :py:class:`~pydriosm.downloader.GeofabrikDownloader`
@@ -3430,9 +3483,8 @@ class GeofabrikReader(_Reader):
             'Geofabrik'
         """
 
-        # noinspection PyTypeChecker
         super().__init__(
-            max_tmpfile_size=max_tmpfile_size, downloader=GeofabrikDownloader, data_dir=data_dir)
+            downloader=GeofabrikDownloader, data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
 
     def get_file_path(self, subregion_name, osm_file_format, data_dir=None):
         """
@@ -3445,9 +3497,9 @@ class GeofabrikReader(_Reader):
         :type osm_file_format: str
         :param data_dir: directory where the data file of the ``subregion_name`` is located/saved;
             if ``None`` (default), the default local directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :return: path to PBF (.osm.pbf) file
-        :rtype: str or None
+        :rtype: str | None
 
         **Examples**::
 
@@ -3566,7 +3618,7 @@ class GeofabrikReader(_Reader):
         :type subregion_name: str
         :param data_dir: directory where the .osm.pbf data file is located/saved;
             if ``None``, the default local directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param readable: whether to parse each feature in the raw data, defaults to ``False``
         :type readable: bool
         :param expand: whether to expand dict-like data into separate columns, defaults to ``False``
@@ -3596,18 +3648,20 @@ class GeofabrikReader(_Reader):
             defaults to ``50``;
             if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``,
             it will be parsed in a chunk-wise way
-        :type chunk_size_limit: int or None
+        :type chunk_size_limit: int | None
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param kwargs: [optional] parameters of the method
             :meth:`_Reader.read_osm_pbf()<pydriosm.reader._Reader.read_osm_pbf>`
         :return: dictionary of the .osm.pbf data;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
-        :rtype: dict or tuple or None
+        :rtype: dict | tuple | None
 
-        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`dict`: https://docs.python.org/3/library/stdtypes.html#dict
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`dict`:
+            https://docs.python.org/3/library/stdtypes.html#dict
 
         .. _pydriosm-reader-GeofabrikReader-read_osm_pbf:
 
@@ -3702,7 +3756,8 @@ class GeofabrikReader(_Reader):
             parse_geometry=parse_geometry, parse_properties=parse_properties,
             parse_other_tags=parse_other_tags,
             update=update, download=download, pickle_it=pickle_it, ret_pickle_path=ret_pickle_path,
-            rm_pbf_file=rm_pbf_file, chunk_size_limit=chunk_size_limit, verbose=verbose, **kwargs)
+            rm_pbf_file=rm_pbf_file, chunk_size_limit=chunk_size_limit, verbose=verbose,
+            **kwargs)
 
         return osm_pbf_data
 
@@ -3715,13 +3770,13 @@ class GeofabrikReader(_Reader):
             that is available on Geofabrik free download server
         :type subregion_name: str
         :param layer_name: name of a .shp layer (e.g. ``'railways'``), defaults to ``None``
-        :type layer_name: str or None
+        :type layer_name: str | None
         :param feature_name: name of a feature (e.g. ``'rail'``);
             if ``None`` (default), all available features included
-        :type feature_name: str or None
+        :type feature_name: str | None
         :param data_dir: directory where the search is conducted; if ``None`` (default),
             the default directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :return: path(s) to .shp file(s)
         :rtype: list
 
@@ -3844,21 +3899,21 @@ class GeofabrikReader(_Reader):
         :type download: bool
         :param data_dir: directory where the .shp.zip data files are located/saved;
             if ``None`` (default), the default directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param rm_zip_extracts: whether to delete the extracted files, defaults to ``False``
         :type rm_zip_extracts: bool
         :param rm_shp_temp: whether to delete temporary layer files, defaults to ``False``
         :type rm_shp_temp: bool
         :param merged_shp_dir: if ``None`` (default), use the layer name
             as the name of the folder where the merged .shp files will be saved
-        :type merged_shp_dir: str or None
+        :type merged_shp_dir: str | None
         :param verbose: whether to print relevant information in console, defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param ret_merged_shp_path: whether to return the path to the merged .shp file,
             defaults to ``False``
         :type ret_merged_shp_path: bool
         :return: the path to the merged file when ``ret_merged_shp_path=True``
-        :rtype: list or str
+        :rtype: list | str
 
         .. _`geopandas.GeoDataFrame.to_file()`:
             https://geopandas.org/reference.html#geopandas.GeoDataFrame.to_file
@@ -4022,13 +4077,13 @@ class GeofabrikReader(_Reader):
         :type subregion_name: str
         :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
             if ``None`` (default), all available layers
-        :type layer_names: str or list or None
+        :type layer_names: str | list | None
         :param feature_names: name of a feature, e.g. 'rail', or names of multiple features;
             if ``None`` (default), all available features
-        :type feature_names: str or list or None
+        :type feature_names: str | list | None
         :param data_dir: directory where the .shp.zip data file is located/saved;
             if ``None``, the default directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
         :param download: whether to ask for confirmation
@@ -4046,11 +4101,11 @@ class GeofabrikReader(_Reader):
         :type rm_shp_zip: bool
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: dictionary of the shapefile data,
             with keys and values being layer names and tabular data
             (in the format of `geopandas.GeoDataFrame`_), respectively
-        :rtype: dict or collections.OrderedDict or None
+        :rtype: dict | collections.OrderedDict | None
 
         .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
 
@@ -4230,14 +4285,14 @@ class BBBikeReader(_Reader):
         '.svg-osm.zip',
     }
 
-    def __init__(self, max_tmpfile_size=5000, data_dir=None):
+    def __init__(self, data_dir=None, max_tmpfile_size=None):
         """
-        :param max_tmpfile_size: defaults to ``5000``,
-            see also :func:`gdal_configurations<pydriosm.settings.gdal_configurations>`
-        :type max_tmpfile_size: int or None
         :param data_dir: (a path or a name of) a directory where a data file is;
             if ``None`` (default), a folder ``osm_bbbike`` under the current working directory
-        :type data_dir: str or None
+        :type data_dir: str | None
+        :param max_tmpfile_size: defaults to ``None``,
+            see also :func:`gdal_configurations<pydriosm.settings.gdal_configurations>`
+        :type max_tmpfile_size: int | None
 
         :ivar BBBikeDownloader downloader: instance of the class
             :py:class:`BBBikeDownloader<pydriosm.downloader.BBBikeDownloader>`
@@ -4256,7 +4311,7 @@ class BBBikeReader(_Reader):
 
         # noinspection PyTypeChecker
         super().__init__(
-            max_tmpfile_size=max_tmpfile_size, downloader=BBBikeDownloader, data_dir=data_dir)
+            downloader=BBBikeDownloader, data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
 
     def read_osm_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
                      parse_geometry=False, parse_other_tags=False, parse_properties=False,
@@ -4270,7 +4325,7 @@ class BBBikeReader(_Reader):
         :type subregion_name: str
         :param data_dir: directory where the .osm.pbf data file is located/saved;
             if ``None``, the default local directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param readable: whether to parse each feature in the raw data, defaults to ``False``
         :type readable: bool
         :param expand: whether to expand dict-like data into separate columns, defaults to ``False``
@@ -4300,18 +4355,20 @@ class BBBikeReader(_Reader):
             defaults to ``50``;
             if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``,
             it will be parsed in a chunk-wise way
-        :type chunk_size_limit: int or None
+        :type chunk_size_limit: int | None
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :param kwargs: [optional] parameters of the method
             :meth:`_Reader.read_osm_pbf()<pydriosm.reader._Reader.read_osm_pbf>`
         :return: dictionary of the .osm.pbf data;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
-        :rtype: dict or tuple or None
+        :rtype: dict | tuple | None
 
-        .. _`shapely.geometry`: https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-        .. _`dict`: https://docs.python.org/3/library/stdtypes.html#dict
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`dict`:
+            https://docs.python.org/3/library/stdtypes.html#dict
 
         **Examples**::
 
@@ -4391,13 +4448,13 @@ class BBBikeReader(_Reader):
         :type subregion_name: str
         :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
             if ``None`` (default), all available layers
-        :type layer_names: str or list or None
+        :type layer_names: str | list | None
         :param feature_names: name of a feature, e.g. 'rail', or names of multiple features;
             if ``None`` (default), all available features
-        :type feature_names: str or list or None
+        :type feature_names: str | list | None
         :param data_dir: directory where the .shp.zip data file is located/saved;
             if ``None``, the default directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
         :param download: whether to ask for confirmation
@@ -4415,11 +4472,11 @@ class BBBikeReader(_Reader):
         :type rm_shp_zip: bool
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: dictionary of the shapefile data, with keys and values being layer names
             and tabular data (in the format of `geopandas.GeoDataFrame`_), respectively;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
-        :rtype: dict or collections.OrderedDict or tuple or None
+        :rtype: dict | collections.OrderedDict | tuple | None
 
         .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
 
@@ -4538,71 +4595,6 @@ class BBBikeReader(_Reader):
             Deleting "tests\\osm_data\\" ... Done.
         """
 
-        # osm_file_format = ".shp.zip"
-        #
-        # subregion_name_, shp_zip_filename, _, shp_zip_pathname = \
-        #     self.downloader.get_valid_download_info(
-        #         subregion_name=subregion_name, osm_file_format=osm_file_format, download_dir=data_dir)
-        #
-        # layer_names_, feature_names_ = map(self.validate_input_dtype, [layer_names, feature_names])
-        #
-        # if all(x is not None for x in {shp_zip_filename, shp_zip_pathname}):
-        #     extract_dir = os.path.splitext(shp_zip_pathname)[0].replace(".osm.", "-")
-        #
-        #     path_to_shp_pickle = self.make_shp_pkl_pathname(
-        #         shp_zip_filename=shp_zip_filename, extract_dir=extract_dir, layer_names_=layer_names_,
-        #         feature_names_=feature_names_)
-        #
-        #     if os.path.isfile(path_to_shp_pickle) and not update:
-        #         shp_data = load_pickle(path_to_shp_pickle)
-        #
-        #         if ret_pickle_path:
-        #             shp_data = shp_data, path_to_shp_pickle
-        #
-        #     else:
-        #         try:
-        #             layer_name_list = self.validate_shp_layer_names(
-        #                 layer_names_=layer_names_, extract_dir=extract_dir,
-        #                 shp_zip_pathname=shp_zip_pathname, subregion_name=subregion_name_,
-        #                 osm_file_format=osm_file_format, data_dir=data_dir, update=update,
-        #                 download=download, verbose=verbose)
-        #
-        #             paths_to_layers_shp = [
-        #                 glob.glob(os.path.join(extract_dir, "shape", f"{lyr_name}.shp"))
-        #                 for lyr_name in layer_name_list]
-        #             paths_to_layers_shp = [x for x in paths_to_layers_shp if x]
-        #
-        #             if verbose:
-        #                 files_dir = os.path.relpath(
-        #                     os.path.commonpath(list(itertools.chain.from_iterable(paths_to_layers_shp))))
-        #                 msg_ = "the data at" if os.path.isdir(files_dir) else ""
-        #                 print(f'Reading {msg_} "{files_dir}\\"', end=" ... ")
-        #
-        #             shp_dat_list = [
-        #                 self.SHP.read_layer_shps(p, feature_names=feature_names_)
-        #                 for p in paths_to_layers_shp]
-        #
-        #             shp_data = collections.OrderedDict(zip(layer_name_list, shp_dat_list))
-        #
-        #             if verbose:
-        #                 print("Done.")
-        #
-        #             if pickle_it:
-        #                 save_pickle(shp_data, path_to_shp_pickle, verbose=verbose)
-        #
-        #                 if ret_pickle_path:
-        #                     shp_data = shp_data, path_to_shp_pickle
-        #
-        #             if os.path.exists(extract_dir) and rm_extracts:
-        #                 self.remove_extracts(extract_dir, verbose=verbose)
-        #
-        #             if os.path.isfile(shp_zip_pathname) and rm_shp_zip:
-        #                 remove_osm_file(shp_zip_pathname, verbose=verbose)
-        #
-        #         except Exception as e:
-        #             print(f"Failed. {e}")
-        #             shp_data = None
-
         shp_data = super().read_shp_zip(
             subregion_name=subregion_name, layer_names=layer_names, feature_names=feature_names,
             data_dir=data_dir, update=update, download=download, pickle_it=pickle_it,
@@ -4620,15 +4612,15 @@ class BBBikeReader(_Reader):
         :type subregion_name: str
         :param data_dir: directory where the .csv.xz data file is located/saved;
             if ``None`` (default), the default directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param download: whether to try to download the requisite data file if it does not exist,
             defaults to ``True``
         :type download: bool
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: tabular data of the .csv.xz file
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         .. _pydriosm-BBBikeReader-read_csv_xz:
 
@@ -4681,7 +4673,7 @@ class BBBikeReader(_Reader):
         :type subregion_name: str
         :param data_dir: directory where the .geojson.xz data file is located/saved;
             if ``None`` (default), the default directory
-        :type data_dir: str or None
+        :type data_dir: str | None
         :param parse_geometry: whether to represent coordinates in a format of a geometric object,
             defaults to ``False``
         :type parse_geometry: bool
@@ -4690,9 +4682,9 @@ class BBBikeReader(_Reader):
         :type download: bool
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
-        :type verbose: bool or int
+        :type verbose: bool | int
         :return: tabular data of the .csv.xz file
-        :rtype: pandas.DataFrame or None
+        :rtype: pandas.DataFrame | None
 
         .. _pydriosm-BBBikeReader-read_geojson_xz:
 
