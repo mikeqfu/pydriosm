@@ -20,6 +20,6 @@ setuptools.setup(
     project_urls={
         'Documentation': f'https://{__pkgname__}.readthedocs.io/en/{__version__}/',
         'Source': __home_page__,
-        'Bug Tracker': __home_page__ + '/issues',
+        'Issue Tracker': __home_page__ + '/issues',
     },
 )

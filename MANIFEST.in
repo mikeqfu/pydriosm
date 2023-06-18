@@ -1,0 +1,5 @@
+# Include package data
+recursive-include pydriosm/data *
+
+# Exclude tests
+recursive-exclude tests *
