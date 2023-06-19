@@ -10,7 +10,7 @@ PyDriosm is an open-source tool that provides an effortless way to download and 
 
 ## Installation
 
-To install the latest release of pydriosm from [PyPI](https://pypi.org/project/pydriosm/) via [pip](https://pip.pypa.io/en/stable/cli/pip/):
+To install the latest release of PyDriosm from [PyPI](https://pypi.org/project/pydriosm/) via [pip](https://pip.pypa.io/en/stable/cli/pip/):
 
 ```bash
 pip install --upgrade pydriosm
@@ -28,7 +28,7 @@ The full PyDriosm documentation [[HTML](https://pydriosm.readthedocs.io/en/lates
 
 ## License
 
-- PyDriosm is licensed under [GNU General Public License v3.0](https://github.com/mikeqfu/pyhelpers/blob/master/LICENSE) or later (GPLv3+).
+- PyDriosm is licensed under [GNU General Public License v3.0](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE) or later (GPLv3+).
 - The free [OpenStreetMap](https://www.openstreetmap.org/) data, which is used for the development of PyDriosm, is licensed under the [Open Data Commons Open Database License](https://opendatacommons.org/licenses/odbl/) (ODbL) by the [OpenStreetMap Foundation](https://osmfoundation.org/) (OSMF).
 
 ## Acknowledgement

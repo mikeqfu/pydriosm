@@ -2,7 +2,7 @@
 Installation
 ============
 
-To install the latest release of pydriosm from `PyPI`_ via `pip`_:
+To install the latest release of PyDriosm from `PyPI`_ via `pip`_:
 
 .. _`PyPI`: https://pypi.org/project/pydriosm/
 .. _`pip`: https://pip.pypa.io/en/stable/cli/pip/
@@ -12,7 +12,7 @@ To install the latest release of pydriosm from `PyPI`_ via `pip`_:
     pip install --upgrade pydriosm
 
 
-To install the most recent version of pydriosm hosted on `GitHub`_:
+To install the most recent version of PyDriosm hosted on `GitHub`_:
 
 .. _`GitHub`: https://github.com/mikeqfu/pydriosm
 
@@ -35,7 +35,7 @@ To install the most recent version of pydriosm hosted on `GitHub`_:
 
     - If using a `virtual environment`_, make sure it is activated.
     - It is recommended to add `pip install`_ the option ``--upgrade`` (or ``-U``) to ensure that you are getting the latest stable release of the package.
-    - Non-essential dependencies (e.g. `GeoPandas`_) of pydriosm are not enforced to be installed along with the installation of the package. This is intended to optimise the installation requirements. If a `ModuleNotFoundError`_ or an `ImportError`_ pops out when importing/running a function or a method, first try to install the module(s)/package(s) mentioned in the error message, and then try to import/run the function or method again.
+    - Non-essential dependencies (e.g. `GeoPandas`_) of PyDriosm are not enforced to be installed along with the installation of the package. This is intended to optimise the installation requirements. If a `ModuleNotFoundError`_ or an `ImportError`_ pops out when importing/running a function or a method, first try to install the module(s)/package(s) mentioned in the error message, and then try to import/run the function or method again.
     - For more general instructions on the installation of Python packages, please refer to the official guide of `Installing Packages`_.
 
     .. _`virtual environment`: https://packaging.python.org/glossary/#term-Virtual-Environment
@@ -47,7 +47,7 @@ To install the most recent version of pydriosm hosted on `GitHub`_:
     .. _`Installing Packages`: https://packaging.python.org/tutorials/installing-packages/
 
 
-To check whether pydriosm has been correctly installed, try to import the package via an interpreter shell:
+To check whether PyDriosm has been correctly installed, try to import the package via an interpreter shell:
 
 .. code-block:: python
     :name: cmd current version

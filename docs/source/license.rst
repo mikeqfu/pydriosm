@@ -4,7 +4,7 @@ License
 
 - **PyDriosm**
 
-    - `pydriosm <https://pypi.org/project/pydriosm/>`_ is licensed under `GNU General Public License v3.0 <https://github.com/mikeqfu/pydriosm/blob/master/LICENSE>`_ or later (GPLv3+).
+    - `PyDriosm <https://pypi.org/project/pydriosm/>`_ is licensed under `GNU General Public License v3.0 <https://github.com/mikeqfu/pydriosm/blob/master/LICENSE>`_ or later (GPLv3+).
 
 - **OpenStreetMap data**
 

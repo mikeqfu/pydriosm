@@ -2,7 +2,7 @@
 Quick start
 ===========
 
-For a demonstration of how `pydriosm <https://pypi.org/project/pydriosm/>`_ works with `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data, this section of the documentation provides a quick guide with practical examples. It showcases the usage of the package for tasks such as downloading, parsing, and storage I/O of OSM data.
+For a demonstration of how `PyDriosm <https://pypi.org/project/pydriosm/>`_ works with `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data, this section of the documentation provides a quick guide with practical examples. It showcases the usage of the package for tasks such as downloading, parsing, and storage I/O of OSM data.
 
 (Also check out `GitHub <https://github.com/mikeqfu/pydriosm>`_ and `Documentation <https://pydriosm.readthedocs.io/en/latest/>`_.)
 
@@ -582,7 +582,7 @@ For more details, also check out the methods :meth:`SHPReadParse.merge_shps()<py
 Import data into / fetch data from a PostgreSQL server
 ======================================================
 
-After downloading and reading the OSM data, `pydriosm <https://pypi.org/project/pydriosm/>`_ further provides a practical solution - the module :mod:`pydriosm.ios` - to managing the storage I/O of the data through database. Specifically, the class :class:`~pydriosm.ios.PostgresOSM`, which inherits from `pyhelpers.dbms.PostgreSQL`_, can assist us with importing the OSM data into, and retrieving it from, a `PostgreSQL`_ server.
+After downloading and reading the OSM data, `PyDriosm <https://pypi.org/project/pydriosm/>`_ further provides a practical solution - the module :mod:`pydriosm.ios` - to managing the storage I/O of the data through database. Specifically, the class :class:`~pydriosm.ios.PostgresOSM`, which inherits from `pyhelpers.dbms.PostgreSQL`_, can assist us with importing the OSM data into, and retrieving it from, a `PostgreSQL`_ server.
 
 .. _`pyhelpers.dbms.PostgreSQL`: https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dbms.PostgreSQL.html
 .. _`PostgreSQL`: https://www.postgresql.org/
@@ -628,7 +628,7 @@ The example is illustrated in :numref:`pbf_db_example`:
 
     - The parameter ``password`` is by default ``None``. If we don't specify a password for creating an instance, we'll need to manually type in the password to the PostgreSQL server.
 
-    - The class :class:`~pydriosm.ios.PostgresOSM` incorporates the classes for downloading and reading OSM data from the modules :mod:`downloader<pydriosm.downloader>` and :mod:`reader<pydriosm.reader>` as properties. In the case of the above instance, ``osmdb.downloader`` is equivalent to the class :class:`GeofabrikDownloader<pydriosm.downloader.GeofabrikDownloader>`, as the parameter ``data_source='Geofabrik'`` by default.
+    - The class :class:`~pydriosm.ios.PostgresOSM` incorporates the classes for downloading and reading OSM data from the modules :mod:`~pydriosm.downloader` and :mod:`~pydriosm.reader` as properties. In the case of the above instance, ``osmdb.downloader`` is equivalent to the class :class:`~pydriosm.downloader.GeofabrikDownloader`, as the parameter ``data_source='Geofabrik'`` by default.
 
     - To relate the instance ``osmdb_test`` to `BBBike <https://extract.bbbike.org/>`_ data, we could just run ``osmdb.data_source = 'BBBike'``.
 
