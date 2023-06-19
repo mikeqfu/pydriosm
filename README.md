@@ -65,7 +65,6 @@ Fu, Q. (2020). PyDriosm: an open-source tool for downloading, reading and Postgr
         <a href="https://github.com/mikeqfu/pydriosm/commits?author=mikeqfu" target="_blank" title="Code">&#128187;</a>
         <a href="https://github.com/mikeqfu/pydriosm/tree/master/tests" target="_blank" title="Tests">&#129514;</a>
         <a href="https://pydriosm.readthedocs.io/en/latest/" target="_blank" title="Documentation">&#128214;</a>
-      &ensp;
       </td>
   </tbody>
 </table>
