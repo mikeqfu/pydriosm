@@ -2,6 +2,19 @@
 
 <br/>
 
+#### **[2.2.0](https://github.com/mikeqfu/pydriosm/releases/tag/2.2.0)**
+
+(*19 June 2023*)
+
+##### **Notable [changes](https://github.com/mikeqfu/pydriosm/compare/2.1.2...2.2.0) since [2.1.2](https://pypi.org/project/pydriosm/2.1.2/):**
+
+- [GDAL](https://pypi.org/project/GDAL/) is now an optional dependency and will only be required when dealing with PBF data.
+- Fixed bugs in the following classes: [BBBikeDownloader](https://github.com/mikeqfu/pydriosm/commit/59c9c8a7381c90cd3e706955a27462697bb2104f) and [PostgresOSM](https://github.com/mikeqfu/pydriosm/commit/496e0fc8cee4c5125cff2529e647394276392287).
+
+**For more information and detailed specifications, check out [PyDriosm 2.2.0 documentation](https://pydriosm.readthedocs.io/en/2.2.0/).**
+
+<br/>
+
 #### **[2.1.2](https://github.com/mikeqfu/pydriosm/releases/tag/2.1.2)**
 
 (*27 February 2023*)
