@@ -22,12 +22,9 @@ coverage.xml
 
 # Customised
 .idea
-osm_geofabrik/
-osm_bbbike/
-misc/
 tests/*
 !tests/data/
-!tests/images/
-!tests/__init__.py
 !tests/test_*.*
+tutorials/*
 .pypirc
+cmd.txt

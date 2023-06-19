@@ -1,6 +1,7 @@
 """Test the module :py:mod:`pydriosm.downloader`."""
 
 import os
+import tempfile
 
 import pandas as pd
 import pytest
@@ -73,7 +74,8 @@ class TestDownloader:
     @staticmethod
     @pytest.mark.parametrize('data_name', [None, '<data_name>'])
     def test_get_prepacked_data(data_name, monkeypatch, capfd):
-        rslt = _Downloader.get_prepacked_data(callable, data_name=data_name, confirmation_required=False)
+        rslt = _Downloader.get_prepacked_data(
+            callable, data_name=data_name, confirmation_required=False)
         assert rslt is None
 
         monkeypatch.setattr('builtins.input', lambda _: "No")
@@ -159,7 +161,8 @@ class TestDownloader:
         assert os.path.relpath(file_pathname) == 'osm_data\\<subregion_name_>\\<download_url>'
 
         download_dir = 'x-osm-pbf'
-        _, _, _, file_pathname = d.get_valid_download_info(subregion_name, osm_file_format, download_dir)
+        _, _, _, file_pathname = d.get_valid_download_info(
+            subregion_name, osm_file_format, download_dir)
         assert os.path.relpath(file_pathname) == 'x-osm-pbf\\<download_url>'
 
         subregion_name, osm_file_format = '', ''
@@ -177,7 +180,8 @@ class TestDownloader:
         assert not rslt
 
         subregion_name, osm_file_format = '', ''
-        rslt = d.file_exists(subregion_name=subregion_name, osm_file_format=osm_file_format, verbose=2)
+        rslt = d.file_exists(
+            subregion_name=subregion_name, osm_file_format=osm_file_format, verbose=2)
         out, _ = capfd.readouterr()
         assert 'None data for "None" is not available' in out
         assert not rslt
@@ -195,12 +199,14 @@ class TestDownloader:
         subrgn_names = ['london', 'rutland']
         rslt = gfd.file_exists_and_more(subregion_names=subrgn_names, osm_file_format=file_format)
         assert rslt == (
-            ['Greater London', 'Rutland'], '.osm.pbf', True, 'download', ['Greater London', 'Rutland'],
+            ['Greater London', 'Rutland'], '.osm.pbf', True, 'download',
+            ['Greater London', 'Rutland'],
             [])
 
         subrgn_names = ['birmingham', 'leeds']
         rslt = bbd.file_exists_and_more(subregion_names=subrgn_names, osm_file_format=file_format)
-        assert rslt == (['Birmingham', 'Leeds'], '.pbf', True, 'download', ['Birmingham', 'Leeds'], [])
+        assert rslt == (
+            ['Birmingham', 'Leeds'], '.pbf', True, 'download', ['Birmingham', 'Leeds'], [])
 
     @staticmethod
     def test_verify_download_dir():
@@ -235,7 +241,8 @@ class TestGeofabrikDownloader:
         raw_index = gfd.get_raw_directory_index(gfd.URL, verbose=True)
         out, _ = capfd.readouterr()
         assert out == \
-               "Collecting the raw directory index on 'https://download.geofabrik.de/' ... Failed.\n" \
+               "Collecting the raw directory index on 'https://download.geofabrik.de/' ... " \
+               "Failed.\n" \
                "No raw directory index is available on the web page.\n"
         assert raw_index is None
 
@@ -290,7 +297,8 @@ class TestGeofabrikDownloader:
         out, _ = capfd.readouterr()
         assert out == \
                "Compiling information about subregions of \"Antarctica\" ... Failed.\n" \
-               "No subregion data is available for \"Antarctica\" on Geofabrik's free download server.\n"
+               "No subregion data is available for \"Antarctica\" on " \
+               "Geofabrik's free download server.\n"
         assert antarctica2 is None
 
     @staticmethod
@@ -357,7 +365,8 @@ class TestGeofabrikDownloader:
         file_format = ".pbf"
         valid_name, dwnld_link = gfd.get_subregion_download_url(subrgn_name, file_format)
         assert valid_name == 'England'
-        assert dwnld_link == 'https://download.geofabrik.de/europe/great-britain/england-latest.osm.pbf'
+        assert dwnld_link == \
+               'https://download.geofabrik.de/europe/great-britain/england-latest.osm.pbf'
 
         subrgn_name = 'britain'
         file_format = ".shp"
@@ -463,7 +472,9 @@ class TestGeofabrikDownloader:
 
         subrgn_names = ['london', 'rutland']
         file_format = ".pbf"
-        gfd_.download_osm_data(subrgn_names, file_format, verbose=True, confirmation_required=False)
+        gfd_.download_osm_data(
+            subregion_names=subrgn_names, osm_file_format=file_format, verbose=True,
+            confirmation_required=False)
         out, _ = capfd.readouterr()
         assert "Downloading " in out and "Done." in out
         assert len(gfd_.data_paths) == 2
@@ -473,16 +484,18 @@ class TestGeofabrikDownloader:
 
         region_name = 'west midlands'
         file_format = ".shp"
-        new_dwnld_dir = "tests\\osm_data"
+        temp_dwnld_dir = tempfile.TemporaryDirectory().name
 
-        gfd_.download_osm_data(region_name, file_format, new_dwnld_dir, confirmation_required=False)
+        gfd_.download_osm_data(
+            subregion_names=region_name, osm_file_format=file_format, download_dir=temp_dwnld_dir,
+            confirmation_required=False)
         assert len(gfd_.data_paths) == 3
-        assert os.path.relpath(gfd_.data_paths[-1]) == \
-               'tests\\osm_data\\west-midlands\\west-midlands-latest-free.shp.zip'
-        assert os.path.relpath(gfd_.download_dir) == new_dwnld_dir
+        assert gfd_.data_paths[-1] == \
+               f'{temp_dwnld_dir}\\west-midlands\\west-midlands-latest-free.shp.zip'
+        assert gfd_.download_dir == temp_dwnld_dir
         assert os.path.relpath(gfd_.cdd()) == 'osm_data\\geofabrik'
 
-        delete_dir([dwnld_dir, new_dwnld_dir], confirmation_required=False)
+        delete_dir([dwnld_dir, temp_dwnld_dir], confirmation_required=False)
 
     # @staticmethod
     # def test_download_subregion_data():
@@ -608,7 +621,8 @@ class TestBBBikeDownloader:
         subrgn_name_, dwnld_url = bbd.get_subregion_download_url(subrgn_name, file_format)
 
         assert subrgn_name_ == 'Birmingham'
-        assert dwnld_url == 'https://download.bbbike.org/osm/bbbike/Birmingham/Birmingham.osm.csv.xz'
+        assert dwnld_url == \
+               'https://download.bbbike.org/osm/bbbike/Birmingham/Birmingham.osm.csv.xz'
 
     @staticmethod
     def test_get_valid_download_info():
@@ -642,8 +656,8 @@ class TestBBBikeDownloader:
     #     dwnld_dir = "tests\\osm_data"
     #
     #     bbd.download_subregion_data(
-    #         subregion_name=subrgn_name, download_dir=dwnld_dir, ret_download_path=True, verbose=True,
-    #         confirmation_required=False)
+    #         subregion_name=subrgn_name, download_dir=dwnld_dir, ret_download_path=True,
+    #         verbose=True, confirmation_required=False)
     #     out, _ = capfd.readouterr()
     #     assert 'Check out the downloaded OSM data at "tests\\osm_data\\leeds\\".' in out
 
@@ -663,7 +677,8 @@ class TestBBBikeDownloader:
         dwnld_dir = "tests\\osm_data"
 
         dwnld_paths = bbd.download_osm_data(
-            subrgn_names, file_format, dwnld_dir, confirmation_required=False, ret_download_path=True)
+            subrgn_names, file_format, dwnld_dir, confirmation_required=False,
+            ret_download_path=True)
         assert len(dwnld_paths) == 2
         assert len(bbd.data_paths) == 3
         assert os.path.relpath(bbd.download_dir) == os.path.relpath(dwnld_dir)

@@ -13,12 +13,12 @@ from pydriosm.reader import PBFReadParse, SHPReadParse, Transformer, _Reader
 
 
 class TestTransformer:
-    test_point_1 = {
+    TEST_POINT_1 = {
         'type': 'Point',
         'coordinates': [-0.5134241, 52.6555853]
     }
 
-    test_point_2 = {
+    TEST_POINT_2 = {
         'type': 'Feature',
         'geometry': {
             'type': 'Point',
@@ -39,7 +39,7 @@ class TestTransformer:
         'id': 488432
     }
 
-    test_collection_1 = {
+    TEST_COLLECTION_1 = {
         'type': 'GeometryCollection',
         'geometries': [
             {'type': 'Point', 'coordinates': [-0.5096176, 52.6605168]},
@@ -47,7 +47,7 @@ class TestTransformer:
         ]
     }
 
-    test_collection_2 = {
+    TEST_COLLECTION_2 = {
         'type': 'Feature',
         'geometry': {
             'type': 'GeometryCollection',
@@ -78,37 +78,40 @@ class TestTransformer:
               [-0.6920145, 52.6753268],
               [-0.6920145, 52.6753268]]]]
 
-    def test_transform_unitary_geometry(self):
-        g1_dat = self.test_point_1.copy()
+    @classmethod
+    def test_transform_unitary_geometry(cls):
+        g1_dat = cls.TEST_POINT_1.copy()
         g1_data = Transformer.transform_unitary_geometry(g1_dat)
         assert isinstance(g1_data, shapely.geometry.Point)
         assert g1_data.wkt == 'POINT (-0.5134241 52.6555853)'
 
-        g2_dat = self.test_point_2.copy()
+        g2_dat = cls.TEST_POINT_2.copy()
         g2_data = Transformer.transform_unitary_geometry(g2_dat, mode=2)
 
         assert isinstance(g2_data, dict)
         assert list(g2_data.keys()) == ['type', 'geometry', 'properties', 'id']
         assert g2_data['geometry'] == 'POINT (-0.5134241 52.6555853)'
 
-    def test_transform_geometry_collection(self):
-        g1_dat_ = self.test_collection_1.copy()
+    @classmethod
+    def test_transform_geometry_collection(cls):
+        g1_dat_ = cls.TEST_COLLECTION_1.copy()
         g1_dat = g1_dat_['geometries']
         g1_data = Transformer.transform_geometry_collection(g1_dat)
         assert isinstance(g1_data, shapely.geometry.base.GeometrySequence)
         assert shapely.geometry.GeometryCollection(list(g1_data)).wkt == \
                'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))'
 
-        g2_dat = self.test_collection_2.copy()
+        g2_dat = cls.TEST_COLLECTION_2.copy()
         g2_data = Transformer.transform_geometry_collection(g2_dat, mode=2)
         assert isinstance(g2_data, dict)
         assert list(g2_data.keys()) == ['type', 'geometry', 'properties', 'id']
         assert g2_data['geometry'] == \
                'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))'
 
-    def test_transform_geometry(self):
+    @classmethod
+    def test_transform_geometry(cls):
         lyr_name = 'points'
-        dat_ = self.test_point_2.copy()
+        dat_ = cls.TEST_POINT_2.copy()
 
         lyr_data = pd.DataFrame.from_dict(dat_, orient='index').T
 
