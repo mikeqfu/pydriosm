@@ -2,4 +2,4 @@
 Acknowledgement
 ===============
 
-The development of PyDriosm, together with all the example code for demonstrating how to use the package, is mainly built on free `OpenStreetMap <https://www.openstreetmap.org/>`_ data. The author of the package would like to thank all `OpenStreetMap contributors <https://wiki.openstreetmap.org/wiki/Contributors>`_ who make the data available for free.
+The development of `pydriosm <https://pypi.org/project/pydriosm/>`_, including the example code that demonstrates how to use the package, heavily relies on freely available `OpenStreetMap <https://www.openstreetmap.org/>`_ data. The author would like to express sincere gratitude to all the `OpenStreetMap contributors <https://wiki.openstreetmap.org/wiki/Contributors>`_ for their invaluable contributions in making this data accessible to the community.

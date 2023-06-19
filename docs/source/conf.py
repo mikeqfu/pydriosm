@@ -1,4 +1,6 @@
-"""Configuration file for the Sphinx documentation builder."""
+"""
+Configuration file for the Sphinx documentation builder.
+"""
 
 # == Path setup ====================================================================================
 import os
@@ -10,33 +12,19 @@ sys.path.insert(0, os.path.abspath('../../pydriosm'))
 sys.path.insert(0, os.path.abspath('../../pydriosm/data'))
 
 # == Project information ===========================================================================
-import json
-import datetime
-
-with open("../../pydriosm/data/metadata.json", mode='r') as metadata_file:
-    metadata = json.load(metadata_file)
-
-__pkgname__, __description__ = metadata['Package'], metadata['Description']
-__author__, __author_email__ = metadata['Author'], metadata['Email']
-__affiliation__ = metadata['Affiliation']
-__copyright__ = f'2019-{datetime.datetime.now().year}, {__author__}'
-__first_release_date__ = metadata['First release']
+from pydriosm import __affiliation__, __author__, __copyright__, __description__, __pkgname__, \
+    __project__, __version__, __first_release_date__
 
 # General information about the project:
-project = metadata['Project']
+project = __project__
 copyright = __copyright__
 
 # The version info for the project:
-version = metadata['Version']  # The short X.Y.Z version
+version = __version__  # The short X.Y.Z version
 release = version  # The full version, including alpha/beta/rc tags
 
 # == General configuration =========================================================================
-import sphinx_rtd_theme
-
-_ = sphinx_rtd_theme.get_html_theme_path()
-
-# Sphinx extension module names, which can be named 'sphinx.ext.*' or custom ones:
-extensions = [
+extensions = [  # Sphinx extension module names, which can be named 'sphinx.ext.*' or custom ones:
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.autosectionlabel',
@@ -46,8 +34,77 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.todo',
     'sphinx_rtd_theme',
+    'sphinx.ext.linkcode',
+    'sphinx.ext.doctest',
     'sphinx_copybutton',
 ]
+
+
+def linkcode_resolve(domain, info):
+    """
+    Determine the URL corresponding to Python object.
+
+    (Adapted from https://github.com/pandas-dev/pandas/blob/main/doc/source/conf.py)
+    """
+
+    import inspect
+    import warnings
+
+    import pydriosm
+
+    if domain != 'py' or not info['module']:
+        return None
+
+    module_name, full_name = info['module'], info['fullname']
+
+    sub_module_name = sys.modules.get(module_name)
+    if sub_module_name is None:
+        return None
+
+    obj = sub_module_name
+    for part in full_name.split('.'):
+        try:
+            with warnings.catch_warnings():
+                # Accessing deprecated objects will generate noisy warnings
+                warnings.simplefilter('ignore', FutureWarning)
+                obj = getattr(obj, part)
+        except AttributeError:
+            return None
+
+    try:
+        fn = inspect.getsourcefile(inspect.unwrap(obj))
+    except TypeError:
+        try:  # property
+            fn = inspect.getsourcefile(inspect.unwrap(obj.fget))
+        except (AttributeError, TypeError):
+            fn = None
+    if not fn:
+        return None
+
+    source = [0]
+    try:
+        source, line_no = inspect.getsourcelines(obj)
+    except TypeError:
+        try:  # property
+            source, line_no = inspect.getsourcelines(obj.fget)
+        except (AttributeError, TypeError):
+            line_no = None
+    except OSError:
+        line_no = None
+
+    if line_no:
+        line_spec = f"#L{line_no}-L{line_no + len(source) - 1}"
+    else:
+        line_spec = ""
+
+    # fn = os.path.relpath(fn, start=os.path.abspath(".."))
+    fn = os.path.relpath(fn, start=os.path.dirname(pydriosm.__file__))
+
+    # f"https://github.com/mikeqfu/pydriosm/blob/{pydriosm.__version__}/pydriosm/{fn}{line_spec}"
+    url = f"https://github.com/mikeqfu/pydriosm/blob/master/pydriosm/{fn}{line_spec}"
+
+    return url
+
 
 # Enable to reference numbered figures:
 numfig = True
@@ -104,7 +161,7 @@ html_css_files = ['rtd_overrides.css', 'copy_button.css']
 html_js_files = ['prompt_button.js']
 
 # Output file base name for HTML help builder:
-htmlhelp_basename = metadata['Project'] + 'doc'  # Defaults to 'pydoc'
+htmlhelp_basename = __project__ + 'doc'  # Defaults to 'pydoc'
 
 # == Options for LaTeX output ======================================================================
 from pygments.formatters.latex import LatexFormatter
@@ -133,7 +190,7 @@ latex_documents = [
      ),
 ]
 
-affil_centre, affil_school, affil_univ = __affiliation__.split(', ')
+affil_dept, affil_sch, affil_univ = __affiliation__.split(', ')
 
 # Custom title page
 latex_maketitle = r'''
@@ -193,8 +250,8 @@ latex_maketitle = r'''
            __description__.rstrip('.'),
            release,
            __author__,
-           affil_centre,
-           affil_school,
+           affil_dept,
+           affil_sch,
            affil_univ,
            __first_release_date__,
            __copyright__)
