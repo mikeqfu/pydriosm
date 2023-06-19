@@ -20,7 +20,7 @@ Please also refer to [Installation](https://pydriosm.readthedocs.io/en/latest/in
 
 ## Quick start
 
-For a comprehensive guide with practical examples, please check out the [quick-start tutorial](https://pydriosm.readthedocs.io/en/latest/quick-start.html) . This tutorial showcases how to use the package for various tasks, such as downloading, parsing, and performing storage I/O operations on OSM data using a PostgreSQL database.
+For a comprehensive guide with practical examples, please check out the [quick-start tutorial](https://pydriosm.readthedocs.io/en/latest/quick-start.html). This tutorial showcases how to use the package for various tasks, such as downloading, parsing, and performing storage I/O operations on OSM data using a PostgreSQL database.
 
 ## Documentation
 
@@ -33,7 +33,7 @@ The full PyDriosm documentation [[HTML](https://pydriosm.readthedocs.io/en/lates
 
 ## Acknowledgement
 
-The development of [pydriosm](https://pypi.org/project/pydriosm/), including the example code that demonstrates how to use the package, heavily relies on freely available [OpenStreetMap](https://www.openstreetmap.org/) data. The author would like to express sincere gratitude to all the [OpenStreetMap contributors](https://wiki.openstreetmap.org/wiki/Contributors) for their invaluable contributions in making this data accessible to the community.
+The development of PyDriosm, including the example code that demonstrates how to use the package, heavily relies on freely available [OpenStreetMap](https://www.openstreetmap.org/) data. The author would like to express sincere gratitude to all the [OpenStreetMap contributors](https://wiki.openstreetmap.org/wiki/Contributors) for their invaluable contributions in making this data accessible to the community.
 
 ## Cite as
 
