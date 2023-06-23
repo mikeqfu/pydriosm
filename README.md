@@ -20,11 +20,13 @@ Please also refer to [Installation](https://pydriosm.readthedocs.io/en/latest/in
 
 ## Quick start
 
-For a comprehensive guide with practical examples, please check out the [quick-start tutorial](https://pydriosm.readthedocs.io/en/latest/quick-start.html). This tutorial showcases how to use the package for various tasks, such as downloading, parsing, and performing storage I/O operations on OSM data using a PostgreSQL database.
+For a concise guide with practical examples, please check out the [quick-start tutorial](https://pydriosm.readthedocs.io/en/latest/quick-start.html). This tutorial showcases how to utilise PyDriosm for various tasks, such as downloading, parsing, and performing storage I/O operations on OSM data using a PostgreSQL database.
 
 ## Documentation
 
-The full PyDriosm documentation [[HTML](https://pydriosm.readthedocs.io/en/latest/)\] \[[PDF](https://pydriosm.readthedocs.io/_/downloads/en/latest/pdf/)], which includes more detailed examples, is hosted on [ReadTheDocs](https://readthedocs.org/projects/pydriosm/).
+The complete PyDriosm documentation: [[HTML](https://pydriosm.readthedocs.io/en/latest/)\] \[[PDF](https://pydriosm.readthedocs.io/_/downloads/en/latest/pdf/)] 
+
+It is hosted on [ReadTheDocs](https://readthedocs.org/projects/pydriosm/) and provides a wealth of detailed examples. 
 
 ## License
 
