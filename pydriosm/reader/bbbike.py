@@ -2,8 +2,6 @@
 Read OpenStreetMap data extracts available from BBBike free download server.
 """
 
-import collections
-
 from pydriosm.downloader import BBBikeDownloader
 from pydriosm.reader._reader import _Reader
 

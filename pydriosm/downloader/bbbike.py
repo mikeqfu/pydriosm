@@ -18,8 +18,6 @@ from pydriosm.downloader._downloader import _Downloader
 from pydriosm.utils import check_relpath
 
 
-# == Downloading data ==============================================================================
-
 class BBBikeDownloader(_Downloader):
     """
     Download OSM data from `BBBike`_ free download server.
@@ -434,7 +432,8 @@ class BBBikeDownloader(_Downloader):
 
         return subregion_names
 
-    def validate_subregion_name(self, subregion_name, **kwargs):
+    def validate_subregion_name(self, subregion_name, valid_subregion_names=None, raise_err=True,
+                                **kwargs):
         """
         Validate an input name of a geographic (sub)region.
 
@@ -443,6 +442,11 @@ class BBBikeDownloader(_Downloader):
 
         :param subregion_name: name of a (sub)region available on BBBike free download server
         :type subregion_name: str
+        :param valid_subregion_names: names of all (sub)regions available on a free download server
+        :type valid_subregion_names: typing.Iterable
+        :param raise_err: (if the input fails to match a valid name) whether to raise the error
+            :py:class:`pydriosm.downloader.InvalidSubregionName`, defaults to ``True``
+        :type raise_err: bool
         :return: valid (sub)region name that matches, or is the most similar to, the input
         :rtype: str
 
@@ -459,9 +463,14 @@ class BBBikeDownloader(_Downloader):
             'Birmingham'
         """
 
+        if valid_subregion_names is None:
+            valid_subregion_names_ = self.valid_subregion_names
+        else:
+            valid_subregion_names_ = valid_subregion_names
+
         subregion_name_ = super().validate_subregion_name(
-            subregion_name=subregion_name, valid_subregion_names=self.valid_subregion_names,
-            **kwargs)
+            subregion_name=subregion_name, valid_subregion_names=valid_subregion_names_,
+            raise_err=raise_err, **kwargs)
 
         return subregion_name_
 
@@ -665,7 +674,8 @@ class BBBikeDownloader(_Downloader):
 
         return download_index
 
-    def validate_file_format(self, osm_file_format, **kwargs):
+    def validate_file_format(self, osm_file_format, valid_file_formats=None, raise_err=True,
+                             **kwargs):
         """
         Validate an input file format of OSM data.
 
@@ -675,6 +685,11 @@ class BBBikeDownloader(_Downloader):
         :param osm_file_format: file format/extension of the OSM data
             available on BBBike free download server
         :type osm_file_format: str
+        :param valid_file_formats: fil extensions of the data available on a free download server
+        :type valid_file_formats: typing.Iterable
+        :param raise_err: (if the input fails to match a valid name) whether to raise the error
+            :py:class:`pydriosm.downloader.InvalidFileFormatError`, defaults to ``True``
+        :type raise_err: bool
         :return: valid file format (file extension)
         :rtype: str
 
@@ -693,9 +708,14 @@ class BBBikeDownloader(_Downloader):
             '.pbf'
         """
 
+        if valid_file_formats is None:
+            valid_file_formats_ = self.FILE_FORMATS
+        else:
+            valid_file_formats_ = valid_file_formats
+
         osm_file_format_ = super().validate_file_format(
-            osm_file_format=osm_file_format, valid_file_formats=self.FILE_FORMATS,
-            **kwargs)
+            osm_file_format=osm_file_format, valid_file_formats=valid_file_formats_,
+            raise_err=raise_err, **kwargs)
 
         return osm_file_format_
 
@@ -887,6 +907,29 @@ class BBBikeDownloader(_Downloader):
 
         return file_exists
 
+    def _prep_download_subregion_data(self, subregion_name, download_dir, verify_download_dir):
+        subregion_name_ = self.validate_subregion_name(subregion_name)
+        subrgn_cat = self.catalogue['Catalogue'][subregion_name_]
+
+        sub_dirname = self.make_subregion_dirname(subregion_name_)
+
+        if download_dir is None:
+            data_dir = cd(self.download_dir, sub_dirname, mkdir=True)
+
+        else:
+            download_dir_ = validate_dir(path_to_dir=download_dir)
+
+            data_dir = os.path.join(download_dir_, sub_dirname)
+            if not os.path.exists(data_dir):
+                os.makedirs(data_dir)
+
+            if verify_download_dir and download_dir_ != self.download_dir:
+                self.download_dir = download_dir_
+
+        cfm_dat = f"all available BBBike OSM data of {subregion_name_}"
+
+        return subrgn_cat, data_dir, cfm_dat
+
     def download_subregion_data(self, subregion_name, download_dir=None, update=False,
                                 confirmation_required=True, interval=None, verify_download_dir=True,
                                 verbose=False, ret_download_path=False, **kwargs):
@@ -1007,25 +1050,8 @@ class BBBikeDownloader(_Downloader):
             Deleting "tests\\osm_data\\" ... Done.
         """
 
-        subregion_name_ = self.validate_subregion_name(subregion_name)
-        subrgn_cat = self.catalogue['Catalogue'][subregion_name_]
-
-        sub_dirname = self.make_subregion_dirname(subregion_name_)
-
-        if download_dir is None:
-            data_dir = cd(self.download_dir, sub_dirname, mkdir=True)
-
-        else:
-            download_dir_ = validate_dir(path_to_dir=download_dir)
-
-            data_dir = os.path.join(download_dir_, sub_dirname)
-            if not os.path.exists(data_dir):
-                os.makedirs(data_dir)
-
-            if verify_download_dir and download_dir_ != self.download_dir:
-                self.download_dir = download_dir_
-
-        cfm_dat = f"all available BBBike OSM data of {subregion_name_}"
+        subrgn_cat, data_dir, cfm_dat = self._prep_download_subregion_data(
+            subregion_name, download_dir, verify_download_dir)
 
         if confirmed(f"To download {cfm_dat}\n?", confirmation_required=confirmation_required):
             if verbose:

@@ -237,7 +237,7 @@ class _Downloader:
                 action = "updating" if update or os.path.exists(path_to_file) else "collecting"
                 print(f"The {action} of {data_name} is cancelled, or no data is available.")
             elif verbose_:
-                print(f"Cancelled.")
+                print("Cancelled.")
 
     @classmethod
     def get_prepacked_data(cls, meth, data_name='<data_name>', update=False,
@@ -538,7 +538,7 @@ class _Downloader:
         return sub_dirname
 
     @classmethod
-    def get_subregion_download_url(cls, subregion_name, osm_file_format):
+    def get_subregion_download_url(cls, subregion_name, osm_file_format, *args, **kwargs):
         """
         Get a download URL of a geographic (sub)region.
 

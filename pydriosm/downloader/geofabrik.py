@@ -478,7 +478,7 @@ class GeofabrikDownloader(_Downloader):
 
         except (AttributeError, ValueError, TypeError):
             if verbose:
-                print(f"Failed.")
+                print("Failed.")
                 if verbose == 2:
                     print(f"No subregion data is available for \"{region_name}\" "
                           f"on {cls.NAME}'s free download server.")
@@ -968,7 +968,8 @@ class GeofabrikDownloader(_Downloader):
 
         return self.valid_subregion_names
 
-    def validate_subregion_name(self, subregion_name, **kwargs):
+    def validate_subregion_name(self, subregion_name, valid_subregion_names=None, raise_err=True,
+                                **kwargs):
         """
         Validate an input name of a geographic (sub)region.
 
@@ -977,6 +978,11 @@ class GeofabrikDownloader(_Downloader):
 
         :param subregion_name: name/URL of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
+        :param valid_subregion_names: names of all (sub)regions available on a free download server
+        :type valid_subregion_names: typing.Iterable
+        :param raise_err: (if the input fails to match a valid name) whether to raise the error
+            :py:class:`pydriosm.downloader.InvalidSubregionName`, defaults to ``True``
+        :type raise_err: bool
         :param kwargs: [optional] parameters of `pyhelpers.text.find_similar_str()`_
         :return: valid subregion name that matches (or is the most similar to) the input
         :rtype: str
@@ -1002,13 +1008,19 @@ class GeofabrikDownloader(_Downloader):
             'Great Britain'
         """
 
+        if valid_subregion_names is None:
+            valid_subregion_names_ = self.valid_subregion_names
+        else:
+            valid_subregion_names_ = valid_subregion_names
+
         subregion_name_ = super().validate_subregion_name(
-            subregion_name=subregion_name, valid_subregion_names=self.valid_subregion_names,
-            **kwargs)
+            subregion_name=subregion_name, valid_subregion_names=valid_subregion_names_,
+            raise_err=raise_err, **kwargs)
 
         return subregion_name_
 
-    def validate_file_format(self, osm_file_format, **kwargs):
+    def validate_file_format(self, osm_file_format, valid_file_formats=None, raise_err=True,
+                             **kwargs):
         """
         Validate an input file format of OSM data.
 
@@ -1017,6 +1029,11 @@ class GeofabrikDownloader(_Downloader):
 
         :param osm_file_format: file format/extension of the OSM data on the free download server
         :type osm_file_format: str
+        :param valid_file_formats: fil extensions of the data available on a free download server
+        :type valid_file_formats: typing.Iterable
+        :param raise_err: (if the input fails to match a valid name) whether to raise the error
+            :py:class:`pydriosm.downloader.InvalidFileFormatError`, defaults to ``True``
+        :type raise_err: bool
         :param kwargs: [optional] parameters of `pyhelpers.text.find_similar_str()`_
         :return: formal file format
         :rtype: str
@@ -1042,9 +1059,14 @@ class GeofabrikDownloader(_Downloader):
             '.shp.zip'
         """
 
+        if valid_file_formats is None:
+            valid_file_formats_ = self.FILE_FORMATS
+        else:
+            valid_file_formats_ = valid_file_formats
+
         osm_file_format_ = super().validate_file_format(
-            osm_file_format=osm_file_format, valid_file_formats=self.FILE_FORMATS,
-            **kwargs)
+            osm_file_format=osm_file_format, valid_file_formats=valid_file_formats_,
+            raise_err=raise_err, **kwargs)
 
         return osm_file_format_
 

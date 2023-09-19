@@ -13,10 +13,11 @@ from pyhelpers._cache import _check_dependency, _format_err_msg
 from pyhelpers.dbms import PostgreSQL
 from pyhelpers.ops import confirmed, get_number_of_chunks, split_list
 from pyhelpers.store import save_pickle
+from pyhelpers.text import find_similar_str
 
 from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader
-from pydriosm.ios.utils import *
-from pydriosm.reader import BBBikeReader, GeofabrikReader
+from pydriosm.ios.utils import get_default_layer_name, validate_schema_names, validate_table_name
+from pydriosm.reader import BBBikeReader, GeofabrikReader, PBFReadParse, SHPReadParse
 from pydriosm.utils import check_relpath, remove_osm_file
 
 

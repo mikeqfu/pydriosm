@@ -22,7 +22,6 @@ from pyhelpers.ops import split_list
 from pyhelpers.settings import gdal_configurations
 from pyhelpers.text import find_similar_str
 
-from pydriosm.downloader import GeofabrikDownloader
 from pydriosm.reader.transformer import Transformer
 from pydriosm.utils import check_json_engine, check_relpath
 

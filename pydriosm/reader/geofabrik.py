@@ -2,7 +2,6 @@
 Read OpenStreetMap data extracts available from Geofabrik free download server.
 """
 
-import collections
 import os
 
 from pyhelpers.text import find_similar_str

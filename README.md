@@ -31,8 +31,8 @@ It is hosted on [ReadTheDocs](https://readthedocs.org/projects/pydriosm/) and pr
 
 ## License
 
-- PyDriosm is licensed under [GNU General Public License v3.0](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE) or later (GPLv3+).
-- The free [OpenStreetMap](https://www.openstreetmap.org/) data, which is used for the development of PyDriosm, is licensed under the [Open Data Commons Open Database License](https://opendatacommons.org/licenses/odbl/) (ODbL) by the [OpenStreetMap Foundation](https://osmfoundation.org/) (OSMF).
+-   PyDriosm is licensed under [GNU General Public License v3.0](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE) or later (GPLv3+). 
+-   The free [OpenStreetMap](https://www.openstreetmap.org/) data, which is used for the development of PyDriosm, is licensed under the [Open Data Commons Open Database License](https://opendatacommons.org/licenses/odbl/) (ODbL) by the [OpenStreetMap Foundation](https://osmfoundation.org/) (OSMF).
 
 ## Acknowledgement
 

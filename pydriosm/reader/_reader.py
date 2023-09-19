@@ -440,10 +440,8 @@ class _Reader:
 
         osm_file_format = ".osm.pbf"
 
-        subregion_name_, osm_pbf_filename, _, path_to_osm_pbf = \
-            self.downloader.get_valid_download_info(
-                subregion_name=subregion_name, osm_file_format=osm_file_format,
-                download_dir=data_dir)
+        subregion_name_, _, _, path_to_osm_pbf = self.downloader.get_valid_download_info(
+            subregion_name=subregion_name, osm_file_format=osm_file_format, download_dir=data_dir)
 
         if path_to_osm_pbf is not None:
             suffix = "-pbf.pkl" if readable else "-raw.pkl"
