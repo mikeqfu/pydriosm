@@ -55,6 +55,30 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
     return pathname
 
 
+def check_relpath(pathname, start=os.curdir):
+    """
+    Check and return a relative pathname to the given ``pathname``.
+
+    On Windows, when ``pathname`` and ``start`` are on different drives, the function returns
+    the given ``pathname``.
+
+    :param pathname: pathname of a file or a directory
+    :type pathname: str | os.PathLike[str]
+    :param start: optional start directory,
+        defaults to ``os.curdir`` (i.e. the current working directory)
+    :type start: str | os.PathLike[str]
+    :return: relative pathname to the given ``pathname``
+    :type: str | os.PathLike[str]
+    """
+
+    try:
+        relpath = os.path.relpath(pathname, start=start)
+    except ValueError:
+        relpath = pathname
+
+    return relpath
+
+
 def cdd_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
     """
     Change directory to ``osm_geofabrik\\`` and its subdirectories within a package.
@@ -229,7 +253,7 @@ def remove_osm_file(path_to_file, verbose=True):
 
     else:
         if verbose:
-            print(f"Deleting \"{os.path.relpath(path_to_file)}\"", end=" ... ")
+            print(f"Deleting \"{check_relpath(path_to_file)}\"", end=" ... ")
 
         try:
             if os.path.isfile(path_to_file):
