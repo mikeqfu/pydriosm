@@ -4,7 +4,7 @@ import pytest
 
 
 def test_get_default_layer_name():
-    from pydriosm.ios import get_default_layer_name
+    from pydriosm.ios.utils import get_default_layer_name
 
     lyr_name = get_default_layer_name(schema_name='point')
     assert lyr_name == 'points'
@@ -14,7 +14,7 @@ def test_get_default_layer_name():
 
 
 def test_validate_schema_names():
-    from pydriosm.ios import validate_schema_names
+    from pydriosm.ios.utils import validate_schema_names
 
     valid_names = validate_schema_names()
     assert valid_names == []
@@ -28,7 +28,7 @@ def test_validate_schema_names():
 
 
 def test_validate_table_name():
-    from pydriosm.ios import validate_table_name
+    from pydriosm.ios.utils import validate_table_name
 
     subrgn_name = 'greater london'
     valid_table_name = validate_table_name(subrgn_name)
