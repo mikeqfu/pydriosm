@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 from pyhelpers.dirs import delete_dir
 
-from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader, _Downloader
+from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader
+from pydriosm.downloader._downloader import _Downloader
 from pydriosm.errors import InvalidFileFormatError, InvalidSubregionNameError
 
 gfd, bbd = GeofabrikDownloader(), BBBikeDownloader()

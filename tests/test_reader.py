@@ -9,7 +9,8 @@ import pytest
 import shapely.geometry
 from pyhelpers.store import load_pickle
 
-from pydriosm.reader import PBFReadParse, SHPReadParse, Transformer, _Reader
+from pydriosm.reader import PBFReadParse, SHPReadParse, Transformer
+from pydriosm.reader._reader import _Reader
 
 
 class TestTransformer:
