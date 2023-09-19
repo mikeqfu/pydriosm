@@ -9,34 +9,33 @@ reader
     :no-undoc-members:
     :no-inherited-members:
 
-Parsing / transforming data
----------------------------
+
+Transform OSM data
+------------------
 
 .. autosummary::
     :toctree: _generated/
     :template: class.rst
 
     Transformer
-    PBFReadParse
+
+Parse OSM data
+--------------
+
+.. autosummary::
+    :toctree: _generated/
+    :template: class.rst
+
     SHPReadParse
+    PBFReadParse
     VarReadParse
 
-Base reader class
------------------
+Read OSM data
+-------------
 
 .. autosummary::
     :toctree: _generated/
     :template: class.rst
 
-    _Reader
-
-Reading data
-------------
-
-.. autosummary::
-    :toctree: _generated/
-    :template: class.rst
-
-    _Reader
     GeofabrikReader
     BBBikeReader

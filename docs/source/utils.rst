@@ -9,13 +9,14 @@ utils
     :no-undoc-members:
     :no-inherited-members:
 
-Data directories
-----------------
+Check data pathnames
+--------------------
 
 .. autosummary::
     :toctree: _generated/
     :template: function.rst
 
+    check_relpath
     cdd_geofabrik
     cdd_bbbike
 

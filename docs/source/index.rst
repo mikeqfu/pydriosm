@@ -2,28 +2,26 @@
 PyDriosm
 ########
 
-.. only:: html
+|PyPI| |Python Version| |Documentation Status| |License| |Codacy Badge| |DOI|
 
-    |PyPI| |Python| |Documentation| |License| |Code quality| |DOI|
-
-    .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm
-        :alt: PyPI - Release
-        :target: https://pypi.org/project/pydriosm/
-    .. |Python| image:: https://img.shields.io/pypi/pyversions/pydriosm
-        :alt: PyPI - Python version
-        :target: https://docs.python.org/3/
-    .. |Documentation| image:: https://readthedocs.org/projects/pydriosm/badge/?version=latest
-        :alt: ReadTheDocs - Documentation status
-        :target: https://pydriosm.readthedocs.io/en/latest/?badge=latest
-    .. |License| image:: https://img.shields.io/pypi/l/pydriosm
-        :alt: PyPI - License
-        :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
-    .. |Code quality| image:: https://app.codacy.com/project/badge/Grade/b411ce89cbc445f58377a5799646d4cb
-        :alt: Codacy grade (Code quality)
-        :target: https://www.codacy.com/gh/mikeqfu/pydriosm/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mikeqfu/pydriosm&amp;utm_campaign=Badge_Grade
-    .. |DOI| image:: https://zenodo.org/badge/92493726.svg
-        :alt: Zenodo - DOI
-        :target: https://zenodo.org/badge/latestdoi/92493726
+.. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm
+    :alt: PyPI - Release
+    :target: https://pypi.org/project/pydriosm/
+.. |Python Version| image:: https://img.shields.io/pypi/pyversions/pydriosm
+    :alt: PyPI - Python version
+    :target: https://docs.python.org/3/
+.. |Documentation Status| image:: https://readthedocs.org/projects/pydriosm/badge/?version=latest
+    :alt: ReadTheDocs - Documentation status
+    :target: https://pydriosm.readthedocs.io/en/latest/?badge=latest
+.. |License| image:: https://img.shields.io/pypi/l/pydriosm
+    :alt: PyPI - License
+    :target: https://github.com/mikeqfu/pydriosm/blob/master/LICENSE
+.. |Codacy Badge| image:: https://app.codacy.com/project/badge/Grade/b411ce89cbc445f58377a5799646d4cb
+    :alt: Codacy grade (Code quality)
+    :target: https://www.codacy.com/gh/mikeqfu/pydriosm/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mikeqfu/pydriosm&amp;utm_campaign=Badge_Grade
+.. |DOI| image:: https://zenodo.org/badge/92493726.svg
+    :alt: Zenodo - DOI
+    :target: https://zenodo.org/badge/latestdoi/92493726
 
 | **Author**: Qian Fu
 | **Email**: q.fu@bham.ac.uk
@@ -36,7 +34,6 @@ PyDriosm is an open-source tool that provides an effortless way to download and 
     :includehidden:
     :caption: Documentation
 
-    introduction
     installation
     modules
     license
@@ -57,4 +54,3 @@ Indices
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

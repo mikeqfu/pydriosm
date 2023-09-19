@@ -9,8 +9,8 @@ ios
     :no-undoc-members:
     :no-inherited-members:
 
-Storage I/O of data
--------------------
+Manage I/O storage of parsed OSM data
+-------------------------------------
 
 .. autosummary::
     :toctree: _generated/
@@ -30,6 +30,14 @@ Customised alternatives (Optional)
 
 Other utilities
 ---------------
+
+.. py:module:: pydriosm.ios.utils
+
+.. automodule:: pydriosm.ios.utils
+    :noindex:
+    :no-members:
+    :no-undoc-members:
+    :no-inherited-members:
 
 .. autosummary::
     :toctree: _generated/

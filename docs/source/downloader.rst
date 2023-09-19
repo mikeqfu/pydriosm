@@ -9,17 +9,8 @@ downloader
     :no-undoc-members:
     :no-inherited-members:
 
-Base downloader class
----------------------
-
-.. autosummary::
-    :toctree: _generated/
-    :template: class.rst
-
-    _Downloader
-
-Downloading data
-----------------
+Download OSM data
+-----------------
 
 .. autosummary::
     :toctree: _generated/

@@ -1,18 +1,19 @@
-=======
-Modules
-=======
+======================
+Sub-packages / modules
+======================
 
 .. py:module:: pydriosm
 
-The package includes the following five modules:
+The package includes the following sub-packages and modules:
+
+Sub-packages
+============
 
 .. autosummary::
 
     downloader
     reader
     ios
-    errors
-    utils
 
 .. toctree::
     :maxdepth: 2
@@ -21,5 +22,18 @@ The package includes the following five modules:
     downloader
     reader
     ios
+
+Modules
+=======
+
+.. autosummary::
+
+    errors
+    utils
+
+.. toctree::
+    :maxdepth: 2
+    :hidden:
+
     errors
     utils
