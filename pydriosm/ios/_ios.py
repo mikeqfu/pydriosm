@@ -1,8 +1,3 @@
-"""
-Implement storage I/O of (parsed) `OSM <https://www.openstreetmap.org/>`_ data extracts
-with `PostgreSQL <https://www.postgresql.org/>`_.
-"""
-
 import ast
 import collections
 import copy
@@ -18,145 +13,23 @@ from pyhelpers._cache import _check_dependency, _format_err_msg
 from pyhelpers.dbms import PostgreSQL
 from pyhelpers.ops import confirmed, get_number_of_chunks, split_list
 from pyhelpers.store import save_pickle
-from pyhelpers.text import find_similar_str, remove_punctuation
 
 from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader
-from pydriosm.reader import BBBikeReader, GeofabrikReader, PBFReadParse, SHPReadParse
-from pydriosm.utils import remove_osm_file
+from pydriosm.ios.utils import *
+from pydriosm.reader import BBBikeReader, GeofabrikReader
+from pydriosm.utils import check_relpath, remove_osm_file
 
-
-# == Module-specific utilities =====================================================================
-
-def get_default_layer_name(schema_name):
-    """
-    Get default name (as an input schema name) of an OSM layer
-    for the class :py:class:`PostgresOSM<pydriosm.ios.PostgresOSM>`.
-
-    See, for example, the method :meth:`pydriosm.ios.PostgresOSM.import_osm_layer`.
-
-    :param schema_name: name of a schema (or name of an OSM layer)
-    :type schema_name: str
-    :return: default name of the layer
-    :rtype: str
-
-    **Examples**::
-
-        >>> from pydriosm.ios import get_default_layer_name
-
-        >>> lyr_name = get_default_layer_name(schema_name='point')
-        >>> lyr_name
-        'points'
-
-        >>> lyr_name = get_default_layer_name(schema_name='land')
-        >>> lyr_name
-        'landuse'
-    """
-
-    valid_layer_names = set(PBFReadParse.LAYER_GEOM.keys()).union(SHPReadParse.LAYER_NAMES)
-
-    layer_name_ = find_similar_str(x=schema_name, lookup_list=valid_layer_names)
-
-    return layer_name_
-
-
-def validate_schema_names(schema_names=None, schema_named_as_layer=False):
-    """
-    Validate schema names for importing data into a `PostgreSQL`_ database.
-
-    .. _`PostgreSQL`: https://www.postgresql.org/
-
-    :param schema_names: one or multiple names of layers, e.g. 'points', 'lines', defaults to ``None``
-    :type schema_names: typing.Iterable | None
-    :param schema_named_as_layer: whether to use default PBF layer name as the schema name,
-        defaults to ``False``
-    :type schema_named_as_layer: bool
-    :return: valid names of the schemas in the database
-    :rtype: list
-
-    **Examples**::
-
-        >>> from pydriosm.ios import validate_schema_names
-
-        >>> valid_names = validate_schema_names()
-        >>> valid_names
-        []
-
-        >>> input_schema_names = ['point', 'polygon']
-        >>> valid_names = validate_schema_names(input_schema_names)
-        >>> valid_names
-        ['point', 'polygon']
-
-        >>> valid_names = validate_schema_names(input_schema_names, schema_named_as_layer=True)
-        >>> valid_names
-        ['points', 'multipolygons']
-    """
-
-    if schema_names:
-        if isinstance(schema_names, str):
-            schema_names_ = [
-                get_default_layer_name(schema_names) if schema_named_as_layer else schema_names]
-            # assert schema_names_[0] in valid_layer_names, assertion_msg
-        else:  # isinstance(schema_names, list) is True
-            if schema_named_as_layer:
-                schema_names_ = [get_default_layer_name(x) for x in schema_names]
-            else:
-                schema_names_ = schema_names
-    else:
-        schema_names_ = []
-
-    return schema_names_
-
-
-def validate_table_name(table_name, sub_space=''):
-    """
-    Validate a table name for importing OSM data into a `PostgreSQL`_ database.
-
-    .. _`PostgreSQL`: https://www.postgresql.org/
-
-    :param table_name: name as input of a table in a PostgreSQL database
-    :type table_name: str
-    :param sub_space: substitute for space, defaults to ``''``
-    :type sub_space: str
-    :return: valid name of the table in the database
-    :rtype: str
-
-    **Examples**::
-
-        >>> from pydriosm.ios import validate_table_name
-
-        >>> subrgn_name = 'greater london'
-        >>> valid_table_name = validate_table_name(subrgn_name)
-        >>> valid_table_name
-        'greater london'
-
-        >>> subrgn_name = 'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Wales'
-        >>> valid_table_name = validate_table_name(subrgn_name, sub_space='_')
-        >>> valid_table_name
-        'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch_W..'
-    """
-
-    table_name_ = remove_punctuation(x=table_name, rm_whitespace=True)
-
-    if sub_space:
-        table_name_ = table_name_.replace(' ', sub_space)
-
-    table_name_ = table_name_[:60] + '..' if len(table_name_) >= 63 else table_name_
-
-    return table_name_
-
-
-# == Storage I/O of data ===========================================================================
 
 class PostgresOSM(PostgreSQL):
     """
-    Implement storage I/O of `OSM`_ data with `PostgreSQL`_.
+    Implement storage I/O of `OpenStreetMap <https://www.openstreetmap.org/>`_ data
+    with `PostgreSQL`_.
 
-    .. _`OSM`: https://www.openstreetmap.org/
     .. _`PostgreSQL`: https://www.postgresql.org/
     """
 
-    #: dict: Specify a data-type dictionary for data or columns in
-    #: `PostgreSQL database <https://www.postgresql.org/docs/current/datatype.html>`_ and
+    #: dict: Specify a `data-type <https://www.postgresql.org/docs/current/datatype.html>`_
+    #: dictionary for data or columns corresponding to
     #: `Pandas <https://pandas.pydata.org/docs/user_guide/basics.html#basics-dtypes>`_.
     DATA_TYPES = {
         'text': str,
@@ -521,8 +394,7 @@ class PostgresOSM(PostgreSQL):
     def get_table_column_info(self, subregion_name, layer_name, as_dict=False,
                               table_named_as_subregion=False, schema_named_as_layer=False):
         """
-        Get information about columns of a specific schema and
-        table data of a geographic (sub)region.
+        Get information about columns of a specific schema and table data of a geographic (sub)region.
 
         :param subregion_name: name of a geographic (sub)region, which acts as a table name
         :type subregion_name: str
@@ -1118,7 +990,7 @@ class PostgresOSM(PostgreSQL):
         number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
 
         if verbose:
-            print(f"Reading \"{os.path.relpath(path_to_osm_pbf)}\"", end=" ... ")
+            print(f"Reading \"{check_relpath(path_to_osm_pbf)}\"", end=" ... ")
 
         osm_pbf_data = PBFReadParse.read_pbf(
             pbf_pathname=path_to_osm_pbf, number_of_chunks=number_of_chunks, expand=expand,
@@ -1271,8 +1143,7 @@ class PostgresOSM(PostgreSQL):
                                  parse_other_tags=False, pickle_pbf_file=False, rm_pbf_file=False,
                                  confirmation_required=True, verbose=False, **kwargs):
         """
-        Import data of geographic (sub)region(s) that do not have (sub-)subregions
-        into a database.
+        Import data of geographic (sub)region(s) that do not have (sub-)subregions into a database.
 
         :param subregion_names: name(s) of geographic (sub)region(s)
         :type subregion_names: str | list | None
@@ -1565,8 +1436,7 @@ class PostgresOSM(PostgreSQL):
         Fetch OSM data (of one or multiple layers) of a geographic (sub)region.
 
         See also
-        [`ROP-1
-        <https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-read-sql-query>`_].
+        [`ROP-1 <https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-read-sql-query>`_].
 
         :param subregion_name: name of a geographic (sub)region (or the corresponding table)
         :type subregion_name: str
@@ -2020,8 +1890,7 @@ class PostgresOSM(PostgreSQL):
         """
 
         table_names = self.reader.validate_input_dtype(subregion_names)
-        table_names_ = sorted(
-            [self.get_table_name(x, table_named_as_subregion) for x in table_names])
+        table_names_ = sorted([self.get_table_name(x, table_named_as_subregion) for x in table_names])
 
         # Validate the input `schema_names`
         if schema_names is None:
@@ -2050,8 +1919,8 @@ class PostgresOSM(PostgreSQL):
         else:
             # existing_schema_names_.sort()
             _, schema_pl, prt_schema = self._msg_for_multi_items(
-                existing_schema_names_, desc='schema')
-            _, tbl_pl, prt_tbl = self._msg_for_multi_items(table_names_, desc='table')
+                existing_schema_names_, desc='schema', fmt='"{}"')
+            _, tbl_pl, prt_tbl = self._msg_for_multi_items(table_names_, desc='table', fmt='"{}"')
 
             table_list = list(itertools.product(existing_schema_names_, table_names_))
 
@@ -2092,87 +1961,3 @@ class PostgresOSM(PostgreSQL):
                         else:  # The table doesn't exist
                             if verbose == 2:
                                 print(f"\t{schema_table} does not exist.")
-
-
-class GeofabrikIOS:
-    """
-    Implement storage I/O of
-    `Geofabrik OpenStreetMap data extracts <https://download.geofabrik.de/>`_
-    with `PostgreSQL`_.
-
-    .. _`PostgreSQL`: https://www.postgresql.org/
-    """
-
-    def __init__(self, **kwargs):
-        """
-        :param kwargs: [optional] parameters of the class :class:`~pydriosm.downloader.PostgresOSM`
-
-        :ivar PostgresOSM postgres: instance of the class :class:`~pydriosm.downloader.PostgresOSM`
-        :ivar GeofabrikDownloader downloader: instance of the class
-            :class:`~pydriosm.downloader.GeofabrikDownloader`
-        :ivar GeofabrikReader reader: instance of the class
-            :class:`~pydriosm.downloader.GeofabrikReader`
-
-        **Examples**::
-
-            >>> from pydriosm.ios import GeofabrikIOS
-
-            >>> gfi = GeofabrikIOS(database_name='osmdb_test')
-            Password (postgres@localhost:5432): ***
-            Creating a database: "osmdb_test" ... Done.
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> type(gfi.dbms)
-            pydriosm.ios.PostgresOSM
-
-            >>> gfi.dbms.name
-            'Geofabrik OpenStreetMap data extracts'
-
-        .. seealso::
-
-            - Examples for all the methods of the class :class:`~pydriosm.ios.PostgresOSM`.
-        """
-
-        kwargs.update({'data_source': 'Geofabrik'})
-        self.dbms = PostgresOSM(**kwargs)
-
-
-class BBBikeIOS:
-    """
-    Implement storage I/O of `BBBike exports of OpenStreetMap data <https://download.bbbike.org/>`_
-    with `PostgreSQL`_.
-
-    .. _`PostgreSQL`: https://www.postgresql.org/
-    """
-
-    def __init__(self, **kwargs):
-        """
-        :param kwargs: [optional] parameters of the class :class:`~pydriosm.downloader.PostgresOSM`
-
-        :ivar BBBikeDownloader downloader: instance of the class
-            :class:`~pydriosm.downloader.BBBikeDownloader`
-        :ivar BBBikeReader reader: instance of the class
-            :class:`~pydriosm.downloader.BBBikeReader`
-
-        **Examples**::
-
-            >>> from pydriosm.ios import BBBikeIOS
-
-            >>> bbi = BBBikeIOS(database_name='osmdb_test')
-            Password (postgres@localhost:5432): ***
-            Creating a database: "osmdb_test" ... Done.
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> type(bbi.dbms)
-            pydriosm.ios.PostgresOSM
-
-            >>> bbi.dbms.name
-            'BBBike exports of OpenStreetMap data'
-
-        .. seealso::
-
-            - Examples for all the methods of the class :class:`~pydriosm.ios.PostgresOSM`.
-        """
-
-        kwargs.update({'data_source': 'BBBike'})
-        self.dbms = PostgresOSM(**kwargs)
