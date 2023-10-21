@@ -98,9 +98,9 @@ class TestTransformer:
         g1_dat_ = cls.TEST_COLLECTION_1.copy()
         g1_dat = g1_dat_['geometries']
         g1_data = Transformer.transform_geometry_collection(g1_dat)
-        assert isinstance(g1_data, shapely.geometry.base.GeometrySequence)
-        assert shapely.geometry.GeometryCollection(list(g1_data)).wkt == \
-               'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))'
+        assert isinstance(g1_data, shapely.geometry.base.BaseGeometry)
+        assert (g1_data.wkt ==
+                'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))')
 
         g2_dat = cls.TEST_COLLECTION_2.copy()
         g2_data = Transformer.transform_geometry_collection(g2_dat, mode=2)
