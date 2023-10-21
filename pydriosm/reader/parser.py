@@ -16,7 +16,7 @@ import zipfile
 import pandas as pd
 import shapefile as pyshp
 import shapely.geometry
-from pyhelpers._cache import _check_dependency, _format_err_msg
+from pyhelpers._cache import _check_dependency, _print_failure_msg
 from pyhelpers.dirs import cd, validate_dir
 from pyhelpers.ops import split_list
 from pyhelpers.settings import gdal_configurations
@@ -215,6 +215,63 @@ class SHPReadParse:
         return layer_name
 
     @classmethod
+    def _unzip_shp_zip_prep(cls, shp_zip_pathname, extract_to=None, layer_names=None, verbose=False):
+        if extract_to:
+            extract_dir = extract_to
+        else:
+            extract_dir = os.path.splitext(shp_zip_pathname)[0].replace(".", "-")
+
+        shp_zip_rel_path, extrdir_rel_path = map(check_relpath, [shp_zip_pathname, extract_dir])
+
+        if not layer_names:
+            layer_names_ = layer_names
+            if verbose:
+                print(
+                    f"Extracting \"{shp_zip_rel_path}\"\n\tto \"{extrdir_rel_path}\\\"",
+                    end=" ... ")
+        else:
+            layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
+            if verbose:
+                layer_name_list = "\t" + "\n\t".join([f"'{x}'" for x in layer_names_])
+                print(f"Extracting the following layer(s):\n{layer_name_list}")
+                print(f"\tfrom \"{shp_zip_rel_path}\"\n\t  to \"{extrdir_rel_path}\\\"", end=" ... ")
+
+        return extract_dir, layer_names_
+
+    @classmethod
+    def _unzip_shp_zip_post(cls, extract_dir, extract_files, verbose):
+        file_list = extract_files if extract_files else os.listdir(extract_dir)
+        if 'README' in file_list:
+            file_list.remove('README')
+
+        filenames, exts = map(
+            lambda x: list(set(x)), zip(*map(os.path.splitext, file_list)))
+
+        layer_names_ = [cls.find_shp_layer_name(f) for f in filenames]
+
+        extract_dirs = []
+        for lyr, fn in zip(layer_names_, filenames):
+            extract_dir_ = os.path.join(extract_dir, lyr)
+            if verbose == 2:
+                print("\t{}".format(lyr if '_a_' not in fn else lyr + '_a'), end=" ... ")
+
+            for ext in exts:
+                filename = fn + ext
+                orig = cd(extract_dir, filename, mkdir=True)
+                dest = cd(extract_dir_, filename, mkdir=True)
+                shutil.copyfile(orig, dest)
+                os.remove(orig)
+
+            if verbose == 2:
+                print("Done.")
+
+            extract_dirs.append(extract_dir_)
+
+        extract_dir = list(set(extract_dirs))
+
+        return extract_dir
+
+    @classmethod
     def unzip_shp_zip(cls, shp_zip_pathname, extract_to=None, layer_names=None, separate=False,
                       ret_extract_dir=False, verbose=False):
         """
@@ -338,26 +395,9 @@ class SHPReadParse:
             Deleting "tests\\osm_data\\" ... Done.
         """
 
-        if extract_to:
-            extract_dir = extract_to
-        else:
-            extract_dir = os.path.splitext(shp_zip_pathname)[0].replace(".", "-")
-
-        shp_zip_rel_path, extrdir_rel_path = map(check_relpath, [shp_zip_pathname, extract_dir])
-
-        if not layer_names:
-            layer_names_ = layer_names
-            if verbose:
-                print(
-                    f"Extracting \"{shp_zip_rel_path}\"\n\tto \"{extrdir_rel_path}\\\"",
-                    end=" ... ")
-        else:
-            layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
-            if verbose:
-                layer_name_list = "\t" + "\n\t".join([f"'{x}'" for x in layer_names_])
-                print(f"Extracting the following layer(s):\n{layer_name_list}")
-                print(
-                    f"\tfrom \"{shp_zip_rel_path}\"\n\t  to \"{extrdir_rel_path}\\\"", end=" ... ")
+        extract_dir, layer_names_ = cls._unzip_shp_zip_prep(
+            shp_zip_pathname=shp_zip_pathname, extract_to=extract_to, layer_names=layer_names,
+            verbose=verbose)
 
         try:
             with zipfile.ZipFile(file=shp_zip_pathname, mode='r') as sz:
@@ -379,40 +419,14 @@ class SHPReadParse:
                 if verbose:
                     print("Grouping files by layers ... ", end="\n" if verbose == 2 else "")
 
-                file_list = extract_files if extract_files else os.listdir(extract_dir)
-                if 'README' in file_list:
-                    file_list.remove('README')
-
-                filenames, exts = map(
-                    lambda x: list(set(x)), zip(*map(os.path.splitext, file_list)))
-
-                layer_names_ = [cls.find_shp_layer_name(f) for f in filenames]
-
-                extract_dirs = []
-                for lyr, fn in zip(layer_names_, filenames):
-                    extract_dir_ = os.path.join(extract_dir, lyr)
-                    if verbose == 2:
-                        print("\t{}".format(lyr if '_a_' not in fn else lyr + '_a'), end=" ... ")
-
-                    for ext in exts:
-                        filename = fn + ext
-                        orig = cd(extract_dir, filename, mkdir=True)
-                        dest = cd(extract_dir_, filename, mkdir=True)
-                        shutil.copyfile(orig, dest)
-                        os.remove(orig)
-
-                    if verbose == 2:
-                        print("Done.")
-
-                    extract_dirs.append(extract_dir_)
-
-                extract_dir = list(set(extract_dirs))
+                extract_dir = cls._unzip_shp_zip_post(
+                    extract_dir=extract_dir, extract_files=extract_files, verbose=verbose)
 
                 if verbose:
                     print("Done.")
 
         except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
+            _print_failure_msg(e=e, msg="Failed.")
 
         if ret_extract_dir:
             return extract_dir
@@ -797,7 +811,7 @@ class SHPReadParse:
                 return f"{write_to_}.shp"
 
         except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
+            _print_failure_msg(e=e, msg="Failed.")
 
     @classmethod
     def _make_feat_shp_pathname(cls, shp_pathname, feature_names_):
@@ -1348,7 +1362,7 @@ class SHPReadParse:
                 return path_to_merged_shp
 
         except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
+            _print_failure_msg(e=e, msg="Failed.")
 
 
 class PBFReadParse(Transformer):
@@ -1495,7 +1509,7 @@ class PBFReadParse(Transformer):
             return layer_idx_names
 
         except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
+            _print_failure_msg(e=e, msg="Failed.")
 
     @classmethod
     def transform_pbf_layer_field(cls, layer_data, layer_name, parse_geometry=False,
