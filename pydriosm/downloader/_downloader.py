@@ -794,7 +794,7 @@ class _Downloader:
                 if verbose:
                     osm_filename = os.path.basename(path_to_file)
                     rel_path = check_relpath(os.path.dirname(path_to_file))
-                    print(f'"{osm_filename}" is already available\n\tat "{rel_path}\\".')
+                    print(f'"{osm_filename}" is already available at "{rel_path}\\".')
 
         if not dwnld_list:
             if update:
@@ -908,8 +908,7 @@ class _Downloader:
                 status_msg, prep = "Downloading", "to"
             rel_path = check_relpath(os.path.dirname(file_pathname))
 
-            prt_msg = \
-                f"{status_msg} \"{os.path.basename(file_pathname)}\"\n\t{prep} \"{rel_path}\\\""
+            prt_msg = f"{status_msg} \"{os.path.basename(file_pathname)}\" {prep} \"{rel_path}\\\""
             print(prt_msg, end=" ... \n" if verbose == 2 else " ... ")
 
         try:

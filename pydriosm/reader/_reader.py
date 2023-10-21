@@ -768,13 +768,15 @@ class _Reader:
             # print(f'Reading the shapefile(s) data', end=" ... ")
             files_dir = check_relpath(
                 os.path.commonpath(list(itertools.chain.from_iterable(shp_pathnames))))
-            msg_ = "the shapefile(s) at\n\t" if os.path.isdir(files_dir) else ""
+            if os.path.isdir(files_dir):
+                msg_ = "the shapefile(s) at "
+            else:
+                msg_ = ""
             print(f'Reading {msg_}"{files_dir}\\"', end=" ... ")
 
         try:
             kwargs.update({'feature_names': feature_names_, 'ret_feat_shp_path': False})
-            shp_dat_list = [
-                self.SHP.read_layer_shps(shp_pathnames=x, **kwargs) for x in shp_pathnames]
+            shp_dat_list = [self.SHP.read_layer_shps(x, **kwargs) for x in shp_pathnames]
 
             shp_data = collections.OrderedDict(zip(layer_name_list, shp_dat_list))
 
