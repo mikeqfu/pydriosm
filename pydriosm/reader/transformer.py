@@ -151,16 +151,19 @@ class Transformer:
             geom_func = getattr(shapely.geometry, geom_type)
 
             if geom_type == 'MultiPolygon':
-                geom = geom_func(
+                geom_data = geom_func(
                     shapely.geometry.Polygon(y) for x in cls.point_as_polygon(coords) for y in x)
-                geom_data = geom.wkt if to_wkt else geom.geoms
+                # geom_data = geom.wkt if to_wkt else geom.geoms
 
             else:
                 geom_data = geom_func(coords)
-                if to_wkt:
-                    geom_data = geom_data.wkt
-                elif 'Multi' in geom_type:
-                    geom_data = geom_data.geoms
+                # if to_wkt:
+                #     geom_data = geom_data.wkt
+                # elif 'Multi' in geom_type:
+                #     geom_data = geom_data.geoms
+
+            if to_wkt:
+                geom_data = geom_data.wkt
 
         else:
             geom_data = geometry.copy()
@@ -212,8 +215,8 @@ class Transformer:
             >>> g1_dat = g1_dat_['geometries']
             >>> g1_data = PBFReadParse.transform_geometry_collection(g1_dat)
             >>> type(g1_data)
-            shapely.geometry.base.HeterogeneousGeometrySequence
-            >>> GeometryCollection(list(g1_data)).wkt
+            shapely.geometry.collection.GeometryCollection
+            >>> g1_data.wkt
             'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))'
 
             >>> g2_dat = {
@@ -251,10 +254,11 @@ class Transformer:
                 else:
                     geometry_collection.append(geom_func(pt for pts in coords for pt in pts))
 
+            geome_data = shapely.geometry.GeometryCollection(geometry_collection)
             if to_wkt:
-                geome_data = shapely.geometry.GeometryCollection(geometry_collection).wkt
-            else:
-                geome_data = shapely.geometry.GeometryCollection(geometry_collection).geoms
+                geome_data = geome_data.wkt
+            # else:
+            #     geome_data = shapely.geometry.GeometryCollection(geometry_collection).geoms
 
         else:
             geome_data = geometry.copy()
