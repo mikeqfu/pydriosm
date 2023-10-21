@@ -1,3 +1,7 @@
+"""
+Base class.
+"""
+
 import ast
 import collections
 import copy
@@ -9,7 +13,7 @@ import numpy as np
 import pandas as pd
 import shapely.wkt
 import sqlalchemy
-from pyhelpers._cache import _check_dependency, _format_err_msg
+from pyhelpers._cache import _check_dependency, _print_failure_msg
 from pyhelpers.dbms import PostgreSQL
 from pyhelpers.ops import confirmed, get_number_of_chunks, split_list
 from pyhelpers.store import save_pickle
@@ -936,13 +940,13 @@ class PostgresOSM(PostgreSQL):
             subregion_name=table_name, table_named_as_subregion=table_named_as_subregion)
         tbl_name = f'"{table_name_}"'
 
-        if confirmed(f"To import data into table {tbl_name} at {self.address}\n?",
+        if confirmed(f"To import data into the table {tbl_name} at {self.address}\n?",
                      confirmation_required=confirmation_required):
 
             if verbose:
                 status_msg = "Importing the data"
                 if not confirmation_required:
-                    status_msg += f" into table {tbl_name}"
+                    status_msg += f" into the table {tbl_name}"
                     if verbose != 2:
                         status_msg += f" at {self.address}"
                 print(status_msg, end=" ... \n")
@@ -1065,7 +1069,7 @@ class PostgresOSM(PostgreSQL):
                 print(f"Done. ({count_of_features} features)")
 
         except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
+            _print_failure_msg(e=e, msg="Failed.")
 
         return layer_dat_list
 
@@ -1379,19 +1383,23 @@ class PostgresOSM(PostgreSQL):
                     err_subregion_names.append(subregion_name_)
 
             if len(err_subregion_names) > 0:
-                print(
-                    "Errors occurred when parsing data of the following subregion(s):", end="\n\t")
+                print("Errors occurred when parsing data of the following subregion(s):", end="\n\t")
                 print('"' + '"\n\t"'.join(err_subregion_names) + '"')
 
     @staticmethod
     def _decode_layer_dat(dat, possible_col_names):
         col_names = [x for x in possible_col_names if x in dat.columns]
-        if len(col_names) >= 1:
-            # noinspection PyBroadException
-            try:
-                dat[col_names] = dat[col_names].applymap(ast.literal_eval)
-            except Exception:  # SyntaxError
-                dat[col_names] = dat[col_names].applymap(shapely.wkt.loads)
+
+        if len(col_names) > 0:
+            for col_name in col_names:
+                try:
+                    dat[col_name] = dat[col_name].map(ast.literal_eval)
+                except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
+                    pass
+                try:
+                    dat[col_name] = dat[col_name].map(shapely.wkt.loads)
+                except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
+                    pass
 
     def decode_pbf_layer(self, layer_dat, decode_geojson=True):
         """
@@ -1425,7 +1433,45 @@ class PostgresOSM(PostgreSQL):
             else:
                 possible_col_names = {
                     'coordinates', 'geometries', 'geometry', 'other_tags', 'properties'}
-                self._decode_layer_dat(layer_dat_, possible_col_names=possible_col_names)
+                self._decode_layer_dat(dat=layer_dat_, possible_col_names=possible_col_names)
+
+        return layer_dat_
+
+    def _get_dtype(self, table_name_, schema_name_):
+        column_info_table = self.get_column_info(table_name=table_name_, schema_name=schema_name_)
+
+        dtype_ = column_info_table['data_type']
+        dtype = dict(zip(column_info_table['column_name'], map(self.DATA_TYPES.get, dtype_)))
+
+        return dtype
+
+    def post_process_layer_dat(self, layer_dat, decode_geojson=True, sort_by='id'):
+        """
+        Post-process the data of a specific layer.
+
+        :param layer_dat:
+        :type layer_dat:
+        :param decode_geojson:
+        :type decode_geojson:
+        :param sort_by:
+        :type sort_by:
+        :return:
+        :rtype:
+        """
+
+        if isinstance(layer_dat, pd.DataFrame):
+            layer_dat_ = self.decode_pbf_layer(layer_dat=layer_dat, decode_geojson=decode_geojson)
+
+        else:
+            lyr_dat_ = [
+                self.decode_pbf_layer(layer_dat=dat, decode_geojson=decode_geojson)
+                for dat in layer_dat]
+            layer_dat_ = pd.concat(lyr_dat_, ignore_index=True)
+
+        if sort_by:
+            sort_by_ = [sort_by] if isinstance(sort_by, str) else copy.copy(sort_by)
+            if all(x in layer_dat_.columns for x in sort_by_):
+                layer_dat_.sort_values(sort_by, ignore_index=True, inplace=True)
 
         return layer_dat_
 
@@ -1624,8 +1670,10 @@ class PostgresOSM(PostgreSQL):
               are available in :doc:`../quick-start`.
         """
 
-        table_name_ = self.get_table_name(subregion_name, table_named_as_subregion)
-        schema_names_ = validate_schema_names(layer_names, schema_named_as_layer)
+        table_name_ = self.get_table_name(
+            subregion_name=subregion_name, table_named_as_subregion=table_named_as_subregion)
+        schema_names_ = validate_schema_names(
+            schema_names=layer_names, schema_named_as_layer=schema_named_as_layer)
 
         if not schema_names_:
             schema_names_ = list(dict.fromkeys(
@@ -1640,21 +1688,15 @@ class PostgresOSM(PostgreSQL):
 
             for schema_name_ in schema_names_:
                 if self.subregion_table_exists(table_name_, schema_name_):
-                    tbl_name = f'"{schema_name_}"."{table_name_}"'
-                    sql_query = f'SELECT * FROM {tbl_name}'
+                    sql_query = f'SELECT * FROM "{schema_name_}"."{table_name_}"'
 
                     if verbose:
                         print(f'\t"{schema_name_}"', end=" ... ")
 
                     try:
                         if method is not None:
-                            column_info_table = self.get_column_info(
-                                table_name=table_name_, schema_name=schema_name_)
-
-                            dtype_ = column_info_table['data_type']
-                            dtype = dict(
-                                zip(column_info_table['column_name'],
-                                    map(self.DATA_TYPES.get, dtype_)))
+                            dtype = self._get_dtype(
+                                table_name_=table_name_, schema_name_=schema_name_)
 
                             layer_dat = self.read_sql_query(
                                 sql_query=sql_query, method=method,
@@ -1663,32 +1705,20 @@ class PostgresOSM(PostgreSQL):
 
                         else:
                             with self.engine.connect() as connection:
-                                sql_query_ = sqlalchemy.text(sql_query)
                                 layer_dat = pd.read_sql(
-                                    sql_query_, con=connection, chunksize=chunk_size, **kwargs)
+                                    sql=sqlalchemy.text(sql_query), con=connection,
+                                    chunksize=chunk_size, **kwargs)
 
-                        if isinstance(layer_dat, pd.DataFrame):
-                            layer_dat = self.decode_pbf_layer(
-                                layer_dat=layer_dat, decode_geojson=decode_geojson)
+                        layer_dat = self.post_process_layer_dat(
+                            layer_dat=layer_dat, decode_geojson=decode_geojson, sort_by=sort_by)
 
-                        else:
-                            lyr_dat_ = [
-                                self.decode_pbf_layer(layer_dat=dat, decode_geojson=decode_geojson)
-                                for dat in layer_dat]
-                            layer_dat = pd.concat(lyr_dat_, ignore_index=True)
-
-                        if sort_by:
-                            sort_by_ = [sort_by] if isinstance(sort_by, str) else copy.copy(sort_by)
-                            if all(x in layer_dat.columns for x in sort_by_):
-                                layer_dat.sort_values(sort_by, ignore_index=True, inplace=True)
+                        layer_data.append(layer_dat)
 
                         if verbose:
                             print("Done.")
 
-                        layer_data.append(layer_dat)
-
                     except Exception as e:
-                        print(f"Failed. {_format_err_msg(e)}")
+                        _print_failure_msg(e=e, msg="Failed.")
 
                 else:
                     existing_schemas.remove(schema_name_)
@@ -1701,6 +1731,51 @@ class PostgresOSM(PostgreSQL):
             osm_data = None
 
         return osm_data
+
+    def _check_schema_and_table_names(self, subregion_names, schema_names=None,
+                                      table_named_as_subregion=False, schema_named_as_layer=False):
+        table_names = self.reader.validate_input_dtype(subregion_names)
+        table_names_ = sorted([self.get_table_name(x, table_named_as_subregion) for x in table_names])
+
+        # Validate the input `schema_names`
+        if schema_names is None:
+            inspector = sqlalchemy.inspection.inspect(self.engine)
+            schema_names_ = [
+                x for x in inspector.get_schema_names()
+                if x not in {'public', 'information_schema'}]
+        else:
+            schema_names_ = validate_schema_names(
+                schema_names=schema_names, schema_named_as_layer=schema_named_as_layer)
+
+        if len(schema_names_) > 0:
+            existing_schema_names_ = list(set(
+                schema_name
+                for schema_name, table_name in itertools.product(schema_names_, table_names_)
+                if self.subregion_table_exists(
+                    subregion_name=table_name, layer_name=schema_name,
+                    table_named_as_subregion=table_named_as_subregion,
+                    schema_named_as_layer=schema_named_as_layer)))
+        else:
+            existing_schema_names_ = schema_names_
+
+        return existing_schema_names_, table_names_
+
+    def _get_table_list_and_confirm_msg(self, existing_schema_names_, table_names_):
+        # existing_schema_names_.sort()
+        _, schema_pl, prt_schema = self._msg_for_multi_items(
+            existing_schema_names_, desc='schema', fmt='"{}"')
+        _, tbl_pl, prt_tbl = self._msg_for_multi_items(table_names_, desc='table', fmt='"{}"')
+
+        table_list = list(itertools.product(existing_schema_names_, table_names_))
+
+        if len(table_list) == 1:
+            confirm_msg = f'To drop {tbl_pl} {prt_schema}.{prt_tbl}\n' \
+                          f'  from {self.address}\n?'
+        else:
+            confirm_msg = f'To drop {tbl_pl} from {self.address}: {prt_tbl}\n' \
+                          f'  under the {schema_pl}: {prt_schema}\n?'
+
+        return table_list, confirm_msg
 
     def drop_subregion_tables(self, subregion_names, schema_names=None,
                               table_named_as_subregion=False, schema_named_as_layer=False,
@@ -1890,49 +1965,19 @@ class PostgresOSM(PostgreSQL):
             Deleting "tests\\osm_data\\" ... Done.
         """
 
-        table_names = self.reader.validate_input_dtype(subregion_names)
-        table_names_ = sorted([self.get_table_name(x, table_named_as_subregion) for x in table_names])
-
-        # Validate the input `schema_names`
-        if schema_names is None:
-            inspector = sqlalchemy.inspection.inspect(self.engine)
-            schema_names_ = [
-                x for x in inspector.get_schema_names()
-                if x not in {'public', 'information_schema'}]
-        else:
-            schema_names_ = validate_schema_names(
-                schema_names=schema_names, schema_named_as_layer=schema_named_as_layer)
-
-        if len(schema_names_) > 0:
-            existing_schema_names_ = list(set(
-                schema_name
-                for schema_name, table_name in itertools.product(schema_names_, table_names_)
-                if self.subregion_table_exists(
-                    subregion_name=table_name, layer_name=schema_name,
-                    table_named_as_subregion=table_named_as_subregion,
-                    schema_named_as_layer=schema_named_as_layer)))
-        else:
-            existing_schema_names_ = schema_names_
+        existing_schema_names_, table_names_ = self._check_schema_and_table_names(
+            subregion_names=subregion_names, schema_names=schema_names,
+            table_named_as_subregion=table_named_as_subregion,
+            schema_named_as_layer=schema_named_as_layer)
 
         if not existing_schema_names_:
             print("None of the data exists.")
 
         else:
-            # existing_schema_names_.sort()
-            _, schema_pl, prt_schema = self._msg_for_multi_items(
-                existing_schema_names_, desc='schema', fmt='"{}"')
-            _, tbl_pl, prt_tbl = self._msg_for_multi_items(table_names_, desc='table', fmt='"{}"')
+            table_list, confirm_msg = self._get_table_list_and_confirm_msg(
+                existing_schema_names_=existing_schema_names_, table_names_=table_names_)
 
-            table_list = list(itertools.product(existing_schema_names_, table_names_))
-
-            if len(table_list) == 1:
-                cfm_msg = f'To drop {tbl_pl} {prt_schema}.{prt_tbl}\n' \
-                          f'  from {self.address}\n?'
-            else:
-                cfm_msg = f'To drop {tbl_pl} from {self.address}: {prt_tbl}\n' \
-                          f'  under the {schema_pl}: {prt_schema}\n?'
-
-            if confirmed(cfm_msg, confirmation_required=confirmation_required):
+            if confirmed(confirm_msg, confirmation_required=confirmation_required):
                 if_tables_exist = any(
                     self.table_exists(table_name=table, schema_name=schema)
                     for schema, table in table_list)
@@ -1951,13 +1996,14 @@ class PostgresOSM(PostgreSQL):
 
                             try:
                                 with self.engine.connect() as connection:
-                                    query = sqlalchemy.text(
-                                        f'DROP TABLE IF EXISTS {schema_table} CASCADE;')
-                                    connection.execute(query)
+                                    query = f'DROP TABLE IF EXISTS {schema_table} CASCADE;'
+                                    connection.execute(sqlalchemy.text(query))
+
                                 if verbose:
                                     print("Done.")
+
                             except Exception as e:
-                                print(f"Failed. {_format_err_msg(e)}")
+                                _print_failure_msg(e=e, msg="Failed.")
 
                         else:  # The table doesn't exist
                             if verbose == 2:
