@@ -1,3 +1,7 @@
+"""
+Download OSM data from BBBike free download server.
+"""
+
 import collections
 import csv
 import importlib
@@ -8,10 +12,10 @@ import urllib.parse
 
 import pandas as pd
 import requests
-from pyhelpers._cache import _format_err_msg
+from pyhelpers._cache import _print_failure_msg
 from pyhelpers.dirs import cd, validate_dir
 from pyhelpers.ops import confirmed, download_file_from_url, fake_requests_headers
-from pyhelpers.store import save_pickle
+from pyhelpers.store import save_data
 from pyrcs.parser import parse_tr
 
 from pydriosm.downloader._downloader import _Downloader
@@ -26,19 +30,20 @@ class BBBikeDownloader(_Downloader):
     """
 
     #: Name of the free downloader server.
-    NAME = 'BBBike'
+    NAME: str = 'BBBike'
     #: Full name of the data resource.
-    LONG_NAME = 'BBBike exports of OpenStreetMap data'
+    LONG_NAME: str = 'BBBike exports of OpenStreetMap data'
     #: URL of the homepage to the free download server.
-    URL = 'https://download.bbbike.org/osm/bbbike/'
+    URL: str = 'https://download.bbbike.org/osm/bbbike/'
     #: URL of a list of cities that are available on the free download server.
-    CITIES_URL = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'
+    CITIES_URL: str = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'
     #: URL of coordinates of all the available cities.
-    CITIES_COORDS_URL = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.csv'
+    CITIES_COORDS_URL: str = \
+        'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.csv'
     #: Default download directory.
-    DEFAULT_DOWNLOAD_DIR = "osm_data\\bbbike"
+    DEFAULT_DOWNLOAD_DIR: str = "osm_data\\bbbike"
     #: Valid file formats.
-    FILE_FORMATS = {
+    FILE_FORMATS: set = {
         '.csv.xz',
         '.garmin-onroad-latin1.zip',
         '.garmin-onroad.zip',
@@ -74,21 +79,15 @@ class BBBikeDownloader(_Downloader):
 
             >>> from pydriosm.downloader import BBBikeDownloader
             >>> import os
-
             >>> bbd = BBBikeDownloader()
-
             >>> bbd.NAME
             'BBBike'
-
             >>> bbd.LONG_NAME
             'BBBike exports of OpenStreetMap data'
-
             >>> bbd.URL
             'https://download.bbbike.org/osm/bbbike/'
-
             >>> os.path.relpath(bbd.download_dir)
             'osm_data\\bbbike'
-
             >>> bbd = BBBikeDownloader(download_dir="tests\\osm_data")
             >>> os.path.relpath(bbd.download_dir)
             'tests\\osm_data'
@@ -126,7 +125,7 @@ class BBBikeDownloader(_Downloader):
         if verbose:
             print("Done.")
 
-        save_pickle(names_of_cities, path_to_file=path_to_pickle, verbose=verbose)
+        save_data(names_of_cities, path_to_pickle, verbose=verbose)
 
         return names_of_cities
 
@@ -215,7 +214,7 @@ class BBBikeDownloader(_Downloader):
         if verbose:
             print("Done.")
 
-        save_pickle(cities_coords, path_to_pickle, verbose=verbose)
+        save_data(cities_coords, path_to_pickle, verbose=verbose)
 
         return cities_coords
 
@@ -322,7 +321,7 @@ class BBBikeDownloader(_Downloader):
         if verbose:
             print("Done.")
 
-        save_pickle(subregion_index, path_to_pickle, verbose=verbose)
+        save_data(subregion_index, path_to_pickle, verbose=verbose)
 
         return subregion_index
 
@@ -384,7 +383,7 @@ class BBBikeDownloader(_Downloader):
         if verbose:
             print("Done.")
 
-        save_pickle(subregion_names, path_to_file=path_to_pickle, verbose=verbose)
+        save_data(subregion_names, path_to_pickle, verbose=verbose)
 
         return subregion_names
 
@@ -487,19 +486,22 @@ class BBBikeDownloader(_Downloader):
         :rtype: list
         """
 
-        x_href = x.get('href')  # URL
+        x_attrs = x.attrs
+        x_href = x_attrs['href']
         filename, download_url = os.path.basename(x_href), urllib.parse.urljoin(url, x_href)
 
         if not x.has_attr('title'):
             file_format, file_size, last_update = 'Poly', None, None
 
         else:
-            if len(x.contents) < 3:
-                file_format, file_size = 'Txt', None
+            # File type and size
+            if x_attrs['class'] == ['download_link']:
+                file_format, file_size = [
+                    y.strip() if isinstance(y, str) else y.text.strip() for y in x.contents]
             else:
-                file_format, file_size, _ = x.contents  # File type and size
-                file_format, file_size = file_format.strip(), file_size.text
-            last_update = pd.to_datetime(x.get('title'))  # Date and time
+                file_format, file_size = 'Txt', None
+            # Date and time
+            last_update = pd.to_datetime(re.sub(r'last update: ?', '', x_attrs['title']))
 
         parsed_dat = [filename, download_url, file_format, file_size, last_update]
 
@@ -522,11 +524,8 @@ class BBBikeDownloader(_Downloader):
         **Examples**::
 
             >>> from pydriosm.downloader import BBBikeDownloader
-
             >>> bbd = BBBikeDownloader()
-
             >>> subrgn_name = 'birmingham'
-
             >>> # A download catalogue for Leeds
             >>> bham_dwnld_cat = bbd.get_subregion_catalogue(subrgn_name, verbose=True)
             To compile data of a download catalogue for "Birmingham"
@@ -572,7 +571,7 @@ class BBBikeDownloader(_Downloader):
                     print("Done.")
 
             except Exception as e:
-                print(f"Failed. {_format_err_msg(e)}")
+                _print_failure_msg(e, msg="Failed.")
                 download_catalogue = None
 
             return download_catalogue
@@ -625,7 +624,7 @@ class BBBikeDownloader(_Downloader):
         elif verbose == 2:
             print("All done.")
 
-        save_pickle(download_index, path_to_file=path_to_pickle, verbose=verbose)
+        save_data(download_index, path_to_pickle, verbose=verbose)
 
         return download_index
 
@@ -1089,14 +1088,14 @@ class BBBikeDownloader(_Downloader):
                         download_paths.append(path_to_file)
 
                 except Exception as e:
-                    print(f"Failed. {_format_err_msg(e)}")
+                    _print_failure_msg(e, msg="Failed.")
 
             if verbose and len(download_paths) > 1:
                 rel_path = check_relpath(os.path.commonpath(download_paths))
                 if verbose == 2:
                     print("All done.")
 
-                print("Check out the downloaded OSM data at \"{}\\\".".format(rel_path))
+                print(f"Check out the downloaded OSM data at \"{rel_path}\\\".")
 
             self.data_paths = list(
                 collections.OrderedDict.fromkeys(self.data_paths + download_paths))
