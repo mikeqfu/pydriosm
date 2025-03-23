@@ -1,5 +1,5 @@
 """
-Test the :py:class:`pydriosm.downloader.geofabrik.GeofabrikDownloader` class.
+Tests the :py:class:`pydriosm.downloader._geofabrik.GeofabrikDownloader` class.
 """
 
 import os
@@ -127,11 +127,12 @@ class TestGeofabrikDownloader:
         assert isinstance(no_subrgn_list, list)
 
     @pytest.mark.parametrize('update', [True, False])
-    def test_get_catalogue(self, gfd, update):
-        dwnld_catalog = gfd.get_catalogue(update=update, confirmation_required=False, verbose=True)
-        assert isinstance(dwnld_catalog, pd.DataFrame)
-        assert len(dwnld_catalog) >= 500
-        assert all(x in self.SUBREGION_TABLE_COLUMN_NAMES for x in dwnld_catalog.columns)
+    def test_get_catalogue(self, gfd, update, monkeypatch):
+        monkeypatch.setattr('builtins.input', lambda _: "Yes")
+        download_catalog = gfd.get_catalogue(update=update, verbose=True)
+        assert isinstance(download_catalog, pd.DataFrame)
+        assert len(download_catalog) >= 500
+        assert all(x in self.SUBREGION_TABLE_COLUMN_NAMES for x in download_catalog.columns)
 
     @pytest.mark.parametrize('update', [True, False])
     def test_get_valid_subregion_names(self, gfd, update):
@@ -160,15 +161,15 @@ class TestGeofabrikDownloader:
     def test_get_subregion_download_url(self, gfd):
         subrgn_name = 'England'
         file_format = ".pbf"
-        valid_name, dwnld_link = gfd.get_subregion_download_url(subrgn_name, file_format)
+        valid_name, download_link = gfd.get_subregion_download_url(subrgn_name, file_format)
         assert valid_name == 'England'
-        assert dwnld_link.endswith('united-kingdom/england-latest.osm.pbf')
+        assert download_link.endswith('united-kingdom/england-latest.osm.pbf')
 
         subrgn_name = 'britain'
         file_format = ".shp"
-        valid_name, dwnld_link = gfd.get_subregion_download_url(subrgn_name, file_format)
+        valid_name, download_link = gfd.get_subregion_download_url(subrgn_name, file_format)
         assert valid_name == 'Great Britain'
-        assert dwnld_link is None
+        assert download_link is None
 
     def test_get_default_filename(self, gfd, capfd):
         subrgn_name, file_format = 'london', ".pbf"
@@ -207,48 +208,48 @@ class TestGeofabrikDownloader:
         subrgn_name = 'london'
         file_format = ".pbf"
 
-        dwnld_dir = gfd.specify_sub_download_dir(subrgn_name, file_format)
-        assert os.path.dirname(os.path.relpath(dwnld_dir)) == os.path.join(
+        download_dir = gfd.specify_sub_download_dir(subrgn_name, file_format)
+        assert os.path.dirname(os.path.relpath(download_dir)) == os.path.join(
             "osm_data", "geofabrik", "europe", "united-kingdom", "england", "greater-london")
 
-        dwnld_dir = os.path.join("tests", "osm_data")
+        download_dir = os.path.join("tests", "osm_data")
 
         subrgn_name = 'britain'
         file_format = ".shp"
 
-        dwnld_pathname = gfd.specify_sub_download_dir(subrgn_name, file_format, dwnld_dir)
-        assert os.path.relpath(dwnld_pathname) == os.path.join(
+        download_pathname = gfd.specify_sub_download_dir(subrgn_name, file_format, download_dir)
+        assert os.path.relpath(download_pathname) == os.path.join(
             "tests", "osm_data", "great-britain-shp-zip")
 
-        gfd_ = GeofabrikDownloader(download_dir=dwnld_dir)
-        dwnld_pathname_ = gfd_.specify_sub_download_dir(subrgn_name, file_format)
-        assert os.path.relpath(dwnld_pathname_) == os.path.join(
+        gfd_ = GeofabrikDownloader(download_dir=download_dir)
+        download_pathname_ = gfd_.specify_sub_download_dir(subrgn_name, file_format)
+        assert os.path.relpath(download_pathname_) == os.path.join(
             "tests", "osm_data", "europe", "great-britain", "great-britain-shp-zip")
 
     def test_get_valid_download_info(self, gfd):
         subrgn_name = 'london'
         file_format = "pbf"
 
-        valid_subrgn_name, pbf_filename, dwnld_url, path_to_pbf = gfd.get_valid_download_info(
+        valid_subrgn_name, pbf_filename, download_url, path_to_pbf = gfd.get_valid_download_info(
             subrgn_name, file_format)
 
         assert valid_subrgn_name == 'Greater London'
         assert pbf_filename == 'greater-london-latest.osm.pbf'
-        assert dwnld_url == \
+        assert download_url == \
                'https://download.geofabrik.de/europe/united-kingdom/england/' \
                'greater-london-latest.osm.pbf'
         assert os.path.relpath(path_to_pbf) == os.path.join(
             "osm_data", "geofabrik", "europe", "united-kingdom", "england", "greater-london",
             "greater-london-latest.osm.pbf")
 
-        dwnld_dir = os.path.join("tests", "osm_data")
+        download_dir = os.path.join("tests", "osm_data")
 
-        _, _, _, path_to_pbf2 = gfd.get_valid_download_info(subrgn_name, file_format, dwnld_dir)
+        _, _, _, path_to_pbf2 = gfd.get_valid_download_info(subrgn_name, file_format, download_dir)
 
         assert os.path.relpath(path_to_pbf2) == os.path.join(
             "tests", "osm_data", "greater-london", "greater-london-latest.osm.pbf")
 
-        gfd_ = GeofabrikDownloader(download_dir=dwnld_dir)
+        gfd_ = GeofabrikDownloader(download_dir=download_dir)
 
         _, _, _, path_to_pbf3 = gfd_.get_valid_download_info(subrgn_name, file_format)
 
@@ -290,15 +291,15 @@ class TestGeofabrikDownloader:
     def test_download_subregion_data(self, gfd, monkeypatch):
         subrgn_name = 'England'
         file_format = ".pbf"
-        dwnld_dir = "tests/osm_data"
+        download_dir = "tests/osm_data"
 
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        dwnld_file_pathnames = gfd.download_subregion_data(
-            subrgn_name, file_format, download_dir=dwnld_dir, update=True, verbose=True,
+        download_file_pathnames = gfd.download_subregion_data(
+            subrgn_name, file_format, download_dir=download_dir, update=True, verbose=True,
             ret_download_path=True)
 
-        assert len(dwnld_file_pathnames) >= 47
-        assert os.path.commonpath(dwnld_file_pathnames) == os.path.normpath(gfd.download_dir)
+        assert len(download_file_pathnames) >= 47
+        assert os.path.commonpath(download_file_pathnames) == os.path.normpath(gfd.download_dir)
 
         delete_dir(gfd.download_dir, confirmation_required=False)
 
