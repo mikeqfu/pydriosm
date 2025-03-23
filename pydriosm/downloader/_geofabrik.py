@@ -199,7 +199,7 @@ class GeofabrikDownloader(_Downloader):
         data_name = f'{self.NAME} index of subregions'
 
         download_index = self.get_prepacked_data(
-            get_geofabrik_download_index, data_name=data_name, update=update,
+            fetch_geofabrik_download_index, data_name=data_name, update=update,
             confirmation_required=confirmation_required, verbose=verbose, raise_error=raise_error,
             **kwargs)
 
@@ -276,7 +276,7 @@ class GeofabrikDownloader(_Downloader):
                 f' of "{region_name}"' if region_name else ''), end=" ... ")
 
         try:
-            subregion_table = get_geofabrik_subregion_table(url)
+            subregion_table = fetch_geofabrik_subregion_table(url)
 
             if not subregion_table.empty:
                 if verbose:
@@ -350,7 +350,7 @@ class GeofabrikDownloader(_Downloader):
         data_name = f'{self.NAME} continent tables'
 
         continents_subregion_tables = self.get_prepacked_data(
-            meth=get_geofabrik_continent_tables, url=self.URL, data_name=data_name, update=update,
+            meth=fetch_geofabrik_continent_tables, url=self.URL, data_name=data_name, update=update,
             confirmation_required=confirmation_required, verbose=verbose, raise_error=raise_error,
             **kwargs)
 
@@ -491,7 +491,7 @@ class GeofabrikDownloader(_Downloader):
         msg_note = "(This process may take a few minutes)"
 
         catalogue = self.get_prepacked_data(
-            get_geofabrik_catalogue, data_name=data_name, update=update,
+            fetch_geofabrik_catalogue, data_name=data_name, update=update,
             confirmation_required=confirmation_required, verbose=verbose,
             confirmation_prompt_note=msg_note, action_prompt_note=msg_note, raise_error=raise_error)
 
@@ -530,12 +530,12 @@ class GeofabrikDownloader(_Downloader):
             _ = self.get_download_index(update=update, confirmation_required=False, verbose=False)
 
         self.valid_subregion_names = self.get_prepacked_data(
-            get_valid_geofabrik_subregion_names, data_name=data_name, update=update,
+            fetch_valid_geofabrik_subregion_names, data_name=data_name, update=update,
             confirmation_required=confirmation_required, verbose=verbose)
 
         return self.valid_subregion_names
 
-    def validate_subregion_name(self, subregion_name, valid_subregion_names=None, raise_error=False,
+    def validate_subregion_name(self, subregion_name, valid_names=None, raise_error=False,
                                 **kwargs):
         # noinspection PyShadowingNames
         """
@@ -546,8 +546,8 @@ class GeofabrikDownloader(_Downloader):
 
         :param subregion_name: name/URL of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
-        :param valid_subregion_names: names of all (sub)regions available on a free download server
-        :type valid_subregion_names: typing.Iterable
+        :param valid_names: names of all (sub)regions available on a free download server
+        :type valid_names: typing.Iterable
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidSubregionName`, defaults to ``True``
         :type raise_error: bool
@@ -571,19 +571,18 @@ class GeofabrikDownloader(_Downloader):
             'United Kingdom'
         """
 
-        if valid_subregion_names is None:
+        if valid_names is None:
             valid_subregion_names_ = self.valid_subregion_names
         else:
-            valid_subregion_names_ = valid_subregion_names
+            valid_subregion_names_ = valid_names
 
         subregion_name_ = super().validate_subregion_name(
-            subregion_name=subregion_name, valid_subregion_names=valid_subregion_names_,
+            subregion_name=subregion_name, valid_names=valid_subregion_names_,
             raise_error=raise_error, **kwargs)
 
         return subregion_name_
 
-    def validate_file_format(self, osm_file_format, valid_file_formats=None, raise_error=True,
-                             **kwargs):
+    def validate_file_format(self, osm_file_format, valid_formats=None, raise_error=True, **kwargs):
         # noinspection PyShadowingNames
         """
         Validate an input file format of OSM data.
@@ -593,8 +592,8 @@ class GeofabrikDownloader(_Downloader):
 
         :param osm_file_format: file format/extension of the OSM data on the free download server
         :type osm_file_format: str
-        :param valid_file_formats: fil extensions of the data available on a free download server
-        :type valid_file_formats: typing.Iterable
+        :param valid_formats: fil extensions of the data available on a free download server
+        :type valid_formats: typing.Iterable
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidFileFormatError`, defaults to ``True``
         :type raise_error: bool
@@ -618,13 +617,13 @@ class GeofabrikDownloader(_Downloader):
             '.shp.zip'
         """
 
-        if valid_file_formats is None:
+        if valid_formats is None:
             valid_file_formats_ = self.FILE_FORMATS
         else:
-            valid_file_formats_ = valid_file_formats
+            valid_file_formats_ = valid_formats
 
         osm_file_format_ = super().validate_file_format(
-            osm_file_format=osm_file_format, valid_file_formats=valid_file_formats_,
+            osm_file_format=osm_file_format, valid_formats=valid_file_formats_,
             raise_error=raise_error, **kwargs)
 
         return osm_file_format_
@@ -1326,7 +1325,7 @@ class GeofabrikDownloader(_Downloader):
                 data_dir=download_dir, update=update, confirmation_required=confirmation_required,
                 verbose=verbose)
 
-        dwnld_list_ = '\n\t'.join([f'"{x}"' for x in dwnld_list_])
+        dwnld_list_ = "\n\t".join([f'"{x}"' for x in dwnld_list_])
         confirmation_prompt = \
             f"To {action_} {file_fmt_} data of the following geographic (sub)region(s): " \
             f"\n\t{dwnld_list_}\n?"
