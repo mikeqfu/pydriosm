@@ -235,8 +235,9 @@ class _Downloader:
 
     @classmethod
     def get_prepacked_data(cls, meth, data_name='<data_name>', ext=".pkl.xz", update=False,
-                           confirmation_required=True, verbose=False, confirmation_prompt_note="",
-                           action_prompt_note="", action_prompt_end=" ... ", raise_error=False,
+                           confirmation_required=True, dump_backup=True, verbose=False,
+                           confirmation_prompt_note="", action_prompt_note="",
+                           action_prompt_end=" ... ", ending_message="Done.", raise_error=False,
                            **kwargs):
         # noinspection PyShadowingNames
         """
@@ -253,6 +254,10 @@ class _Downloader:
         :param confirmation_required: whether asking for confirmation to proceed,
             defaults to ``True``
         :type confirmation_required: bool
+        :param dump_backup:
+        :type dump_backup:
+        :param ending_message:
+        :type ending_message:
         :param verbose: whether to print relevant information in console, defaults to ``False``
         :type verbose: bool | int
         :param confirmation_prompt_note: additional message for the method
@@ -300,16 +305,20 @@ class _Downloader:
 
                 try:
                     # Build kwargs dynamically based on method signature
-                    for param in {'verbose'}:
-                        if 'verbose' in inspect.signature(meth).parameters:
+                    # for param in set(inspect.signature(cls.get_prepacked_data).parameters):
+                    for param in {'verbose', 'raise_error'}:
+                        if param in inspect.signature(meth).parameters:
                             kwargs.update({param: locals()[param]})
 
                     data = meth(**kwargs)
 
                     if verbose:
-                        print("Done.", end=("\n\t" if verbose == 2 else "\n"))
+                        leading_tabs = len(re.match(r'^\t*', ending_message).group())
+                        end = "\n" + "\t" * (leading_tabs + 1) if verbose == 2 else "\n"
+                        print(ending_message, end=end)
 
-                    save_data(data, path_to_file=path_to_file, verbose=(verbose == 2))
+                    if dump_backup:
+                        save_data(data, path_to_file=path_to_file, verbose=(verbose == 2))
 
                     return data
 
@@ -324,8 +333,7 @@ class _Downloader:
                     update=update)
 
     @classmethod
-    def validate_subregion_name(cls, subregion_name, valid_subregion_names=None, raise_error=True,
-                                **kwargs):
+    def validate_subregion_name(cls, subregion_name, valid_names=None, raise_error=True, **kwargs):
         """
         Validate an input name of a geographic (sub)region.
 
@@ -334,8 +342,8 @@ class _Downloader:
 
         :param subregion_name: name/URL of a (sub)region available on a free download server
         :type subregion_name: str
-        :param valid_subregion_names: names of all (sub)regions available on a free download server
-        :type valid_subregion_names: typing.Iterable
+        :param valid_names: names of all (sub)regions available on a free download server
+        :type valid_names: typing.Iterable
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidSubregionName`, defaults to ``True``
         :type raise_error: bool
@@ -376,10 +384,10 @@ class _Downloader:
               <pydriosm.downloader.BBBikeDownloader.validate_subregion_name>`.
         """
 
-        if valid_subregion_names is None:
-            valid_subregion_names = cls.VALID_SUBREGION_NAMES
+        if valid_names is None:
+            valid_names = cls.VALID_SUBREGION_NAMES
 
-        if subregion_name in valid_subregion_names:
+        if subregion_name in valid_names:
             subregion_name_ = subregion_name
 
         elif re.match(r'[Uu][Ss][Aa]?', subregion_name):
@@ -394,7 +402,7 @@ class _Downloader:
 
             # kwargs.update({'cutoff': 0.6})
             subregion_name_ = find_similar_str(
-                subrgn_name_, lookup_list=valid_subregion_names, **kwargs)
+                subrgn_name_, lookup_list=valid_names, **kwargs)
 
             if raise_error:
                 if subregion_name_ is None:
@@ -406,8 +414,7 @@ class _Downloader:
         return subregion_name_
 
     @classmethod
-    def validate_file_format(cls, osm_file_format, valid_file_formats=None, raise_error=True,
-                             **kwargs):
+    def validate_file_format(cls, osm_file_format, valid_formats=None, raise_error=True, **kwargs):
         """
         Validate an input file format of OSM data.
 
@@ -417,8 +424,8 @@ class _Downloader:
         :param osm_file_format: file format/extension of the data
             available on a free download server
         :type osm_file_format: str
-        :param valid_file_formats: fil extensions of the data available on a free download server
-        :type valid_file_formats: typing.Iterable
+        :param valid_formats: fil extensions of the data available on a free download server
+        :type valid_formats: typing.Iterable
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidFileFormatError`, defaults to ``True``
         :type raise_error: bool
@@ -461,18 +468,18 @@ class _Downloader:
               <pydriosm.downloader.BBBikeDownloader.validate_file_format>`.
         """
 
-        if valid_file_formats is None:
-            valid_file_formats = cls.FILE_FORMATS
+        if valid_formats is None:
+            valid_formats = cls.FILE_FORMATS
 
-        if osm_file_format in valid_file_formats:
+        if osm_file_format in valid_formats:
             osm_file_format_ = copy.copy(osm_file_format)
 
         else:
             osm_file_format_ = find_similar_str(
-                osm_file_format, lookup_list=valid_file_formats, **kwargs)
+                osm_file_format, lookup_list=valid_formats, **kwargs)
 
             if osm_file_format_ is None and raise_error:
-                raise InvalidFileFormatError(osm_file_format, set(valid_file_formats))
+                raise InvalidFileFormatError(osm_file_format, set(valid_formats))
 
         return osm_file_format_
 
@@ -839,8 +846,9 @@ class _Downloader:
             if download_dir_ != self.download_dir:
                 self.download_dir = download_dir_
 
-    def _download_osm_data(self, url, path_to_file, verbose=False, raise_error=False,
-                           colour='green', print_wrap_limit=75, verify_download_dir=True, **kwargs):
+    def _download_osm_data(self, url, path_to_file, interval=0.5, verbose=False, raise_error=False,
+                           print_state="Downloading", colour='green', print_wrap_limit=75,
+                           verify_download_dir=True, **kwargs):
         # noinspection PyShadowingNames
         """
         Download an OSM data file.
@@ -901,7 +909,7 @@ class _Downloader:
         verbose_ = verbose == 2 or False
 
         _check_saving_path(
-            path_to_file, verbose=verbose_, state_verb="Downloading", print_end=" ... ",
+            path_to_file, verbose=verbose_, state_verb=print_state, print_end=" ... ",
             print_wrap_limit=print_wrap_limit)
 
         try:
@@ -920,7 +928,7 @@ class _Downloader:
                     print(out, end="")
 
             if verbose_:
-                time.sleep(0.5)
+                time.sleep(0 if interval is None else interval)
                 print("Done.")
 
         except Exception as e:
