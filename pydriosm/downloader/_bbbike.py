@@ -29,7 +29,7 @@ class BBBikeDownloader(_Downloader):
     CITIES_COORDS_URL: str = \
         'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.csv'
     #: Default download directory.
-    DEFAULT_DOWNLOAD_DIR: str = "osm_data\\bbbike"
+    DEFAULT_DOWNLOAD_DIR: str = "osm_data/bbbike"
     #: Valid file formats.
     FILE_FORMATS: set = {
         '.csv.xz',
