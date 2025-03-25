@@ -290,7 +290,7 @@ class _Downloader:
         path_to_file = _cdd(data_name.replace(" ", "-").lower() + ext)
 
         if os.path.isfile(path_to_file) and not update:
-            return load_data(path_to_file)
+            return load_data(path_to_file, verbose=(verbose == 3 or False))
 
         else:
             cfm_msg = cls.format_confirmation_prompt(
