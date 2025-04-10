@@ -23,9 +23,7 @@ from pydriosm.errors import InvalidFileFormatError, InvalidSubregionNameError
 from pydriosm.utils import _cdd
 
 
-# == Downloading data ==============================================================================
-
-class _Downloader:
+class BaseDownloader:
     """
     Initialization of a data downloader.
     """
@@ -36,8 +34,6 @@ class _Downloader:
     LONG_NAME: str = 'OpenStreetMap data downloader'
     #: Default download directory.
     DEFAULT_DOWNLOAD_DIR: str = cd("osm_data")
-    #: Valid subregion names.
-    VALID_SUBREGION_NAMES: set = {}
     #: Valid file formats.
     FILE_FORMATS: set = {
         '.csv.xz',
@@ -68,9 +64,9 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
             >>> import os
-            >>> _d = _Downloader()
+            >>> _d = BaseDownloader()
             >>> _d.NAME
             'OSM downloader'
             >>> os.path.relpath(_d.download_dir)
@@ -79,7 +75,7 @@ class _Downloader:
             'osm_data'
             >>> _d.download_dir == _d.cdd()
             True
-            >>> _d = _Downloader(download_dir="tests/osm_data")
+            >>> _d = BaseDownloader(download_dir="tests/osm_data")
             >>> os.path.relpath(_d.download_dir)  # on Windows
             'tests\\osm_data'
         """
@@ -106,9 +102,9 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
             >>> import os
-            >>> os.path.relpath(_Downloader.cdd())
+            >>> os.path.relpath(BaseDownloader.cdd())
             'osm_data'
         """
 
@@ -135,10 +131,10 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
-            >>> _Downloader.format_confirmation_prompt()
+            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> BaseDownloader.format_confirmation_prompt()
             'To compile data of <data_name>\\n?'
-            >>> _Downloader.format_confirmation_prompt(update=True)
+            >>> BaseDownloader.format_confirmation_prompt(update=True)
             'To update the data of <data_name>\\n?'
         """
 
@@ -168,16 +164,16 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
-            >>> _Downloader.print_action_prompt(verbose=False) is None  # Nothing will be printed.
+            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> BaseDownloader.print_action_prompt(verbose=False) is None  # Nothing will be printed.
             True
-            >>> _Downloader.print_action_prompt(verbose=True)
+            >>> BaseDownloader.print_action_prompt(verbose=True)
             ... print("Done.")
             Compiling the data ... Done.
-            >>> _Downloader.print_action_prompt(verbose=True, note="(Some notes)")
+            >>> BaseDownloader.print_action_prompt(verbose=True, note="(Some notes)")
             ... print("Done.")
             Compiling the data (Some notes) ... Done.
-            >>> _Downloader.print_action_prompt(verbose=True, confirmation_required=False)
+            >>> BaseDownloader.print_action_prompt(verbose=True, confirmation_required=False)
             ... print("Done.")
             Compiling data of <data_name> ... Done.
         """
@@ -210,14 +206,14 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
-            >>> _Downloader.print_status() is None  # Nothing will be printed.
+            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> BaseDownloader.print_status() is None  # Nothing will be printed.
             True
-            >>> _Downloader.print_status(verbose=True)
+            >>> BaseDownloader.print_status(verbose=True)
             Cancelled.
-            >>> _Downloader.print_status(verbose=2)
+            >>> BaseDownloader.print_status(verbose=2)
             The collecting of <data_name> is cancelled, or no data is available.
-            >>> _Downloader.print_status(verbose=True, error_message="Errors.")
+            >>> BaseDownloader.print_status(verbose=True, error_message="Errors.")
             Failed. Errors.
         """
 
@@ -277,8 +273,8 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
-            >>> data = _Downloader.get_prepacked_data(callable, verbose=True, raise_error=True)
+            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> data = BaseDownloader.get_prepacked_data(callable, verbose=True, raise_error=True)
             To compile data of <data_name>
             ? [No]|Yes: yes
             >>> data is None
@@ -357,10 +353,10 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
 
             >>> subrgn_name = 'abc'
-            >>> _Downloader.validate_subregion_name(subrgn_name)
+            >>> BaseDownloader.validate_subregion_name(subrgn_name)
             Traceback (most recent call last):
               ...
             pydriosm.errors.InvalidSubregionNameError:
@@ -369,10 +365,10 @@ class _Downloader:
                 2) The queried (sub)region is not available on the free download server.
             >>> avail_subrgn_names = ['Greater London', 'Great Britain', 'Birmingham', 'Leeds']
             >>> subrgn_name = 'Britain'
-            >>> _Downloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
+            >>> BaseDownloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
             'Great Britain'
             >>> subrgn_name = 'london'
-            >>> _Downloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
+            >>> BaseDownloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
             'Greater London'
 
         .. seealso::
@@ -385,31 +381,29 @@ class _Downloader:
         """
 
         if valid_names is None:
-            valid_names = cls.VALID_SUBREGION_NAMES
-
+            valid_names = []
         if subregion_name in valid_names:
-            subregion_name_ = subregion_name
+            return subregion_name
 
-        elif re.match(r'[Uu][Ss][Aa]?', subregion_name):
-            subregion_name_ = 'United States of America'
+        if re.match(r"(?i)^usa?$", subregion_name):  # Handle common shorthand like "USA"
+            return "United States of America"
 
+        # Attempt to extract a name from a path or URL
+        if os.path.isdir(os.path.dirname(subregion_name)) or is_url(url=subregion_name):
+            base_name = os.path.basename(subregion_name).split('.')[0]
+            query_name = re.sub(r'-(latest|free)', '', base_name)
         else:
-            if os.path.isdir(os.path.dirname(subregion_name)) or is_url(url=subregion_name):
-                base_name = os.path.basename(subregion_name).split('.')[0]
-                subrgn_name_ = re.sub(r'-(latest|free)', '', base_name)
-            else:
-                subrgn_name_ = subregion_name
+            query_name = subregion_name
 
-            # kwargs.update({'cutoff': 0.6})
-            subregion_name_ = find_similar_str(
-                subrgn_name_, lookup_list=valid_names, **kwargs)
+        # kwargs.update({'cutoff': 0.6})
+        subregion_name_ = find_similar_str(query_name, lookup_list=valid_names, **kwargs)
 
-            if raise_error:
-                if subregion_name_ is None:
-                    raise InvalidSubregionNameError(subregion_name, msg=1)
+        if raise_error:
+            if subregion_name_ is None:
+                raise InvalidSubregionNameError(subregion_name, msg=1)
 
-                elif cosine_similarity_between_texts(subregion_name_, subrgn_name_) < 0.4:
-                    raise InvalidSubregionNameError(subregion_name, msg=2)
+            elif cosine_similarity_between_texts(subregion_name_, query_name) < 0.4:
+                raise InvalidSubregionNameError(subregion_name, msg=2)
 
         return subregion_name_
 
@@ -439,10 +433,10 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
 
             >>> file_fmt = 'abc'
-            >>> _Downloader.validate_file_format(file_fmt)  # Raise an error
+            >>> BaseDownloader.validate_file_format(file_fmt)  # Raise an error
             Traceback (most recent call last):
               ...
             pydriosm.errors.InvalidFileFormatError:
@@ -452,11 +446,11 @@ class _Downloader:
             >>> avail_file_fmts = ['.osm.pbf', '.shp.zip', '.osm.bz2']
 
             >>> file_fmt = 'pbf'
-            >>> _Downloader.validate_file_format(file_fmt, avail_file_fmts)
+            >>> BaseDownloader.validate_file_format(file_fmt, avail_file_fmts)
             '.osm.pbf'
 
             >>> file_fmt = 'shp'
-            >>> _Downloader.validate_file_format(file_fmt, avail_file_fmts)
+            >>> BaseDownloader.validate_file_format(file_fmt, avail_file_fmts)
             '.shp.zip'
 
         .. seealso::
@@ -497,12 +491,12 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
 
             >>> subrgn_name_ = 'London'
             >>> dwnld_url = 'https://download.bbbike.org/osm/bbbike/London/London.osm.pbf'
 
-            >>> _Downloader.get_default_sub_path(subrgn_name_, dwnld_url)
+            >>> BaseDownloader.get_default_sub_path(subrgn_name_, dwnld_url)
             '\\london'
         """
 
@@ -529,12 +523,12 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
             >>> subrgn_name_ = 'England'
-            >>> _Downloader.make_subregion_dirname(subrgn_name_)
+            >>> BaseDownloader.make_subregion_dirname(subrgn_name_)
             'england'
             >>> subrgn_name_ = 'Greater London'
-            >>> _Downloader.make_subregion_dirname(subrgn_name_)
+            >>> BaseDownloader.make_subregion_dirname(subrgn_name_)
             'greater-london'
         """
 
@@ -604,10 +598,10 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
             >>> import os
 
-            >>> d = _Downloader()
+            >>> d = BaseDownloader()
 
             >>> valid_dwnld_info = d.get_valid_download_info('subregion_name', 'osm_file_format')
             >>> valid_dwnld_info[0] == '<subregion_name_>'
@@ -683,8 +677,8 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
-            >>> _d = _Downloader()
+            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> _d = BaseDownloader()
             >>> _d.file_exists('<subregion_name>', osm_file_format='shp')
             False
             >>> _d.file_exists('rutland', osm_file_format='shp', data_dir="tests\\data")
@@ -725,8 +719,8 @@ class _Downloader:
 
         return file_exists
 
-    def file_exists_and_more(self, subregion_names, osm_file_format, data_dir=None, update=False,
-                             confirmation_required=True, verbose=True):
+    def file_exists_and_more(self, subregion_names, osm_file_formats, data_dir=None, update=False,
+                             confirmation_required=True, verbose=True, deep=False):
         """
         Check if a requested data file already exists and compile information
         for downloading the data.
@@ -734,8 +728,8 @@ class _Downloader:
         :param subregion_names: name(s) of geographic (sub)region(s)
             available on a free download server
         :type subregion_names: str | list
-        :param osm_file_format: file format of the OSM data available on the free download server
-        :type osm_file_format: str
+        :param osm_file_formats: file format of the OSM data available on the free download server
+        :type osm_file_formats: str
         :param data_dir: directory where the data file (or files) is (or are) stored,
             defaults to ``None``
         :type data_dir: str | None
@@ -762,6 +756,13 @@ class _Downloader:
              'download',
              ['Greater London', 'Rutland'],
              [])
+            >>> gfd.file_exists_and_more(['london', 'rutland'], ["shp", ".pbf"])
+            (['Greater London', 'Rutland'],
+             ['.shp.zip', '.osm.pbf'],
+             True,
+             'download',
+             ['Greater London', 'Greater London', 'Rutland', 'Rutland'],
+             [])
             >>> bbd = BBBikeDownloader()
             >>> bbd.file_exists_and_more('London', ".pbf")
             (['London'], '.pbf', True, 'download', ['London'], [])
@@ -775,49 +776,89 @@ class _Downloader:
         """
 
         if isinstance(subregion_names, str):
-            subrgn_names_ = [subregion_names]
+            subregion_names_ = [subregion_names]
         else:
-            subrgn_names_ = list(subregion_names)
-        subrgn_names_ = [self.validate_subregion_name(x) for x in subrgn_names_]
+            subregion_names_ = list(subregion_names)
+        subregion_names_ = [self.validate_subregion_name(x) for x in subregion_names_]
 
-        file_fmt_ = self.validate_file_format(osm_file_format)
+        if deep:
+            try:
+                # noinspection PyUnresolvedReferences
+                subregion_names_ = self.get_subregions(*subregion_names_, deep=deep)
+            except AttributeError:
+                pass
 
-        dwnld_list = subrgn_names_.copy()
+        if osm_file_formats is None:
+            file_formats_ = tuple(self.FILE_FORMATS)
+            fmt_msg = "data in all available formats"
+        else:
+            if isinstance(osm_file_formats, str):
+                file_formats_ = [osm_file_formats]
+            else:
+                file_formats_ = list(osm_file_formats)
+            file_formats_ = [self.validate_file_format(x) for x in file_formats_]
 
+            fmt_msg_ = f"format '{file_formats_[0]}'" if len(file_formats_) == 1 \
+                else f"formats {tuple(file_formats_)}"
+            fmt_msg = f"data in the {fmt_msg_}"
+
+        file_paths = []
         existing_file_paths = []  # Paths of existing files
+        download_list = [x for x in subregion_names_ for _ in range(len(file_formats_))]
+        for subrgn_name_ in subregion_names_:
+            for file_fmt in file_formats_:
+                path_to_file = self.file_exists(
+                    subregion_name=subrgn_name_, osm_file_format=file_fmt, data_dir=data_dir,
+                    update=update, ret_file_path=True)
 
-        for subrgn_name_ in subrgn_names_:
-            path_to_file = self.file_exists(
-                subregion_name=subrgn_name_, osm_file_format=file_fmt_, data_dir=data_dir,
-                update=update, ret_file_path=True)
+                if isinstance(path_to_file, str):
+                    existing_file_paths.append(path_to_file)
+                    download_list.remove(subrgn_name_)
 
-            if isinstance(path_to_file, str):
-                existing_file_paths.append(path_to_file)
-                dwnld_list.remove(subrgn_name_)
+                    if verbose:
+                        osm_filename = os.path.basename(path_to_file)
+                        rel_path = check_relative_pathname(os.path.dirname(path_to_file))
+                        print(f'"{osm_filename}" already exists in {add_slashes(rel_path)}.')
 
-                if verbose:
-                    osm_filename = os.path.basename(path_to_file)
-                    rel_path = check_relative_pathname(os.path.dirname(path_to_file))
-                    print(f'"{osm_filename}" already exists in {add_slashes(rel_path)}.')
+                else:
+                    _, _, _, path_to_file = self.get_valid_download_info(
+                        subrgn_name_, osm_file_format=file_fmt, download_dir=data_dir)
 
-        if not dwnld_list:
+                file_paths.append(path_to_file)
+
+        download_list = list(set(download_list))
+
+        if not download_list:
             if update:
-                cfm_req_ = True if confirmation_required else False
-                action_, dwnld_list_ = "update the", subrgn_names_.copy()
+                cfm_req_ = confirmation_required or False
+                action_, dwnld_list_, prep = "update the", subregion_names_.copy(), "in"
             else:
                 cfm_req_ = False
-                action_, dwnld_list_ = "", dwnld_list
+                action_, dwnld_list_, prep = "", download_list, "to"
 
         else:
-            cfm_req_ = True if confirmation_required else False
-            if len(dwnld_list) == len(subrgn_names_) or not update:
-                action_ = "download"
-                dwnld_list_ = dwnld_list
+            cfm_req_ = confirmation_required or False
+            if len(download_list) == len(subregion_names_) or not update:
+                action_, dwnld_list_, prep = "download", download_list, "to"
             else:
-                action_ = "download/update the"
-                dwnld_list_ = subrgn_names_.copy()
+                action_, dwnld_list_, prep = "download/update the", subregion_names_.copy(), "to/in"
 
-        return subrgn_names_, file_fmt_, cfm_req_, action_, dwnld_list_, existing_file_paths
+        print_download_list = "\n\t".join([f'"{x}"' for x in dwnld_list_])
+
+        if any(x is None for x in file_paths):
+            download_dir_ = ""
+        else:
+            if len(file_paths) == 1:
+                download_dir_ = os.path.dirname(file_paths[0])
+            else:
+                download_dir_ = os.path.commonpath(file_paths)
+            download_dir_ = f"\n  {prep} {add_slashes(check_relative_pathname(download_dir_))}"
+
+        confirmation_prompt = \
+            f"To {action_} {fmt_msg} for the following geographic (sub)region(s): " \
+            f"\n\t{print_download_list}{download_dir_}\n?"
+
+        return subregion_names_, file_formats_, cfm_req_, confirmation_prompt, existing_file_paths
 
     def verify_download_dir(self, download_dir=None, verify_download_dir=True):
         """
@@ -830,9 +871,9 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
             >>> import os
-            >>> _d = _Downloader()
+            >>> _d = BaseDownloader()
             >>> os.path.relpath(_d.download_dir)
             'osm_data'
             >>> _d.verify_download_dir(download_dir='tests', verify_download_dir=True)
@@ -846,9 +887,9 @@ class _Downloader:
             if download_dir_ != self.download_dir:
                 self.download_dir = download_dir_
 
-    def _download_osm_data(self, url, path_to_file, interval=0.5, verbose=False, raise_error=False,
-                           print_state="Downloading", colour='green', print_wrap_limit=75,
-                           verify_download_dir=True, **kwargs):
+    def _download_data(self, url, path_to_file, interval=0.5, verbose=False, raise_error=False,
+                       print_state="Downloading", colour='green', print_wrap_limit=75,
+                       verify_download_dir=True, **kwargs):
         # noinspection PyShadowingNames
         """
         Download an OSM data file.
@@ -873,10 +914,10 @@ class _Downloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._downloader import _Downloader
+            >>> from pydriosm.downloader._base import BaseDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
-            >>> _d = _Downloader()
+            >>> _d = BaseDownloader()
             >>> download_dir = "tests/osm_data"
             >>> filename = "rutland-latest.osm.pbf"
             >>> path_to_file = cd(download_dir, filename)
@@ -884,12 +925,12 @@ class _Downloader:
             >>> os.path.exists(path_to_file)
             False
             >>> # Download the PBF data of Rutland
-            >>> _d._download_osm_data(url, path_to_file, verbose=True)
+            >>> _d._download_data(url, path_to_file, verbose=True)
             Downloading "rutland-latest.osm.pbf" to "./tests/osm_data/" ... Done.
             >>> os.path.isfile(path_to_file)
             True
             >>> # Download the data again
-            >>> _d._download_osm_data(url, path_to_file, verbose=True)
+            >>> _d._download_data(url, path_to_file, verbose=True)
             Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 471kB/s ...
                 Updating "rutland-latest.osm.pbf" in "./tests/osm_data/" ... Done.
             >>> os.path.isfile(path_to_file)
@@ -932,8 +973,14 @@ class _Downloader:
                 print("Done.")
 
         except Exception as e:
+            if os.path.isfile(path_to_file):
+                os.remove(path_to_file)
+
             _print_failure_message(
                 e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
+
+            if not raise_error:
+                return None
 
         if path_to_file not in self.data_paths:
             self.data_paths.append(path_to_file)
