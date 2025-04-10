@@ -11,12 +11,12 @@ from pyhelpers.dirs import cd, validate_dir
 from pyhelpers.ops import confirmed
 from pyhelpers.store import save_data
 
-from pydriosm.downloader._downloader import _Downloader
-from pydriosm.downloader._web_parser import *
+from pydriosm.downloader._base import BaseDownloader
+from pydriosm.downloader.web_parser import *
 from pydriosm.errors import InvalidFileFormatError, InvalidSubregionNameError
 
 
-class GeofabrikDownloader(_Downloader):
+class GeofabrikDownloader(BaseDownloader):
     """
     Download OSM data from `Geofabrik`_ free download server.
 
@@ -571,14 +571,11 @@ class GeofabrikDownloader(_Downloader):
             'United Kingdom'
         """
 
-        if valid_names is None:
-            valid_subregion_names_ = self.valid_subregion_names
-        else:
-            valid_subregion_names_ = valid_names
+        valid_names_ = self.valid_subregion_names if valid_names is None else valid_names
 
         subregion_name_ = super().validate_subregion_name(
-            subregion_name=subregion_name, valid_names=valid_subregion_names_,
-            raise_error=raise_error, **kwargs)
+            subregion_name=subregion_name, valid_names=valid_names_, raise_error=raise_error,
+            **kwargs)
 
         return subregion_name_
 
@@ -1109,7 +1106,7 @@ class GeofabrikDownloader(_Downloader):
             >>> # Download the PBF data of London (to the default directory)
             >>> subregion_name = 'london'
             >>> osm_file_format = ".pbf"
-            >>> gfd.download_osm_data(subregion_name, osm_file_format, verbose=True)
+            >>> gfd.download_data(subregion_name, osm_file_format, verbose=True)
             To download .osm.pbf data of the following geographic (sub)region(s):
                 Greater London
             ? [No]|Yes: yes
@@ -1143,10 +1140,10 @@ class GeofabrikDownloader(_Downloader):
 
         return file_exists
 
-    def download_osm_data(self, subregion_names, osm_file_format, download_dir=None, update=False,
-                          confirmation_required=True, deep_retry=False, interval=None,
-                          verify_download_dir=True, verbose=False, ret_download_path=False,
-                          **kwargs):
+    def download_data(self, subregion_names, osm_file_formats, download_dir=None, update=False,
+                      confirmation_required=True, deep=False, interval=None,
+                      verify_download_dir=True, verbose=False, ret_download_path=False,
+                      **kwargs):
         # noinspection PyShadowingNames
         """
         Download OSM data (in a specific format) of one (or multiple) geographic (sub)region(s).
@@ -1154,9 +1151,9 @@ class GeofabrikDownloader(_Downloader):
         :param subregion_names: name of a geographic (sub)region
             (or names of multiple geographic (sub)regions) available on Geofabrik.
         :type subregion_names: str | list
-        :param osm_file_format: file format/extension of the OSM data
+        :param osm_file_formats: file format/extension of the OSM data
             available on the download server
-        :type osm_file_format: str
+        :type osm_file_formats: str | list
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
             when ``download_dir=None``, it refers to the method
             :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
@@ -1166,9 +1163,9 @@ class GeofabrikDownloader(_Downloader):
         :param confirmation_required: whether asking for confirmation to proceed,
             defaults to ``True``
         :type confirmation_required: bool
-        :param deep_retry: whether to further check availability of sub-subregions data,
+        :param deep: whether to further check availability of sub-subregions data,
             defaults to ``False``
-        :type deep_retry: bool
+        :type deep: bool
         :param interval: interval (in sec) between downloading two subregions, defaults to ``None``
         :type interval: int | float | None
         :param verify_download_dir: whether to verify the pathname of
@@ -1199,7 +1196,7 @@ class GeofabrikDownloader(_Downloader):
             >>> # Download PBF data file of 'Greater London' and 'Rutland'
             >>> subregion_names = ['Isle of Wight', 'rutland']  # Case-insensitive
             >>> osm_file_format = ".pbf"
-            >>> gfd.download_osm_data(subregion_names, osm_file_format, verbose=True)
+            >>> gfd.download_data(subregion_names, osm_file_format, verbose=True)
             To download .osm.pbf data of the following geographic (sub)region(s):
                 "Isle of Wight"
                 "Rutland"
@@ -1219,21 +1216,25 @@ class GeofabrikDownloader(_Downloader):
             >>> #   the data is now in the default download directory
             >>> os.path.relpath(gfd.download_dir)  # (on Windows)
             'osm_data\\geofabrik'
+            >>> download_dir_ = os.path.dirname(gfd.download_dir)
+
             >>> # Download shapefiles of West Midlands (to a given directory "tests/osm_data")
             >>> subregion_name = 'west midlands'  # Case-insensitive
-            >>> osm_file_format = ".shp"
+            >>> osm_file_format = [".shp", "pbf"]
             >>> download_dir = "tests/osm_data"
-            >>> gfd.download_osm_data(subregion_name, osm_file_format, download_dir, verbose=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
+            >>> gfd.download_data(subregion_name, osm_file_format, download_dir, verbose=True)
+            To download ('.shp.zip', '.osm.pbf') data of the following geographic (sub)region(s):
                 "West Midlands"
             ? [No]|Yes: yes
-            Downloading "west-midlands-latest-free.shp.zip" 100%|██████████| 97.1M/97.1M ...
+            Downloading "west-midlands-latest-free.shp.zip" 100%|██████████| 97.3M/97.3M ...
                 Saving "west-midlands-latest-free.shp.zip" ...
                     to "./tests/osm_data/west-midlands/" ... Done.
+            Downloading "west-midlands-latest.osm.pbf" 100%|██████████| 54.5M/54.5M | 918...
+                Saving "west-midlands-latest.osm.pbf" to "./tests/osm_data/west-midlands/" ... ...
             >>> len(gfd.data_paths)
-            3
+            4
             >>> os.path.relpath(gfd.data_paths[-1])  # (on Windows)
-            'tests\\osm_data\\west-midlands\\west-midlands-latest-free.shp.zip'
+            'tests\\osm_data\\west-midlands\\west-midlands-latest.osm.pbf'
             >>> # Now the `.download_dir` variable has changed to the given one `download_dir`
             >>> os.path.relpath(gfd.download_dir)  # (on Windows)
             'tests\\osm_data'
@@ -1241,13 +1242,13 @@ class GeofabrikDownloader(_Downloader):
             >>> os.path.relpath(gfd.cdd())  # (on Windows)
             'osm_data\\geofabrik'
             >>> # Delete the above downloaded directories
-            >>> delete_dir([gfd.download_dir, download_dir], verbose=True)
+            >>> delete_dir([download_dir_, gfd.download_dir], verbose=True)
             To delete the following directories:
-                "./tests/osm_data/" (Not empty)
                 "./osm_data/" (Not empty)
+                "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
             Deleting "./osm_data/" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
 
         ***Example 2***::
 
@@ -1260,11 +1261,11 @@ class GeofabrikDownloader(_Downloader):
             >>> subregion_name = 'United Kingdom'  # Case-insensitive
             >>> osm_file_format = ".shp"
             >>> # By default, `deep_retry=False`
-            >>> gfd.download_osm_data(subregion_name, osm_file_format, verbose=True)
+            >>> gfd.download_data(subregion_name, osm_file_format, verbose=True)
             To download .shp.zip data of the following geographic (sub)region(s):
                 "United Kingdom"
             ? [No]|Yes: yes
-            No .shp.zip data is available for "United Kingdom".
+            No '.shp.zip' data is available for "United Kingdom".
             Try to download the data of its subregions instead
             ? [No]|Yes: yes
             Downloading "england-latest-free.shp.zip" 100%|██████████| 2.59G/2.59G | 315kB/...
@@ -1279,11 +1280,11 @@ class GeofabrikDownloader(_Downloader):
             >>> len(gfd.data_paths)
             3
             >>> # Now set `deep_retry=True`
-            >>> gfd.download_osm_data(subregion_name, osm_file_format, verbose=1, deep_retry=True)
+            >>> gfd.download_data(subregion_name, osm_file_format, verbose=1, deep_retry=True)
             To download .shp.zip data of the following geographic (sub)region(s):
                 "United Kingdom"
             ? [No]|Yes: yes
-            No .shp.zip data is available for "United Kingdom".
+            No '.shp.zip' data is available for "United Kingdom".
             Try to download the data of its subregions instead
             ? [No]|Yes: yes
             "wales-latest-free.shp.zip" already exists in "./tests/osm_data/europe/united-kingdom...
@@ -1319,62 +1320,58 @@ class GeofabrikDownloader(_Downloader):
             Deleting "./tests/osm_data/" ... Done.
         """
 
-        subrgn_names_, file_fmt_, cfm_req, action_, dwnld_list_, existing_file_pathnames = \
+        subrgn_names_, file_formats_, cfm_req, confirmation_prompt, existing_file_pathnames = \
             self.file_exists_and_more(
-                subregion_names=subregion_names, osm_file_format=osm_file_format,
+                subregion_names=subregion_names, osm_file_formats=osm_file_formats,
                 data_dir=download_dir, update=update, confirmation_required=confirmation_required,
-                verbose=verbose)
-
-        dwnld_list_ = "\n\t".join([f'"{x}"' for x in dwnld_list_])
-        confirmation_prompt = \
-            f"To {action_} {file_fmt_} data of the following geographic (sub)region(s): " \
-            f"\n\t{dwnld_list_}\n?"
+                verbose=verbose, deep=deep)
 
         if confirmed(confirmation_prompt, confirmation_required=cfm_req and confirmation_required):
 
             download_paths = []
 
             for subrgn_name_ in subrgn_names_:
-                subregion_name_, _, download_url, file_pathname = self.get_valid_download_info(
-                    subregion_name=subrgn_name_, osm_file_format=file_fmt_,
-                    download_dir=download_dir)
+                for file_fmt_ in file_formats_:
+                    subregion_name_, _, download_url, file_pathname = self.get_valid_download_info(
+                        subregion_name=subrgn_name_, osm_file_format=file_fmt_,
+                        download_dir=download_dir)
 
-                if download_url is None:
-                    if verbose:
-                        print(f'No {file_fmt_} data is available for "{subregion_name_}".')
+                    if download_url is None:
+                        if verbose:
+                            print(f'No \'{file_fmt_}\' data is available for "{subregion_name_}".')
 
-                    cfm_msg_ = "Try to download the data of its subregions instead\n?"
-                    if confirmed(prompt=cfm_msg_, confirmation_required=confirmation_required):
-                        sub_subregions = self.get_subregions(subregion_name_, deep=deep_retry)
+                        cfm_msg_ = "Try to download the data of its subregions instead\n?"
+                        if confirmed(prompt=cfm_msg_, confirmation_required=confirmation_required):
+                            sub_subregions = self.get_subregions(subregion_name_, deep=deep)
 
-                        if sub_subregions == [subregion_name_]:
-                            pass
+                            if sub_subregions == [subregion_name_]:
+                                pass
 
-                        else:
-                            dwnld_dir_ = self.specify_sub_download_dir(
-                                subregion_name=subregion_name_, osm_file_format=file_fmt_,
-                                download_dir=download_dir)
+                            else:
+                                dwnld_dir_ = self.specify_sub_download_dir(
+                                    subregion_name=subregion_name_, osm_file_format=file_fmt_,
+                                    download_dir=download_dir)
 
-                            download_paths_ = self.download_osm_data(
-                                subregion_names=sub_subregions, osm_file_format=file_fmt_,
-                                download_dir=dwnld_dir_, update=update, confirmation_required=False,
-                                verify_download_dir=False, verbose=verbose,
-                                ret_download_path=ret_download_path)
+                                download_paths_ = self.download_data(
+                                    subregion_names=sub_subregions, osm_file_formats=file_fmt_,
+                                    download_dir=dwnld_dir_, update=update,
+                                    confirmation_required=False, verify_download_dir=False,
+                                    verbose=verbose, ret_download_path=True)
 
-                            if isinstance(download_paths_, list):
-                                download_paths += download_paths_
+                                if isinstance(download_paths_, list):
+                                    download_paths += download_paths_
 
-                else:
-                    if not os.path.isfile(file_pathname) or update:
-                        self._download_osm_data(
-                            url=download_url, path_to_file=file_pathname, verbose=verbose,
-                            verify_download_dir=False, **kwargs)
+                    else:
+                        if not os.path.isfile(file_pathname) or update:
+                            self._download_data(
+                                url=download_url, path_to_file=file_pathname, verbose=verbose,
+                                verify_download_dir=False, **kwargs)
 
-                    if os.path.isfile(file_pathname):
-                        download_paths.append(file_pathname)
+                        if os.path.isfile(file_pathname):
+                            download_paths.append(file_pathname)
 
-                if isinstance(interval, (int, float)):
-                    time.sleep(interval)
+                    if isinstance(interval, (int, float)):
+                        time.sleep(interval)
 
             self.verify_download_dir(download_dir, verify_download_dir=verify_download_dir)
 
@@ -1386,174 +1383,4 @@ class GeofabrikDownloader(_Downloader):
         self.data_paths = list(collections.OrderedDict.fromkeys(self.data_paths + download_paths))
 
         if ret_download_path:
-            return download_paths
-
-    def download_subregion_data(self, subregion_names, osm_file_format, download_dir=None,
-                                deep=False, ret_download_path=False, **kwargs):
-        # noinspection PyShadowingNames
-        """
-        Download OSM data (in a specific file format) of all subregions (if available) for
-        one (or multiple) geographic (sub)region(s).
-
-        If no subregion data is available for the region(s) specified by ``subregion_names``,
-        then the data of ``subregion_names`` would be downloaded only.
-
-        :param subregion_names: name of a geographic (sub)region
-            (or names of multiple geographic (sub)regions)
-            available on Geofabrik free download server
-        :type subregion_names: str | list
-        :param osm_file_format: file format/extension of the OSM data
-            available on the download server
-        :type osm_file_format: str
-        :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
-        :type download_dir: str | None
-        :param deep: whether to try to search for subregions of subregion(s), defaults to ``False``
-        :type deep: bool
-        :param ret_download_path: whether to return the path(s) to the downloaded file(s),
-            defaults to ``False``
-        :type ret_download_path: bool
-        :param kwargs: optional parameters of `pydriosm.GeofabrikDownloader.download_osm_data()`_
-        :return: the path(s) to the downloaded file(s) when ``ret_download_path=True``
-        :rtype: list | str
-
-        .. _`pydriosm.GeofabrikDownloader.download_osm_data()`:
-            https://pydriosm.readthedocs.io/en/latest/
-            _generated/pydriosm.downloader.GeofabrikDownloader.download_osm_data.html
-
-        **Examples**::
-
-            >>> from pydriosm.downloader import GeofabrikDownloader
-            >>> from pyhelpers.dirs import cd, delete_dir
-            >>> import os
-            >>> gfd = GeofabrikDownloader()
-
-        **Example 1**::
-
-            >>> subregion_names = ['rutland', 'Isle of Wight']
-            >>> osm_file_format = ".pbf"
-            >>> download_dir = "tests/osm_data"
-            >>> gfd.download_subregion_data(
-            ...     subregion_names, osm_file_format, download_dir, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                "Rutland"
-                "Isle of Wight"
-            ? [No]|Yes: yes
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 2.16MB/s | ...
-                Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
-            Downloading "isle-of-wight-latest.osm.pbf" 100%|██████████| 8.30M/8.30M | 121kB...
-                Saving "isle-of-wight-latest.osm.pbf" to "./tests/osm_data/isle-of-wight/" ... Done.
-            >>> len(gfd.data_paths)
-            2
-            >>> for fp in gfd.data_paths: print(os.path.relpath(fp))
-            tests\\osm_data\\rutland\\rutland-latest.osm.pbf
-            tests\\osm_data\\isle-of-wight\\isle-of-wight-latest.osm.pbf
-            >>> # Try to download data given another list which also includes 'Rutland'
-            >>> subregion_names = ['rutland', 'west yorkshire']
-            >>> # Set `ret_download_path=True`
-            >>> download_paths = gfd.download_subregion_data(
-            ...     subregion_names, osm_file_format, download_dir, verbose=True,
-            ...     ret_download_path=True)
-            "rutland-latest.osm.pbf" already exists in "./tests/osm_data/rutland/".
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                "West Yorkshire"
-            ? [No]|Yes: yes
-            Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 45.2M/45.2M | 290k...
-                Saving "west-yorkshire-latest.osm.pbf" ...
-                    to "./tests/osm_data/west-yorkshire/" ... Done.
-            >>> len(gfd.data_paths)  # The pathname of the newly downloaded file is added
-            3
-            >>> len(download_paths)
-            2
-            >>> for fp in download_paths: print(os.path.relpath(fp))
-            tests\\osm_data\\rutland\\rutland-latest.osm.pbf
-            tests\\osm_data\\west-yorkshire\\west-yorkshire-latest.osm.pbf
-            >>> # Update (or re-download) the existing data file by setting `update=True`
-            >>> gfd.download_subregion_data(
-            ...     subregion_names, osm_file_format, download_dir, update=True, verbose=True)
-            "rutland-latest.osm.pbf" already exists in "./tests/osm_data/rutland/".
-            "west-yorkshire-latest.osm.pbf" already exists in "./tests/osm_data/west-yorkshire/".
-            To update the .osm.pbf data of the following geographic (sub)region(s):
-                "Rutland"
-                "West Yorkshire"
-            ? [No]|Yes: >? yes
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 486kB/s | E...
-                Updating "rutland-latest.osm.pbf" in "./tests/osm_data/rutland/" ... Done.
-            Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 45.2M/45.2M | 161k...
-                Updating "west-yorkshire-latest.osm.pbf" ...
-                    in "./tests/osm_data/west-yorkshire/" ... Done.
-
-        **Example 2**::
-
-            >>> # To download the PBF data of all available subregions of England
-            >>> subregion_name = 'England'
-            >>> download_paths_ = gfd.download_subregion_data(
-            ...     subregion_name, osm_file_format, download_dir, update=True, verbose=True,
-            ...     ret_download_path=True)
-            "isle-of-wight-latest.osm.pbf" already exists in "./tests/osm_data/isle-of-wight/".
-            "rutland-latest.osm.pbf" already exists in "./tests/osm_data/rutland/".
-            "west-yorkshire-latest.osm.pbf" already exists in "./tests/osm_data/west-yorkshire/".
-            To download/update the .osm.pbf data of the following geographic (sub)region(s):
-                "Bedfordshire"
-                "Berkshire"
-                "Bristol"
-                ... ...
-                "Rutland"
-                ... ...
-                "West Yorkshire"
-                "Wiltshire"
-                "Worcestershire"
-            ? [No]|Yes: yes
-            Downloading "bedfordshire-latest.osm.pbf" 100%|██████████| 11.6M/11.6M | 209kB/...
-                Saving "bedfordshire-latest.osm.pbf" to "./tests/osm_data/bedfordshire/" ... Done.
-            Downloading "berkshire-latest.osm.pbf" 100%|██████████| 20.4M/20.4M | 258kB/s |...
-                Saving "berkshire-latest.osm.pbf" to "./tests/osm_data/berkshire/" ... Done.
-            Downloading "bristol-latest.osm.pbf" 100%|██████████| 11.5M/11.5M | 459kB/s | E...
-                Saving "bristol-latest.osm.pbf" to "./tests/osm_data/bristol/" ... Done.
-            ...
-                ...
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 354kB/s | E...
-                Updating "rutland-latest.osm.pbf" in "./tests/osm_data/rutland/" ... Done.
-            ...
-                ...
-            Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 45.2M/45.2M | 110k...
-                Updating "west-yorkshire-latest.osm.pbf" ...
-                    in "./tests/osm_data/west-yorkshire/" ... Done.
-            Downloading "wiltshire-latest.osm.pbf" 100%|██████████| 28.5M/28.5M | 241kB/s |...
-                Saving "wiltshire-latest.osm.pbf" to "./tests/osm_data/wiltshire/" ... Done.
-            Downloading "worcestershire-latest.osm.pbf" 100%|██████████| 18.5M/18.5M | 220k...
-                Saving "worcestershire-latest.osm.pbf" ...
-                    to "./tests/osm_data/worcestershire/" ... Done.
-            >>> len(download_paths_)
-            47
-            >>> common_path = os.path.commonpath(download_paths_)
-            >>> os.path.relpath(common_path) == os.path.relpath(gfd.download_dir)
-            True
-
-            >>> # Delete the download directory and the downloaded files
-            >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "./tests/osm_data/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
-        """
-
-        if isinstance(subregion_names, str):
-            subregion_names_ = [subregion_names]
-        else:
-            subregion_names_ = subregion_names.copy()
-        subregion_names_ = [self.validate_subregion_name(x) for x in subregion_names_]
-
-        subregion_names_ = self.get_subregions(*subregion_names_, deep=deep)
-
-        osm_file_format_ = self.validate_file_format(osm_file_format)
-
-        kwargs.update({'download_dir': download_dir, 'ret_download_path': True})
-        download_paths = self.download_osm_data(
-            subregion_names=subregion_names_, osm_file_format=osm_file_format_, **kwargs)
-
-        if ret_download_path:
-            if isinstance(download_paths, list) and len(download_paths) == 1:
-                download_paths = download_paths[0]
-
             return download_paths
