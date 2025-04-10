@@ -6,7 +6,7 @@ import importlib.resources
 import os
 import shutil
 
-from pyhelpers._cache import _check_dependency, _format_err_msg
+from pyhelpers._cache import _check_dependency, _check_relative_pathname, _print_failure_message
 from pyhelpers.dirs import cd
 
 
@@ -53,30 +53,6 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
             os.makedirs(os.path.dirname(pathname), exist_ok=True, **kwargs)
 
     return pathname
-
-
-def check_relpath(pathname, start=os.curdir):
-    """
-    Check and return a relative pathname to the given ``pathname``.
-
-    On Windows, when ``pathname`` and ``start`` are on different drives, the function returns
-    the given ``pathname``.
-
-    :param pathname: pathname of a file or a directory
-    :type pathname: str | os.PathLike[str]
-    :param start: optional start directory,
-        defaults to ``os.curdir`` (i.e. the current working directory)
-    :type start: str | os.PathLike[str]
-    :return: relative pathname to the given ``pathname``
-    :type: str | os.PathLike[str]
-    """
-
-    try:
-        relpath = os.path.relpath(pathname, start=start)
-    except ValueError:
-        relpath = pathname
-
-    return relpath
 
 
 def cdd_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
@@ -228,7 +204,7 @@ def remove_osm_file(path_to_file, verbose=True):
         >>> from pyhelpers.dirs import cd
         >>> import os
 
-        >>> path_to_pseudo_pbf_file = cd('tests\\pseudo.osm.pbf')
+        >>> path_to_pseudo_pbf_file = cd('tests/pseudo.osm.pbf')
         >>> try:
         ...     open(path_to_pseudo_pbf_file, 'a').close()
         ... except OSError:
@@ -249,11 +225,11 @@ def remove_osm_file(path_to_file, verbose=True):
 
     if not os.path.exists(path_to_file):
         if verbose:
-            print("The file \"{}\" is not found at {}.".format(*os.path.split(path_to_file)[::-1]))
+            print('The file "{}" is not found at {}.'.format(*os.path.split(path_to_file)[::-1]))
 
     else:
         if verbose:
-            print(f"Deleting \"{check_relpath(path_to_file)}\"", end=" ... ")
+            print(f'Deleting "{_check_relative_pathname(path_to_file)}"', end=" ... ")
 
         try:
             if os.path.isfile(path_to_file):
@@ -267,4 +243,4 @@ def remove_osm_file(path_to_file, verbose=True):
                     print("Done.")
 
         except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
+            _print_failure_message(e, prefix="Failed. Error:")
