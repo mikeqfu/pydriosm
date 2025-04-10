@@ -32,7 +32,7 @@ def get_geofabrik_raw_directory_index(url):
 
     **Examples**::
 
-        >>> from pydriosm.downloader._web_parser import get_geofabrik_raw_directory_index
+        >>> from pydriosm.downloader.web_parser import get_geofabrik_raw_directory_index
         >>> url = 'https://download.geofabrik.de/'
         >>> raw_directory_index = get_geofabrik_raw_directory_index(url)
         Traceback (most recent call last):
@@ -120,7 +120,7 @@ def fetch_geofabrik_download_index():
 
     **Examples**::
 
-        >>> from pydriosm.downloader._web_parser import fetch_geofabrik_download_index
+        >>> from pydriosm.downloader.web_parser import fetch_geofabrik_download_index
         >>> geofabrik_download_index = fetch_geofabrik_download_index()
         >>> type(geofabrik_download_index)
         pandas.core.frame.DataFrame
@@ -233,7 +233,7 @@ def fetch_geofabrik_subregion_table(url):
 
     **Examples**::
 
-        >>> from pydriosm.downloader._web_parser import fetch_geofabrik_subregion_table
+        >>> from pydriosm.downloader.web_parser import fetch_geofabrik_subregion_table
         >>> # Download information on the homepage
         >>> url = 'https://download.geofabrik.de/'
         >>> subregion_table = fetch_geofabrik_subregion_table(url)
@@ -314,7 +314,7 @@ def fetch_geofabrik_continent_tables(url='https://download.geofabrik.de/'):
 
     **Examples**::
 
-        >>> from pydriosm.downloader._web_parser import fetch_geofabrik_continent_tables
+        >>> from pydriosm.downloader.web_parser import fetch_geofabrik_continent_tables
         >>> url = 'https://download.geofabrik.de/'
         >>> continent_tables = fetch_geofabrik_continent_tables(url)
         >>> type(continent_tables)
@@ -391,8 +391,8 @@ def compile_geofabrik_region_subregion_tiers(subregion_tables, verbose=2, indent
 
     **Examples**::
 
-        >>> from pydriosm.downloader._web_parser import compile_geofabrik_region_subregion_tiers
-        >>> from pydriosm.downloader._web_parser import fetch_geofabrik_continent_tables
+        >>> from pydriosm.downloader.web_parser import compile_geofabrik_region_subregion_tiers
+        >>> from pydriosm.downloader.web_parser import fetch_geofabrik_continent_tables
         >>> continent_tables = fetch_geofabrik_continent_tables()
         >>> region_subregion_tier, having_no_subregions = \
         ...     compile_geofabrik_region_subregion_tiers(continent_tables, verbose=2)
@@ -474,7 +474,7 @@ def fetch_geofabrik_catalogue():
 
     **Examples**::
 
-        >>> from pydriosm.downloader._web_parser import fetch_geofabrik_catalogue
+        >>> from pydriosm.downloader.web_parser import fetch_geofabrik_catalogue
         >>> downloads_catalogue = fetch_geofabrik_catalogue()
         >>> type(downloads_catalogue)
         pandas.core.frame.DataFrame
@@ -670,7 +670,7 @@ def fetch_bbbike_subregion_index(url, raise_error=True):
 
     **Examples**::
 
-        >>> from pydriosm.downloader._web_parser import fetch_bbbike_subregion_index
+        >>> from pydriosm.downloader.web_parser import fetch_bbbike_subregion_index
         >>> url = 'https://download.bbbike.org/osm/bbbike/'
         >>> fetch_bbbike_subregion_index(url)
 
