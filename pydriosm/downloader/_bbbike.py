@@ -2,10 +2,16 @@
 Downloads OSM data from BBBike free download server.
 """
 
+import collections
+import os
+
+from pyhelpers._cache import _print_failure_message
 from pyhelpers.ops import confirmed
 
 from pydriosm.downloader._base import BaseDownloader
-from pydriosm.downloader.web_parser import *
+from pydriosm.downloader.web_parser import fetch_bbbike_catalogue, fetch_bbbike_cities, \
+    fetch_bbbike_city_coordinates, fetch_bbbike_sub_catalogue, fetch_bbbike_subregion_index, \
+    fetch_bbbike_valid_subregion_names
 
 
 class BBBikeDownloader(BaseDownloader):
@@ -461,7 +467,8 @@ class BBBikeDownloader(BaseDownloader):
 
         return osm_file_format_
 
-    def get_subregion_download_url(self, subregion_name, osm_file_format, **kwargs):
+    def get_subregion_download_url(self, subregion_name, osm_file_format, update=False,
+                                   verbose=False, raise_error=True):
         # noinspection PyShadowingNames
         """
         Get a valid URL for downloading OSM data of a specific file format
@@ -472,6 +479,14 @@ class BBBikeDownloader(BaseDownloader):
         :param osm_file_format: file format/extension of the OSM data
             available on the download server
         :type osm_file_format: str
+        :param update: whether to (check on and) update the prepacked data, defaults to ``False``
+        :type update: bool
+        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :type verbose: bool | int
+        :param raise_error: (if the input fails to match a valid name) whether to raise an
+            :py:class:`pydriosm.errors.InvalidSubregionNameError` or
+            :py:class:`~pydriosm.errors.InvalidFileFormatError`; defaults to ``True``
+        :type raise_error: bool
         :return: a valid name of ``subregion_name`` and
             a download URL for the given ``osm_file_format``
         :rtype: tuple
@@ -497,15 +512,25 @@ class BBBikeDownloader(BaseDownloader):
             'https://download.bbbike.org/osm/bbbike/Birmingham/Birmingham.osm.csv.xz'
         """
 
-        subregion_name_ = self.validate_subregion_name(subregion_name=subregion_name, **kwargs)
-        osm_file_format_ = ".osm" + self.validate_file_format(osm_file_format=osm_file_format)
+        subregion_name_ = self.validate_subregion_name(
+            subregion_name=subregion_name, raise_error=raise_error)
 
-        sub_dwnld_cat = self.catalogue['Catalogue'][subregion_name_]
+        osm_file_format_ = ".osm" + self.validate_file_format(
+            osm_file_format=osm_file_format, raise_error=raise_error)
 
-        filename = subregion_name_ + osm_file_format_
-        download_url = sub_dwnld_cat.loc[sub_dwnld_cat['filename'] == filename, 'url'].values[0]
+        # Fetch the download URL
+        try:
+            sub_dwnld_cat = self.catalogue['Catalogue'][subregion_name_]
 
-        return subregion_name_, download_url
+            filename = subregion_name_ + osm_file_format_
+
+            download_url = sub_dwnld_cat.loc[sub_dwnld_cat['filename'] == filename, 'url'].values[0]
+
+            return subregion_name_, download_url
+
+        except Exception as e:
+            _print_failure_message(e, verbose=verbose, raise_error=raise_error)
+            return None, None
 
     def get_valid_download_info(self, subregion_name, osm_file_format, download_dir=None, **kwargs):
         # noinspection PyShadowingNames
@@ -524,12 +549,8 @@ class BBBikeDownloader(BaseDownloader):
             when ``download_dir=None``,
             it refers to the method :meth:`~pydriosm.downloader.BBBike.cdd`
         :type download_dir: str | None
-        :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_, including ``mkdir``
         :return: valid subregion name, filename, download url and absolute file path
         :rtype: tuple
-
-        .. _`pyhelpers.dirs.cd()`:
-            https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dirs.cd.html
 
         **Examples**::
 
@@ -742,7 +763,9 @@ class BBBikeDownloader(BaseDownloader):
                     # Get essential information for the download
                     _, _, download_url, path_to_file = self.get_valid_download_info(
                         subregion_name=sub_reg_name, osm_file_format=osm_file_format_,
-                        download_dir=download_dir, mkdir=True)
+                        download_dir=download_dir)
+
+                    os.makedirs(os.path.dirname(path_to_file), exist_ok=True)
 
                     if not os.path.isfile(path_to_file) or update:
                         self._download_data(
