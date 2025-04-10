@@ -160,16 +160,18 @@ class TestBaseDownloader:
         assert subregion_name_ == '<subregion_name_>'
         assert osm_filename == '<download_url>'
         assert download_url == '<download_url>'
-        assert os.path.relpath(file_pathname) == 'osm_data\\<subregion_name_>\\<download_url>'
+        assert os.path.relpath(file_pathname) == os.path.join(
+            "osm_data", "<subregion_name_>", "<download_url>")
 
         bd.download_dir = os.path.join(cur_dir, '<subregion_name_>')
         _, _, _, file_pathname = bd.get_valid_download_info(subregion_name, osm_file_format)
-        assert os.path.relpath(file_pathname) == 'osm_data\\<subregion_name_>\\<download_url>'
+        assert os.path.relpath(file_pathname) == os.path.join(
+            "osm_data", "<subregion_name_>", "<download_url>")
 
         download_dir = 'x-osm-pbf'
         _, _, _, file_pathname = bd.get_valid_download_info(
             subregion_name, osm_file_format, download_dir)
-        assert os.path.relpath(file_pathname) == 'x-osm-pbf\\<download_url>'
+        assert os.path.relpath(file_pathname) == os.path.join("x-osm-pbf", "<download_url>")
 
         subregion_name, osm_file_format = '', ''
         _, osm_filename, _, file_pathname = bd.get_valid_download_info(
