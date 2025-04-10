@@ -2,7 +2,9 @@
 Downloads OSM data from Geofabrik free download server.
 """
 
+import collections
 import os
+import re
 import time
 import urllib.parse
 
@@ -12,8 +14,10 @@ from pyhelpers.ops import confirmed
 from pyhelpers.store import save_data
 
 from pydriosm.downloader._base import BaseDownloader
-from pydriosm.downloader.web_parser import *
-from pydriosm.errors import InvalidFileFormatError, InvalidSubregionNameError
+from pydriosm.downloader.web_parser import compile_geofabrik_region_subregion_tiers, \
+    fetch_geofabrik_catalogue, fetch_geofabrik_continent_tables, fetch_geofabrik_download_index, \
+    fetch_geofabrik_subregion_table, fetch_valid_geofabrik_subregion_names, \
+    get_geofabrik_raw_directory_index
 
 
 class GeofabrikDownloader(BaseDownloader):
@@ -673,34 +677,23 @@ class GeofabrikDownloader(BaseDownloader):
         if update or self.catalogue is None:
             self.get_catalogue(update=True, verbose=verbose, raise_error=raise_error)
 
-        subregion_name_, osm_file_format_ = fallback_output = None, None
-
         # Validate inputs
-        try:
-            subregion_name_ = self.validate_subregion_name(subregion_name=subregion_name)
-        except InvalidSubregionNameError as e:
-            _print_failure_message(e, verbose=verbose, raise_error=raise_error)
+        subregion_name_ = self.validate_subregion_name(
+            subregion_name=subregion_name, raise_error=raise_error)
 
-        try:
-            osm_file_format_ = self.validate_file_format(osm_file_format=osm_file_format)
-        except InvalidFileFormatError as e:
-            _print_failure_message(e, verbose=verbose, raise_error=raise_error)
-
-        if not subregion_name_ or not osm_file_format_:
-            if verbose:
-                print(f"Invalid input: subregion='{subregion_name}', format='{osm_file_format}'")
-            return fallback_output
+        osm_file_format_ = self.validate_file_format(
+            osm_file_format=osm_file_format, raise_error=raise_error)
 
         # Fetch the download URL
         try:
-            download_url = self.catalogue.set_index("subregion").loc[
-                subregion_name_, osm_file_format_]
+            download_url = \
+                self.catalogue.set_index("subregion").loc[subregion_name_, osm_file_format_]
 
             return subregion_name_, download_url
 
-        except (KeyError, AttributeError) as e:
+        except Exception as e:
             _print_failure_message(e, verbose=verbose, raise_error=raise_error)
-            return fallback_output
+            return None, None
 
     def get_default_filename(self, subregion_name, osm_file_format, update=False):
         # noinspection PyShadowingNames
