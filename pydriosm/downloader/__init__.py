@@ -5,8 +5,6 @@ Download `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data from free 
 
 from ._bbbike import BBBikeDownloader
 from ._geofabrik import GeofabrikDownloader
+from ._wrapper import Downloader
 
-__all__ = [
-    'GeofabrikDownloader',
-    'BBBikeDownloader',
-]
+__all__ = ['BBBikeDownloader', 'GeofabrikDownloader', 'Downloader']
