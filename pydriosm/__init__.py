@@ -10,7 +10,7 @@ from .downloader import BBBikeDownloader, GeofabrikDownloader
 from .ios import PostgresOSM
 from .reader import BBBikeReader, GeofabrikReader, PBFReadParse, SHPReadParse, VarReadParse
 
-metadata = json.loads(pkgutil.get_data(__name__, "data/metadata.json").decode())
+metadata = json.loads(pkgutil.get_data(__name__, "data/.metadata").decode())
 
 __project__ = metadata['Project']
 __pkgname__ = metadata['Package']
