@@ -546,7 +546,8 @@ class BaseDownloader:
         return sub_dirname
 
     @classmethod
-    def get_subregion_download_url(cls, *args, **kwargs):
+    def get_subregion_download_url(cls, subregion_name, osm_file_format, update=False,
+                                   verbose=False, raise_error=True):
         """
         Get a download URL of a geographic (sub)region.
 
@@ -557,10 +558,7 @@ class BaseDownloader:
         <pydriosm.downloader.BBBikeDownloader.get_subregion_download_url>`.
         """
 
-        filtered_args = [arg for arg in args if arg not in ('', None)]
-        filtered_kwargs = {k: v for k, v in kwargs.items() if v not in ('', None)}
-
-        if not filtered_args and not filtered_kwargs:
+        if not subregion_name and not osm_file_format or (update and verbose and raise_error):
             subregion_name_, download_url = None, None
         else:
             subregion_name_, download_url = '<subregion_name_>', '<download_url>'

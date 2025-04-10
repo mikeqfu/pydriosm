@@ -241,7 +241,7 @@ class TestBaseDownloader:
     def test__download_data(self, bd, tmp_path, capfd):
         filename = "rutland-latest.osm.pbf"
         path_to_file = os.path.join(tmp_path, filename)
-        url_ = f'https://download.geofabrik.de/europe/united-kingdom/england/'
+        url_ = 'https://download.geofabrik.de/europe/united-kingdom/england/'
 
         bd._download_data(f'{url_}{filename}', path_to_file, verbose=True)
         out, _ = capfd.readouterr()
