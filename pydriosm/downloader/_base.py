@@ -547,7 +547,7 @@ class BaseDownloader:
 
     @classmethod
     def get_subregion_download_url(cls, subregion_name, osm_file_format, update=False,
-                                   verbose=False, raise_error=True):
+                                   verbose=False, raise_error=True, **kwargs):
         """
         Get a download URL of a geographic (sub)region.
 
