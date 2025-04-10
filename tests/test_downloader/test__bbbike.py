@@ -15,6 +15,7 @@ class TestBBBikeDownloader:
 
     @pytest.fixture(scope='class')
     def bbd(self):
+        # bbd = BBBikeDownloader()
         return BBBikeDownloader()
 
     def test_init(self, bbd):
@@ -125,11 +126,13 @@ class TestBBBikeDownloader:
         assert valid_subrgn_name == 'Birmingham'
         assert pbf_filename == 'Birmingham.osm.pbf'
         assert dwnld_url == 'https://download.bbbike.org/osm/bbbike/Birmingham/Birmingham.osm.pbf'
-        assert os.path.relpath(pbf_pathname) == 'osm_data\\bbbike\\birmingham\\Birmingham.osm.pbf'
+        assert os.path.relpath(pbf_pathname) == os.path.join(
+            "osm_data", "bbbike", "birmingham", "Birmingham.osm.pbf")
 
-        bbd_ = BBBikeDownloader(download_dir="tests\\osm_data")
+        bbd_ = BBBikeDownloader(download_dir="tests/osm_data")
         _, _, _, pbf_pathname = bbd_.get_valid_download_info(subrgn_name, file_format)
-        assert os.path.relpath(pbf_pathname) == 'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
+        assert os.path.relpath(pbf_pathname) == os.path.join(
+            "tests", "osm_data", "birmingham", "Birmingham.osm.pbf")
 
     def test_file_exists(self, bbd, tmp_path):
         subregion_name = 'birmingham'
@@ -139,31 +142,15 @@ class TestBBBikeDownloader:
             subregion_name=subregion_name, osm_file_format=osm_file_format, data_dir=tmp_path)
         assert not pbf_exists
 
-    def test_download_subregion_data(self, bbd, monkeypatch, capfd, tmp_path):
-        subregion_name = 'leeds'
-
-        monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        dwnld_paths = bbd.download_subregion_data(
-            subregion_name=subregion_name, download_dir=tmp_path, ret_download_path=True,
-            verbose=True)
-        out, _ = capfd.readouterr()
-
-        common_path = os.path.commonpath(dwnld_paths)
-        assert common_path == os.path.normpath(f"{tmp_path}/leeds/")
-        assert f'Check out the downloaded OSM data in' in out
-
-        monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        delete_dir(tmp_path, verbose=True)
-
-    def test_download_osm_data(self, bbd, monkeypatch, tmp_path):
+    def test_download_data(self, bbd, monkeypatch, tmp_path):
         bbd.data_paths = []
         bbd.download_dir = bbd.cdd()
 
         subregion_name, osm_file_format = 'London', "pbf"
 
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        bbd.download_osm_data(
-            subregion_names=subregion_name, osm_file_format=osm_file_format, download_dir=None,
+        bbd.download_data(
+            subregion_names=subregion_name, osm_file_formats=osm_file_format, download_dir=None,
             verbose=True)
         assert len(bbd.data_paths) == 1
         assert os.path.normpath('osm_data/bbbike/') in os.path.normpath(bbd.data_paths[0])
@@ -174,7 +161,7 @@ class TestBBBikeDownloader:
         subregion_names, osm_file_format = ['leeds', 'birmingham'], "shp"
 
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        dwnld_paths = bbd.download_osm_data(
+        dwnld_paths = bbd.download_data(
             subregion_names, osm_file_format, download_dir=tmp_path, ret_download_path=True)
         assert len(dwnld_paths) == 2
         assert len(bbd.data_paths) == 3

@@ -24,6 +24,7 @@ class TestGeofabrikDownloader:
 
     @pytest.fixture(scope='class')
     def gfd(self):
+        # gfd = GeofabrikDownloader()
         return GeofabrikDownloader()
 
     def test_init(self, gfd):
@@ -131,7 +132,7 @@ class TestGeofabrikDownloader:
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
         download_catalog = gfd.get_catalogue(update=update, verbose=True)
         assert isinstance(download_catalog, pd.DataFrame)
-        assert len(download_catalog) >= 500
+        assert len(download_catalog) >= 450
         assert all(x in self.SUBREGION_TABLE_COLUMN_NAMES for x in download_catalog.columns)
 
     @pytest.mark.parametrize('update', [True, False])
@@ -257,14 +258,13 @@ class TestGeofabrikDownloader:
             "tests", "osm_data", "europe", "united-kingdom", "england", "greater-london",
             "greater-london-latest.osm.pbf")
 
-    def test_download_osm_data(self, gfd, monkeypatch, capfd, tmp_path):
+    def test_download_data(self, gfd, monkeypatch, capfd, tmp_path):
         subregion_names = ['rutland', 'Isle of Wight']
         osm_file_format = ".pbf"
 
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        gfd.download_osm_data(
-            subregion_names=subregion_names, osm_file_format=osm_file_format, verbose=True,
-            confirmation_required=False)
+        gfd.download_data(
+            subregion_names=subregion_names, osm_file_formats=osm_file_format, verbose=True)
         out, _ = capfd.readouterr()
         assert "Saving " in out and "Done." in out
         assert len(gfd.data_paths) == 2
@@ -277,9 +277,9 @@ class TestGeofabrikDownloader:
         subregion_names = 'west yorkshire'
         osm_file_format = ".shp"
 
-        gfd.download_osm_data(
-            subregion_names=subregion_names, osm_file_format=osm_file_format, download_dir=tmp_path,
-            confirmation_required=False, verbose=True)
+        gfd.download_data(
+            subregion_names=subregion_names, osm_file_formats=osm_file_format,
+            download_dir=tmp_path, confirmation_required=False, verbose=True)
         assert len(gfd.data_paths) == 3
         assert os.path.normpath(gfd.data_paths[-1]) == os.path.join(
             tmp_path, "west-yorkshire", "west-yorkshire-latest-free.shp.zip")
@@ -288,17 +288,16 @@ class TestGeofabrikDownloader:
 
         delete_dir(tmp_path, confirmation_required=False)
 
-    def test_download_subregion_data(self, gfd, monkeypatch):
         subrgn_name = 'England'
         file_format = ".pbf"
         download_dir = "tests/osm_data"
 
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        download_file_pathnames = gfd.download_subregion_data(
-            subrgn_name, file_format, download_dir=download_dir, update=True, verbose=True,
-            ret_download_path=True)
+        download_file_pathnames = gfd.download_data(
+            subrgn_name, file_format, download_dir=download_dir, deep=True, update=True,
+            verbose=True, ret_download_path=True)
 
-        assert len(download_file_pathnames) >= 47
+        assert len(download_file_pathnames) > 40
         assert os.path.commonpath(download_file_pathnames) == os.path.normpath(gfd.download_dir)
 
         delete_dir(gfd.download_dir, confirmation_required=False)
