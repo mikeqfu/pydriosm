@@ -3,30 +3,22 @@ Read OpenStreetMap data extracts available from BBBike free download server.
 """
 
 from pydriosm.downloader import BBBikeDownloader
-from pydriosm.reader._reader import _Reader
+from pydriosm.reader._base import BaseReader
 
 
-class BBBikeReader(_Reader):
+class BBBikeReader(BaseReader):
     """
     Read `BBBike <https://download.bbbike.org/>`_ exports of OpenStreetMap data.
     """
 
-    #: str: Default download directory.
-    DEFAULT_DOWNLOAD_DIR = "osm_data\\bbbike"
-    #: set: Valid file formats.
-    FILE_FORMATS = {
-        '.csv.xz',
-        '.garmin-onroad-latin1.zip',
-        '.garmin-onroad.zip',
-        '.garmin-opentopo.zip',
-        '.garmin-osm.zip',
-        '.geojson.xz',
-        '.gz',
-        '.mapsforge-osm.zip',
-        '.pbf',
-        '.shp.zip',
-        '.svg-osm.zip',
-    }
+    #:
+    NAME: str = BBBikeDownloader.NAME
+    #:
+    LONG_NAME: str = BBBikeDownloader.LONG_NAME
+    #: Default download directory.
+    DEFAULT_DATA_DIR: str = BBBikeDownloader.DEFAULT_DOWNLOAD_DIR
+    #: Valid file formats.
+    FILE_FORMATS: set = BBBikeDownloader.FILE_FORMATS
 
     def __init__(self, data_dir=None, max_tmpfile_size=None):
         """
@@ -45,21 +37,19 @@ class BBBikeReader(_Reader):
         **Examples**::
 
             >>> from pydriosm.reader import BBBikeReader
-
             >>> bbr = BBBikeReader()
-
             >>> bbr.NAME
             'BBBike'
         """
 
         # noinspection PyTypeChecker
-        super().__init__(
-            downloader=BBBikeDownloader, data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
+        super().__init__(data_source='bbbike', data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
 
-    def read_osm_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
-                     parse_geometry=False, parse_other_tags=False, parse_properties=False,
-                     update=False, download=True, pickle_it=False, ret_pickle_path=False,
-                     rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
+    def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
+                 parse_geometry=False, parse_properties=False, parse_other_tags=False,
+                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
+        # noinspection PyShadowingNames
         """
         Read a PBF (.osm.pbf) data file of a geographic (sub)region.
 
@@ -117,61 +107,53 @@ class BBBikeReader(_Reader):
 
             >>> from pydriosm.reader import BBBikeReader
             >>> from pyhelpers.dirs import delete_dir
-
             >>> bbr = BBBikeReader()
-
-            >>> subrgn_name = 'Leeds'
-            >>> dat_dir = "tests\\osm_data"
-
-            >>> leeds_pbf_raw = bbr.read_osm_pbf(subrgn_name, data_dir=dat_dir, verbose=True)
-            Downloading "Leeds.osm.pbf"
-                to "tests\\osm_data\\leeds\\" ... Done.
-            Reading "tests\\osm_data\\leeds\\Leeds.osm.pbf" ... Done.
+            >>> subregion_name = 'Leeds'
+            >>> data_dir = "tests/osm_data"
+            >>> leeds_pbf_raw = bbr.read_pbf(subregion_name, data_dir=data_dir, verbose=True)
+            Downloading "Leeds.osm.pbf" 100%|██████████| 29.3M/29.3M | 20.7MB/s | ETA: 00:00
+                Saving "Leeds.osm.pbf" to "./tests/osm_data/leeds/" ... Done.
+            Reading "./tests/osm_data/leeds/Leeds.osm.pbf" ... Done.
             >>> type(leeds_pbf_raw)
             dict
             >>> list(leeds_pbf_raw.keys())
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
-
             >>> pbf_raw_points = leeds_pbf_raw['points']
             >>> type(pbf_raw_points)
             list
             >>> type(pbf_raw_points[0])
             osgeo.ogr.Feature
-
             >>> # (Parsing the data in this example might take up to a few minutes.)
-            >>> leeds_pbf_parsed = bbr.read_osm_pbf(
-            ...     subrgn_name, data_dir=dat_dir, readable=True, expand=True,
+            >>> leeds_pbf_parsed = bbr.read_pbf(
+            ...     subregion_name, data_dir=data_dir, readable=True, expand=True,
             ...     parse_geometry=True, parse_other_tags=True, parse_properties=True,
             ...     verbose=True)
-            Parsing "tests\\osm_data\\leeds\\Leeds.osm.pbf" ... Done.
-
+            Parsing "./tests/osm_data/leeds/Leeds.osm.pbf" ... Done.
             >>> list(leeds_pbf_parsed.keys())
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
-
             >>> # Data of the 'multipolygons' layer
             >>> leeds_pbf_parsed_multipolygons = leeds_pbf_parsed['multipolygons']
             >>> leeds_pbf_parsed_multipolygons.head()
                   id                                           geometry  ... tourism other_tags
-            0  10595  (POLYGON ((-1.5030223 53.6725382, -1.5034495 5...  ...    None       None
-            1  10600  (POLYGON ((-1.5116994 53.6764287, -1.5099361 5...  ...    None       None
-            2  10601  (POLYGON ((-1.5142403 53.6710831, -1.5143686 5...  ...    None       None
-            3  10612  (POLYGON ((-1.5129341 53.6704885, -1.5131883 5...  ...    None       None
-            4  10776  (POLYGON ((-1.5523801 53.7029081, -1.5524772 5...  ...    None       None
+            0  10595  MULTIPOLYGON (((-1.5030223 53.6725382, -1.5031...  ...    None       None
+            1  10600  MULTIPOLYGON (((-1.5116994 53.6764287, -1.5099...  ...    None       None
+            2  10601  MULTIPOLYGON (((-1.5142761 53.6706582, -1.5144...  ...    None       None
+            3  10612  MULTIPOLYGON (((-1.5129341 53.6704885, -1.5131...  ...    None       None
+            4  10776  MULTIPOLYGON (((-1.5523801 53.7029081, -1.5524...  ...    None       None
             [5 rows x 26 columns]
-
             >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
 
         .. seealso::
 
             - Examples for the method
-              :meth:`GeofabrikReader.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>`.
+              :meth:`GeofabrikReader.read_pbf()<pydriosm.reader.GeofabrikReader.read_pbf>`.
         """
 
-        osm_pbf_data = super().read_osm_pbf(
+        osm_pbf_data = super().read_pbf(
             subregion_name=subregion_name, data_dir=data_dir, readable=readable, expand=expand,
             parse_geometry=parse_geometry, parse_properties=parse_properties,
             parse_other_tags=parse_other_tags, update=update, download=download,
@@ -180,9 +162,9 @@ class BBBikeReader(_Reader):
 
         return osm_pbf_data
 
-    def read_shp_zip(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
-                     update=False, download=True, pickle_it=False, ret_pickle_path=False,
-                     rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
+    def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
+                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
         """
         Read a shapefile of a geographic (sub)region.
 
@@ -234,12 +216,12 @@ class BBBikeReader(_Reader):
             >>> subrgn_name = 'Birmingham'
             >>> dat_dir = "tests\\osm_data"
 
-            >>> bham_shp = bbr.read_shp_zip(
+            >>> bham_shp = bbr.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=False, verbose=True)
             The .shp.zip file for "Birmingham" is not found.
 
             >>> # Set `download=True`
-            >>> bham_shp = bbr.read_shp_zip(
+            >>> bham_shp = bbr.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
             Downloading "Birmingham.osm.shp.zip"
                 to "tests\\osm_data\\birmingham\\" ... Done.
@@ -273,7 +255,7 @@ class BBBikeReader(_Reader):
             >>> # Read data of 'road' layer only from the original .shp.zip file
             >>> # (and delete all extracts)
             >>> lyr_name = 'roads'
-            >>> bham_roads_shp = bbr.read_shp_zip(
+            >>> bham_roads_shp = bbr.read_shp(
             ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir,
             ...     rm_extracts=True, verbose=True)
             Reading "tests\\osm_data\\birmingham\\Birmingham-shp\\shape\\roads.shp" ... Done.
@@ -295,7 +277,7 @@ class BBBikeReader(_Reader):
             >>> # (and delete all extracts)
             >>> lyr_names = ['railways', 'waterways']
             >>> feat_names = ['rail', 'canal']
-            >>> bham_rw_rc_shp = bbr.read_shp_zip(
+            >>> bham_rw_rc_shp = bbr.read_shp(
             ...     subregion_name=subrgn_name, layer_names=lyr_names, feature_names=feat_names,
             ...     data_dir=dat_dir, rm_extracts=True, rm_shp_zip=True, verbose=True)
             Extracting the following layer(s):
@@ -338,7 +320,7 @@ class BBBikeReader(_Reader):
             Deleting "tests\\osm_data\\" ... Done.
         """
 
-        shp_data = super().read_shp_zip(
+        shp_data = super().read_shp(
             subregion_name=subregion_name, layer_names=layer_names, feature_names=feature_names,
             data_dir=data_dir, update=update, download=download, pickle_it=pickle_it,
             ret_pickle_path=ret_pickle_path, rm_extracts=rm_extracts, rm_shp_zip=rm_shp_zip,
@@ -347,6 +329,7 @@ class BBBikeReader(_Reader):
         return shp_data
 
     def read_csv_xz(self, subregion_name, data_dir=None, download=False, verbose=False, **kwargs):
+        # noinspection PyShadowingNames
         """
         Read a compressed CSV (.csv.xz) data file of a geographic (sub)region.
 
@@ -371,20 +354,16 @@ class BBBikeReader(_Reader):
 
             >>> from pydriosm.reader import BBBikeReader
             >>> from pyhelpers.dirs import cd, delete_dir
-
             >>> bbr = BBBikeReader()
-
-            >>> subrgn_name = 'Leeds'
-            >>> dat_dir = "tests\\osm_data"
-
-            >>> leeds_csv_xz = bbr.read_csv_xz(subrgn_name, dat_dir, verbose=True)
-            The requisite data file "tests\\osm_data\\leeds\\Leeds.osm.csv.xz" does not exist.
-
-            >>> leeds_csv_xz = bbr.read_csv_xz(subrgn_name, dat_dir, verbose=True, download=True)
+            >>> subregion_name = 'Leeds'
+            >>> data_dir = "tests/osm_data"
+            >>> leeds_csv_xz = bbr.read_csv_xz(subregion_name, data_dir, verbose=True)
+            The requisite data file "./tests/osm_data/leeds/Leeds.osm.csv.xz" does not exist.
+            >>> leeds_csv_xz = bbr.read_csv_xz(
+            ...     subregion_name, data_dir=data_dir, verbose=True, download=True)
             Downloading "Leeds.osm.csv.xz"
                 to "tests\\osm_data\\leeds\\" ... Done.
             Parsing the data ... Done.
-
             >>> leeds_csv_xz.head()
                type      id feature  note
             0  node  154915    None  None
@@ -392,15 +371,13 @@ class BBBikeReader(_Reader):
             2  node  154921    None  None
             3  node  154922    None  None
             4  node  154923    None  None
-
-            >>> # Delete the downloaded .csv.xz data file
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            >>> delete_dir(data_dir, verbose=True)  # Delete the downloaded .csv.xz data file
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
-        csv_xz_data = self.read_osm_var(
+        csv_xz_data = self.read_var_osm(
             self.VAR.read_csv_xz, subregion_name=subregion_name, osm_file_format=".csv.xz",
             data_dir=data_dir, download=download, verbose=verbose, **kwargs)
 
@@ -474,10 +451,9 @@ class BBBikeReader(_Reader):
             >>> delete_dir(dat_dir, verbose=True)
         """
 
-        kwargs.update({'parse_geometry': parse_geometry})
-
-        geojson_xz_data = self.read_osm_var(
+        geojson_xz_data = self.read_var_osm(
             self.VAR.read_geojson_xz, subregion_name=subregion_name, osm_file_format=".geojson.xz",
-            data_dir=data_dir, download=download, verbose=verbose, **kwargs)
+            data_dir=data_dir, download=download, verbose=verbose, parse_geometry=parse_geometry,
+            **kwargs)
 
         return geojson_xz_data
