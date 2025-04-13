@@ -8,20 +8,24 @@ import itertools
 import os
 import re
 import shutil
+import warnings
 
-from pyhelpers._cache import _format_err_msg
-from pyhelpers.dirs import cd, validate_dir
+from pyhelpers._cache import _print_failure_message
+from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, validate_dir
 from pyhelpers.ops import get_number_of_chunks
 from pyhelpers.settings import gdal_configurations
 from pyhelpers.store import load_pickle, save_pickle
 from pyhelpers.text import find_similar_str
 
-from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader
-from pydriosm.reader.parser import PBFReadParse, SHPReadParse, VarReadParse
-from pydriosm.utils import check_relpath, remove_osm_file
+from pydriosm.downloader import Downloader
+from pydriosm.downloader._base import BaseDownloader
+from pydriosm.reader._pbf import PBF
+from pydriosm.reader._shp import SHP
+from pydriosm.reader._var import VAR
+from pydriosm.utils import remove_osm_file
 
 
-class _Reader:
+class BaseReader:
     """
     Initialization of a data reader.
     """
@@ -34,13 +38,13 @@ class _Reader:
     DEFAULT_DATA_DIR = 'osm_data'
 
     #: PBFReadParse: Read/parse `PBF <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ data.
-    PBF = PBFReadParse
+    PBF = PBF
     #: SHPReadParse: Read/parse `Shapefile <https://wiki.openstreetmap.org/wiki/Shapefiles>`_ data.
-    SHP = SHPReadParse
+    SHP = SHP
     #: VarReadParse: Read/parse OSM data of various formats (other than PBF and Shapefile).
-    VAR = VarReadParse
+    VAR = VAR
 
-    def __init__(self, downloader=None, data_dir=None, max_tmpfile_size=None):
+    def __init__(self, data_source=None, data_dir=None, max_tmpfile_size=None, **kwargs):
         """
         :param downloader: class of a downloader, valid options include
             :class:`~pydriosm.downloader.GeofabrikDownloader` and
@@ -64,9 +68,9 @@ class _Reader:
 
         **Tests**::
 
-            >>> from pydriosm.reader._reader import _Reader
+            >>> from pydriosm.reader._base import BaseReader
 
-            >>> r = _Reader()
+            >>> r = BaseReader()
 
             >>> r.NAME
             'OSM Reader'
@@ -75,17 +79,12 @@ class _Reader:
             pydriosm.reader.SHPReadParse
         """
 
-        if downloader is None:
-            from pydriosm.downloader._downloader import _Downloader
-            self.downloader = _Downloader
+        if data_source is None:
+            self.downloader = BaseDownloader(download_dir=data_dir)
         else:
-            assert downloader in {GeofabrikDownloader, BBBikeDownloader}
-            # noinspection PyCallingNonCallable
-            self.downloader = downloader(download_dir=data_dir)
-            for x in {'NAME', 'LONG_NAME', 'FILE_FORMATS'}:
-                setattr(self, x, getattr(self.downloader, x))
+            self.downloader = Downloader(data_source=data_source, download_dir=data_dir, **kwargs)
 
-        self.max_tmpfile_size = 5000 if max_tmpfile_size is None else max_tmpfile_size
+        self.max_tmpfile_size = max_tmpfile_size
 
     @classmethod
     def cdd(cls, *sub_dir, mkdir=False, **kwargs):
@@ -105,13 +104,13 @@ class _Reader:
 
         **Tests**::
 
-            >>> from pydriosm.reader._reader import _Reader
+            >>> from pydriosm.reader._base import BaseReader
             >>> import os
 
-            >>> os.path.relpath(_Reader.cdd())
+            >>> os.path.relpath(BaseReader.cdd())
             'osm_data'
 
-            >>> os.path.exists(_Reader.cdd())
+            >>> os.path.exists(BaseReader.cdd())
             False
         """
 
@@ -119,7 +118,6 @@ class _Reader:
 
         return pathname
 
-    # noinspection PyTypeChecker
     @property
     def data_dir(self):
         """
@@ -130,19 +128,19 @@ class _Reader:
 
         **Tests**::
 
-            >>> from pydriosm.reader._reader import _Reader
+            >>> from pydriosm.reader._base import BaseReader
             >>> from pydriosm.downloader import GeofabrikDownloader, BBBikeDownloader
             >>> import os
 
-            >>> r = _Reader()
+            >>> r = BaseReader()
             >>> os.path.relpath(r.data_dir)
             'osm_data'
 
-            >>> r = _Reader(downloader=GeofabrikDownloader)
+            >>> r = BaseReader(downloader=GeofabrikDownloader)
             >>> os.path.relpath(r.data_dir)
             'osm_data\\geofabrik'
 
-            >>> r = _Reader(downloader=BBBikeDownloader)
+            >>> r = BaseReader(downloader=BBBikeDownloader)
             >>> os.path.relpath(r.data_dir)
             'osm_data\\bbbike'
         """
@@ -164,9 +162,9 @@ class _Reader:
 
         **Tests**::
 
-            >>> from pydriosm.reader._reader import _Reader
+            >>> from pydriosm.reader._base import BaseReader
 
-            >>> r = _Reader()
+            >>> r = BaseReader()
             >>> r.data_paths
             []
         """
@@ -178,7 +176,6 @@ class _Reader:
 
         return _data_paths
 
-    # noinspection PyTypeChecker
     def get_file_path(self, subregion_name, osm_file_format, data_dir=None):
         """
         Get the path to an OSM data file (if available) of a specific file format
@@ -198,11 +195,11 @@ class _Reader:
 
         **Tests**::
 
-            >>> from pydriosm.reader._reader import _Reader
+            >>> from pydriosm.reader._base import BaseReader
             >>> from pydriosm.downloader import GeofabrikDownloader, BBBikeDownloader
             >>> import os
 
-            >>> r = _Reader(downloader=GeofabrikDownloader)
+            >>> r = BaseReader(downloader=GeofabrikDownloader)
 
             >>> subrgn_name = 'rutland'
             >>> file_format = ".pbf"
@@ -220,7 +217,7 @@ class _Reader:
             True
 
             >>> # Change the `downloader` to `BBBikeDownloader`
-            >>> r = _Reader(downloader=BBBikeDownloader)
+            >>> r = BaseReader(downloader=BBBikeDownloader)
             >>> path_to_leeds_pbf = r.get_file_path(subrgn_name, file_format, dat_dir)
             >>> os.path.relpath(path_to_leeds_pbf)
             'tests\\osm_data\\leeds\\Leeds.osm.pbf'
@@ -235,12 +232,12 @@ class _Reader:
         return path_to_file
 
     @classmethod
-    def validate_file_path(cls, path_to_osm_file, osm_filename=None, data_dir=None):
+    def validate_file_path(cls, path_to_file, osm_filename=None, data_dir=None):
         """
         Validate the pathname of an OSM data file.
 
-        :param path_to_osm_file: pathname of an OSM data file
-        :type path_to_osm_file: str | os.PathLike[str]
+        :param path_to_file: pathname of an OSM data file
+        :type path_to_file: str | os.PathLike[str]
         :param osm_filename: filename of the OSM data file
         :type osm_filename: str
         :param data_dir: name or pathname of the data directory
@@ -250,106 +247,106 @@ class _Reader:
 
         **Tests**::
 
-            >>> from pydriosm.reader._reader import _Reader
+            >>> from pydriosm.reader._base import BaseReader
             >>> import os
 
-            >>> file_path = _Reader.validate_file_path("a\\b\\c.osm.pbf")
+            >>> file_path = BaseReader.validate_file_path("a\\b\\c.osm.pbf")
             >>> file_path
             'a\\b\\c.osm.pbf'
-            >>> file_path = _Reader.validate_file_path("a\\b\\c.osm.pbf", "x.y.z", data_dir="a\\b")
+            >>> file_path = BaseReader.validate_file_path("a\\b\\c.osm.pbf", "x.y.z", data_dir="a\\b")
             >>> os.path.relpath(file_path)
             'a\\b\\x.y.z'
         """
 
         if not data_dir:  # Go to default file path
-            valid_file_path = path_to_osm_file
+            valid_file_path = path_to_file
 
         else:
-            osm_pbf_dir = validate_dir(path_to_dir=data_dir)
-            if osm_filename is None:
-                osm_filename_ = os.path.basename(path_to_osm_file)
-            else:
-                osm_filename_ = osm_filename
-            valid_file_path = os.path.join(osm_pbf_dir, osm_filename_)
+            pbf_dir = validate_dir(path_to_dir=data_dir)
+            filename_ = os.path.basename(path_to_file) if osm_filename is None else osm_filename
+
+            valid_file_path = os.path.join(pbf_dir, filename_)
 
         return valid_file_path
 
+    def get_pbf_layer_names(self, subregion_name, data_dir=None):
+        """
+        Get indices and names of all layers in the PBF data file of a given (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on Geofabrik free download server
+        :type subregion_name: str
+        :param data_dir:
+        :type data_dir:
+        :return: indices and names of each layer of the PBF data file
+        :rtype: dict
+
+        **Examples**::
+
+            >>> from pydriosm.reader import GeofabrikReader
+            >>> from pyhelpers.dirs import delete_dir
+            >>> import os
+
+            >>> gfr = GeofabrikReader()
+
+            >>> # Download the .shp.zip file of Rutland as an example
+            >>> subrgn_name = 'london'
+            >>> file_format = ".pbf"
+            >>> dat_dir = "tests\\osm_data"
+
+            >>> gfr.downloader.download_data(subrgn_name, file_format, dat_dir, verbose=True)
+            To download .osm.pbf data of the following geographic (sub)region(s):
+                Greater London
+            ? [No]|Yes: yes
+            Downloading "greater-london-latest.osm.pbf"
+                to "tests\\osm_data\\greater-london\\" ... Done.
+
+            >>> london_pbf_path = gfr.data_paths[0]
+            >>> os.path.relpath(london_pbf_path)
+            'tests\\osm_data\\greater-london\\greater-london-latest.osm.pbf'
+
+            >>> lyr_idx_names = gfr.get_pbf_layer_names(london_pbf_path)
+            >>> lyr_idx_names
+            {0: 'points',
+             1: 'lines',
+             2: 'multilinestrings',
+             3: 'multipolygons',
+             4: 'other_relations'}
+
+            >>> # Delete the example data and the test data directory
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "tests\\osm_data\\" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "tests\\osm_data\\" ... Done.
+        """
+
+        data_dir_ = self.data_dir if data_dir is None else data_dir
+
+        osm_file_format = ".osm.pbf" if self.downloader.NAME.lower() == 'geofabrik' else '.pbf'
+
+        path_to_osm_pbf = self.get_file_path(
+            subregion_name=subregion_name, osm_file_format=osm_file_format, data_dir=data_dir_)
+
+        with warnings.catch_warnings(action="ignore", category=FutureWarning):
+            layer_idx_names = PBF.get_layer_names(path_to_osm_pbf)
+
+        return layer_idx_names
+
     @classmethod
-    def remove_extracts(cls, path_to_extract_dir, verbose):
-        """
-        Remove data extracts.
-
-        :param path_to_extract_dir: pathname of the directory where data extracts are stored
-        :type path_to_extract_dir: str | os.PathLike[str]
-        :param verbose: whether to print relevant information in console as the function runs,
-            defaults to ``False``
-        :type verbose: bool | int
-
-        See examples for the methods
-        :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` and
-        :meth:`BBBikeReader.read_shp_zip()<pydriosm.reader.BBBikeReader.read_shp_zip>`.
-        """
-
-        if verbose:
-            extr_dir_rel_path = check_relpath(path_to_extract_dir)
-            print(f"Deleting the extracts \"{extr_dir_rel_path}\\\"", end=" ... ")
-
-        try:
-            # for f in glob.glob(os.path.join(extract_dir, "gis_osm*")):
-            #     # if layer not in f:
-            #     os.remove(f)
-            shutil.rmtree(path_to_extract_dir)
-
-            if verbose:
-                print("Done.")
-
-        except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
-
-    @classmethod
-    def validate_input_dtype(cls, var_input):
-        """
-        Validate the data type of the input variable.
-
-        :param var_input: a variable
-        :type var_input: str | list | None
-        :return: validated input
-        :rtype: list
-
-        **Tests**::
-
-            >>> from pydriosm.reader._reader import _Reader
-
-            >>> _Reader.validate_input_dtype(var_input=None)
-            []
-
-            >>> _Reader.validate_input_dtype(var_input='str')
-            ['str']
-
-            >>> _Reader.validate_input_dtype(var_input=['str'])
-            ['str']
-        """
-
-        if var_input:
-            var_input_ = [var_input] if isinstance(var_input, str) else var_input.copy()
-        else:
-            var_input_ = []
-
-        return var_input_
-
-    def _read_osm_pbf(self, pbf_pathname, chunk_size_limit, readable, expand, pickle_it,
-                      path_to_pickle, ret_pickle_path, rm_pbf_file, verbose, **kwargs):
+    def _read_pbf(cls, path_to_file, chunk_size_limit, readable, expand, pickle_it,
+                  path_to_pickle, ret_pickle_path, rm_pbf_file, verbose, **kwargs):
 
         if verbose:
             action_msg = "Parsing" if readable or expand else "Reading"
-            print(f"{action_msg} \"{check_relpath(pbf_pathname)}\"", end=" ... ")
+            path_to_file_ = add_slashes(check_relative_pathname(path_to_file))
+            print(f"{action_msg} {path_to_file_}", end=" ... ")
 
         try:
             number_of_chunks = get_number_of_chunks(
-                file_or_obj=pbf_pathname, chunk_size_limit=chunk_size_limit)
+                file_or_obj=path_to_file, chunk_size_limit=chunk_size_limit)
 
-            data = self.PBF.read_pbf(
-                pbf_pathname=pbf_pathname, readable=readable, expand=expand,
+            data = cls.PBF.read_pbf(
+                path_to_file=path_to_file, readable=readable, expand=expand,
                 number_of_chunks=number_of_chunks, **kwargs)
 
             if verbose:
@@ -362,19 +359,19 @@ class _Reader:
                     data = data, path_to_pickle
 
             if rm_pbf_file:
-                remove_osm_file(pbf_pathname, verbose=verbose)
+                remove_osm_file(path_to_file, verbose=verbose)
 
         except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
+            _print_failure_message(e, prefix="Failed. Error:")
 
             data = None
 
         return data
 
-    def read_osm_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
-                     parse_geometry=False, parse_properties=False, parse_other_tags=False,
-                     update=False, download=True, pickle_it=False, ret_pickle_path=False,
-                     rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
+    def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
+                 parse_geometry=False, parse_properties=False, parse_other_tags=False,
+                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
         """
         Read a PBF (.osm.pbf) data file of a geographic (sub)region.
 
@@ -435,8 +432,9 @@ class _Reader:
               and :meth:`BBBikeReader.read_osm_pbf()<pydriosm.reader.BBBikeReader.read_osm_pbf>`.
         """
 
-        kwargs.update({'max_tmpfile_size': self.max_tmpfile_size})
-        gdal_configurations(**kwargs)
+        if self.max_tmpfile_size:
+            kwargs.update({'max_tmpfile_size': self.max_tmpfile_size})
+            gdal_configurations(**kwargs)
 
         osm_file_format = ".osm.pbf"
 
@@ -455,14 +453,14 @@ class _Reader:
 
             else:  # If the target file is not available, try downloading it:
                 if (not os.path.exists(path_to_osm_pbf) or update) and download:
-                    self.downloader.download_osm_data(
-                        subregion_names=subregion_name, osm_file_format=osm_file_format,
+                    self.downloader.download_data(
+                        subregion_names=subregion_name, osm_file_formats=osm_file_format,
                         download_dir=data_dir, update=update, confirmation_required=False,
                         verbose=verbose)
 
                 if os.path.isfile(path_to_osm_pbf):
-                    osm_pbf_data = self._read_osm_pbf(
-                        pbf_pathname=path_to_osm_pbf, chunk_size_limit=chunk_size_limit,
+                    osm_pbf_data = self._read_pbf(
+                        path_to_file=path_to_osm_pbf, chunk_size_limit=chunk_size_limit,
                         readable=readable, expand=expand, parse_geometry=parse_geometry,
                         parse_properties=parse_properties, parse_other_tags=parse_other_tags,
                         pickle_it=pickle_it, path_to_pickle=path_to_pickle,
@@ -512,7 +510,7 @@ class _Reader:
             []
 
             >>> # Download the shapefiles of London
-            >>> path_to_london_shp_zip = gfr.downloader.download_osm_data(
+            >>> path_to_london_shp_zip = gfr.downloader.download_data(
             ...     subrgn_name, file_format, dat_dir, verbose=True, ret_download_path=True)
             To download .shp.zip data of the following geographic (sub)region(s):
                 Greater London
@@ -592,7 +590,7 @@ class _Reader:
             path_to_osm_shp_file = available_pathnames
 
         else:
-            layer_name_ = find_similar_str(x=layer_name, lookup_list=self.SHP.LAYER_NAMES)
+            layer_name_ = find_similar_str(layer_name, lookup_list=self.SHP.LAYER_NAMES)
 
             pat_ = f'gis_osm_{layer_name_}(_a)?(_free)?(_1)?'
             if feature_name is None:
@@ -637,7 +635,7 @@ class _Reader:
         if layer_names_:  # layer is not None
             temp = layer_names_ + (feature_names_ if feature_names_ else [])
             # Make a local path for saving a pickle file for .shp data
-            if cls.NAME == 'Geofabrik':
+            if cls.NAME.lower() == 'geofabrik':
                 filename_ = shp_zip_filename.replace("-latest-free.shp.zip", "")
                 sub_fname = "-".join(x[:3] for x in [filename_] + temp if x)
             else:
@@ -646,7 +644,7 @@ class _Reader:
             path_to_shp_pickle = os.path.join(os.path.dirname(extract_dir), sub_fname + "-shp.pkl")
 
         else:  # len(layer_names_) >= 12
-            if cls.NAME == 'Geofabrik':
+            if cls.NAME.lower() == 'geofabrik':
                 path_to_shp_pickle = extract_dir.replace("-latest-free-shp", "-shp.pkl")
             else:
                 path_to_shp_pickle = extract_dir + ".pkl"
@@ -656,7 +654,7 @@ class _Reader:
     def _get_shp_layer_names(self, extract_dir_):
         if self.NAME == 'Geofabrik':
             lyr_names_ = [
-                self.SHP.find_shp_layer_name(x) for x in os.listdir(extract_dir_) if x != 'README']
+                self.SHP.get_layer_name(x) for x in os.listdir(extract_dir_) if x != 'README']
         else:
             lyr_names_ = [
                 x.rsplit(".", 1)[0] for x in os.listdir(os.path.join(extract_dir_, "shape"))]
@@ -718,7 +716,7 @@ class _Reader:
         if not os.path.exists(extract_dir_):
             if (not os.path.exists(shp_zip_pathname) or update) and download:
                 # Download the requested OSM file
-                self.downloader.download_osm_data(**download_args)
+                self.downloader.download_data(**download_args)
 
             if os.path.isfile(shp_zip_pathname):
                 # and shp_zip_pathname in self.downloader.data_paths:
@@ -749,7 +747,7 @@ class _Reader:
 
             if len(unavailable_layers) > 0:
                 if not os.path.exists(shp_zip_pathname) and download:
-                    self.downloader.download_osm_data(**download_args)
+                    self.downloader.download_data(**download_args)
 
                 if os.path.isfile(shp_zip_pathname):
                     self.SHP.unzip_shp_zip(
@@ -761,12 +759,67 @@ class _Reader:
 
         return layer_name_list
 
-    def _read_shp_zip(self, shp_pathnames, feature_names_, layer_name_list, pickle_it,
-                      path_to_pickle, ret_pickle_path, rm_extracts, extract_dir, rm_shp_zip,
-                      shp_zip_pathname, verbose, **kwargs):
+    @classmethod
+    def remove_extracts(cls, path_to_extract_dir, verbose):
+        """
+        Remove data extracts.
+
+        :param path_to_extract_dir: pathname of the directory where data extracts are stored
+        :type path_to_extract_dir: str | os.PathLike[str]
+        :param verbose: whether to print relevant information in console as the function runs,
+            defaults to ``False``
+        :type verbose: bool | int
+
+        See examples for the methods
+        :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` and
+        :meth:`BBBikeReader.read_shp_zip()<pydriosm.reader.BBBikeReader.read_shp_zip>`.
+        """
+
+        if verbose:
+            extr_dir_rel_path = check_relative_pathname(path_to_extract_dir)
+            print(f"Deleting the extracts \"{extr_dir_rel_path}\\\"", end=" ... ")
+
+        try:
+            # for f in glob.glob(os.path.join(extract_dir, "gis_osm*")):
+            #     # if layer not in f:
+            #     os.remove(f)
+            shutil.rmtree(path_to_extract_dir)
+
+            if verbose:
+                print("Done.")
+
+        except Exception as e:
+            _print_failure_message(e, prefix="Failed. Error:")
+
+    @classmethod
+    def validate_dtype(cls, x):
+        """
+        Validate the data type of the input variable.
+
+        :param x: a variable
+        :type x: str | list | None
+        :return: validated input
+        :rtype: list
+
+        **Tests**::
+
+            >>> from pydriosm.reader._base import BaseReader
+            >>> BaseReader.validate_dtype(x=None)
+            []
+            >>> BaseReader.validate_dtype(x='str')
+            ['str']
+            >>> BaseReader.validate_dtype(x=['str'])
+            ['str']
+        """
+
+        return ([x] if isinstance(x, str) else x.copy()) if x else []
+
+    def _read_shp(self, shp_pathnames, feature_names_, layer_name_list, pickle_it,
+                  path_to_pickle, ret_pickle_path, rm_extracts, extract_dir, rm_shp_zip,
+                  shp_zip_pathname, verbose, **kwargs):
         if verbose:
             # print(f'Reading the shapefile(s) data', end=" ... ")
-            files_dir = check_relpath(
+            files_dir = check_relative_pathname(
                 os.path.commonpath(list(itertools.chain.from_iterable(shp_pathnames))))
             if os.path.isdir(files_dir):
                 msg_ = "the shapefile(s) at "
@@ -795,15 +848,14 @@ class _Reader:
             if os.path.isfile(shp_zip_pathname) and rm_shp_zip:
                 remove_osm_file(shp_zip_pathname, verbose=verbose)
 
+            return shp_data
+
         except Exception as e:
-            print(f"Failed. {_format_err_msg(e)}")
-            shp_data = None
+            _print_failure_message(e, prefix="Failed. Error:")
 
-        return shp_data
-
-    def read_shp_zip(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
-                     update=False, download=True, pickle_it=False, ret_pickle_path=False,
-                     rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
+    def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
+                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
         """
         Read a .shp.zip data file of a geographic (sub)region.
 
@@ -858,7 +910,7 @@ class _Reader:
                 subregion_name=subregion_name, osm_file_format=osm_file_format,
                 download_dir=data_dir)
 
-        layer_names_, feature_names_ = map(self.validate_input_dtype, [layer_names, feature_names])
+        layer_names_, feature_names_ = map(self.validate_dtype, [layer_names, feature_names])
 
         if all(x is not None for x in {shp_zip_filename, shp_zip_pathname}):
             # The shapefile data of the subregion should be downloadable
@@ -892,7 +944,7 @@ class _Reader:
                         glob.glob(shp_pathname_.format(layer_name))
                         for layer_name in layer_name_list]
 
-                    shp_data = self._read_shp_zip(
+                    shp_data = self._read_shp(
                         shp_pathnames=shp_pathnames, feature_names_=feature_names_,
                         layer_name_list=layer_name_list, pickle_it=pickle_it,
                         path_to_pickle=path_to_pickle, ret_pickle_path=ret_pickle_path,
@@ -902,12 +954,12 @@ class _Reader:
                 else:
                     shp_data = None
                     if verbose:
-                        print(f"The {osm_file_format} file for \"{subregion_name_}\" is not found.")
+                        print(f'The {osm_file_format} file for "{subregion_name_}" is not found.')
 
             return shp_data
 
-    def read_osm_var(self, meth, subregion_name, osm_file_format, data_dir=None, download=False,
-                     verbose=False, **kwargs):
+    def read_var_osm(self, meth, subregion_name, osm_file_format, data_dir=None, download=False,
+                     verbose=False, raise_error=True, **kwargs):
         """
         Read data file of various formats (other than PBF and shapefile)
         for a geographic (sub)region.
@@ -929,6 +981,9 @@ class _Reader:
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
         :type verbose: bool | int
+        :param raise_error: Whether to raise the provided exception;
+            if ``raise_error=False`` (default), the error will be suppressed.
+        :type raise_error: bool
         :param kwargs: [optional] parameters of the method specified by ``meth``
         :return: data of the specified file format
         :rtype: pandas.DataFrame | None
@@ -938,35 +993,40 @@ class _Reader:
         :meth:`BBBikeReader.read_geojson_xz()<pydriosm.reader.BBBikeReader.read_geojson_xz>`.
         """
 
-        subregion_name_ = self.downloader.validate_subregion_name(subregion_name)
+        subregion_name_ = self.downloader.validate_subregion_name(subregion_name=subregion_name)
 
-        path_to_osm_var = self.get_file_path(subregion_name_, osm_file_format, data_dir)
+        path_to_file = self.get_file_path(
+            subregion_name=subregion_name_, osm_file_format=osm_file_format, data_dir=data_dir)
 
-        if not os.path.isfile(path_to_osm_var) and download:
-            self.downloader.download_osm_data(
-                subregion_names=subregion_name_, osm_file_format=osm_file_format,
+        if not os.path.isfile(path_to_file) and download:
+            self.downloader.download_data(
+                subregion_names=subregion_name_, osm_file_formats=osm_file_format,
                 download_dir=data_dir, confirmation_required=False, verbose=verbose)
             downloaded = True
         else:
             downloaded = False
 
-        if os.path.isfile(path_to_osm_var):
+        print_path_to_file = add_slashes(check_relative_pathname(path_to_file))
+
+        if os.path.isfile(path_to_file):
             if verbose:
-                prt_msg = "the data" if downloaded else f'"{check_relpath(path_to_osm_var)}"'
+                prt_msg = "the data" if downloaded else print_path_to_file
                 print(f"Parsing {prt_msg}", end=" ... ")
 
             try:
-                # getattr(self.VAR, 'read_...')
-                osm_var_data = meth(path_to_osm_var, **kwargs)
+                if isinstance(meth, str):
+                    osm_data = getattr(self.VAR, meth)(path_to_file, **kwargs)
+                else:
+                    osm_data = meth(path_to_file, **kwargs)
 
                 if verbose:
                     print("Done.")
 
-            except Exception as e:
-                print(f"Failed. {_format_err_msg(e)}")
-                osm_var_data = None
+                return osm_data
 
-            return osm_var_data
+            except Exception as e:
+                _print_failure_message(
+                    e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
 
         else:
-            print(f'The requisite data file "{check_relpath(path_to_osm_var)}" does not exist.')
+            print(f"The requisite data file {print_path_to_file} does not exist.")
