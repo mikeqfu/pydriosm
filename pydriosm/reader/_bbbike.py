@@ -45,6 +45,120 @@ class BBBikeReader(BaseReader):
         # noinspection PyTypeChecker
         super().__init__(data_source='bbbike', data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
 
+    def get_file_path(self, subregion_name, osm_file_format, data_dir=None):
+        # noinspection PyShadowingNames
+        """
+        Get the local path to an OSM data file of a geographic (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on Geofabrik free download server
+        :type subregion_name: str
+        :param osm_file_format: file format of the OSM data available on the free download server
+        :type osm_file_format: str
+        :param data_dir: directory where the data file of the ``subregion_name`` is located/saved;
+            if ``None`` (default), the default local directory
+        :type data_dir: str | None
+        :return: path to PBF (.osm.pbf) file
+        :rtype: str | None
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> from pyhelpers.dirs import delete_dir
+            >>> import os
+            >>> bbr = BBBikeReader()
+            >>> subregion_name = 'rutland'
+            >>> osm_file_format = ".pbf"
+            >>> data_dir = "tests/osm_data"
+            >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
+            Traceback (most recent call last):
+                ...
+            pydriosm.errors.InvalidSubregionNameError:
+              `subregion_name='rutland'` -> The input of `subregion_name` is not recognizable.
+              Check the `.data_source`, or try another one instead.
+            >>> subregion_name = 'birmingham'
+            >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
+            >>> # When "Birmingham.osm.pbf" is unavailable at the data directory
+            >>> os.path.isfile(path_to_pbf)
+            False
+            >>> # Download the PBF data file of Birmingham to "./tests/osm_data/"
+            >>> bbr.downloader.download_data(
+            ...     subregion_name, osm_file_format, data_dir, verbose=True)
+            To download data in the format '.pbf' for the following geographic (sub)region(s):
+                "Birmingham"
+              to "./tests/osm_data/birmingham/"
+            ? [No]|Yes: yes
+            Downloading "Birmingham.osm.pbf" 100%|██████████| 42.5M/42.5M | 1.40MB/s | ET...
+                Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
+            >>> # Check again
+            >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
+            >>> os.path.isfile(path_to_pbf)
+            True
+            >>> os.path.relpath(path_to_pbf)  # (on Windows)
+            'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
+            >>> # Delete the test data directory
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        path_to_file = super().get_file_path(
+            subregion_name=subregion_name, osm_file_format=osm_file_format, data_dir=data_dir)
+
+        return path_to_file
+
+    def get_pbf_layer_names(self, subregion_name, data_dir=None):
+        # noinspection PyShadowingNames
+        """
+        Get indices and names of all layers in the PBF data file of a given (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on Geofabrik free download server
+        :type subregion_name: str
+        :param data_dir:
+        :type data_dir:
+        :return: indices and names of each layer of the PBF data file
+        :rtype: dict
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> from pyhelpers.dirs import delete_dir
+            >>> import os
+            >>> bbr = BBBikeReader()
+            >>> # Download the PBF data of Birmingham as an example
+            >>> subregion_name = 'birmingham'
+            >>> osm_file_format = ".pbf"
+            >>> data_dir = "tests/osm_data"
+            >>> # Download the PBF data of Birmingham to "./tests/osm_data/"
+            >>> bbr.downloader.download_data(
+            ...     subregion_name, osm_file_format, data_dir, verbose=True)
+            To download data in the format '.pbf' for the following geographic (sub)region(s):
+                "Birmingham"
+              to "./tests/osm_data/birmingham/"
+            ? [No]|Yes: yes
+            Downloading "Birmingham.osm.pbf" 100%|██████████| 42.5M/42.5M | 1.40MB/s | ET...
+                Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
+            >>> path_to_pbf = bbr.data_paths[0]
+            >>> os.path.relpath(path_to_pbf)
+            'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
+            >>> lyr_idx_names = bbr.get_pbf_layer_names(subregion_name)
+            >>> lyr_idx_names
+            {0: 'points',
+             1: 'lines',
+             2: 'multilinestrings',
+             3: 'multipolygons',
+             4: 'other_relations'}
+            >>> # Delete the example data and the test data directory
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        return super().get_pbf_layer_names(subregion_name=subregion_name, data_dir=data_dir)
+
     def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
                  parse_geometry=False, parse_properties=False, parse_other_tags=False,
                  update=False, download=True, pickle_it=False, ret_pickle_path=False,
