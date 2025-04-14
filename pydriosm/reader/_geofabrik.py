@@ -7,7 +7,7 @@ import os
 from pyhelpers.text import find_similar_str
 
 from pydriosm.downloader import GeofabrikDownloader
-from pydriosm.reader._base import BaseReader, PBF
+from pydriosm.reader._base import BaseReader
 
 
 class GeofabrikReader(BaseReader):
@@ -118,6 +118,7 @@ class GeofabrikReader(BaseReader):
         return path_to_file
 
     def get_pbf_layer_names(self, subregion_name, data_dir=None):
+        # noinspection PyShadowingNames
         """
         Get indices and names of all layers in the PBF data file of a given (sub)region.
 
@@ -134,48 +135,38 @@ class GeofabrikReader(BaseReader):
             >>> from pydriosm.reader import GeofabrikReader
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
-
             >>> gfr = GeofabrikReader()
-
-            >>> # Download the .shp.zip file of Rutland as an example
-            >>> subrgn_name = 'london'
-            >>> file_format = ".pbf"
-            >>> dat_dir = "tests\\osm_data"
-
-            >>> gfr.downloader.download_osm_data(subrgn_name, file_format, dat_dir, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                Greater London
+            >>> # Download the PBF data of Rutland as an example
+            >>> subregion_name = 'rutland'
+            >>> osm_file_format = ".pbf"
+            >>> data_dir = "tests/osm_data"
+            >>> # Download the PBF data of Rutland to "./tests/osm_data/"
+            >>> gfr.downloader.download_data(
+            ...     subregion_name, osm_file_format, data_dir, verbose=True)
+            To download data in the format '.osm.pbf' for the following geographic (sub)region(s):
+                "Rutland"
+              to "./tests/osm_data/rutland/"
             ? [No]|Yes: yes
-            Downloading "greater-london-latest.osm.pbf"
-                to "tests\\osm_data\\greater-london\\" ... Done.
-
-            >>> london_pbf_path = gfr.data_paths[0]
-            >>> os.path.relpath(london_pbf_path)
-            'tests\\osm_data\\greater-london\\greater-london-latest.osm.pbf'
-
-            >>> lyr_idx_names = gfr.get_pbf_layer_names(london_pbf_path)
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 1.00MB/s ...
+                Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
+            >>> path_to_pbf = gfr.data_paths[0]
+            >>> os.path.relpath(path_to_pbf)
+            'tests\\osm_data\\rutland\\rutland-latest.osm.pbf'
+            >>> lyr_idx_names = gfr.get_pbf_layer_names(subregion_name)
             >>> lyr_idx_names
             {0: 'points',
              1: 'lines',
              2: 'multilinestrings',
              3: 'multipolygons',
              4: 'other_relations'}
-
             >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
-        data_dir_ = self.data_dir if data_dir is None else data_dir
-
-        path_to_osm_pbf = self.get_file_path(
-            subregion_name=subregion_name, osm_file_format=".osm.pbf", data_dir=data_dir_)
-
-        layer_idx_names = PBF.get_layer_names(path_to_osm_pbf)
-
-        return layer_idx_names
+        return super().get_pbf_layer_names(subregion_name=subregion_name, data_dir=data_dir)
 
     def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
                  parse_geometry=False, parse_properties=False, parse_other_tags=False,
