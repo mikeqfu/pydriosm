@@ -222,6 +222,21 @@ class Reader(BaseReader):
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
+    def get_shp_pathname(self, subregion_name, layer_name=None, feature_name=None, data_dir=None,
+                         raise_error=True):
+        method_name = self.get_shp_pathname.__name__
+
+        if hasattr(self.reader, method_name):
+            return self.reader.get_shp_pathname(
+                subregion_name=subregion_name,
+                layer_name=layer_name,
+                feature_name=feature_name,
+                data_dir=data_dir,
+            )
+
+        else:
+            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+
     def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
                  parse_geometry=False, parse_properties=False, parse_other_tags=False,
                  update=False, download=True, pickle_it=False, ret_pickle_path=False,
@@ -270,6 +285,66 @@ class Reader(BaseReader):
                 ret_pickle_path=ret_pickle_path,
                 rm_extracts=rm_extracts,
                 rm_shp_zip=rm_shp_zip,
+                verbose=verbose,
+                **kwargs
+            )
+
+        else:
+            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+
+    def merge_shp_layers(self, subregion_names, layer_name, data_dir=None, engine='pyshp',
+                         update=False, download=True, rm_zip_extracts=True,
+                         merged_shp_dir=None, rm_shp_temp=True, verbose=False,
+                         ret_merged_shp_path=False, raise_error=True):
+
+        method_name = self.merge_shp_layers.__name__
+
+        if hasattr(self.reader, method_name):
+            return self.reader.read_csv_xz(
+                subregion_names=subregion_names,
+                layer_name=layer_name,
+                data_dir=data_dir,
+                engine=engine,
+                update=update,
+                download=download,
+                rm_zip_extracts=rm_zip_extracts,
+                merged_shp_dir=merged_shp_dir,
+                rm_shp_temp=rm_shp_temp,
+                verbose=verbose,
+                ret_merged_shp_path=ret_merged_shp_path
+            )
+
+        else:
+            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+
+    def read_csv_xz(self, subregion_name, data_dir=None, download=False, verbose=False,
+                    raise_error=True, **kwargs):
+
+        method_name = self.read_csv_xz.__name__
+
+        if hasattr(self.reader, method_name):
+            return self.reader.read_csv_xz(
+                subregion_name=subregion_name,
+                data_dir=data_dir,
+                download=download,
+                verbose=verbose,
+                **kwargs
+            )
+
+        else:
+            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+
+    def read_geojson_xz(self, subregion_name, data_dir=None, parse_geometry=False, download=False,
+                        verbose=False, raise_error=True, **kwargs):
+
+        method_name = self.read_geojson_xz.__name__
+
+        if hasattr(self.reader, method_name):
+            return self.reader.read_geojson_xz(
+                subregion_name=subregion_name,
+                data_dir=data_dir,
+                parse_geometry=parse_geometry,
+                download=download,
                 verbose=verbose,
                 **kwargs
             )
