@@ -151,10 +151,11 @@ class PBF:
         try:
             osgeo_ogr = _check_dependency(name='osgeo.ogr')
 
-            f = osgeo_ogr.Open(path_to_file)
+            with warnings.catch_warnings(action='ignore', category=FutureWarning):
+                f = osgeo_ogr.Open(path_to_file)
 
-            layer_count = f.GetLayerCount()
-            layer_names = [f.GetLayerByIndex(i).GetName() for i in range(layer_count)]
+                layer_count = f.GetLayerCount()
+                layer_names = [f.GetLayerByIndex(i).GetName() for i in range(layer_count)]
 
             layer_idx_names = dict(zip(range(layer_count), layer_names))
 
