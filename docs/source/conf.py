@@ -240,6 +240,7 @@ latex_maketitle = r'''
     \cleardoublepage
     \makeatletter
     \hypertarget{lofpage}{}
+    \renewcommand*{\addvspace}[1]{}
     \listoffigures
     \bookmark[dest=lofpage]{List of Figures}
     \makeatother
