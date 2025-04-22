@@ -1,4 +1,5 @@
 # Include package data
+include LICENSE
 recursive-include pydriosm/data *
 
 # Exclude tests
