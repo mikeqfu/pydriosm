@@ -47,7 +47,7 @@ def _update_prepacked_data(verbose=True, interval=5):
 
         time.sleep(interval)
 
-        _ = gfd.get_region_subregion_tier(**meth_args)
+        _ = gfd.get_region_subregion_tiers(**meth_args)
 
         time.sleep(interval)
 
@@ -62,7 +62,7 @@ def _update_prepacked_data(verbose=True, interval=5):
         # -- BBBike --------------------------------------------------------------------------------
         bbd = BBBikeDownloader()
 
-        _ = bbd.get_names_of_cities(**meth_args)
+        _ = bbd.get_bbbike_cities(**meth_args)
 
         time.sleep(interval)
 

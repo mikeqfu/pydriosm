@@ -8,7 +8,7 @@ import pkgutil
 
 from .downloader import BBBikeDownloader, GeofabrikDownloader
 from .ios import PostgresOSM
-from .reader import BBBikeReader, GeofabrikReader, PBFReadParse, SHPReadParse, VarReadParse
+from .reader import BBBikeReader, GeofabrikReader, PBF, SHP, VAR
 
 metadata = json.loads(pkgutil.get_data(__name__, "data/.metadata").decode())
 
@@ -29,12 +29,7 @@ __license__ = metadata['License']
 __first_release_date__ = metadata['First release']
 
 __all__ = [
-    __author__,
-    __description__,
-    __author_email__,
-    __pkgname__,
-    __version__,
     'downloader', 'GeofabrikDownloader', 'BBBikeDownloader',
-    'reader', 'PBFReadParse', 'SHPReadParse', 'VarReadParse', 'GeofabrikReader', 'BBBikeReader',
+    'reader', 'PBF', 'SHP', 'VAR', 'GeofabrikReader', 'BBBikeReader',
     'ios', 'PostgresOSM',
 ]

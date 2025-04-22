@@ -547,11 +547,11 @@ class BaseDownloader:
 
     @classmethod
     def get_subregion_download_url(cls, subregion_name, osm_file_format, update=False,
-                                   verbose=False, raise_error=True, **kwargs):
+                                   verbose=False, raise_error=True):
         """
         Get a download URL of a geographic (sub)region.
 
-        See Examples for the methods
+        See examples for the methods
         :meth:`GeofabrikDownloader.get_subregion_download_url()
         <pydriosm.downloader.GeofabrikDownloader.get_subregion_download_url>` and
         :meth:`BBBikeDownloader.get_subregion_download_url()
@@ -713,6 +713,68 @@ class BaseDownloader:
 
         return file_exists
 
+    def _prep_subregion_names(self, subregion_names, deep):
+        if isinstance(subregion_names, str):
+            subregion_names_ = [subregion_names]
+        else:
+            subregion_names_ = list(subregion_names)
+        subregion_names_ = [self.validate_subregion_name(x) for x in subregion_names_]
+
+        if deep:
+            try:
+                # noinspection PyUnresolvedReferences
+                subregion_names_ = self.get_subregions(*subregion_names_, deep=deep)
+            except AttributeError:
+                pass
+
+        return subregion_names_
+
+    def _prep_osm_file_formats(self, osm_file_formats):
+        if osm_file_formats is None:
+            file_formats_ = tuple(self.FILE_FORMATS)
+            file_fmt_msg = "data in all available formats"
+        else:
+            if isinstance(osm_file_formats, str):
+                file_formats_ = [osm_file_formats]
+            else:
+                file_formats_ = list(osm_file_formats)
+            file_formats_ = [self.validate_file_format(x) for x in file_formats_]
+
+            fmt_msg_ = f"format '{file_formats_[0]}'" if len(file_formats_) == 1 \
+                else f"formats {tuple(file_formats_)}"
+            file_fmt_msg = f"data in the {fmt_msg_}"
+
+        return file_formats_, file_fmt_msg
+
+    def _prep_file_paths(self, subregion_names_, file_formats_, data_dir, update, verbose):
+        file_paths = []
+        existing_file_paths = []  # Paths of existing files
+        download_list = [x for x in subregion_names_ for _ in range(len(file_formats_))]
+        for subrgn_name_ in subregion_names_:
+            for file_fmt in file_formats_:
+                path_to_file = self.file_exists(
+                    subregion_name=subrgn_name_, osm_file_format=file_fmt, data_dir=data_dir,
+                    update=update, ret_file_path=True)
+
+                if isinstance(path_to_file, str):
+                    existing_file_paths.append(path_to_file)
+                    download_list.remove(subrgn_name_)
+
+                    if verbose:
+                        osm_filename = os.path.basename(path_to_file)
+                        rel_path = check_relative_pathname(os.path.dirname(path_to_file))
+                        print(f'"{osm_filename}" already exists in {add_slashes(rel_path)}.')
+
+                else:
+                    _, _, _, path_to_file = self.get_valid_download_info(
+                        subrgn_name_, osm_file_format=file_fmt, download_dir=data_dir)
+
+                file_paths.append(path_to_file)
+
+        download_list = list(set(download_list))
+
+        return file_paths, existing_file_paths, download_list
+
     def file_exists_and_more(self, subregion_names, osm_file_formats, data_dir=None, update=False,
                              confirmation_required=True, verbose=True, deep=False):
         """
@@ -772,58 +834,13 @@ class BaseDownloader:
              [])
         """
 
-        if isinstance(subregion_names, str):
-            subregion_names_ = [subregion_names]
-        else:
-            subregion_names_ = list(subregion_names)
-        subregion_names_ = [self.validate_subregion_name(x) for x in subregion_names_]
+        subregion_names_ = self._prep_subregion_names(subregion_names=subregion_names, deep=deep)
 
-        if deep:
-            try:
-                # noinspection PyUnresolvedReferences
-                subregion_names_ = self.get_subregions(*subregion_names_, deep=deep)
-            except AttributeError:
-                pass
+        file_formats_, file_fmt_msg = self._prep_osm_file_formats(osm_file_formats=osm_file_formats)
 
-        if osm_file_formats is None:
-            file_formats_ = tuple(self.FILE_FORMATS)
-            fmt_msg = "data in all available formats"
-        else:
-            if isinstance(osm_file_formats, str):
-                file_formats_ = [osm_file_formats]
-            else:
-                file_formats_ = list(osm_file_formats)
-            file_formats_ = [self.validate_file_format(x) for x in file_formats_]
-
-            fmt_msg_ = f"format '{file_formats_[0]}'" if len(file_formats_) == 1 \
-                else f"formats {tuple(file_formats_)}"
-            fmt_msg = f"data in the {fmt_msg_}"
-
-        file_paths = []
-        existing_file_paths = []  # Paths of existing files
-        download_list = [x for x in subregion_names_ for _ in range(len(file_formats_))]
-        for subrgn_name_ in subregion_names_:
-            for file_fmt in file_formats_:
-                path_to_file = self.file_exists(
-                    subregion_name=subrgn_name_, osm_file_format=file_fmt, data_dir=data_dir,
-                    update=update, ret_file_path=True)
-
-                if isinstance(path_to_file, str):
-                    existing_file_paths.append(path_to_file)
-                    download_list.remove(subrgn_name_)
-
-                    if verbose:
-                        osm_filename = os.path.basename(path_to_file)
-                        rel_path = check_relative_pathname(os.path.dirname(path_to_file))
-                        print(f'"{osm_filename}" already exists in {add_slashes(rel_path)}.')
-
-                else:
-                    _, _, _, path_to_file = self.get_valid_download_info(
-                        subrgn_name_, osm_file_format=file_fmt, download_dir=data_dir)
-
-                file_paths.append(path_to_file)
-
-        download_list = list(set(download_list))
+        file_paths, existing_file_paths, download_list = self._prep_file_paths(
+            subregion_names_=subregion_names_, file_formats_=file_formats_, data_dir=data_dir,
+            update=update, verbose=verbose)
 
         if not download_list:
             if update:
@@ -852,7 +869,7 @@ class BaseDownloader:
             download_dir_ = f"\n  {prep} {add_slashes(check_relative_pathname(download_dir_))}"
 
         confirmation_prompt = \
-            f"To {action_} {fmt_msg} for the following geographic (sub)region(s): " \
+            f"To {action_} {file_fmt_msg} for the following geographic (sub)region(s): " \
             f"\n\t{print_download_list}{download_dir_}\n?"
 
         return subregion_names_, file_formats_, cfm_req_, confirmation_prompt, existing_file_paths

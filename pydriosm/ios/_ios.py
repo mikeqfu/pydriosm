@@ -13,16 +13,16 @@ import numpy as np
 import pandas as pd
 import shapely.wkt
 import sqlalchemy
-from pyhelpers._cache import _check_dependency, _print_failure_msg
+from pyhelpers._cache import _check_dependency, _check_relative_pathname, _print_failure_message
 from pyhelpers.dbms import PostgreSQL
 from pyhelpers.ops import confirmed, get_number_of_chunks, split_list
-from pyhelpers.store import save_pickle
+from pyhelpers.store import save_data
 from pyhelpers.text import find_similar_str
 
 from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader
-from pydriosm.ios.utils import get_default_layer_name, validate_schema_names, validate_table_name
-from pydriosm.reader import BBBikeReader, GeofabrikReader, PBFReadParse, SHPReadParse
-from pydriosm.utils import check_relpath, remove_osm_file
+from pydriosm.ios._utils import get_default_layer_name, validate_schema_names, validate_table_name
+from pydriosm.reader import BBBikeReader, GeofabrikReader, PBF, SHP
+from pydriosm.utils import remove_osm_file
 
 
 class PostgresOSM(PostgreSQL):
@@ -546,7 +546,7 @@ class PostgresOSM(PostgreSQL):
 
             >>> # First, read the PBF data of Rutland (from Geofabrik free download server)
             >>> # (If the data file is not available, it'll be downloaded by confirmation)
-            >>> raw_pbf = osmdb.reader.read_osm_pbf(subrgn_name, data_dir=dat_dir, verbose=True)
+            >>> raw_pbf = osmdb.reader.read_pbf(subrgn_name, data_dir=dat_dir, verbose=True)
             Downloading "rutland-latest.osm.pbf"
                 to "tests\\osm_data\\rutland\\" ... Done.
             Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
@@ -582,7 +582,7 @@ class PostgresOSM(PostgreSQL):
             ordinal_position           1
 
             >>> # Parse the 'geometry' of the PBF data of Rutland
-            >>> parsed_pbf = osmdb.reader.read_osm_pbf(
+            >>> parsed_pbf = osmdb.reader.read_pbf(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True, parse_geometry=True)
             >>> type(parsed_pbf)
             dict
@@ -623,7 +623,7 @@ class PostgresOSM(PostgreSQL):
 
             >>> # Read the data of 'railways' layer and delete the extracts
             >>> lyr_name = 'railways'
-            >>> rutland_railways_shp = osmdb.reader.read_shp_zip(
+            >>> rutland_railways_shp = osmdb.reader.read_shp(
             ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir,
             ...     rm_extracts=True, verbose=True)
             Downloading "rutland-latest-free.shp.zip"
@@ -780,7 +780,7 @@ class PostgresOSM(PostgreSQL):
 
             >>> # First, read the PBF data of Rutland
             >>> # (If the data file is not available, it'll be downloaded by confirmation)
-            >>> raw_rutland_pbf = osmdb.reader.read_osm_pbf(subrgn_name, dat_dir, verbose=True)
+            >>> raw_rutland_pbf = osmdb.reader.read_pbf(subrgn_name, dat_dir, verbose=True)
             Downloading "rutland-latest.osm.pbf"
                 to "tests\\osm_data\\rutland\\" ... Done.
             Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
@@ -801,7 +801,7 @@ class PostgresOSM(PostgreSQL):
                 "other_relations" ... Done. (<total of rows> features)
 
             >>> # Get parsed PBF data
-            >>> parsed_rutland_pbf = osmdb.reader.read_osm_pbf(
+            >>> parsed_rutland_pbf = osmdb.reader.read_pbf(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True, parse_geometry=True,
             ...     parse_other_tags=True, verbose=True)
             Parsing "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
@@ -834,7 +834,7 @@ class PostgresOSM(PostgreSQL):
         *Example 2* - Import data of a shapefile::
 
             >>> # Read shapefile data of Rutland
-            >>> rutland_shp = osmdb.reader.read_shp_zip(
+            >>> rutland_shp = osmdb.reader.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
             Downloading "rutland-latest-free.shp.zip"
                 to "tests\\osm_data\\rutland\\" ... Done.
@@ -884,7 +884,7 @@ class PostgresOSM(PostgreSQL):
             >>> subrgn_name = 'Leeds'
 
             >>> # Read shapefile data of Leeds
-            >>> leeds_shp = osmdb.reader.read_shp_zip(
+            >>> leeds_shp = osmdb.reader.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
             Downloading "Leeds.osm.shp.zip"
                 to "tests\\osm_data\\leeds\\" ... Done.
@@ -988,17 +988,17 @@ class PostgresOSM(PostgreSQL):
                 del osm_layer
                 gc.collect()
 
-    def _import_subregion_osm_pbf(self, subregion_name_, osm_file_format, path_to_osm_pbf,
-                                  chunk_size_limit, expand, parse_geometry, parse_properties,
-                                  parse_other_tags, if_exists, pickle_pbf_file, verbose,
-                                  **kwargs):
+    def _import_pbf(self, subregion_name_, osm_file_format, path_to_osm_pbf,
+                    chunk_size_limit, expand, parse_geometry, parse_properties,
+                    parse_other_tags, if_exists, pickle_pbf_file, verbose,
+                    **kwargs):
         number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
 
         if verbose:
-            print(f"Reading \"{check_relpath(path_to_osm_pbf)}\"", end=" ... ")
+            print(f"Reading \"{_check_relative_pathname(path_to_osm_pbf)}\"", end=" ... ")
 
-        osm_pbf_data = PBFReadParse.read_pbf(
-            pbf_pathname=path_to_osm_pbf, number_of_chunks=number_of_chunks, expand=expand,
+        osm_pbf_data = PBF.read_pbf(
+            path_to_file=path_to_osm_pbf, number_of_chunks=number_of_chunks, expand=expand,
             parse_geometry=parse_geometry, parse_properties=parse_properties,
             parse_other_tags=parse_other_tags)
 
@@ -1018,14 +1018,14 @@ class PostgresOSM(PostgreSQL):
 
             if pickle_pbf_file:
                 path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")
-                save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
+                save_data(osm_pbf_data, path_to_pickle, verbose=verbose)
 
         del osm_pbf_data
         gc.collect()
 
-    def _import_pbf_layer_chunk_wisely(self, layer, layer_name, subregion_name_, number_of_chunks,
-                                       expand, parse_geometry, parse_properties, parse_other_tags,
-                                       pickle_pbf_file, verbose, **kwargs):
+    def _import_pbf_layer(self, layer, layer_name, subregion_name_, number_of_chunks,
+                          expand, parse_geometry, parse_properties, parse_other_tags,
+                          pickle_pbf_file, verbose, raise_error, **kwargs):
         if verbose:
             print(f'\t"{layer_name}"', end=" ... ")
 
@@ -1045,7 +1045,7 @@ class PostgresOSM(PostgreSQL):
                 else:
                     lyr_dat = pd.DataFrame([f.ExportToJson() for f in chunk], columns=[layer_name])
 
-                layer_dat = PBFReadParse.transform_pbf_layer_field(
+                layer_dat = PBF.transform_pbf_layer_field(
                     layer_data=lyr_dat, layer_name=layer_name, parse_geometry=parse_geometry,
                     parse_properties=parse_properties, parse_other_tags=parse_other_tags)
 
@@ -1069,7 +1069,8 @@ class PostgresOSM(PostgreSQL):
                 print(f"Done. ({count_of_features} features)")
 
         except Exception as e:
-            _print_failure_msg(e=e, msg="Failed.")
+            _print_failure_message(
+                e=e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
 
         return layer_dat_list
 
@@ -1103,7 +1104,7 @@ class PostgresOSM(PostgreSQL):
                     if verbose:
                         print(f'\tTable "{subregion_name_}" already exists.')
 
-                    lyr_dat = PBFReadParse._read_pbf_layer_chunkwise(
+                    lyr_dat = PBF._read_layer_chunkwise(
                         layer, number_of_chunks=number_of_chunks, readable=True, expand=expand,
                         parse_geometry=parse_geometry, parse_properties=parse_properties,
                         parse_other_tags=parse_other_tags)
@@ -1119,7 +1120,7 @@ class PostgresOSM(PostgreSQL):
                         subregion_names=subregion_name_, schema_names=layer_name,
                         confirmation_required=False)
 
-            layer_dat_list = self._import_pbf_layer_chunk_wisely(
+            layer_dat_list = self._import_pbf_layer(
                 layer=layer, layer_name=layer_name, subregion_name_=subregion_name_,
                 number_of_chunks=number_of_chunks, expand=expand, parse_geometry=parse_geometry,
                 parse_properties=parse_properties, parse_other_tags=parse_other_tags,
@@ -1137,7 +1138,7 @@ class PostgresOSM(PostgreSQL):
         if pickle_pbf_file:
             osm_pbf_data = dict(zip(layer_names, layer_data_list))
             path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")
-            save_pickle(osm_pbf_data, path_to_pickle, verbose=verbose)
+            save_data(osm_pbf_data, path_to_pickle, verbose=verbose)
 
         del osm_pbf_data
         gc.collect()
@@ -1328,7 +1329,7 @@ class PostgresOSM(PostgreSQL):
         else:
             subregion_names_ = [
                 self.downloader.validate_subregion_name(x)
-                for x in self.reader.validate_input_dtype(subregion_names)]
+                for x in self.reader.validate_dtype(subregion_names)]
 
             if self.data_source == 'Geofabrik':
                 subregion_names_ = self.downloader.get_subregions(*subregion_names_)
@@ -1343,8 +1344,8 @@ class PostgresOSM(PostgreSQL):
             err_subregion_names = []
 
             for subregion_name_ in subregion_names_:
-                path_to_osm_pbf_ = self.downloader.download_osm_data(
-                    subregion_names=subregion_name_, osm_file_format=osm_file_format,
+                path_to_osm_pbf_ = self.downloader.download_data(
+                    subregion_names=subregion_name_, osm_file_formats=osm_file_format,
                     download_dir=data_dir, update=update_osm_pbf, confirmation_required=False,
                     verbose=verbose, ret_download_path=True)
                 path_to_osm_pbf = path_to_osm_pbf_[0]
@@ -1370,7 +1371,7 @@ class PostgresOSM(PostgreSQL):
                     file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
                     if file_size_in_mb <= chunk_size_limit:
                         import_args.update({'if_exists': if_exists})
-                        self._import_subregion_osm_pbf(**import_args, **kwargs)
+                        self._import_pbf(**import_args, **kwargs)
                     else:
                         import_args.update({'if_exists': 'append'})
                         self._import_subregion_osm_pbf_chunk_wisely(**import_args, **kwargs)
@@ -1396,6 +1397,7 @@ class PostgresOSM(PostgreSQL):
                     dat[col_name] = dat[col_name].map(ast.literal_eval)
                 except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
                     pass
+
                 try:
                     dat[col_name] = dat[col_name].map(shapely.wkt.loads)
                 except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
@@ -1475,10 +1477,10 @@ class PostgresOSM(PostgreSQL):
 
         return layer_dat_
 
-    def fetch_osm_data(self, subregion_name, layer_names=None, chunk_size=None, method='tempfile',
-                       max_size_spooled=1, decode_geojson=True, sort_by='id',
-                       table_named_as_subregion=False, schema_named_as_layer=False, verbose=False,
-                       **kwargs):
+    def fetch_data(self, subregion_name, layer_names=None, chunk_size=None, method='tempfile',
+                   max_size_spooled=1, decode_geojson=True, sort_by='id',
+                   table_named_as_subregion=False, schema_named_as_layer=False, verbose=False,
+                   raise_error=False, **kwargs):
         """
         Fetch OSM data (of one or multiple layers) of a geographic (sub)region.
 
@@ -1511,6 +1513,9 @@ class PostgresOSM(PostgreSQL):
         :type schema_named_as_layer: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
         :type verbose: bool | int
+        :param raise_error: Whether to raise the provided exception;
+            if ``raise_error=False`` (default), the error will be suppressed.
+        :type raise_error: bool
         :return: PBF (.osm.pbf) data
         :rtype: dict | collections.OrderedDict
 
@@ -1547,7 +1552,7 @@ class PostgresOSM(PostgreSQL):
                 "other_relations" ... Done. (<total of rows> features)
 
             >>> # Import shapefile data of Rutland
-            >>> rutland_shp = osmdb.reader.read_shp_zip(
+            >>> rutland_shp = osmdb.reader.read_shp(
             ...     subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
             Downloading "rutland-latest-free.shp.zip"
                 to "tests\\osm_data\\rutland\\" ... Done.
@@ -1575,7 +1580,7 @@ class PostgresOSM(PostgreSQL):
 
             >>> # Retrieve the data of specific layers
             >>> lyr_names = ['points', 'multipolygons']
-            >>> rutland_data_ = osmdb.fetch_osm_data(subrgn_name, lyr_names, verbose=True)
+            >>> rutland_data_ = osmdb.fetch_data(subrgn_name, lyr_names, verbose=True)
             Fetching the data of "Rutland" ...
                 "points" ... Done.
                 "multipolygons" ... Done.
@@ -1595,7 +1600,7 @@ class PostgresOSM(PostgreSQL):
             4  {'type': 'Feature', 'geometry': {'type': 'Poin...
 
             >>> # Retrieve the data of all the layers from the database
-            >>> rutland_data = osmdb.fetch_osm_data(subrgn_name, layer_names=None, verbose=True)
+            >>> rutland_data = osmdb.fetch_data(subrgn_name, layer_names=None, verbose=True)
             Fetching the data of "Rutland" ...
                 "points" ... Done.
                 "lines" ... Done.
@@ -1677,7 +1682,7 @@ class PostgresOSM(PostgreSQL):
 
         if not schema_names_:
             schema_names_ = list(dict.fromkeys(
-                list(PBFReadParse.LAYER_GEOM.keys()) + sorted(list(SHPReadParse.LAYER_NAMES))))
+                list(PBF.LAYER_GEOM.keys()) + sorted(list(SHP.LAYER_NAMES))))
 
         if any(self.subregion_table_exists(table_name_, x) for x in schema_names_):
 
@@ -1718,23 +1723,23 @@ class PostgresOSM(PostgreSQL):
                             print("Done.")
 
                     except Exception as e:
-                        _print_failure_msg(e=e, msg="Failed.")
+                        _print_failure_message(
+                            e=e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
 
                 else:
                     existing_schemas.remove(schema_name_)
 
             osm_data = collections.OrderedDict(zip(existing_schemas, layer_data))
 
+            return osm_data
+
         else:
             if verbose:
                 print("No data is available for the given input `subregion_name`.")
-            osm_data = None
-
-        return osm_data
 
     def _check_schema_and_table_names(self, subregion_names, schema_names=None,
                                       table_named_as_subregion=False, schema_named_as_layer=False):
-        table_names = self.reader.validate_input_dtype(subregion_names)
+        table_names = self.reader.validate_dtype(subregion_names)
         table_names_ = sorted([self.get_table_name(x, table_named_as_subregion) for x in table_names])
 
         # Validate the input `schema_names`
@@ -1760,7 +1765,7 @@ class PostgresOSM(PostgreSQL):
 
         return existing_schema_names_, table_names_
 
-    def _get_table_list_and_confirm_msg(self, existing_schema_names_, table_names_):
+    def _get_table_list_and_confirmation_prompt(self, existing_schema_names_, table_names_):
         # existing_schema_names_.sort()
         _, schema_pl, prt_schema = self._msg_for_multi_items(
             existing_schema_names_, desc='schema', fmt='"{}"')
@@ -1769,17 +1774,17 @@ class PostgresOSM(PostgreSQL):
         table_list = list(itertools.product(existing_schema_names_, table_names_))
 
         if len(table_list) == 1:
-            confirm_msg = f'To drop {tbl_pl} {prt_schema}.{prt_tbl}\n' \
-                          f'  from {self.address}\n?'
+            confirmation_prompt = f'To drop {tbl_pl} {prt_schema}.{prt_tbl}\n' \
+                                  f'  from {self.address}\n?'
         else:
-            confirm_msg = f'To drop {tbl_pl} from {self.address}: {prt_tbl}\n' \
-                          f'  under the {schema_pl}: {prt_schema}\n?'
+            confirmation_prompt = f'To drop {tbl_pl} from {self.address}: {prt_tbl}\n' \
+                                  f'  under the {schema_pl}: {prt_schema}\n?'
 
-        return table_list, confirm_msg
+        return table_list, confirmation_prompt
 
     def drop_subregion_tables(self, subregion_names, schema_names=None,
                               table_named_as_subregion=False, schema_named_as_layer=False,
-                              confirmation_required=True, verbose=False):
+                              confirmation_required=True, verbose=False, raise_error=False):
         """
         Delete all or specific schemas/layers of subregion data from the database being connected.
 
@@ -1799,6 +1804,9 @@ class PostgresOSM(PostgreSQL):
         :type confirmation_required: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
         :type verbose: bool | int
+        :param raise_error: Whether to raise the provided exception;
+            if ``raise_error=False`` (default), the error will be suppressed.
+        :type raise_error: bool
 
         **Examples**::
 
@@ -1848,7 +1856,7 @@ class PostgresOSM(PostgreSQL):
             >>> subrgn_name_2 = 'London'
 
             >>> # An alternative way to import the shapefile data of 'London'
-            >>> london_shp = osmdb.reader.read_shp_zip(
+            >>> london_shp = osmdb.reader.read_shp(
             ...     subrgn_name_2, data_dir=dat_dir, rm_extracts=True, download=True, verbose=True)
             Downloading "London.osm.shp.zip"
                 to "tests\\osm_data\\london\\" ... Done.
@@ -1974,7 +1982,7 @@ class PostgresOSM(PostgreSQL):
             print("None of the data exists.")
 
         else:
-            table_list, confirm_msg = self._get_table_list_and_confirm_msg(
+            table_list, confirm_msg = self._get_table_list_and_confirmation_prompt(
                 existing_schema_names_=existing_schema_names_, table_names_=table_names_)
 
             if confirmed(confirm_msg, confirmation_required=confirmation_required):
@@ -2003,7 +2011,9 @@ class PostgresOSM(PostgreSQL):
                                     print("Done.")
 
                             except Exception as e:
-                                _print_failure_msg(e=e, msg="Failed.")
+                                _print_failure_message(
+                                    e=e, prefix="Failed. Error:", verbose=verbose,
+                                    raise_error=raise_error)
 
                         else:  # The table doesn't exist
                             if verbose == 2:

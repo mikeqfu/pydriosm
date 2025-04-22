@@ -22,7 +22,6 @@ class InvalidSubregionNameError(Exception):
         **Examples**::
 
             >>> from pydriosm.errors import InvalidSubregionNameError
-
             >>> raise InvalidSubregionNameError(subregion_name='abc')
             Traceback (most recent call last):
               ...
@@ -31,7 +30,6 @@ class InvalidSubregionNameError(Exception):
               Check the `.data_source`, or try another one instead.
 
             >>> from pydriosm.downloader import GeofabrikDownloader, BBBikeDownloader
-
             >>> gfd = GeofabrikDownloader()
             >>> gfd.validate_subregion_name(subregion_name='birmingham')
             Traceback (most recent call last):
@@ -90,7 +88,6 @@ class InvalidFileFormatError(Exception):
         **Examples**::
 
             >>> from pydriosm.errors import InvalidFileFormatError
-
             >>> raise InvalidFileFormatError(osm_file_format='abc')
             Traceback (most recent call last):
               ...
@@ -98,7 +95,6 @@ class InvalidFileFormatError(Exception):
               `osm_file_format='abc'` -> The input `osm_file_format` is unidentifiable.
 
             >>> from pydriosm.downloader import GeofabrikDownloader, BBBikeDownloader
-
             >>> gfd = GeofabrikDownloader()
             >>> gfd.validate_file_format(osm_file_format='abc')
             Traceback (most recent call last):
@@ -145,7 +141,6 @@ class OtherTagsReformatError(Exception):
         **Examples**::
 
             >>> from pydriosm.errors import OtherTagsReformatError
-
             >>> raise OtherTagsReformatError(other_tags='abc')
             Traceback (most recent call last):
               ...
@@ -160,3 +155,51 @@ class OtherTagsReformatError(Exception):
 
     def __str__(self):
         return f"\n  `other_tags='{self.other_tags}'` -> {self.message}"
+
+
+class MethodNotAvailableError(Exception):
+    """
+    Exception raised when the called method is not available in the given instance.
+
+    It is used to indicate that a certain method is not implemented or not applicable for the
+    current class or data source.
+    """
+
+    def __init__(self, method_name, instance):
+        """
+        Initialise the exception.
+
+        :param method_name: The name of the method that was attempted to be called.
+        :type method_name: str
+        :param instance: The object on which the method call was attempted.
+        :type instance: object
+        :raises AttributeError: If the instance does not have a `'NAME'` attribute,
+            it will default to `'Unknown'`.
+
+        **Example**::
+
+            >>> from pydriosm.errors import MethodNotAvailableError
+            >>> from pydriosm.downloader import Downloader
+            >>> downloader = Downloader()
+            >>> raise MethodNotAvailableError(method_name='download', instance=downloader)
+            Traceback (most recent call last):
+              ...
+            pydriosm.errors.MethodNotAvailableError:
+              The '.download()' method is not available for 'Downloader' (for 'Geofabrik' source).
+            >>> downloader = Downloader()
+            >>> downloader.get_sub_catalogue(subregion_name='Leeds', raise_error=True)
+            Traceback (most recent call last):
+              ...
+            pydriosm.errors.MethodNotAvailableError:
+              The '.get_sub_catalogue()' method is not available for 'GeofabrikDownloader' (for...
+        """
+
+        class_name = instance.__class__.__name__
+        source_name = getattr(instance, 'NAME', 'Unknown')
+
+        self.message = (
+            f"\n  The '.{method_name}()' method is not available for "
+            f"'{class_name}' (for '{source_name}' source)."
+        )
+
+        super().__init__(self.message)

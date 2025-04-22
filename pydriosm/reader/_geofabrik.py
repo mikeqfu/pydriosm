@@ -7,18 +7,22 @@ import os
 from pyhelpers.text import find_similar_str
 
 from pydriosm.downloader import GeofabrikDownloader
-from pydriosm.reader._reader import PBFReadParse, _Reader
+from pydriosm.reader._base import BaseReader
 
 
-class GeofabrikReader(_Reader):
+class GeofabrikReader(BaseReader):
     """
     Read `Geofabrik <https://download.geofabrik.de/>`_ OpenStreetMap data extracts.
     """
 
+    #:
+    NAME: str = GeofabrikDownloader.NAME
+    #:
+    LONG_NAME: str = GeofabrikDownloader.LONG_NAME
     #: str: Default download directory.
-    DEFAULT_DATA_DIR = "osm_data\\geofabrik"
+    DEFAULT_DATA_DIR = GeofabrikDownloader.DEFAULT_DOWNLOAD_DIR
     #: set: Valid file formats.
-    FILE_FORMATS = {'.osm.pbf', '.shp.zip', '.osm.bz2'}
+    FILE_FORMATS = GeofabrikDownloader.FILE_FORMATS
 
     def __init__(self, data_dir=None, max_tmpfile_size=None):
         """
@@ -51,7 +55,7 @@ class GeofabrikReader(_Reader):
         """
 
         super().__init__(
-            downloader=GeofabrikDownloader, data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
+            data_source='geofabrik', data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
 
     def get_file_path(self, subregion_name, osm_file_format, data_dir=None):
         """
@@ -114,6 +118,7 @@ class GeofabrikReader(_Reader):
         return path_to_file
 
     def get_pbf_layer_names(self, subregion_name, data_dir=None):
+        # noinspection PyShadowingNames
         """
         Get indices and names of all layers in the PBF data file of a given (sub)region.
 
@@ -130,53 +135,44 @@ class GeofabrikReader(_Reader):
             >>> from pydriosm.reader import GeofabrikReader
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
-
             >>> gfr = GeofabrikReader()
-
-            >>> # Download the .shp.zip file of Rutland as an example
-            >>> subrgn_name = 'london'
-            >>> file_format = ".pbf"
-            >>> dat_dir = "tests\\osm_data"
-
-            >>> gfr.downloader.download_osm_data(subrgn_name, file_format, dat_dir, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                Greater London
+            >>> # Download the PBF data of Rutland as an example
+            >>> subregion_name = 'rutland'
+            >>> osm_file_format = ".pbf"
+            >>> data_dir = "tests/osm_data"
+            >>> # Download the PBF data of Rutland to "./tests/osm_data/"
+            >>> gfr.downloader.download_data(
+            ...     subregion_name, osm_file_format, data_dir, verbose=True)
+            To download data in the format '.osm.pbf' for the following geographic (sub)region(s):
+                "Rutland"
+              to "./tests/osm_data/rutland/"
             ? [No]|Yes: yes
-            Downloading "greater-london-latest.osm.pbf"
-                to "tests\\osm_data\\greater-london\\" ... Done.
-
-            >>> london_pbf_path = gfr.data_paths[0]
-            >>> os.path.relpath(london_pbf_path)
-            'tests\\osm_data\\greater-london\\greater-london-latest.osm.pbf'
-
-            >>> lyr_idx_names = gfr.get_pbf_layer_names(london_pbf_path)
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 1.00MB/s ...
+                Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
+            >>> path_to_pbf = gfr.data_paths[0]
+            >>> os.path.relpath(path_to_pbf)
+            'tests\\osm_data\\rutland\\rutland-latest.osm.pbf'
+            >>> lyr_idx_names = gfr.get_pbf_layer_names(subregion_name)
             >>> lyr_idx_names
             {0: 'points',
              1: 'lines',
              2: 'multilinestrings',
              3: 'multipolygons',
              4: 'other_relations'}
-
             >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
-        data_dir_ = self.data_dir if data_dir is None else data_dir
+        return super().get_pbf_layer_names(subregion_name=subregion_name, data_dir=data_dir)
 
-        path_to_osm_pbf = self.get_file_path(
-            subregion_name=subregion_name, osm_file_format=".osm.pbf", data_dir=data_dir_)
-
-        layer_idx_names = PBFReadParse.get_pbf_layer_names(path_to_osm_pbf)
-
-        return layer_idx_names
-
-    def read_osm_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
-                     parse_geometry=False, parse_properties=False, parse_other_tags=False,
-                     update=False, download=True, pickle_it=False, ret_pickle_path=False,
-                     rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
+    def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
+                 parse_geometry=False, parse_properties=False, parse_other_tags=False,
+                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
+        # noinspection PyShadowingNames
         """
         Read a PBF (.osm.pbf) data file of a geographic (sub)region.
 
@@ -236,32 +232,27 @@ class GeofabrikReader(_Reader):
 
             >>> from pydriosm.reader import GeofabrikReader
             >>> from pyhelpers.dirs import delete_dir
-
             >>> gfr = GeofabrikReader()
-
-            >>> subrgn_name = 'rutland'
-            >>> dat_dir = "tests\\osm_data"
-
+            >>> subregion_name = 'rutland'
+            >>> data_dir = "tests/osm_data"
             >>> # If the PBF data of Rutland is not available at the specified data directory,
             >>> # the function can download the latest data by setting `download=True` (default)
-            >>> pbf_raw = gfr.read_osm_pbf(subrgn_name, data_dir=dat_dir, verbose=True)
-            Downloading "rutland-latest.osm.pbf"
-                to "tests\\osm_data\\rutland\\" ... Done.
-            Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            >>> pbf_raw = gfr.read_pbf(subregion_name, data_dir=data_dir, verbose=True)
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 5.63MB/s ...
+                Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
+            Reading "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> type(pbf_raw)
             dict
             >>> list(pbf_raw.keys())
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
-
             >>> pbf_raw_points = pbf_raw['points']
             >>> type(pbf_raw_points)
             list
             >>> type(pbf_raw_points[0])
             osgeo.ogr.Feature
-
             >>> # Set `readable=True`
-            >>> pbf_parsed = gfr.read_osm_pbf(subrgn_name, dat_dir, readable=True, verbose=True)
-            Parsing "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            >>> pbf_parsed = gfr.read_pbf(subregion_name, data_dir, readable=True, verbose=True)
+            Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> pbf_parsed_points = pbf_parsed['points']
             >>> pbf_parsed_points.head()
             0    {'type': 'Feature', 'geometry': {'type': 'Poin...
@@ -270,10 +261,9 @@ class GeofabrikReader(_Reader):
             3    {'type': 'Feature', 'geometry': {'type': 'Poin...
             4    {'type': 'Feature', 'geometry': {'type': 'Poin...
             Name: points, dtype: object
-
             >>> # Set `expand=True`, which would force `readable=True`
-            >>> pbf_parsed_ = gfr.read_osm_pbf(subrgn_name, dat_dir, expand=True, verbose=True)
-            Parsing "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            >>> pbf_parsed_ = gfr.read_pbf(subregion_name, data_dir, expand=True, verbose=True)
+            Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> pbf_parsed_points_ = pbf_parsed_['points']
             >>> pbf_parsed_points_.head()
                      id  ...                                         properties
@@ -283,10 +273,9 @@ class GeofabrikReader(_Reader):
             3  14049101  ...  {'osm_id': '14049101', 'name': None, 'barrier'...
             4  14558402  ...  {'osm_id': '14558402', 'name': None, 'barrier'...
             [5 rows x 3 columns]
-
             >>> # Set `readable` and `parse_geometry` to be `True`
-            >>> pbf_parsed_1 = gfr.read_osm_pbf(subrgn_name, dat_dir, readable=True,
-            ...                                 parse_geometry=True)
+            >>> pbf_parsed_1 = gfr.read_pbf(
+            ...     subregion_name, data_dir, readable=True, parse_geometry=True)
             >>> pbf_parsed_1_point = pbf_parsed_1['points'][0]
             >>> pbf_parsed_1_point['geometry']
             'POINT (-0.5134241 52.6555853)'
@@ -294,37 +283,35 @@ class GeofabrikReader(_Reader):
             '"odbl"=>"clean"'
 
             >>> # Set `readable` and `parse_other_tags` to be `True`
-            >>> pbf_parsed_2 = gfr.read_osm_pbf(subrgn_name, dat_dir, readable=True,
-            ...                                 parse_other_tags=True)
+            >>> pbf_parsed_2 = gfr.read_pbf(
+            ...     subregion_name, data_dir, readable=True, parse_other_tags=True)
             >>> pbf_parsed_2_point = pbf_parsed_2['points'][0]
             >>> pbf_parsed_2_point['geometry']
             {'type': 'Point', 'coordinates': [-0.5134241, 52.6555853]}
             >>> pbf_parsed_2_point['properties']['other_tags']
             {'odbl': 'clean'}
-
             >>> # Set `readable`, `parse_geometry` and `parse_other_tags` to be `True`
-            >>> pbf_parsed_3 = gfr.read_osm_pbf(subrgn_name, dat_dir, readable=True,
-            ...                                 parse_geometry=True, parse_other_tags=True)
+            >>> pbf_parsed_3 = gfr.read_pbf(
+            ...     subregion_name, data_dir, readable=True, parse_geometry=True,
+            ...     parse_other_tags=True)
             >>> pbf_parsed_3_point = pbf_parsed_3['points'][0]
             >>> pbf_parsed_3_point['geometry']
             'POINT (-0.5134241 52.6555853)'
             >>> pbf_parsed_3_point['properties']['other_tags']
             {'odbl': 'clean'}
-
             >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
-        osm_pbf_data = super().read_osm_pbf(
+        osm_pbf_data = super().read_pbf(
             subregion_name=subregion_name, data_dir=data_dir, readable=readable, expand=expand,
             parse_geometry=parse_geometry, parse_properties=parse_properties,
-            parse_other_tags=parse_other_tags,
-            update=update, download=download, pickle_it=pickle_it, ret_pickle_path=ret_pickle_path,
-            rm_pbf_file=rm_pbf_file, chunk_size_limit=chunk_size_limit, verbose=verbose,
-            **kwargs)
+            parse_other_tags=parse_other_tags, update=update, download=download,
+            pickle_it=pickle_it, ret_pickle_path=ret_pickle_path, rm_pbf_file=rm_pbf_file,
+            chunk_size_limit=chunk_size_limit, verbose=verbose, **kwargs)
 
         return osm_pbf_data
 
@@ -379,7 +366,7 @@ class GeofabrikReader(_Reader):
             1
 
             >>> # Extract the downloaded .zip file
-            >>> gfr.SHP.unzip_shp_zip(path_to_london_shp_zip[0], verbose=True)
+            >>> gfr.SHP.unzip(path_to_london_shp_zip[0], verbose=True)
             Extracting "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
                 to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
 
@@ -442,10 +429,10 @@ class GeofabrikReader(_Reader):
 
         return path_to_osm_shp_file
 
-    def merge_subregion_layer_shp(self, subregion_names, layer_name, data_dir=None, engine='pyshp',
-                                  update=False, download=True, rm_zip_extracts=True,
-                                  merged_shp_dir=None, rm_shp_temp=True, verbose=False,
-                                  ret_merged_shp_path=False):
+    def merge_shp_layers(self, subregion_names, layer_name, data_dir=None, engine='pyshp',
+                         update=False, download=True, rm_zip_extracts=True,
+                         merged_shp_dir=None, rm_shp_temp=True, verbose=False,
+                         ret_merged_shp_path=False):
         """
         Merge shapefiles for a specific layer of two or multiple geographic regions.
 
@@ -504,7 +491,7 @@ class GeofabrikReader(_Reader):
             >>> lyr_name = 'railways'
             >>> dat_dir = "tests\\osm_data"
 
-            >>> path_to_merged_shp_file = gfr.merge_subregion_layer_shp(
+            >>> path_to_merged_shp_file = gfr.merge_shp_layers(
             ...     subrgn_name, lyr_name, dat_dir, verbose=True, ret_merged_shp_path=True)
             To download .shp.zip data of the following geographic (sub)region(s):
                 Greater Manchester
@@ -556,7 +543,7 @@ class GeofabrikReader(_Reader):
             >>> subrgn_name = ['London', 'Kent', 'Surrey']
             >>> lyr_name = 'transport'
 
-            >>> path_to_merged_shp_file = gfr.merge_subregion_layer_shp(
+            >>> path_to_merged_shp_file = gfr.merge_shp_layers(
             ...     subrgn_name, lyr_name, dat_dir, verbose=True, ret_merged_shp_path=True)
             To download .shp.zip data of the following geographic (sub)region(s):
                 Greater London
@@ -613,7 +600,7 @@ class GeofabrikReader(_Reader):
         """
 
         # Make sure all the required shape files are ready
-        layer_name_ = find_similar_str(x=layer_name, lookup_list=self.SHP.LAYER_NAMES)
+        layer_name_ = find_similar_str(layer_name, lookup_list=self.SHP.LAYER_NAMES)
         subregion_names_ = [self.downloader.validate_subregion_name(x) for x in subregion_names]
 
         osm_file_format = ".shp.zip"
@@ -625,7 +612,7 @@ class GeofabrikReader(_Reader):
             deep_retry=True, interval=1, verbose=verbose, ret_download_path=True)
 
         if all(os.path.isfile(shp_zip_path_file) for shp_zip_path_file in paths_to_shp_zip_files):
-            path_to_merged_shp = self.SHP.merge_layer_shps(
+            path_to_merged_shp = self.SHP.merge_layers(
                 shp_zip_pathnames=paths_to_shp_zip_files, layer_name=layer_name_, engine=engine,
                 rm_zip_extracts=rm_zip_extracts, output_dir=merged_shp_dir, rm_shp_temp=rm_shp_temp,
                 verbose=verbose, ret_shp_pathname=ret_merged_shp_path)
@@ -633,9 +620,9 @@ class GeofabrikReader(_Reader):
             if ret_merged_shp_path:
                 return path_to_merged_shp
 
-    def read_shp_zip(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
-                     update=False, download=True, pickle_it=False, ret_pickle_path=False,
-                     rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
+    def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
+                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
         """
         Read a .shp.zip data file of a geographic (sub)region.
 
@@ -686,12 +673,12 @@ class GeofabrikReader(_Reader):
             >>> subrgn_name = 'London'
             >>> dat_dir = "tests\\osm_data"
 
-            >>> london_shp_data = gfr.read_shp_zip(
+            >>> london_shp_data = gfr.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=False, verbose=True)
             The .shp.zip file for "Greater London" is not found.
 
             >>> # Set `download=True`
-            >>> london_shp_data = gfr.read_shp_zip(
+            >>> london_shp_data = gfr.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
             Downloading "greater-london-latest-free.shp.zip"
                 to "tests\\osm_data\\greater-london\\" ... Done.
@@ -731,7 +718,7 @@ class GeofabrikReader(_Reader):
             >>> subrgn_layer = 'transport'
 
             >>> # Set `rm_extracts=True` to remove the extracts
-            >>> london_shp_transport = gfr.read_shp_zip(
+            >>> london_shp_transport = gfr.read_shp(
             ...     subregion_name=subrgn_name, layer_names=subrgn_layer, data_dir=dat_dir,
             ...     rm_extracts=True, verbose=True)
             Reading the shapefile(s) at
@@ -754,7 +741,7 @@ class GeofabrikReader(_Reader):
             >>> # Read data of only the 'bus_stop' feature (in the 'transport' layer)
             >>> # from the original .shp.zip file (and delete any extracts)
             >>> feat_name = 'bus_stop'
-            >>> london_bus_stop = gfr.read_shp_zip(
+            >>> london_bus_stop = gfr.read_shp(
             ...     subregion_name=subrgn_name, layer_names=subrgn_layer, feature_names=feat_name,
             ...     data_dir=dat_dir, rm_extracts=True, verbose=True)
             Extracting the following layer(s):
@@ -777,7 +764,7 @@ class GeofabrikReader(_Reader):
             >>> # (and delete both the original .shp.zip file and extracts)
             >>> subrgn_layers = ['traffic', 'roads']
             >>> feat_names = ['parking', 'trunk']
-            >>> london_shp_tra_roa_par_tru = gfr.read_shp_zip(
+            >>> london_shp_tra_roa_par_tru = gfr.read_shp(
             ...     subregion_name=subrgn_name, layer_names=subrgn_layers, feature_names=feat_names,
             ...     data_dir=dat_dir, rm_extracts=True, rm_shp_zip=True, verbose=True)
             Extracting the following layer(s):
@@ -821,7 +808,7 @@ class GeofabrikReader(_Reader):
             Deleting "tests\\osm_data\\" ... Done.
         """
 
-        shp_data = super().read_shp_zip(
+        shp_data = super().read_shp(
             subregion_name=subregion_name, layer_names=layer_names, feature_names=feature_names,
             data_dir=data_dir, update=update, download=download, pickle_it=pickle_it,
             ret_pickle_path=ret_pickle_path, rm_extracts=rm_extracts, rm_shp_zip=rm_shp_zip,
