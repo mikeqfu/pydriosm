@@ -4,7 +4,7 @@ Utilities for the :mod:`~pydriosm.ios` module.
 
 from pyhelpers.text import find_similar_str, remove_punctuation
 
-from pydriosm.reader import PBFReadParse, SHPReadParse
+from pydriosm.reader import PBF, SHP
 
 
 def get_default_layer_name(schema_name):
@@ -21,20 +21,18 @@ def get_default_layer_name(schema_name):
 
     **Examples**::
 
-        >>> from pydriosm.ios import get_default_layer_name
-
+        >>> from pydriosm.ios._utils import get_default_layer_name
         >>> lyr_name = get_default_layer_name(schema_name='point')
         >>> lyr_name
         'points'
-
         >>> lyr_name = get_default_layer_name(schema_name='land')
         >>> lyr_name
         'landuse'
     """
 
-    valid_layer_names = set(PBFReadParse.LAYER_GEOM.keys()).union(SHPReadParse.LAYER_NAMES)
+    valid_layer_names = set(PBF.LAYER_GEOM.keys()).union(SHP.LAYER_NAMES)
 
-    layer_name_ = find_similar_str(x=schema_name, lookup_list=valid_layer_names)
+    layer_name_ = find_similar_str(schema_name, lookup_list=valid_layer_names)
 
     return layer_name_
 
@@ -53,17 +51,14 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
 
     **Examples**::
 
-        >>> from pydriosm.ios import validate_schema_names
-
+        >>> from pydriosm.ios._utils import validate_schema_names
         >>> valid_names = validate_schema_names()
         >>> valid_names
         []
-
         >>> input_schema_names = ['point', 'polygon']
         >>> valid_names = validate_schema_names(input_schema_names)
         >>> valid_names
         ['point', 'polygon']
-
         >>> valid_names = validate_schema_names(input_schema_names, schema_named_as_layer=True)
         >>> valid_names
         ['points', 'multipolygons']
@@ -98,20 +93,18 @@ def validate_table_name(table_name, sub_space=''):
 
     **Examples**::
 
-        >>> from pydriosm.ios import validate_table_name
-
+        >>> from pydriosm.ios._utils import validate_table_name
         >>> subrgn_name = 'greater london'
         >>> valid_table_name = validate_table_name(subrgn_name)
         >>> valid_table_name
         'greater london'
-
         >>> subrgn_name = 'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Wales'
         >>> valid_table_name = validate_table_name(subrgn_name, sub_space='_')
         >>> valid_table_name
         'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch_W..'
     """
 
-    table_name_ = remove_punctuation(x=table_name, rm_whitespace=True)
+    table_name_ = remove_punctuation(table_name, rm_whitespace=True)
 
     if sub_space:
         table_name_ = table_name_.replace(' ', sub_space)
