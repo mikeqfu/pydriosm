@@ -6,7 +6,7 @@ import importlib.resources
 import os
 import shutil
 
-from pyhelpers._cache import _check_dependency, _check_relative_pathname, _print_failure_message
+from pyhelpers._cache import _check_dependencies, _check_relative_pathname, _print_failure_message
 from pyhelpers.dirs import cd
 
 
@@ -169,9 +169,7 @@ def check_json_engine(engine=None):
 
         >>> from pydriosm.utils import check_json_engine
         >>> import types
-
         >>> result = check_json_engine()
-
         >>> isinstance(result, types.ModuleType)
         True
         >>> result.__name__ == 'json'
@@ -181,10 +179,10 @@ def check_json_engine(engine=None):
     if engine is not None:
         valid_mod_names = {'ujson', 'orjson', 'rapidjson', 'json'}
         assert engine in valid_mod_names, f"`engine` must be on one of {valid_mod_names}."
-        engine_ = _check_dependency(name=engine)
+        engine_ = _check_dependencies(engine)
 
     else:
-        engine_ = _check_dependency(name='json')
+        engine_ = _check_dependencies('json')
 
     return engine_
 
@@ -215,10 +213,8 @@ def remove_osm_file(path_to_file, verbose=True):
 
         >>> os.path.exists(path_to_pseudo_pbf_file)
         True
-
         >>> remove_osm_file(path_to_pseudo_pbf_file, verbose=True)
         Deleting "tests\\pseudo.osm.pbf" ... Done.
-
         >>> os.path.exists(path_to_pseudo_pbf_file)
         False
     """

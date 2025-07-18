@@ -4,7 +4,7 @@ import warnings
 
 import pandas as pd
 import shapely.geometry
-from pyhelpers._cache import _check_dependency, _print_failure_message
+from pyhelpers._cache import _check_dependencies, _print_failure_message
 from pyhelpers.dirs import check_relative_pathname
 from pyhelpers.ops import split_list
 from pyhelpers.settings import gdal_configurations
@@ -148,7 +148,7 @@ class PBF:
                 end=" ... ")
 
         try:
-            osgeo_ogr = _check_dependency(name='osgeo.ogr')
+            osgeo_ogr = _check_dependencies('osgeo.ogr')
 
             with warnings.catch_warnings(action='ignore', category=FutureWarning):
                 f = osgeo_ogr.Open(path_to_file)
@@ -577,7 +577,7 @@ class PBF:
               and :meth:`BBBikeReader.read_osm_pbf()<pydriosm.reader.BBBikeReader.read_osm_pbf>`.
         """
 
-        osgeo_ogr, osgeo_gdal = map(_check_dependency, ['osgeo.ogr', 'osgeo.gdal'])
+        osgeo_ogr, osgeo_gdal = _check_dependencies('osgeo.ogr', 'osgeo.gdal')
 
         # Reference: https://gis.stackexchange.com/questions/332327/
         # Stop GDAL printing both warnings and errors to STDERR

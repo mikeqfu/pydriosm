@@ -14,7 +14,7 @@ import zipfile
 import pandas as pd
 import shapefile as pyshp
 import shapely.geometry
-from pyhelpers._cache import _check_dependency, _print_failure_message
+from pyhelpers._cache import _check_dependencies, _print_failure_message
 from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, validate_dir
 from pyhelpers.text import find_similar_str
 
@@ -587,7 +587,7 @@ class SHP:
         """
 
         if engine in {'geopandas', 'gpd'}:
-            gpd = _check_dependency(name='geopandas')
+            gpd = _check_dependencies('geopandas')
             shp_data = gpd.read_file(shp_pathname, **kwargs)
 
         else:  # method == 'pyshp':  # default
@@ -919,7 +919,7 @@ class SHP:
             if isinstance(dat, pd.DataFrame) and not hasattr(dat, 'crs'):
                 cls.write_to_shapefile(data=dat, write_to=feat_shp_pathname)
             else:
-                gpd = _check_dependency('geopandas')
+                gpd = _check_dependencies('geopandas')
                 assert isinstance(dat, gpd.GeoDataFrame)
                 # os.makedirs(os.path.dirname(feat_shp_pathnames), exist_ok=True)
                 dat.to_file(
@@ -1104,7 +1104,7 @@ class SHP:
         """
 
         if engine in {'geopandas', 'gpd'}:
-            gpd = _check_dependency(name='geopandas')
+            gpd = _check_dependencies('geopandas')
 
             shp_data = collections.defaultdict(list)
             for shp_pathname in shp_pathnames:
