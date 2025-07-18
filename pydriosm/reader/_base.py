@@ -2,7 +2,6 @@
 Base reader.
 """
 
-import collections
 import glob
 import itertools
 import os
@@ -469,7 +468,7 @@ class BaseReader:
                 else:
                     osm_pbf_data = None
                     if verbose:
-                        print(f"The {osm_file_format} file for \"{subregion_name_}\" is not found.")
+                        print(f'The {osm_file_format} file for "{subregion_name_}" is not found.')
 
             return osm_pbf_data
 
@@ -703,7 +702,7 @@ class BaseReader:
 
         download_args = {
             'subregion_names': subregion_name,
-            'osm_file_format': osm_file_format,
+            'osm_file_formats': osm_file_format,
             'download_dir': data_dir,
             'update': update,
             'confirmation_required': False,
@@ -777,7 +776,7 @@ class BaseReader:
 
         if verbose:
             extr_dir_rel_path = check_relative_pathname(path_to_extract_dir)
-            print(f"Deleting the extracts \"{extr_dir_rel_path}\\\"", end=" ... ")
+            print(f"Deleting the extracts {add_slashes(extr_dir_rel_path)}", end=" ... ")
 
         try:
             # for f in glob.glob(os.path.join(extract_dir, "gis_osm*")):
@@ -825,13 +824,13 @@ class BaseReader:
                 msg_ = "the shapefile(s) at "
             else:
                 msg_ = ""
-            print(f'Reading {msg_}"{files_dir}\\"', end=" ... ")
+            print(f"Reading {msg_}{add_slashes(files_dir)}", end=" ... ")
 
         try:
             kwargs.update({'feature_names': feature_names_, 'ret_feat_shp_path': False})
             shp_dat_list = [self.SHP.read_layer_shps(x, **kwargs) for x in shp_pathnames]
 
-            shp_data = collections.OrderedDict(zip(layer_name_list, shp_dat_list))
+            shp_data = dict(zip(layer_name_list, shp_dat_list))
 
             if verbose:
                 print("Done.")
@@ -894,7 +893,7 @@ class BaseReader:
         :return: dictionary of the shapefile data,
             with keys and values being layer names and tabular data
             (in the format of `geopandas.GeoDataFrame`_), respectively
-        :rtype: dict | collections.OrderedDict | None
+        :rtype: dict | None
 
         .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
 

@@ -427,7 +427,7 @@ class GeofabrikDownloader(BaseDownloader):
         else:
             region_subregion_tiers, having_no_subregions = data
 
-            if update is True:
+            if update:
                 self.region_subregion_tiers = region_subregion_tiers
                 self.having_no_subregions = having_no_subregions
 
@@ -499,7 +499,7 @@ class GeofabrikDownloader(BaseDownloader):
             confirmation_required=confirmation_required, verbose=verbose,
             confirmation_prompt_note=msg_note, action_prompt_note=msg_note, raise_error=raise_error)
 
-        if update is True:
+        if update:
             self.catalogue = catalogue
 
         return catalogue

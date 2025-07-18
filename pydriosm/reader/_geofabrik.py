@@ -606,9 +606,9 @@ class GeofabrikReader(BaseReader):
         osm_file_format = ".shp.zip"
 
         # Download the files if not available
-        paths_to_shp_zip_files = self.downloader.download_osm_data(
-            subregion_names_, osm_file_format=osm_file_format, download_dir=data_dir,
-            update=update, confirmation_required=False if download else True,
+        paths_to_shp_zip_files = self.downloader.download_data(
+            subregion_names=subregion_names_, osm_file_formats=osm_file_format,
+            download_dir=data_dir, update=update, confirmation_required=False if download else True,
             deep_retry=True, interval=1, verbose=verbose, ret_download_path=True)
 
         if all(os.path.isfile(shp_zip_path_file) for shp_zip_path_file in paths_to_shp_zip_files):
@@ -659,7 +659,7 @@ class GeofabrikReader(BaseReader):
         :return: dictionary of the shapefile data,
             with keys and values being layer names and tabular data
             (in the format of `geopandas.GeoDataFrame`_), respectively
-        :rtype: dict | collections.OrderedDict | None
+        :rtype: dict | None
 
         .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
 
@@ -687,7 +687,7 @@ class GeofabrikReader(BaseReader):
             Reading the shapefile(s) at
                 "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
             >>> type(london_shp_data)
-            collections.OrderedDict
+            dict
             >>> list(london_shp_data.keys())
             ['buildings',
              'landuse',
@@ -725,7 +725,7 @@ class GeofabrikReader(BaseReader):
                 "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
             Deleting the extracts "tests\\osm_data\\greater-london\\greater-london-latest-free-sh...
             >>> type(london_shp_transport)
-            collections.OrderedDict
+            dict
             >>> list(london_shp_transport.keys())
             ['transport']
             >>> london_shp_transport_ = london_shp_transport['transport']
@@ -752,7 +752,7 @@ class GeofabrikReader(BaseReader):
                 "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
             Deleting the extracts "tests\\osm_data\\greater-london\\greater-london-latest-free-sh...
             >>> type(london_bus_stop)
-            collections.OrderedDict
+            dict
             >>> list(london_bus_stop.keys())
             ['transport']
 
@@ -777,7 +777,7 @@ class GeofabrikReader(BaseReader):
             Deleting the extracts "tests\\osm_data\\greater-london\\greater-london-latest-free-sh...
             Deleting "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip" ... Done.
             >>> type(london_shp_tra_roa_par_tru)
-            collections.OrderedDict
+            dict
             >>> list(london_shp_tra_roa_par_tru.keys())
             ['traffic', 'roads']
 
