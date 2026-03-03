@@ -133,7 +133,7 @@ class BaseDownloader:
 
             >>> from pydriosm.downloader._base import BaseDownloader
             >>> BaseDownloader.format_confirmation_prompt()
-            'To compile data of <data_name>\\n?'
+            'To retrieve/compile data of <data_name>\\n?'
             >>> BaseDownloader.format_confirmation_prompt(update=True)
             'To update the data of <data_name>\\n?'
         """
@@ -169,13 +169,13 @@ class BaseDownloader:
             True
             >>> BaseDownloader.print_action_prompt(verbose=True)
             ... print("Done.")
-            Compiling the data ... Done.
+            Retrieving/compiling the data ... Done.
             >>> BaseDownloader.print_action_prompt(verbose=True, note="(Some notes)")
             ... print("Done.")
-            Compiling the data (Some notes) ... Done.
+            Retrieving/compiling the data (Some notes) ... Done.
             >>> BaseDownloader.print_action_prompt(verbose=True, confirmation_required=False)
             ... print("Done.")
-            Compiling data of <data_name> ... Done.
+            Retrieving/compiling data of <data_name> ... Done.
         """
 
         if verbose:
@@ -274,9 +274,11 @@ class BaseDownloader:
         **Examples**::
 
             >>> from pydriosm.downloader._base import BaseDownloader
-            >>> data = BaseDownloader.get_prepacked_data(callable, verbose=True, raise_error=True)
+            >>> data = BaseDownloader.get_prepacked_data(print, verbose=True, raise_error=True)
             To compile data of <data_name>
             ? [No]|Yes: yes
+            Retrieving/compiling the data ...
+            Done.
             >>> data is None
             True
         """
@@ -807,30 +809,35 @@ class BaseDownloader:
             >>> from pydriosm.downloader import GeofabrikDownloader, BBBikeDownloader
             >>> gfd = GeofabrikDownloader()
             >>> gfd.file_exists_and_more('London', ".pbf")
-            (['Greater London'], '.osm.pbf', True, 'download', ['Greater London'], [])
+            (['Greater London'],
+             ['.osm.pbf'],
+             True,
+             'To download data in the format \'.osm.pbf\' for the following geographic (sub)reg...
+             [])
             >>> gfd.file_exists_and_more(['london', 'rutland'], ".pbf")
             (['Greater London', 'Rutland'],
-             '.osm.pbf',
+             ['.osm.pbf'],
              True,
-             'download',
-             ['Greater London', 'Rutland'],
+             'To download data in the format \'.osm.pbf\' for the following geographic (sub)reg...
              [])
             >>> gfd.file_exists_and_more(['london', 'rutland'], ["shp", ".pbf"])
             (['Greater London', 'Rutland'],
              ['.shp.zip', '.osm.pbf'],
              True,
-             'download',
-             ['Greater London', 'Greater London', 'Rutland', 'Rutland'],
+             'To download data in the formats (\'.shp.zip\', \'.osm.pbf\') for the following ge...
              [])
             >>> bbd = BBBikeDownloader()
             >>> bbd.file_exists_and_more('London', ".pbf")
-            (['London'], '.pbf', True, 'download', ['London'], [])
+            (['London'],
+             ['.pbf'],
+             True,
+             'To download data in the format \'.pbf\' for the following geographic (sub)region(...
+             [])
             >>> bbd.file_exists_and_more(['birmingham', 'leeds'], ".pbf")
             (['Birmingham', 'Leeds'],
-             '.pbf',
+             ['.pbf'],
              True,
-             'download',
-             ['Birmingham', 'Leeds'],
+             'To download data in the format \'.pbf\' for the following geographic (sub)region(...
              [])
         """
 
@@ -940,12 +947,13 @@ class BaseDownloader:
             False
             >>> # Download the PBF data of Rutland
             >>> _d._download_data(url, path_to_file, verbose=True)
-            Downloading "rutland-latest.osm.pbf" to "./tests/osm_data/" ... Done.
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 5.64MB/s ...
+                Saving "rutland-latest.osm.pbf" to "./tests/osm_data/" ... Done.
             >>> os.path.isfile(path_to_file)
             True
             >>> # Download the data again
             >>> _d._download_data(url, path_to_file, verbose=True)
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 471kB/s ...
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 4.91MB/s ...
                 Updating "rutland-latest.osm.pbf" in "./tests/osm_data/" ... Done.
             >>> os.path.isfile(path_to_file)
             True
