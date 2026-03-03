@@ -119,8 +119,7 @@ class GeofabrikDownloader(BaseDownloader):
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> gfd = GeofabrikDownloader()
             >>> raw_directory_index = gfd.get_raw_directory_index(gfd.URL, verbose=True)
-            Collecting the raw directory index on 'https://download.geofabrik.de/' ... Failed.
-            No raw directory index is available on the web page.
+            Collecting the raw directory index on 'https://download.geofabrik.de/' ... Failed. ...
             >>> raw_directory_index is None
             True
             >>> url = 'https://download.geofabrik.de/europe/great-britain.html'
@@ -176,6 +175,8 @@ class GeofabrikDownloader(BaseDownloader):
             >>> download_index = gfd.get_download_index()
             >>> type(download_index)
             pandas.core.frame.DataFrame
+            >>> download_index.shape
+            (512, 12)
             >>> download_index.head()
                         id  ...                                            updates
             0  afghanistan  ...  https://download.geofabrik.de/asia/afghanistan...
@@ -256,20 +257,25 @@ class GeofabrikDownloader(BaseDownloader):
             >>> url = 'https://download.geofabrik.de/europe/united-kingdom.html'
             >>> subregion_table = gfd.get_subregion_table(url)
             >>> subregion_table
-              subregion  ... .osm.bz2
-            0   England  ...     None
-            1  Scotland  ...     None
-            2     Wales  ...     None
-            [3 rows x 6 columns]
+                      subregion  ... .osm.bz2
+            0           Bermuda  ...     None
+            1           England  ...     None
+            2  Falkland Islands  ...     None
+            3          Scotland  ...     None
+            4             Wales  ...     None
+            [5 rows x 6 columns]
             >>> # Download information about 'Antarctica'
             >>> url = 'https://download.geofabrik.de/antarctica.html'
             >>> subregion_table = gfd.get_subregion_table(url, verbose=True)
             Compiling a subregion list of "Antarctica" ... Failed.
+              No data is available for 'Antarctica'.
             >>> subregion_table is None
             True
             >>> # To get more information about the above failure, set `verbose=2`
             >>> subregion_table = gfd.get_subregion_table(url, verbose=2)
-            Compiling a subregion list of "Antarctica" ... Failed: No data is available for "Ant...
+            Compiling a subregion list of "Antarctica" ... Failed.
+              No data is available for 'Antarctica'.
+              Errors: 'NoneType' object has no attribute 'empty'.
             >>> subregion_table is None
             True
         """
@@ -288,14 +294,13 @@ class GeofabrikDownloader(BaseDownloader):
 
                 return subregion_table
 
-            else:
-                if verbose:
-                    suffix = f': No data is available for "{region_name}".' if verbose == 2 \
-                        else "."
-                    print(f"Failed{suffix}")
-
         except Exception as e:
-            _print_failure_message(e, prefix="Failed.", verbose=verbose, raise_error=raise_error)
+            err_msg = f"Failed.\n  No data is available for '{region_name}'."
+            if verbose in {1, True}:
+                print(err_msg)
+            elif verbose == 2:
+                _print_failure_message(
+                    e, prefix=f"{err_msg}\n  Errors:", verbose=True, raise_error=raise_error)
 
     def get_continent_tables(self, update=False, confirmation_required=True, verbose=False,
                              raise_error=False, **kwargs):
@@ -334,6 +339,8 @@ class GeofabrikDownloader(BaseDownloader):
              'South America']
             >>> # Information about the data of subregions in Asia
             >>> asia_table = continent_tables['Asia']
+            >>> asia_table.shape
+            (40, 6)
             >>> asia_table.head()
                  subregion  ... .osm.bz2
             0  Afghanistan  ...     None
@@ -401,6 +408,8 @@ class GeofabrikDownloader(BaseDownloader):
              'South America']
             >>> type(having_no_subregions)
             list
+            >>> len(having_no_subregions)
+            484
             >>> # Example: five regions that have no subregions
             >>> having_no_subregions[0:5]
             ['Antarctica', 'Algeria', 'Angola', 'Benin', 'Botswana']
@@ -461,6 +470,8 @@ class GeofabrikDownloader(BaseDownloader):
             >>> dwnld_catalog = gfd.get_catalogue()
             >>> type(dwnld_catalog)
             pandas.core.frame.DataFrame
+            >>> dwnld_catalog.shape
+            (511, 6)
             >>> dwnld_catalog.head()
                            subregion  ... .osm.bz2
             0                 Africa  ...     None
@@ -769,7 +780,7 @@ class GeofabrikDownloader(BaseDownloader):
             >>> subregion_name, osm_file_format = 'london', ".pbf"
             >>> pathname, filename = gfd.get_default_pathname(subregion_name, osm_file_format)
             >>> os.path.relpath(os.path.dirname(pathname))
-            'osm_data\\geofabrik\\europe\\great-britain\\england\\greater-london'
+            'osm_data\\geofabrik\\europe\\united-kingdom\\england\\greater-london'
             >>> filename
             'greater-london-latest.osm.pbf'
         """
@@ -814,11 +825,11 @@ class GeofabrikDownloader(BaseDownloader):
 
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> gfd = GeofabrikDownloader()
-            >>> gb_subregions = gfd._find_subregions(subregion_name='Great Britain')
-            >>> type(gb_subregions)
+            >>> uk_subregions = gfd._find_subregions(subregion_name='United Kingdom')
+            >>> type(uk_subregions)
             generator
-            >>> list(gb_subregions)
-            [['England', 'Scotland', 'Wales']]
+            >>> list(uk_subregions)
+            [['Bermuda', 'England', 'Falkland Islands', 'Scotland', 'Wales']]
         """
 
         if region_subregion_tiers is None:
@@ -1095,33 +1106,30 @@ class GeofabrikDownloader(BaseDownloader):
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
             >>> gfd = GeofabrikDownloader(download_dir="tests/osm_data")
-
             >>> # Download the PBF data of London (to the default directory)
             >>> subregion_name = 'london'
             >>> osm_file_format = ".pbf"
             >>> gfd.download_data(subregion_name, osm_file_format, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                Greater London
+            To download data in the format '.osm.pbf' for the following geographic (sub)region(s):
+              "Greater London"
+              to "./tests/osm_data/europe/united-kingdom/england/greater-london/"
             ? [No]|Yes: yes
-            Downloading "greater-london-latest.osm.pbf" ...
+            Downloading "greater-london-latest.osm.pbf" 100%|██████████| 123M/123M | 33.1...
+              Saving "greater-london-latest.osm.pbf" ...
                 to "./tests/osm_data/europe/united-kingdom/england/greater-london/" ... Done.
-
             >>> # Check whether the PBF data file exists; `ret_file_path` is by default `False`
             >>> pbf_exists = gfd.file_exists(subregion_name, osm_file_format)
             >>> pbf_exists  # If the data file exists at the default directory
             True
-
             >>> # Set `ret_file_path=True`
             >>> path_to_pbf = gfd.file_exists(subregion_name, osm_file_format, ret_file_path=True)
             >>> os.path.relpath(path_to_pbf)  # If the data file exists at the default directory
-            'tests\\osm_data\\europe\\united-kingdom\\england\\greater-london\\greater-london-...
-
+            'tests\\osm_data\\europe\\united-kingdom\\england\\greater-london\\greater-london-l...
             >>> # Remove the download directory:
             >>> delete_dir(gfd.download_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
             Deleting "./tests/osm_data/" ... Done.
-
             >>> # Check if the data file still exists at the specified download directory
             >>> gfd.file_exists(subregion_name, osm_file_format)
             False
@@ -1190,16 +1198,17 @@ class GeofabrikDownloader(BaseDownloader):
             >>> subregion_names = ['Isle of Wight', 'rutland']  # Case-insensitive
             >>> osm_file_format = ".pbf"
             >>> gfd.download_data(subregion_names, osm_file_format, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                "Isle of Wight"
-                "Rutland"
-            ? [No]|Yes: yes
-            Downloading "isle-of-wight-latest.osm.pbf" 100%|██████████| 8.30M/8.30M | 343...
-                Saving "isle-of-wight-latest.osm.pbf" ...
-                    to "./osm_data/geofabrik/europe/united-kingdom/england/isle-of-wight/" ... Done.
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 4.05MB/s ...
-                Saving "rutland-latest.osm.pbf" ...
-                    to "./osm_data/geofabrik/europe/united-kingdom/england/rutland/" ... Done.
+            To download data in the format '.osm.pbf' for the following geographic (sub)region(s):
+              "Isle of Wight"
+              "Rutland"
+              to "./osm_data/geofabrik/europe/united-kingdom/england/"
+            ? [No]|Yes: >? yes
+            Downloading "isle-of-wight-latest.osm.pbf" 100%|██████████| 8.83M/8.83M | 16....
+              Saving "isle-of-wight-latest.osm.pbf" ...
+                to "./osm_data/geofabrik/europe/united-kingdom/england/isle-of-wight/" ... Done.
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 4.58MB/s ...
+              Saving "rutland-latest.osm.pbf" ...
+                to "./osm_data/geofabrik/europe/united-kingdom/england/rutland/" ... Done.
             >>> len(gfd.data_paths)
             2
             >>> for file_path in gfd.data_paths: print(os.path.basename(file_path))
@@ -1216,14 +1225,15 @@ class GeofabrikDownloader(BaseDownloader):
             >>> osm_file_format = [".shp", "pbf"]
             >>> download_dir = "tests/osm_data"
             >>> gfd.download_data(subregion_name, osm_file_format, download_dir, verbose=True)
-            To download ('.shp.zip', '.osm.pbf') data of the following geographic (sub)region(s):
-                "West Midlands"
-            ? [No]|Yes: yes
-            Downloading "west-midlands-latest-free.shp.zip" 100%|██████████| 97.3M/97.3M ...
-                Saving "west-midlands-latest-free.shp.zip" ...
-                    to "./tests/osm_data/west-midlands/" ... Done.
-            Downloading "west-midlands-latest.osm.pbf" 100%|██████████| 54.5M/54.5M | 918...
-                Saving "west-midlands-latest.osm.pbf" to "./tests/osm_data/west-midlands/" ... ...
+            To download data in the formats ('.shp.zip', '.osm.pbf') for the following geograph...
+              "West Midlands"
+              to "./tests/osm_data/west-midlands/"
+            ? [No]|Yes: >? yes
+            Downloading "west-midlands-latest-free.shp.zip" 100%|██████████| 99.3M/99.3M ...
+              Saving "west-midlands-latest-free.shp.zip" ...
+                to "./tests/osm_data/west-midlands/" ... Done.
+            Downloading "west-midlands-latest.osm.pbf" 100%|██████████| 58.3M/58.3M | 25....
+              Saving "west-midlands-latest.osm.pbf" to "./tests/osm_data/west-midlands/" ... Done.
             >>> len(gfd.data_paths)
             4
             >>> os.path.relpath(gfd.data_paths[-1])  # (on Windows)
@@ -1237,11 +1247,12 @@ class GeofabrikDownloader(BaseDownloader):
             >>> # Delete the above downloaded directories
             >>> delete_dir([download_dir_, gfd.download_dir], verbose=True)
             To delete the following directories:
-                "./osm_data/" (Not empty)
-                "./tests/osm_data/" (Not empty)
+              "./osm_data/" (Not empty)
+              "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "./osm_data/" ... Done.
-            Deleting "./tests/osm_data/" ... Done.
+            Deleting:
+              "./osm_data/" ... Done.
+              "./tests/osm_data/" ... Done.
 
         ***Example 2***::
 
@@ -1255,57 +1266,70 @@ class GeofabrikDownloader(BaseDownloader):
             >>> osm_file_format = ".shp"
             >>> # By default, `deep_retry=False`
             >>> gfd.download_data(subregion_name, osm_file_format, verbose=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                "United Kingdom"
-            ? [No]|Yes: yes
+            To download data in the format '.shp.zip' for the following geographic (sub)region(s):
+              "United Kingdom"
+            ? [No]|Yes: >? yes
             No '.shp.zip' data is available for "United Kingdom".
             Try to download the data of its subregions instead
-            ? [No]|Yes: yes
-            Downloading "england-latest-free.shp.zip" 100%|██████████| 2.59G/2.59G | 315kB/...
-                Saving "england-latest-free.shp.zip"
-                    to "./tests/osm_data/europe/great-britain/great-britain-shp-zip/" ... Done.
-            Downloading "scotland-latest-free.shp.zip" 100%|██████████| 513M/513M | 275kB/s...
-                Saving "scotland-latest-free.shp.zip" ...
-                    to "./tests/osm_data/europe/united-kingdom/united-kingdom-shp-zip/" ... Done.
-            Downloading "wales-latest-free.shp.zip" 100%|██████████| 230M/230M | 116kB/s | ...
-                Saving "wales-latest-free.shp.zip" ...
-                    to "./tests/osm_data/europe/united-kingdom/united-kingdom-shp-zip/" ... Done.
+            ? [No]|Yes: >? yes
+            Downloading "bermuda-latest-free.shp.zip" 100%|██████████| 4.04M/4.04M | 9.08...
+              Saving "bermuda-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/united-kingdom-shp-zip/" ... Done.
+            Downloading "england-latest-free.shp.zip" 100%|██████████| 2.78G/2.78G | 36.2...
+              Saving "england-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/united-kingdom-shp-zip/" ... Done.
+            Downloading "falklands-latest-free.shp.zip" 100%|██████████| 11.0M/11.0M | 13...
+              Saving "falklands-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/united-kingdom-shp-zip/" ... Done.
+            Downloading "scotland-latest-free.shp.zip" 100%|██████████| 561M/561M | 33.2M...
+              Saving "scotland-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/united-kingdom-shp-zip/" ... Done.
+            Downloading "wales-latest-free.shp.zip" 100%|██████████| 252M/252M | 33.6MB/s...
+              Saving "wales-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/united-kingdom-shp-zip/" ... Done.
             >>> len(gfd.data_paths)
-            3
+            5
             >>> # Now set `deep_retry=True`
-            >>> gfd.download_data(subregion_name, osm_file_format, verbose=1, deep_retry=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                "United Kingdom"
+            >>> gfd.download_data(subregion_name, osm_file_format, verbose=1, deep=True)
+            To download data in the format '.shp.zip' for the following geographic (sub)region(s):
+              "Lancashire"
+              "Scotland"
+              "Merseyside"
+              ...
+              "West Sussex"
+              to "./tests/osm_data/europe/united-kingdom/"
             ? [No]|Yes: yes
-            No '.shp.zip' data is available for "United Kingdom".
-            Try to download the data of its subregions instead
-            ? [No]|Yes: yes
-            "wales-latest-free.shp.zip" already exists in "./tests/osm_data/europe/united-kingdom...
-            "scotland-latest-free.shp.zip" already exists in "./tests/osm_data/europe/united-king...
-            Downloading "bedfordshire-latest.osm.pbf" 100%|██████████| 11.6M/11.6M | 209kB/...
-                Saving "bedfordshire-latest.osm.pbf" to "./tests/osm_data/bedfordshire/" ... Done.
+            Downloading "wales-latest-free.shp.zip" 100%|██████████| 252M/252M | 28.7MB/s...
+              Saving "wales-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/wales/" ... Done.
+            Downloading "scotland-latest-free.shp.zip" 100%|██████████| 561M/561M | 31.3M...
+              Saving "scotland-latest-free.shp.zip" ...
+                  to "./tests/osm_data/europe/united-kingdom/scotland/" ... Done.
+            Downloading "falklands-latest-free.shp.zip" 100%|██████████| 11.0M/11.0M | 5....
+              Saving "falklands-latest-free.shp.zip" ...
+                  to "./tests/osm_data/europe/united-kingdom/falkland-islands/" ... Done.
             ...
                 ...
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 354kB/s | E...
-                Updating "rutland-latest.osm.pbf" in "./tests/osm_data/rutland/" ... Done.
+            Downloading "rutland-latest-free.shp.zip" 100%|██████████| 2.71M/2.71M | 7.33...
+              Saving "rutland-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/england/rutland/" ... Done.
             ...
                 ...
-            Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 45.2M/45.2M | 110k...
-                Updating "west-yorkshire-latest.osm.pbf" ...
-                    in "./tests/osm_data/west-yorkshire/" ... Done.
-            Downloading "wiltshire-latest.osm.pbf" 100%|██████████| 28.5M/28.5M | 241kB/s |...
-                Saving "wiltshire-latest.osm.pbf" to "./tests/osm_data/wiltshire/" ... Done.
-            Downloading "worcestershire-latest.osm.pbf" 100%|██████████| 18.5M/18.5M | 220k...
-                Saving "worcestershire-latest.osm.pbf" ...
-                    to "./tests/osm_data/worcestershire/" ... Done.
+            Downloading "west-yorkshire-latest-free.shp.zip" 100%|██████████| 87.3M/87.3M...
+              Saving "west-yorkshire-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/england/west-yorkshire/" ... Done.
+            Downloading "wiltshire-latest-free.shp.zip" 100%|██████████| 62.7M/62.7M | 28...
+              Saving "wiltshire-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/england/wiltshire/" ... Done.
+            Downloading "worcestershire-latest-free.shp.zip" 100%|██████████| 35.0M/35.0M...
+              Saving "worcestershire-latest-free.shp.zip" ...
+                to "./tests/osm_data/europe/united-kingdom/england/worcestershire/" ... Done.
             >>> # Check the file paths
             >>> len(gfd.data_paths)
-            50
+            56
             >>> # Check the current default `download_dir`
             >>> os.path.relpath(gfd.download_dir)  # (on Windows)
             'tests\\osm_data'
-            >>> os.path.relpath(os.path.commonpath(gfd.data_paths))  # (on Windows)
-            'tests\\osm_data\\europe\\united-kingdom\\united-kingdom-shp-zip'
             >>> # Delete all the downloaded files
             >>> delete_dir(gfd.download_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
