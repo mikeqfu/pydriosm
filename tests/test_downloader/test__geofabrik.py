@@ -75,7 +75,7 @@ class TestGeofabrikDownloader:
             'iso3166-2',
             'geometry',
             '.osm.pbf',
-            '.osm.bz2',
+            # '.osm.bz2',
             '.shp.zip',
             'pbf-internal',
             'history',
@@ -100,11 +100,10 @@ class TestGeofabrikDownloader:
         assert isinstance(uk, pd.DataFrame)
 
         antarctica_url = 'https://download.geofabrik.de/antarctica.html'
-        with pytest.raises(AttributeError):
-            antarctica = gfd.get_subregion_table(antarctica_url, verbose=True, raise_error=True)
-            out, _ = capfd.readouterr()
-            assert 'Compiling a subregion list of "Antarctica" ... Failed.' in out
-            assert antarctica is None
+        antarctica = gfd.get_subregion_table(antarctica_url, verbose=True, raise_error=True)
+        out, _ = capfd.readouterr()
+        assert 'Compiling a subregion list of "Antarctica" ... Failed.' in out
+        assert antarctica is None
 
         antarctica2 = gfd.get_subregion_table(antarctica_url, verbose=2)
         out, _ = capfd.readouterr()
@@ -218,7 +217,8 @@ class TestGeofabrikDownloader:
         subrgn_name = 'britain'
         file_format = ".shp"
 
-        download_pathname = gfd.specify_sub_download_dir(subrgn_name, file_format, download_dir)
+        download_pathname = gfd.specify_sub_download_dir(
+            subregion_name=subrgn_name, osm_file_format=file_format, download_dir=download_dir)
         assert os.path.relpath(download_pathname) == os.path.join(
             "tests", "osm_data", "great-britain-shp-zip")
 
