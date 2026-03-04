@@ -11,9 +11,9 @@ class BBBikeReader(BaseReader):
     Read `BBBike <https://download.bbbike.org/>`_ exports of OpenStreetMap data.
     """
 
-    #:
+    #: Name of the data source.
     NAME: str = BBBikeDownloader.NAME
-    #:
+    #: Full name of the data source.
     LONG_NAME: str = BBBikeDownloader.LONG_NAME
     #: Default download directory.
     DEFAULT_DATA_DIR: str = BBBikeDownloader.DEFAULT_DOWNLOAD_DIR
@@ -84,12 +84,12 @@ class BBBikeReader(BaseReader):
             >>> # Download the PBF data file of Birmingham to "./tests/osm_data/"
             >>> bbr.downloader.download_data(
             ...     subregion_name, osm_file_format, data_dir, verbose=True)
-            To download data in the format '.pbf' for the following geographic (sub)region(s):
-                "Birmingham"
+            Proceed to download data in the format '.pbf' for the following geographic (sub)reg...
+              "Birmingham"
               to "./tests/osm_data/birmingham/"
             ? [No]|Yes: yes
-            Downloading "Birmingham.osm.pbf" 100%|██████████| 42.5M/42.5M | 1.40MB/s | ET...
-                Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
+            Downloading "Birmingham.osm.pbf" 100%|██████████| 55.8M/55.8M | 15.3MB/s | ET...
+              Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
             >>> # Check again
             >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
             >>> os.path.isfile(path_to_pbf)
@@ -134,12 +134,12 @@ class BBBikeReader(BaseReader):
             >>> # Download the PBF data of Birmingham to "./tests/osm_data/"
             >>> bbr.downloader.download_data(
             ...     subregion_name, osm_file_format, data_dir, verbose=True)
-            To download data in the format '.pbf' for the following geographic (sub)region(s):
-                "Birmingham"
+            Proceed to download data in the format '.pbf' for the following geographic (sub)reg...
+              "Birmingham"
               to "./tests/osm_data/birmingham/"
             ? [No]|Yes: yes
-            Downloading "Birmingham.osm.pbf" 100%|██████████| 42.5M/42.5M | 1.40MB/s | ET...
-                Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
+            Downloading "Birmingham.osm.pbf" 100%|██████████| 55.8M/55.8M | 15.3MB/s | ET...
+              Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
             >>> path_to_pbf = bbr.data_paths[0]
             >>> os.path.relpath(path_to_pbf)
             'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
@@ -161,7 +161,7 @@ class BBBikeReader(BaseReader):
 
     def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
                  parse_geometry=False, parse_properties=False, parse_other_tags=False,
-                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
         # noinspection PyShadowingNames
         """
@@ -225,8 +225,14 @@ class BBBikeReader(BaseReader):
             >>> subregion_name = 'Leeds'
             >>> data_dir = "tests/osm_data"
             >>> leeds_pbf_raw = bbr.read_pbf(subregion_name, data_dir=data_dir, verbose=True)
-            Downloading "Leeds.osm.pbf" 100%|██████████| 29.3M/29.3M | 20.7MB/s | ETA: 00:00
-                Saving "Leeds.osm.pbf" to "./tests/osm_data/leeds/" ... Done.
+            The .osm.pbf file for "Leeds" is not found.
+            >>> leeds_pbf_raw is None
+            True
+            >>> # Set `download=True`
+            >>> leeds_pbf_raw = bbr.read_pbf(
+            ...     subregion_name, data_dir=data_dir, download=True, verbose=True)
+            Downloading "Leeds.osm.pbf" 100%|██████████| 38.1M/38.1M | 18.9MB/s | ETA: 00:00
+              Saving "Leeds.osm.pbf" to "./tests/osm_data/leeds/" ... Done.
             Reading "./tests/osm_data/leeds/Leeds.osm.pbf" ... Done.
             >>> type(leeds_pbf_raw)
             dict
@@ -247,13 +253,15 @@ class BBBikeReader(BaseReader):
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
             >>> # Data of the 'multipolygons' layer
             >>> leeds_pbf_parsed_multipolygons = leeds_pbf_parsed['multipolygons']
+            >>> leeds_pbf_parsed_multipolygons.shape
+            (481516, 26)
             >>> leeds_pbf_parsed_multipolygons.head()
-                  id                                           geometry  ... tourism other_tags
-            0  10595  MULTIPOLYGON (((-1.5030223 53.6725382, -1.5031...  ...    None       None
-            1  10600  MULTIPOLYGON (((-1.5116994 53.6764287, -1.5099...  ...    None       None
-            2  10601  MULTIPOLYGON (((-1.5142761 53.6706582, -1.5144...  ...    None       None
-            3  10612  MULTIPOLYGON (((-1.5129341 53.6704885, -1.5131...  ...    None       None
-            4  10776  MULTIPOLYGON (((-1.5523801 53.7029081, -1.5524...  ...    None       None
+                  id  ...                      other_tags
+            0  10595  ...                            None
+            1  10600  ...                            None
+            2  10601  ...                            None
+            3  10612  ...  {'ref:GB:uprn': '10025043089'}
+            4  10776  ...                            None
             [5 rows x 26 columns]
             >>> # Delete the example data and the test data directory
             >>> delete_dir(data_dir, verbose=True)
@@ -277,7 +285,7 @@ class BBBikeReader(BaseReader):
         return osm_pbf_data
 
     def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
-                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
         """
         Read a shapefile of a geographic (sub)region.
@@ -328,7 +336,7 @@ class BBBikeReader(BaseReader):
             >>> bbr = BBBikeReader()
 
             >>> subrgn_name = 'Birmingham'
-            >>> dat_dir = "tests\\osm_data"
+            >>> dat_dir = "tests/osm_data"
 
             >>> bham_shp = bbr.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=False, verbose=True)
@@ -337,14 +345,13 @@ class BBBikeReader(BaseReader):
             >>> # Set `download=True`
             >>> bham_shp = bbr.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
-            Downloading "Birmingham.osm.shp.zip"
-                to "tests\\osm_data\\birmingham\\" ... Done.
-            Extracting "tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip"
-                to "tests\\osm_data\\birmingham\\" ... Done.
-            Reading the shapefile(s) at
-                "tests\\osm_data\\birmingham\\Birmingham-shp\\shape\\" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.0M/79.0M | 28.5MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
+            Extracting "./tests/osm_data/birmingham/Birmingham.osm.shp.zip"
+              to "./tests/osm_data/birmingham/" ... Done.
+            Reading the shapefile(s) at "./tests/osm_data/birmingham/Birmingham-shp/shape/" ......
             >>> type(bham_shp)
-            collections.OrderedDict
+            dict
             >>> list(bham_shp.keys())
             ['buildings',
              'landuse',
@@ -357,6 +364,8 @@ class BBBikeReader(BaseReader):
 
             >>> # Data of 'railways' layer
             >>> bham_railways_shp = bham_shp['railways']
+            >>> bham_railways_shp.shape
+            (3994, 5)
             >>> bham_railways_shp.head()
                 osm_id  ... shape_type
             0      740  ...          3
@@ -372,19 +381,21 @@ class BBBikeReader(BaseReader):
             >>> bham_roads_shp = bbr.read_shp(
             ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir,
             ...     rm_extracts=True, verbose=True)
-            Reading "tests\\osm_data\\birmingham\\Birmingham-shp\\shape\\roads.shp" ... Done.
-            Deleting the extracts "tests\\osm_data\\birmingham\\Birmingham-shp\\"  ... Done.
+            Reading "./tests/osm_data/birmingham/Birmingham-shp/shape/roads.shp" ... Done.
+            Deleting the extracts "./tests/osm_data/birmingham/Birmingham-shp/" ... Done.
             >>> type(bham_roads_shp)
-            collections.OrderedDict
+            dict
             >>> list(bham_roads_shp.keys())
             ['roads']
+            >>> bham_roads_shp[lyr_name].shape
+            (170370, 9)
             >>> bham_roads_shp[lyr_name].head()
                osm_id  ... shape_type
             0      37  ...          3
             1      38  ...          3
             2      41  ...          3
-            3      45  ...          3
-            4      46  ...          3
+            3      42  ...          3
+            4      45  ...          3
             [5 rows x 9 columns]
 
             >>> # Read data of multiple layers and features from the original .shp.zip file
@@ -395,15 +406,15 @@ class BBBikeReader(BaseReader):
             ...     subregion_name=subrgn_name, layer_names=lyr_names, feature_names=feat_names,
             ...     data_dir=dat_dir, rm_extracts=True, rm_shp_zip=True, verbose=True)
             Extracting the following layer(s):
-                'railways'
-                'waterways'
-                from "tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip"
-                  to "tests\\osm_data\\birmingham\\" ... Done.
-            Reading the data at "tests\\osm_data\\birmingham\\Birmingham-shp\\shape\\" ... Done.
-            Deleting the extracts "tests\\osm_data\\birmingham\\Birmingham-shp\\"  ... Done.
-            Deleting "tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip" ... Done.
+              'railways'
+              'waterways'
+                from "./tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
+                  to "./tests/osm_data/birmingham/" ... Done.
+            Reading the shapefile(s) at "./tests/osm_data/birmingham/Birmingham-shp/shape/" ......
+            Deleting the extracts "./tests/osm_data/birmingham/Birmingham-shp/" ... Done.
+            Deleting "tests/osm_data/birmingham/Birmingham.osm.shp.zip" ... Done.
             >>> type(bham_rw_rc_shp)
-            collections.OrderedDict
+            dict
             >>> list(bham_rw_rc_shp.keys())
             ['railways', 'waterways']
 
@@ -420,18 +431,18 @@ class BBBikeReader(BaseReader):
             >>> # Data of the 'waterways' layer
             >>> bham_rw_rc_shp_waterways = bham_rw_rc_shp['waterways']
             >>> bham_rw_rc_shp_waterways[['type', 'name']].head()
-                 type                                              name
-            2   canal                      Birmingham and Fazeley Canal
-            8   canal                      Birmingham and Fazeley Canal
-            9   canal  Birmingham Old Line Canal Navigations - Rotton P
-            10  canal                               Oozells Street Loop
-            11  canal                      Worcester & Birmingham Canal
+                 type                          name
+            2   canal  Birmingham and Fazeley Canal
+            9   canal  Birmingham and Fazeley Canal
+            10  canal      Icknield Port Loop Canal
+            11  canal     Oozells Street Loop Canal
+            12  canal  Worcester & Birmingham Canal
 
             >>> # Delete the example data and the test data directory
             >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         shp_data = super().read_shp(
@@ -475,16 +486,16 @@ class BBBikeReader(BaseReader):
             The requisite data file "./tests/osm_data/leeds/Leeds.osm.csv.xz" does not exist.
             >>> leeds_csv_xz = bbr.read_csv_xz(
             ...     subregion_name, data_dir=data_dir, verbose=True, download=True)
-            Downloading "Leeds.osm.csv.xz"
-                to "tests\\osm_data\\leeds\\" ... Done.
+            Downloading "Leeds.osm.csv.xz" 100%|██████████| 4.08M/4.08M | 17.5MB/s | ETA:...
+              Saving "Leeds.osm.csv.xz" to "./tests/osm_data/leeds/" ... Done.
             Parsing the data ... Done.
             >>> leeds_csv_xz.head()
                type      id feature  note
             0  node  154915    None  None
             1  node  154916    None  None
-            2  node  154921    None  None
-            3  node  154922    None  None
-            4  node  154923    None  None
+            2  node  154919    None  None
+            3  node  154921    None  None
+            4  node  154922    None  None
             >>> delete_dir(data_dir, verbose=True)  # Delete the downloaded .csv.xz data file
             To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
@@ -534,35 +545,38 @@ class BBBikeReader(BaseReader):
             >>> dat_dir = "tests\\osm_data"
 
             >>> leeds_geoj = bbr.read_geojson_xz(subrgn_name, dat_dir, verbose=True)
-            The requisite data file "tests\\osm_data\\leeds\\Leeds.osm.geojson.xz" does not exist.
+            The requisite data file "./tests/osm_data/leeds/Leeds.osm.geojson.xz" does not exist.
 
             >>> # Set `try_download=True`
             >>> leeds_geoj = bbr.read_geojson_xz(subrgn_name, dat_dir, verbose=True, download=True)
-            Downloading "Leeds.osm.geojson.xz"
-                to "tests\\osm_data\\leeds\\" ... Done.
+            Downloading "Leeds.osm.geojson.xz" 100%|██████████| 60.4M/60.4M | 20.7MB/s | ...
+              Saving "Leeds.osm.geojson.xz" to "./tests/osm_data/leeds/" ... Done.
             Parsing the data ... Done.
             >>> leeds_geoj.head()
-                                                        geometry                          properties
-            0  {'type': 'Point', 'coordinates': [-1.5558097, ...  {'highway': 'motorway_junction'...
-            1  {'type': 'Point', 'coordinates': [-1.34293, 53...  {'highway': 'motorway_junction'...
-            2  {'type': 'Point', 'coordinates': [-1.517335, 5...  {'highway': 'motorway_junction'...
-            3  {'type': 'Point', 'coordinates': [-1.514124, 5...  {'highway': 'motorway_junction'...
-            4  {'type': 'Point', 'coordinates': [-1.516511, 5...  {'highway': 'motorway_junction'...
+                                            geometry                                    properties
+            0  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+            1  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+            2  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+            3  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+            4  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
 
             >>> # Set `parse_geometry` to be True
-            >>> leeds_geoj_ = bbr.read_geojson_xz(subrgn_name, dat_dir, parse_geometry=True,
-            ...                                   verbose=True)
-            Parsing "tests\\osm_data\\leeds\\Leeds.osm.geojson.xz" ... Done.
+            >>> leeds_geoj_ = bbr.read_geojson_xz(
+            ...     subrgn_name, dat_dir, parse_geometry=True, verbose=True)
+            Parsing "./tests/osm_data/leeds/Leeds.osm.geojson.xz" ... Done.
             >>> leeds_geoj_['geometry'].head()
             0    POINT (-1.5560511 53.6879848)
             1       POINT (-1.34293 53.844618)
             2     POINT (-1.517335 53.7499667)
-            3     POINT (-1.514124 53.7416937)
+            3     POINT (-1.514175 53.7418444)
             4     POINT (-1.516511 53.7256632)
             Name: geometry, dtype: object
 
             >>> # Delete the download directory
             >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         geojson_xz_data = self.read_var_osm(
