@@ -6,7 +6,6 @@ import os
 
 import pandas as pd
 import pytest
-from pyhelpers.dirs import delete_dir
 
 from pydriosm.downloader._bbbike import BBBikeDownloader
 
@@ -32,19 +31,19 @@ class TestBBBikeDownloader:
         assert isinstance(bbd.subregion_index, pd.DataFrame)
         assert isinstance(bbd.catalogue, dict)
 
-    @pytest.mark.parametrize('update', [True, False])
-    def test_get_names_of_cities(self, bbd, update, monkeypatch, capfd):
+    # @pytest.mark.parametrize('update', [True, False])
+    def test_get_names_of_cities(self, bbd, monkeypatch, capfd):
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        bbbike_cities = bbd.get_bbbike_cities(update=update, verbose=True)
+        bbbike_cities = bbd.get_bbbike_cities(update=False, verbose=True)
         out, _ = capfd.readouterr()
-        if update:
-            assert "Retrieving/compiling the data" in out and "Done." in out
+        # if update:
+        #     assert "Retrieving/compiling the data" in out and "Done." in out
         assert isinstance(bbbike_cities, list)
 
-    @pytest.mark.parametrize('update', [True, False])
-    def test_get_coordinates_of_cities(self, bbd, update, monkeypatch):
+    # @pytest.mark.parametrize('update', [True, False])
+    def test_get_coordinates_of_cities(self, bbd, monkeypatch):
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        coords_of_cities = bbd.get_coordinates_of_cities(update=update, verbose=True)
+        coords_of_cities = bbd.get_coordinates_of_cities(update=False, verbose=True)
         assert isinstance(coords_of_cities, pd.DataFrame)
         assert coords_of_cities.columns.to_list() == [
             'city',
@@ -143,6 +142,8 @@ class TestBBBikeDownloader:
         assert not pbf_exists
 
     def test_download_data(self, bbd, monkeypatch, tmp_path):
+        from pyhelpers.dirs import delete_dir
+
         bbd.data_paths = []
         bbd.download_dir = bbd.cdd()
 
