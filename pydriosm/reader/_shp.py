@@ -70,16 +70,16 @@ def _unzip_prep(shp_zip_pathname, extract_to=None, layer_names=None, verbose=Fal
         layer_names_ = layer_names
         if verbose:
             print(
-                f"Extracting {add_slashes(shp_zip_rel_path)}\n\t"
-                f"to {add_slashes(extrdir_rel_path)}",
+                f"Extracting {add_slashes(shp_zip_rel_path)}\n"
+                f"  to {add_slashes(extrdir_rel_path)}",
                 end=" ... ")
     else:
         layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
         if verbose:
-            layer_name_list = "\t" + "\n\t".join([f"'{x}'" for x in layer_names_])
+            layer_name_list = "\t" + f"\n\t".join([f"'{x}'" for x in layer_names_])
             print(f"Extracting the following layer(s):\n{layer_name_list}")
-            print(f"\t\tfrom {add_slashes(shp_zip_rel_path)} ... \n"
-                  f"\t\t\tto {add_slashes(extrdir_rel_path)}",
+            print(f"  from: {add_slashes(shp_zip_rel_path)} ... \n"
+                  f"    to: {add_slashes(extrdir_rel_path)}",
                   end=" ... ")
 
     return extract_dir, layer_names_
@@ -1368,7 +1368,7 @@ class SHP:
         if verbose:
             print("Merging the following shapefiles:")
             print("\t" + "\n\t".join(f"\"{os.path.basename(f)}\"" for f in paths_to_shp_files))
-            print("\t\tIn progress ... ", end="")
+            print("  In progress ... ", flush=True, end="")
 
         try:
             path_to_merged_dir = cls._make_merged_dir(
@@ -1394,8 +1394,8 @@ class SHP:
                 shutil.rmtree(path_to_merged_dir_temp)
 
             if verbose:
-                m_rel_path = check_relative_pathname(path_to_merged_dir)
-                print(f"    Find the merged shapefile at \"{m_rel_path}\".")
+                m_rel_path = add_slashes(check_relative_pathname(path_to_merged_dir))
+                print(f"    Find the merged shapefile in {m_rel_path}.")
 
             if ret_shp_pathname:
                 path_to_merged_shp = glob.glob(os.path.join(f"{path_to_merged_dir}*", "*.shp"))
