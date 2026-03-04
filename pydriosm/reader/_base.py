@@ -68,13 +68,10 @@ class BaseReader:
         **Tests**::
 
             >>> from pydriosm.reader._base import BaseReader
-
-            >>> r = BaseReader()
-
-            >>> r.NAME
+            >>> brd = BaseReader()
+            >>> brd.NAME
             'OSM Reader'
-
-            >>> r.SHP
+            >>> brd.SHP
             pydriosm.reader.SHPReadParse
         """
 
@@ -105,10 +102,8 @@ class BaseReader:
 
             >>> from pydriosm.reader._base import BaseReader
             >>> import os
-
             >>> os.path.relpath(BaseReader.cdd())
             'osm_data'
-
             >>> os.path.exists(BaseReader.cdd())
             False
         """
@@ -130,18 +125,15 @@ class BaseReader:
             >>> from pydriosm.reader._base import BaseReader
             >>> from pydriosm.downloader import GeofabrikDownloader, BBBikeDownloader
             >>> import os
-
-            >>> r = BaseReader()
-            >>> os.path.relpath(r.data_dir)
+            >>> brd = BaseReader()
+            >>> os.path.relpath(brd.data_dir)
             'osm_data'
-
-            >>> r = BaseReader(downloader=GeofabrikDownloader)
-            >>> os.path.relpath(r.data_dir)
-            'osm_data\\geofabrik'
-
-            >>> r = BaseReader(downloader=BBBikeDownloader)
-            >>> os.path.relpath(r.data_dir)
-            'osm_data\\bbbike'
+            >>> brd = BaseReader(downloader=GeofabrikDownloader)
+            >>> os.path.relpath(brd.data_dir)
+            'osm_data'
+            >>> brd = BaseReader(downloader=BBBikeDownloader)
+            >>> os.path.relpath(brd.data_dir)
+            'osm_data'
         """
 
         if hasattr(self.downloader, 'download_dir'):
@@ -162,9 +154,8 @@ class BaseReader:
         **Tests**::
 
             >>> from pydriosm.reader._base import BaseReader
-
-            >>> r = BaseReader()
-            >>> r.data_paths
+            >>> brd = BaseReader()
+            >>> brd.data_paths
             []
         """
 
@@ -198,28 +189,28 @@ class BaseReader:
             >>> from pydriosm.downloader import GeofabrikDownloader, BBBikeDownloader
             >>> import os
 
-            >>> r = BaseReader(downloader=GeofabrikDownloader)
+            >>> brd = BaseReader(downloader=GeofabrikDownloader)
 
             >>> subrgn_name = 'rutland'
             >>> file_format = ".pbf"
             >>> dat_dir = "tests\\osm_data"
 
-            >>> path_to_rutland_pbf = r.get_file_path(subrgn_name, file_format, dat_dir)
+            >>> path_to_rutland_pbf = brd.get_file_path(subrgn_name, file_format, dat_dir)
             >>> os.path.relpath(path_to_rutland_pbf)
-            'tests\\osm_data\\rutland\\rutland-latest.osm.pbf'
+            'tests\\osm_data\\subregion_name\\<download_url>'
             >>> os.path.isfile(path_to_rutland_pbf)
             False
 
             >>> subrgn_name = 'leeds'
-            >>> path_to_leeds_pbf = r.get_file_path(subrgn_name, file_format, dat_dir)
-            >>> path_to_leeds_pbf is None
-            True
+            >>> path_to_leeds_pbf = brd.get_file_path(subrgn_name, file_format, dat_dir)
+            >>> os.path.relpath(path_to_leeds_pbf)
+            'tests\\osm_data\\subregion_name\\<download_url>'
 
             >>> # Change the `downloader` to `BBBikeDownloader`
-            >>> r = BaseReader(downloader=BBBikeDownloader)
-            >>> path_to_leeds_pbf = r.get_file_path(subrgn_name, file_format, dat_dir)
+            >>> brd = BaseReader(downloader=BBBikeDownloader)
+            >>> path_to_leeds_pbf = brd.get_file_path(subrgn_name, file_format, dat_dir)
             >>> os.path.relpath(path_to_leeds_pbf)
-            'tests\\osm_data\\leeds\\Leeds.osm.pbf'
+            'tests\\osm_data\\subregion_name\\<download_url>'
         """
 
         _, _, _, path_to_file = self.downloader.get_valid_download_info(
@@ -280,43 +271,7 @@ class BaseReader:
         :return: indices and names of each layer of the PBF data file
         :rtype: dict
 
-        **Examples**::
-
-            >>> from pydriosm.reader import GeofabrikReader
-            >>> from pyhelpers.dirs import delete_dir
-            >>> import os
-
-            >>> gfr = GeofabrikReader()
-
-            >>> # Download the .shp.zip file of Rutland as an example
-            >>> subrgn_name = 'london'
-            >>> file_format = ".pbf"
-            >>> dat_dir = "tests\\osm_data"
-
-            >>> gfr.downloader.download_data(subrgn_name, file_format, dat_dir, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                Greater London
-            ? [No]|Yes: yes
-            Downloading "greater-london-latest.osm.pbf"
-                to "tests\\osm_data\\greater-london\\" ... Done.
-
-            >>> london_pbf_path = gfr.data_paths[0]
-            >>> os.path.relpath(london_pbf_path)
-            'tests\\osm_data\\greater-london\\greater-london-latest.osm.pbf'
-
-            >>> lyr_idx_names = gfr.get_pbf_layer_names(london_pbf_path)
-            >>> lyr_idx_names
-            {0: 'points',
-             1: 'lines',
-             2: 'multilinestrings',
-             3: 'multipolygons',
-             4: 'other_relations'}
-
-            >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+        See examples for :meth:`pydriosm.reader.GeofabrikReader.get_pbf_layer_names`.
         """
 
         data_dir_ = self.data_dir if data_dir is None else data_dir
@@ -491,88 +446,7 @@ class BaseReader:
         :return: path(s) to shapefile(s)
         :rtype: list
 
-        **Examples**::
-
-            >>> from pydriosm.reader import GeofabrikReader
-            >>> from pyhelpers.dirs import delete_dir
-            >>> import os
-
-            >>> gfr = GeofabrikReader()
-
-            >>> subrgn_name = 'london'
-            >>> file_format = ".shp"
-            >>> dat_dir = "tests\\osm_data"
-
-            >>> # Try to get the shapefiles' pathnames
-            >>> london_shp_path = gfr.get_shp_pathname(subregion_name=subrgn_name, data_dir=dat_dir)
-            >>> london_shp_path  # An empty list if no data is available
-            []
-
-            >>> # Download the shapefiles of London
-            >>> path_to_london_shp_zip = gfr.downloader.download_data(
-            ...     subrgn_name, file_format, dat_dir, verbose=True, ret_download_path=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater London
-            ? [No]|Yes: yes
-            Downloading "greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\" ... Done.
-
-            >>> # Extract the downloaded .zip file
-            >>> gfr.SHP.unzip_shp_zip(path_to_london_shp_zip[0], verbose=True)
-            Extracting "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
-
-            >>> # Try again to get the shapefiles' pathnames
-            >>> london_shp_path = gfr.get_shp_pathname(subrgn_name, data_dir=dat_dir)
-            >>> len(london_shp_path) > 1
-            True
-
-            >>> # Get the file path of 'railways' shapefile
-            >>> lyr_name = 'railways'
-            >>> railways_shp_path = gfr.get_shp_pathname(subrgn_name, lyr_name, data_dir=dat_dir)
-            >>> len(railways_shp_path)
-            1
-            >>> railways_shp_path = railways_shp_path[0]
-            >>> os.path.relpath(railways_shp_path)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\gis_osm_railways_fr...
-
-            >>> # Get/save shapefile data of features labelled 'rail' only
-            >>> feat_name = 'rail'
-            >>> railways_shp = gfr.SHP.read_layer_shps(
-            ...     railways_shp_path, feature_names=feat_name, save_feat_shp=True)
-            >>> railways_shp.head()
-                osm_id  code  ...                                        coordinates shape_type
-            0    30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
-            3   101511  6101  ...  [(-0.2119027, 51.5241906), (-0.2108059, 51.523...          3
-            5   361978  6101  ...  [(-0.0298545, 51.6619398), (-0.0302322, 51.659...          3
-            6  2370155  6101  ...  [(-0.3379005, 51.5937776), (-0.3367807, 51.593...          3
-            7  2526598  6101  ...  [(-0.1886021, 51.3602632), (-0.1884216, 51.360...          3
-            [5 rows x 9 columns]
-
-            >>> # Get the file path to the data of 'rail'
-            >>> rail_shp_path = gfr.get_shp_pathname(subrgn_name, lyr_name, feat_name, dat_dir)
-            >>> len(rail_shp_path)
-            1
-            >>> rail_shp_path = rail_shp_path[0]
-            >>> os.path.relpath(rail_shp_path)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\railways\\rail.shp'
-
-            >>> # Retrieve the data of 'rail' feature
-            >>> railways_rail_shp = gfr.SHP.read_layer_shps(rail_shp_path)
-            >>> railways_rail_shp.head()
-                osm_id  code  ...                                        coordinates shape_type
-            0    30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
-            1   101511  6101  ...  [(-0.2119027, 51.5241906), (-0.2108059, 51.523...          3
-            2   361978  6101  ...  [(-0.0298545, 51.6619398), (-0.0302322, 51.659...          3
-            3  2370155  6101  ...  [(-0.3379005, 51.5937776), (-0.3367807, 51.593...          3
-            4  2526598  6101  ...  [(-0.1886021, 51.3602632), (-0.1884216, 51.360...          3
-            [5 rows x 9 columns]
-
-            >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+        See examples for :meth:`pydriosm.reader.GeofabrikReader.get_shp_pathname`.
         """
 
         osm_file_format, shp_file_ext = ".shp.zip", ".shp"
@@ -601,7 +475,7 @@ class BaseReader:
                 else:
                     ft_name = "_".join(list(feature_name))
                 pat = re.compile(f"{pat_}_{ft_name}{shp_file_ext}")
-                lookup = glob.glob(os.path.join(shp_dir, layer_name_, f"*{shp_file_ext}"))
+                lookup = glob.glob(os.path.join(shp_dir, f"*{shp_file_ext}"))
 
             path_to_osm_shp_file = [f for f in lookup if re.search(pat, f)]
 
