@@ -11,6 +11,7 @@ import re
 import shutil
 import zipfile
 
+import numpy as np
 import pandas as pd
 import shapefile as pyshp
 import shapely.geometry
@@ -415,9 +416,9 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         extract_dir, layer_names_ = _unzip_prep(
@@ -581,9 +582,9 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         if engine in {'geopandas', 'gpd'}:
@@ -609,6 +610,9 @@ class SHP:
                 # shp_data.drop(columns=shape_geom_colnames, inplace=True)
             else:
                 shp_data = pd.concat([shp_data, shape_geom], axis=1)
+
+        object_cols = shp_data.select_dtypes(include=['object', 'str']).columns
+        shp_data[object_cols] = shp_data[object_cols].replace({np.nan: None})
 
         return shp_data
 
@@ -655,13 +659,15 @@ class SHP:
         """
 
         dtype_shp_type = {
-            'object': 'C',
-            'int64': 'N',
+            'object': 'C',  # Character
+            'str': 'C',
+            'int64': 'N',  # Numeric
             'int32': 'N',
-            'float64': 'F',
+            'float64': 'F',  # Float
             'float32': 'F',
-            'bool': 'L',
-            'datetime64': 'D',
+            'bool': 'L',  # Logical
+            'datetime64': 'D',  # Date
+            'datetime64[ns]': 'D',  # Explicit pandas datetime
         }
 
         fields = []
@@ -672,9 +678,10 @@ class SHP:
             except TypeError:
                 max_size = data[field_name].astype(str).map(len).max()
 
+            shp_type = dtype_shp_type.get(dtype.name, 'C')
             decimal = decimal_precision if 'float' in dtype.name else 0
 
-            fields.append((field_name, dtype_shp_type[dtype.name], max_size, decimal))
+            fields.append((field_name, shp_type, int(max_size), decimal))
 
         return fields
 
@@ -779,9 +786,9 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         filename_ = os.path.basename(write_to) if shp_filename is None else copy.copy(shp_filename)
@@ -795,7 +802,7 @@ class SHP:
             key_column_names = ['coordinates', 'shape_type']
             dat = data.copy()
 
-            if 'geometry' in data:
+            if 'geometry' in data.columns:
                 coords_and_shape_type = pd.DataFrame(
                     dat['geometry'].map(cls._convert_to_coords_and_shape_type).to_list(),
                     columns=key_column_names, index=dat.index)
@@ -807,11 +814,16 @@ class SHP:
             shape_type = dat['shape_type'].unique()[0]
 
             with pyshp.Writer(target=write_to_, shapeType=shape_type, autoBalance=True) as w:
-                w.fields = cls._specify_pyshp_fields(
+                field_info_list = cls._specify_pyshp_fields(
                     data=dat, field_names=field_names, decimal_precision=decimal_precision)
 
+                for f in field_info_list:
+                    w.field(*f)
+
                 for i in dat.index:
-                    w.record(*dat.loc[i, field_names].to_list())
+                    rec_list = dat.loc[i, field_names].values.tolist()
+                    rec_list = [val.item() if hasattr(val, 'item') else val for val in rec_list]
+                    w.record(*rec_list)
 
                     # s = pyshp.Shape(shapeType=w.shapeType, points=dat.loc[i, 'coordinates'])
                     coordinates = dat.loc[i, 'coordinates']
@@ -920,9 +932,8 @@ class SHP:
                 cls.write_to_shapefile(data=dat, write_to=feat_shp_pathname)
             else:
                 gpd = _check_dependencies('geopandas')
-                assert isinstance(dat, gpd.GeoDataFrame)
                 # os.makedirs(os.path.dirname(feat_shp_pathnames), exist_ok=True)
-                dat.to_file(
+                gpd.GeoDataFrame(dat).to_file(
                     feat_shp_pathname, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
 
             feat_shp_pathnames.append(feat_shp_pathname)
@@ -1017,9 +1028,9 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(dwnld_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         lyr_shp_pathnames = [shp_pathnames] if isinstance(shp_pathnames, str) else shp_pathnames
@@ -1158,7 +1169,7 @@ class SHP:
         paths_to_temp_files = []
 
         for subregion_name, path_to_extract_dir in zip(subrgn_names_, path_to_extract_dirs):
-            orig_filename_list = glob.glob1(path_to_extract_dir, f"*_{layer_name}_*")
+            orig_filename_list = glob.glob(f"*_{layer_name}_*", root_dir=path_to_extract_dir)
 
             for orig_filename in orig_filename_list:
                 orig = os.path.join(path_to_extract_dir, orig_filename)
@@ -1319,9 +1330,9 @@ class SHP:
 
             >>> # Delete the test data directory
             >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
 
         .. seealso::
 
@@ -1384,7 +1395,7 @@ class SHP:
 
             if verbose:
                 m_rel_path = check_relative_pathname(path_to_merged_dir)
-                print(f"\t\tFind the merged shapefile at \"{m_rel_path}\\\".")
+                print(f"    Find the merged shapefile at \"{m_rel_path}\".")
 
             if ret_shp_pathname:
                 path_to_merged_shp = glob.glob(os.path.join(f"{path_to_merged_dir}*", "*.shp"))
