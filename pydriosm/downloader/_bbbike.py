@@ -643,10 +643,10 @@ class BBBikeDownloader(BaseDownloader):
             False
             >>> # Download the PBF data of Birmingham (to the default directory)
             >>> bbd.download_data(subregion_name, osm_file_format, data_dir, verbose=True)
-            To download data in the format '.shp.zip' for the following geographic (sub)region(s):
-              "Birmingham"
+            Proceed to download data in the format '.shp.zip' for the following geographic (sub...
+                "Birmingham"
               to "./tests/osm_data/birmingham/"
-            ? [No]|Yes: >? yes
+            ? [No]|Yes: yes
             Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.0M/79.0M | 949kB/s |...
               Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
             >>> bbd.file_exists(subregion_name, osm_file_format, data_dir)
@@ -721,8 +721,8 @@ class BBBikeDownloader(BaseDownloader):
             >>> subregion_name = 'London'
             >>> osm_file_format = "pbf"
             >>> bbd.download_data(subregion_name, osm_file_format, verbose=True)
-            To download data in the format '.pbf' for the following geographic (sub)region(s):
-              "London"
+            Proceed to download data in the format '.pbf' for the following geographic (sub)reg...
+                "London"
               to "./osm_data/bbbike/london/"
             ? [No]|Yes: yes
             Downloading "London.osm.pbf" 100%|██████████| 188M/188M | 1.06MB/s | ETA: 00:00
@@ -742,9 +742,9 @@ class BBBikeDownloader(BaseDownloader):
             >>> download_paths = bbd.download_data(
             ...     subregion_names, osm_file_format, download_dir, verbose=2,
             ...     ret_download_path=True)
-            To download data in the formats ('.shp.zip', '.pbf') for the following geographic (...
-              "Birmingham"
-              "Leeds"
+            Proceed to download data in the formats ('.shp.zip', '.pbf') for the following geog...
+                "Birmingham"
+                "Leeds"
               to "./tests/osm_data/"
             ? [No]|Yes: yes
             Downloading "Leeds.osm.shp.zip" to "./tests/osm_data/leeds/" ... Done.
