@@ -118,24 +118,24 @@ class BaseDownloader:
         """
         Compose a short message to be printed for confirmation.
 
-        :param data_name: name of the prepacked data, defaults to ``'<data_name>'``
+        :param data_name: name of the prepacked data. Defaults to ``'<data_name>'``.
         :type data_name: str
-        :param file_path: pathname of the prepacked data file, defaults to ``"<file_path>"``
-        :type file_path: str | os.PathLike[str]
-        :param update: whether to (check on and) update the prepacked data, defaults to ``False``
+        :param file_path: pathname of the prepacked data file. Defaults to ``"<file_path>"``.
+        :type file_path: str | os.PathLike
+        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``.
         :type update: bool
-        :param note: additional message, defaults to ``""``
+        :param note: additional message. Defaults to ``""``.
         :type note: str
-        :return: a short message to be printed for confirmation
+        :return: a short message to be printed for confirmation.
         :rtype: str
 
         **Examples**::
 
             >>> from pydriosm.downloader._base import BaseDownloader
             >>> BaseDownloader.format_confirmation_prompt()
-            'Proceed to retrieve/compile data of <data_name>\n?'
+            'Proceed to retrieve/compile data of <data_name>\\n?'
             >>> BaseDownloader.format_confirmation_prompt(update=True)
-            'Proceed to update the data of <data_name>\n?'
+            'Proceed to update the data of <data_name>\\n?'
         """
 
         action = "update the" if (os.path.exists(file_path) or update) else "retrieve/compile"
@@ -866,7 +866,7 @@ class BaseDownloader:
             else:
                 action_, dwnld_list_, prep = "download/update the", subregion_names_.copy(), "to/in"
 
-        print_download_list = "\n  ".join([f'"{x}"' for x in dwnld_list_])
+        print_download_list = "\n\t".join([f'"{x}"' for x in dwnld_list_])
 
         if any(x is None for x in file_paths):
             download_dir_ = ""
@@ -879,7 +879,7 @@ class BaseDownloader:
 
         confirmation_prompt = \
             f"Proceed to {action_} {file_fmt_msg} for the following geographic (sub)region(s): " \
-            f"\n  {print_download_list}{download_dir_}\n?"
+            f"\n\t{print_download_list}{download_dir_}\n?"
 
         return subregion_names_, file_formats_, cfm_req_, confirmation_prompt, existing_file_paths
 
@@ -911,7 +911,7 @@ class BaseDownloader:
                 self.download_dir = download_dir_
 
     def _download_data(self, url, path_to_file, interval=0.5, verbose=False, raise_error=False,
-                       print_state="Downloading", pbar_color='green', print_wrap_limit=75,
+                       print_state="Downloading", pbar_color='green', print_wrap_limit=None,
                        verify_download_dir=True, **kwargs):
         # noinspection PyShadowingNames
         """
