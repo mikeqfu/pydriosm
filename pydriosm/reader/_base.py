@@ -727,7 +727,7 @@ class BaseReader:
             _print_failure_message(e, prefix="Failed. Error:")
 
     def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
-                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
         """
         Read a .shp.zip data file of a geographic (sub)region.
@@ -747,7 +747,7 @@ class BaseReader:
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
         :param download: whether to ask for confirmation
-            before starting to download a file, defaults to ``True``
+            before starting to download a file, defaults to ``False``
         :type download: bool
         :param pickle_it: whether to save the .shp data as a pickle file, defaults to ``False``
         :type pickle_it: bool
@@ -812,6 +812,12 @@ class BaseReader:
                     osm_file_format=osm_file_format, data_dir=data_dir, update=update,
                     download=download, verbose=verbose)
 
+                if (not os.path.isdir(os.path.dirname(shp_pathname_)) and
+                        not os.path.isfile(shp_zip_pathname)):
+                    raise FileNotFoundError(
+                        f'The shapefile "{os.path.basename(shp_zip_pathname)}" is not available.\n'
+                        f'  Set `download=True` to download it.')
+
                 if len(layer_name_list) > 0:
                     shp_pathnames = [
                         glob.glob(shp_pathname_.format(layer_name))
@@ -849,7 +855,7 @@ class BaseReader:
             it refers to the directory specified by the corresponding downloader
         :type data_dir: str | None
         :param download: whether to download/update the PBF data file of the given subregion,
-            if it is not available at the specified path, defaults to ``True``
+            if it is not available at the specified path, defaults to ``False``
         :type download: bool
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
