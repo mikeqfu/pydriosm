@@ -10,38 +10,47 @@ from pydriosm.errors import MethodNotAvailableError
 
 class Downloader(BaseDownloader):
     """
-
+    A wrapper of :class:`~pydriosm.downloader.GeofabrikDownloader` and
+    :class:`~pydriosm.downloader.BBBikeDownloader`.
     """
 
+    #: A dictionary of downloaders.
     SOURCES: dict = {
         "geofabrik": GeofabrikDownloader,
         "bbbike": BBBikeDownloader,
     }
 
+    #: Homepage URL.
+    URL: str = 'https://www.openstreetmap.org/'
+
     def __init__(self, data_source='geofabrik', download_dir=None, update=False, **kwargs):
         """
-
-        :param data_source:
+        :param data_source: Name of data source.
         :type data_source: str
 
-        :ivar downloader:
+        :ivar downloader: An instance of source-specific downloader.
         :vartype downloader: BaseDownloader | GeofabrikDownloader | BBBikeDownloader | None
-        :ivar data_source:
+        :ivar data_source: Name of data source.
         :vartype source_name: str
 
         **Examples**::
 
             >>> from pydriosm.downloader import Downloader
             >>> downloader = Downloader()
-            >>> downloader.get_download_index()
-
+            >>> downloader.get_download_index().head()
+                        id  ...                                            updates
+            0  afghanistan  ...  https://download.geofabrik.de/asia/afghanistan...
+            1       africa  ...       https://download.geofabrik.de/africa-updates
+            2      albania  ...  https://download.geofabrik.de/europe/albania-u...
+            3      alberta  ...  https://download.geofabrik.de/north-america/ca...
+            4      algeria  ...  https://download.geofabrik.de/africa/algeria-u...
+            [5 rows x 12 columns]
             >>> downloader.set_source('bbbike')
             >>> downloader.get_download_index()
-
-            >>> downloader.get_download_index(raise_error=True)
             Traceback (most recent call last):
                 ...
-            AttributeError: The '.get_download_index()' method is not available for 'BBBike...
+            pydriosm.errors.MethodNotAvailableError:
+              The '.get_download_index()' method is not available for 'BBBikeDownloader' (for '...
         """
 
         super().__init__()  # Ensure base class initialization
@@ -54,17 +63,24 @@ class Downloader(BaseDownloader):
 
     def set_source(self, data_source, download_dir=None, update=False, **kwargs):
         """
+        Specify which source to be used.
 
-        :param data_source:
-        :param download_dir:
-        :param update:
-        :param kwargs:
-        :return:
+        :param data_source: Name of data source.
+        :type data_source: str
+        :param download_dir: The path to a directory for storing the downloaded data files.
+        :type download_dir: str | None
+        :param update: If ``True``, update the data catalogue for the source-specific downloader
+            instance. Defaults to ``False``.
+        :type update: bool
+        :param kwargs: Additional parameters passed to the source-specific downloader instance.
 
         **Examples**::
 
             >>> from pydriosm.downloader import Downloader
             >>> downloader = Downloader()
+            >>> downloader.set_source('geofabrik')
+            >>> downloader.NAME
+            'Geofabrik'
         """
 
         try:
@@ -75,7 +91,7 @@ class Downloader(BaseDownloader):
 
             self.data_source = data_source.lower()
 
-            self.downloader = self.SOURCES[self.data_source](
+            self.downloader = self.SOURCES.get(self.data_source)(
                 download_dir=download_dir, update=update, **kwargs)
 
             for var_name in self.downloader.__class__.__annotations__ | self.downloader.__dict__:
@@ -104,6 +120,58 @@ class Downloader(BaseDownloader):
 
     def get_download_index(self, update=False, confirmation_required=True, verbose=False,
                            raise_error=True, **kwargs):
+        # noinspection PyShadowingNames
+        """
+        Get the official index of downloads for all available geographic (sub)regions.
+
+        Similar to the method :meth:`~pydriosm.downloader.GeofabrikDownloader.get_catalogue`.
+
+        :param update: whether to (check on and) update the prepacked data, defaults to ``False``
+        :type update: bool
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
+        :type confirmation_required: bool
+        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :type verbose: bool | int
+        :param raise_error: Whether to raise the provided exception;
+            if ``raise_error=False`` (default), the error will be suppressed.
+        :type raise_error: bool
+        :return: the official index of all downloads
+        :rtype: pandas.DataFrame | None
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import Downloader
+            >>> downloader = Downloader()
+            >>> download_index = downloader.get_download_index()
+            >>> type(download_index)
+            pandas.core.frame.DataFrame
+            >>> download_index.shape
+            (512, 12)
+            >>> download_index.head()
+                        id  ...                                            updates
+            0  afghanistan  ...  https://download.geofabrik.de/asia/afghanistan...
+            1       africa  ...       https://download.geofabrik.de/africa-updates
+            2      albania  ...  https://download.geofabrik.de/europe/albania-u...
+            3      alberta  ...  https://download.geofabrik.de/north-america/ca...
+            4      algeria  ...  https://download.geofabrik.de/africa/algeria-u...
+            [5 rows x 13 columns]
+            >>> download_index.columns.to_list()
+            ['id',
+             'parent',
+             'iso3166-1:alpha2',
+             'name',
+             'iso3166-2',
+             'geometry',
+             '.osm.pbf',
+             '.osm.bz2',
+             '.shp.zip',
+             'pbf-internal',
+             'history',
+             'taginfo',
+             'updates']
+        """
+
         method_name = self.get_download_index.__name__
 
         if hasattr(self.downloader, method_name):
@@ -119,6 +187,70 @@ class Downloader(BaseDownloader):
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
     def get_subregion_table(self, url, verbose=False, raise_error=True):
+        # noinspection PyShadowingNames
+        """
+        Get download information of all geographic (sub)regions on a web page.
+
+        :param url: URL of a subregion's web page
+        :type url: str
+        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :type verbose: bool | int
+        :param raise_error: Whether to raise the provided exception;
+            if ``raise_error=False`` (default), the error will be suppressed.
+        :type raise_error: bool
+        :return: download information of all available subregions on the given ``url``
+        :rtype: pandas.DataFrame | None
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import Downloader
+            >>> downloader = Downloader()
+            >>> # Download information on the homepage
+            >>> subregion_table = downloader.get_subregion_table(url=downloader.URL)
+            >>> subregion_table
+                           subregion  ... .osm.bz2
+            0                 Africa  ...     None
+            1             Antarctica  ...     None
+            2                   Asia  ...     None
+            3  Australia and Oceania  ...     None
+            4        Central America  ...     None
+            5                 Europe  ...     None
+            6          North America  ...     None
+            7          South America  ...     None
+            [8 rows x 6 columns]
+            >>> subregion_table.columns.to_list()
+            ['subregion',
+             'subregion-url',
+             '.osm.pbf',
+             '.osm.pbf-size',
+             '.shp.zip',
+             '.osm.bz2']
+            >>> # Download information about 'Great Britain'
+            >>> url = 'https://download.geofabrik.de/europe/united-kingdom.html'
+            >>> subregion_table = downloader.get_subregion_table(url)
+            >>> subregion_table
+                      subregion  ... .osm.bz2
+            0           Bermuda  ...     None
+            1           England  ...     None
+            2  Falkland Islands  ...     None
+            3          Scotland  ...     None
+            4             Wales  ...     None
+            [5 rows x 6 columns]
+            >>> # Download information about 'Antarctica'
+            >>> url = 'https://download.geofabrik.de/antarctica.html'
+            >>> subregion_table = downloader.get_subregion_table(url, verbose=True)
+            Compiling a subregion list of "Antarctica" ... Failed.
+              No data is available for 'Antarctica'.
+            >>> subregion_table is None
+            True
+            >>> # To get more information about the above failure, set `verbose=2`
+            >>> subregion_table = downloader.get_subregion_table(url, verbose=2, raise_error=False)
+            Compiling a subregion list of "Antarctica" ... Failed.
+              No data is available for 'Antarctica'.
+              Errors: 'NoneType' object has no attribute 'empty'.
+            >>> subregion_table is None
+            True
+        """
         method_name = self.get_subregion_table.__name__
 
         if hasattr(self.downloader, method_name):
@@ -133,6 +265,60 @@ class Downloader(BaseDownloader):
 
     def get_continent_tables(self, update=False, confirmation_required=True, verbose=False,
                              raise_error=True, **kwargs):
+        """
+        Get download catalogues for each continent.
+
+        :param update: whether to (check on and) update the prepacked data, defaults to ``False``
+        :type update: bool
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
+        :type confirmation_required: bool
+        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :type verbose: bool | int
+        :param raise_error: Whether to raise the provided exception;
+            if ``raise_error=False`` (default), the error will be suppressed.
+        :type raise_error: bool
+        :return: download catalogues for each continent
+        :rtype: dict | None
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import Downloader
+            >>> downloader = Downloader()
+            >>> # Download information of subregions for each continent
+            >>> continent_tables = downloader.get_continent_tables()
+            >>> type(continent_tables)
+            dict
+            >>> list(continent_tables.keys())
+            ['Africa',
+             'Antarctica',
+             'Asia',
+             'Australia and Oceania',
+             'Central America',
+             'Europe',
+             'North America',
+             'South America']
+            >>> # Information about the data of subregions in Asia
+            >>> asia_table = continent_tables['Asia']
+            >>> asia_table.shape
+            (40, 6)
+            >>> asia_table.head()
+                 subregion  ... .osm.bz2
+            0  Afghanistan  ...     None
+            1      Armenia  ...     None
+            2   Azerbaijan  ...     None
+            3   Bangladesh  ...     None
+            4       Bhutan  ...     None
+            [5 rows x 6 columns]
+            >>> asia_table.columns.to_list()
+            ['subregion',
+             'subregion-url',
+             '.osm.pbf',
+             '.osm.pbf-size',
+             '.shp.zip',
+             '.osm.bz2']
+        """
+
         method_name = self.get_continent_tables.__name__
 
         if hasattr(self.downloader, method_name):
@@ -149,10 +335,55 @@ class Downloader(BaseDownloader):
 
     def get_region_subregion_tiers(self, update=False, confirmation_required=True, verbose=False,
                                    raise_error=True):
+        """
+        Get region-subregion tier and all (sub)regions that have no subregions.
+
+        This includes all geographic (sub)regions for which data of subregions is unavailable.
+
+        :param update: whether to (check on and) update the prepacked data, defaults to ``False``
+        :type update: bool
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
+        :type confirmation_required: bool
+        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :type verbose: bool | int
+        :param raise_error: Whether to raise the provided exception;
+            if ``raise_error=False`` (default), the error will be suppressed.
+        :type raise_error: bool
+        :return: region-subregion tier and all (sub)regions that have no subregions
+        :rtype: tuple[dict, list] | tuple[None, None]
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import Downloader
+            >>> downloader = Downloader()
+            >>> # region-subregion tiers, and all regions that have no subregions
+            >>> region_subregion_tiers, having_no_subregions = downloader.get_region_subregion_tiers()
+            >>> type(region_subregion_tiers)
+            dict
+            >>> # Keys of the region-subregion tier
+            >>> list(region_subregion_tiers)
+            ['Africa',
+             'Antarctica',
+             'Asia',
+             'Australia and Oceania',
+             'Central America',
+             'Europe',
+             'North America',
+             'South America']
+            >>> type(having_no_subregions)
+            list
+            >>> len(having_no_subregions)
+            484
+            >>> # Example: five regions that have no subregions
+            >>> having_no_subregions[0:5]
+            ['Antarctica', 'Algeria', 'Angola', 'Benin', 'Botswana']
+        """
+
         method_name = self.get_region_subregion_tiers.__name__
 
         if hasattr(self.downloader, method_name):
-            return self.downloader.get_continent_tables(
+            return self.downloader.get_region_subregion_tiers(
                 update=update,
                 confirmation_required=confirmation_required,
                 verbose=verbose,
@@ -492,7 +723,7 @@ class Downloader(BaseDownloader):
             >>> subregion_name, osm_file_format = 'london', ".pbf"
             >>> pathname, filename = downloader.get_default_pathname(subregion_name, osm_file_format)
             >>> os.path.relpath(os.path.dirname(pathname))
-            'osm_data\\geofabrik\\europe\\great-britain\\england\\greater-london'
+            'osm_data\\geofabrik\\europe\\united-kingdom\\england\\greater-london'
             >>> filename
             'greater-london-latest.osm.pbf'
         """
@@ -550,7 +781,7 @@ class Downloader(BaseDownloader):
             list
             >>> # Names of subregions of Great Britain
             >>> gb_subrgn_names = downloader.get_subregions('united kingdom')
-            >>> len(gb_subrgn_names) == 3
+            >>> len(gb_subrgn_names) == 5
             True
             >>> # Names of all subregions of Great Britain's subregions
             >>> gb_subrgn_names_ = downloader.get_subregions('united kingdom', deep=True)
@@ -600,7 +831,9 @@ class Downloader(BaseDownloader):
 
             >>> from pydriosm.downloader import Downloader
             >>> import os
+
             >>> downloader = Downloader()
+
             >>> subregion_name = 'london'
             >>> osm_file_format = ".pbf"
 
@@ -673,6 +906,7 @@ class Downloader(BaseDownloader):
 
             >>> from pydriosm.downloader import Downloader
             >>> import os
+
             >>> downloader = Downloader()
 
             >>> # valid subregion name, filename, download url and absolute file path
@@ -697,8 +931,8 @@ class Downloader(BaseDownloader):
             >>> os.path.relpath(os.path.dirname(file_pathname2))
             'tests\\osm_data\\greater-london'
 
-            >>> gfd_ = GeofabrikDownloader(download_dir=download_dir)
-            >>> info_3 = gfd_.get_valid_download_info(subregion_name, osm_file_format)
+            >>> downloader_ = Downloader(download_dir=download_dir)
+            >>> info_3 = downloader_.get_valid_download_info(subregion_name, osm_file_format)
             >>> _, _, _, file_pathname3 = info_3
             >>> os.path.relpath(os.path.dirname(file_pathname3))
             'tests\\osm_data\\europe\\united-kingdom\\england\\greater-london'
@@ -751,18 +985,20 @@ class Downloader(BaseDownloader):
             >>> from pydriosm.downloader import Downloader
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
+
             >>> downloader = Downloader(download_dir="tests/osm_data")
 
             >>> # Download the PBF data of London (to the default directory)
             >>> subregion_name = 'london'
             >>> osm_file_format = ".pbf"
             >>> downloader.download_data(subregion_name, osm_file_format, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                Greater London
-            ? [No]|Yes: yes
-            Downloading "greater-london-latest.osm.pbf" 100%|██████████| 111M/111M | 1.07...
-                Saving "greater-london-latest.osm.pbf" ...
-                    to "./tests/osm_data/europe/united-kingdom/england/greater-london/" ... Done.
+            Proceed to download data in the format '.osm.pbf' for the following geographic (sub...
+              "Greater London"
+              to "./tests/osm_data/europe/united-kingdom/england/greater-london/"
+            ? [No]|Yes: >? yes
+            Downloading "greater-london-latest.osm.pbf" 100%|██████████| 123M/123M | 26.8...
+              Saving "greater-london-latest.osm.pbf" ...
+                to "./tests/osm_data/europe/united-kingdom/england/greater-london/" ... Done.
             >>> # Check whether the PBF data file exists; `ret_file_path` is by default `False`
             >>> pbf_exists = downloader.file_exists(subregion_name, osm_file_format)
             >>> pbf_exists  # If the data file exists at the default directory
@@ -801,6 +1037,33 @@ class Downloader(BaseDownloader):
 
     def get_bbbike_cities(self, update=False, confirmation_required=True, verbose=False,
                           raise_error=True):
+        """
+        Get the names of all the available cities.
+
+        This can be an alternative to the method
+        :meth:`~pydriosm.downloader.BBBikeDownloader.get_valid_subregion_names`.
+
+        :param update: whether to (check on and) update the prepacked data, defaults to ``False``
+        :type update: bool
+        :param confirmation_required: whether asking for confirmation to proceed,
+            defaults to ``True``
+        :type confirmation_required: bool
+        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :type verbose: bool | int
+        :param raise_error: Whether to raise the provided exception;
+            if ``raise_error=False`` (default), the error will be suppressed.
+        :type raise_error: bool
+        :return: list of names of cities available on BBBike free download server
+        :rtype: list | None
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import Downloader
+            >>> downloader = Downloader(data_source='bbbike')
+            >>> bbbike_cities_names = downloader.get_bbbike_cities()
+            >>> type(bbbike_cities_names)
+            list
+        """
 
         method_name = self.get_bbbike_cities.__name__
 
@@ -956,7 +1219,7 @@ class Downloader(BaseDownloader):
             >>> subregion_name = 'birmingham'
             >>> # A download catalogue for Leeds
             >>> bham_catalogue = downloader.get_sub_catalogue(subregion_name, verbose=True)
-            To retrieve/compile data of a download catalogue for "Birmingham"
+            Proceed to retrieve/compile data of a download catalogue for "Birmingham"
             ? [No]|Yes: yes
             Retrieving/compiling the data ... Done.
             >>> bham_catalogue.head()
@@ -1047,14 +1310,15 @@ class Downloader(BaseDownloader):
             >>> download_dir = "tests/osm_data"
             >>> downloader.download_data(
             ...     subregion_names, osm_file_format, download_dir, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                "Rutland"
-                "Isle of Wight"
+            Proceed to download data in the format '.osm.pbf' for the following geographic (sub...
+              "Isle of Wight"
+              "Rutland"
+              to "./tests/osm_data/"
             ? [No]|Yes: yes
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 2.16MB/s ...
-                Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
-            Downloading "isle-of-wight-latest.osm.pbf" 100%|██████████| 8.30M/8.30M | 121...
-                Saving "isle-of-wight-latest.osm.pbf" to "./tests/osm_data/isle-of-wight/" ... ...
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 5.56MB/s ...
+              Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
+            Downloading "isle-of-wight-latest.osm.pbf" 100%|██████████| 8.83M/8.83M | 15....
+              Saving "isle-of-wight-latest.osm.pbf" to "./tests/osm_data/isle-of-wight/" ... Done.
             >>> len(downloader.data_paths)
             2
             >>> for fp in downloader.data_paths: print(os.path.relpath(fp))  # (on Windows)
@@ -1067,12 +1331,13 @@ class Downloader(BaseDownloader):
             ...     subregion_names, osm_file_format, download_dir, verbose=True,
             ...     ret_download_path=True)
             "rutland-latest.osm.pbf" already exists in "./tests/osm_data/rutland/".
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                "West Yorkshire"
+            Proceed to download data in the format '.osm.pbf' for the following geographic (sub...
+              "West Yorkshire"
+              to "./tests/osm_data/"
             ? [No]|Yes: yes
-            Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 45.2M/45.2M | 29...
-                Saving "west-yorkshire-latest.osm.pbf" ...
-                    to "./tests/osm_data/west-yorkshire/" ... Done.
+            Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 50.6M/50.6M | 27...
+              Saving "west-yorkshire-latest.osm.pbf" ...
+                to "./tests/osm_data/west-yorkshire/" ... Done.
             >>> len(downloader.data_paths)  # The pathname of the newly downloaded file is added
             3
             >>> len(download_paths)
@@ -1085,15 +1350,16 @@ class Downloader(BaseDownloader):
             ...     subregion_names, osm_file_format, download_dir, update=True, verbose=True)
             "rutland-latest.osm.pbf" already exists in "./tests/osm_data/rutland/".
             "west-yorkshire-latest.osm.pbf" already exists in "./tests/osm_data/west-yorkshire/".
-            To update the .osm.pbf data of the following geographic (sub)region(s):
-                "Rutland"
-                "West Yorkshire"
+            Proceed to update the data in the format '.osm.pbf' for the following geographic (s...
+              "Rutland"
+              "West Yorkshire"
+              in "./tests/osm_data/"
             ? [No]|Yes: yes
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 486kB/s |...
-                Updating "rutland-latest.osm.pbf" in "./tests/osm_data/rutland/" ... Done.
-            Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 45.2M/45.2M | 16...
-                Updating "west-yorkshire-latest.osm.pbf" ...
-                    in "./tests/osm_data/west-yorkshire/" ... Done.
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 5.81MB/s ...
+              Updating "rutland-latest.osm.pbf" in "./tests/osm_data/rutland/" ... Done.
+            Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 50.6M/50.6M | 17...
+              Updating "west-yorkshire-latest.osm.pbf" ...
+                in "./tests/osm_data/west-yorkshire/" ... Done.
 
         **Example 2**::
 
@@ -1104,10 +1370,10 @@ class Downloader(BaseDownloader):
             >>> download_paths = downloader.download_data(
             ...     subregion_names, osm_file_formats, download_dir, verbose=2,
             ...     ret_download_path=True)
-            To download data in the formats ('.shp.zip', '.pbf') for the following geographic (...
-                "Leeds"
-                "Birmingham"
-              to "./tests/osm_data/leeds/"
+            Proceed to download data in the formats ('.shp.zip', '.pbf') for the following geog...
+              "Birmingham"
+              "Leeds"
+              to "./tests/osm_data/"
             ? [No]|Yes: yes
             Downloading "Leeds.osm.shp.zip" to "./tests/osm_data/leeds/" ... Done.
             Downloading "Leeds.osm.pbf" to "./tests/osm_data/leeds/" ... Done.
