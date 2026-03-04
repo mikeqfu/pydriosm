@@ -2,6 +2,7 @@
 Read the OSM data extracts in various file formats.
 """
 
+from . import _base
 from ._bbbike import BBBikeReader
 from ._geofabrik import GeofabrikReader
 from ._pbf import PBF
