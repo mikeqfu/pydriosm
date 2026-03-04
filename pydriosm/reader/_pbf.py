@@ -2,6 +2,7 @@
 import collections
 import warnings
 
+import numpy as np
 import pandas as pd
 import shapely.geometry
 from pyhelpers._cache import _check_dependencies, _print_failure_message
@@ -217,20 +218,20 @@ class PBF:
 
                 # Whether to reformat the 'properties'
                 prop_data, prop_col_name, ot_name = None, 'properties', 'other_tags'
+
                 if parse_properties:  # Expand the dict-type 'properties'
-                    prop_data = pd.DataFrame(list(lyr_dat[prop_col_name]))
+                    prop_data = pd.DataFrame(list(lyr_dat[prop_col_name])).replace({np.nan: None})
                     if 'osm_id' in prop_data.columns:
                         # if layer_data['id'].equals(prop_data['osm_id'].astype(np.int64))
                         del prop_data['osm_id']
                     if parse_other_tags:
                         # Reformat the properties
-                        prop_data.loc[:, ot_name] = prop_data[ot_name].map(reformat_other_tags)
+                        prop_data[ot_name] = prop_data[ot_name].map(reformat_other_tags)
                 else:
                     # Whether to reformat 'other_tags'
+                    prop_data = lyr_dat[prop_col_name].replace({np.nan: None})
                     if parse_other_tags:
-                        prop_data = lyr_dat[prop_col_name].map(refresh_other_tags)
-                    else:
-                        prop_data = lyr_dat[prop_col_name]
+                        prop_data = prop_data.map(refresh_other_tags)
 
                 lyr_dat = pd.concat([lyr_dat[['id']], geom_data, prop_data], axis=1)
 
@@ -329,8 +330,7 @@ class PBF:
         layer_name = layer.GetName()
         layer_chunks = split_list(lst=[f for f in layer], num_of_sub=number_of_chunks)
 
-        list_of_layer_dat = [
-            cls._read_layer(lyr + [layer_name], **kwargs) for lyr in layer_chunks]
+        list_of_layer_dat = [cls._read_layer(lyr + [layer_name], **kwargs) for lyr in layer_chunks]
 
         if kwargs['readable']:
             layer_data = pd.concat(objs=list_of_layer_dat, axis=0, ignore_index=True)
@@ -391,6 +391,10 @@ class PBF:
         else:
             layer_data = cls._read_layer_chunkwise(
                 layer=layer, number_of_chunks=number_of_chunks, **func_args)
+
+        if isinstance(layer_data, pd.DataFrame):
+            object_cols = layer_data.select_dtypes(include=['object', 'str']).columns
+            layer_data[object_cols] = layer_data[object_cols].replace({np.nan: None})
 
         data = {layer_name: layer_data}
 
@@ -591,12 +595,12 @@ class PBF:
         gdal_configurations(**kwargs)
 
         with warnings.catch_warnings(action="ignore", category=FutureWarning):
-            f = osgeo_ogr.Open(path_to_file)
+            pbf_file = osgeo_ogr.Open(path_to_file)
 
             # Get a collection of parsed layer data
             collection_of_layer_data = [
                 cls.read_layer(
-                    layer=f.GetLayerByIndex(i),
+                    layer=pbf_file.GetLayerByIndex(i),
                     readable=readable,
                     expand=expand,
                     parse_geometry=parse_geometry,
@@ -604,7 +608,7 @@ class PBF:
                     parse_other_tags=parse_other_tags,
                     number_of_chunks=number_of_chunks
                 )
-                for i in range(f.GetLayerCount())
+                for i in range(pbf_file.GetLayerCount())
             ]
 
         # Make the output in a dictionary form:
