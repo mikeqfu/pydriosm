@@ -116,23 +116,43 @@ def validate_table_name(table_name, sub_space=''):
 
 
 def make_data_items(osm_data, schema_names):
-    if isinstance(schema_names, list):
-        schema_names_ = validate_schema_names(
-            schema_names=schema_names, schema_named_as_layer=True)
-        assert all(x in osm_data.keys() for x in schema_names)
-        data_items = zip(schema_names_, (osm_data[x] for x in schema_names_))
+    """
+    Map OSM data layers to specific schema names.
 
-    elif isinstance(schema_names, dict):
+    :param osm_data: Dictionary of OSM data where keys are layer names.
+    :type osm_data: dict
+    :param schema_names: List of layers, dict mapping schema to layer, or ``None``.
+    :type schema_names: list | dict | None
+    :return: An iterable of (schema_name, data) tuples.
+    :rtype: zip
+    :raises KeyError: If a requested layer name is missing from ``osm_data``.
+    """
+
+    # Handle the 'None' or 'All' case immediately
+    if not isinstance(schema_names, (list, dict)):
+        return osm_data.items()
+
+    # 2. Extract targets based on input type
+    if isinstance(schema_names, dict):
         # e.g. schema_names = {'schema_0': 'lines', 'schema_1': 'points'}
-        schema_names_ = validate_schema_names(
-            schema_names=schema_names.values(), schema_named_as_layer=True)
-        assert all(x in osm_data.keys() for x in schema_names_)
-        data_items = zip(schema_names.keys(), (osm_data[x] for x in schema_names_))
+        keys_to_return = schema_names.keys()
+        layer_targets = list(schema_names.values())
+    else:  # list
+        keys_to_return = layer_targets = schema_names
 
-    else:
-        data_items = osm_data.items()
+    # Validate and check keys
+    validated_layers = validate_schema_names(
+        schema_names=layer_targets,
+        schema_named_as_layer=True
+    )
 
-    return data_items
+    missing_keys = [k for k in validated_layers if k not in osm_data]
+
+    if missing_keys:
+        raise KeyError(f"The following layers are missing from osm_data: {missing_keys}")
+
+    # Construct generator
+    return zip(keys_to_return, (osm_data[layer] for layer in validated_layers))
 
 
 def preprocess_pdf_layer(layer_data, layer_name):
