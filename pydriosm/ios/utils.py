@@ -156,22 +156,50 @@ def make_data_items(osm_data, schema_names):
 
 
 def preprocess_pdf_layer(layer_data, layer_name):
+    """
+    Preprocess PBF layer data into a pandas DataFrame with WKT geometries.
+
+    :param layer_data: Layer data as a list of OGR features, a Series, or a DataFrame.
+    :type layer_data: list | pandas.Series | pandas.DataFrame
+    :param layer_name: Name of the layer for column labeling.
+    :type layer_name: str
+    :return: Processed DataFrame with serialized geometries.
+    :rtype: pandas.DataFrame
+    """
+
+    # Handle OGR Feature list
     if isinstance(layer_data, list):
         # osgeo_ogr = _check_dependency('osgeo.ogr')
         # if all(isinstance(f, osgeo_ogr.Feature) for f in layer_data):
         lyr_dat = pd.DataFrame([f.ExportToJson() for f in layer_data], columns=[layer_name])
 
     else:
-        lyr_dat = layer_data.copy()
-        if isinstance(lyr_dat, pd.Series):
-            lyr_dat = pd.DataFrame(lyr_dat)
+        # Ensure we have a DataFrame to work with
+        lyr_dat = layer_data.to_frame() if isinstance(layer_data, pd.Series) else layer_data.copy()
 
+        if lyr_dat.empty:
+            return lyr_dat
+
+        # Handle 'coordinates' column (Check for existence first)
         if 'coordinates' in lyr_dat.columns:
-            if not isinstance(lyr_dat.coordinates[0], list):
-                lyr_dat.coordinates = lyr_dat.coordinates.map(lambda x: x.wkt)
+            # Check first non-null value to avoid IndexError
+            valid_coords = lyr_dat['coordinates'].dropna()
+            if not valid_coords.empty:
+                first_val = valid_coords.iloc[0]
+                # If it's a shapely object/geometry (has .wkt) but isn't a list
+                if not isinstance(first_val, list) and hasattr(first_val, 'wkt'):
+                    lyr_dat['coordinates'] = lyr_dat['coordinates'].map(
+                        lambda x: x.wkt if hasattr(x, 'wkt') else x,
+                        na_action='ignore')
 
-        if 'geometry' in [x.name for x in lyr_dat.dtypes]:
-            geom_col_name = lyr_dat.dtypes[lyr_dat.dtypes == 'geometry'].index[0]
-            lyr_dat[geom_col_name] = lyr_dat[geom_col_name].map(lambda x: x.wkt)
+        # Handle Geometry columns
+        geom_cols = [
+            col for col in lyr_dat.columns
+            if any(hasattr(val, 'wkt') for val in lyr_dat[col].dropna().head(1))
+        ]
+        for col in geom_cols:
+            lyr_dat[col] = lyr_dat[col].map(
+                lambda x: x.wkt if hasattr(x, 'wkt') else x,
+                na_action='ignore')
 
     return lyr_dat
