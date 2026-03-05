@@ -1,0 +1,260 @@
+@media screen and (min-width: 767px) {
+    body {
+        --color-code-background: ivory !important;
+        --color-api-name: firebrick;
+        --color-api-pre-name: firebrick;
+        --color-sidebar-link-text--top-level: var(--color-foreground-secondary);
+        --color-toc-item-text--active: steelblue;
+        /*--code-font-size: var(--font-size--small--3);*/
+    }
+
+    h1 {
+        font-size: 1.65em;
+        color: var(--color-toc-item-text--active);
+    }
+
+    .content-icon-container {
+        align-items: center;
+    }
+
+    .content-icon-container .edit-this-page svg,
+    .content-icon-container .view-this-page svg {
+        display: none;
+    }
+
+    h2 {
+        font-size: 1.35em;
+        margin-bottom: 0.75em;
+        margin-top: 1.65em;
+        color: var(--color-toc-item-text--active);
+    }
+
+    h2+p {
+        margin-top: -0.5em;
+        margin-bottom: 1.5em;
+    }
+
+    ul.simple {
+        line-height: 1.2rem;
+    }
+
+    h3 {
+        font-size: 1.05em;
+    }
+
+    .content {
+        width: 47em;
+    }
+
+    footer {
+        font-size: var(--font-size--normal) !important;
+        margin-right: -0.8em;
+    }
+
+    .related-pages a.prev-page {
+        margin-left: -0.7em;
+    }
+
+    .related-pages a.next-page {
+        margin-right: -0.8em;
+    }
+
+    .bottom-of-page .icons {
+        font-size: 1.3rem;
+        gap: 0.5rem;
+    }
+
+    .toc-title {
+        font-size: large;
+    }
+
+    .toc-tree a.reference {
+        font-size: medium;
+        color: #405D72;
+    }
+
+    .toctree-wrapper.compound .caption,
+    .toctree-wrapper.compound :not(.caption)>.caption-text {
+        margin-top: 1em;
+        margin-bottom: 0.5em;
+        text-transform: none;
+        font-size: larger;
+        font-weight: 700;
+        color: var(--color-toc-item-text--active);
+    }
+
+    .sidebar-brand-text {
+        color: cadetblue;
+        font-size: 1.3rem;
+        font-weight: bold;
+    }
+
+    .sidebar-tree li {
+        font-size: initial;
+    }
+
+    .sidebar-tree li.toctree-l3 {
+        font-size: var(--font-size--small) !important;
+    }
+
+    .sidebar-tree li.toctree-l4 {
+        font-size: var(--font-size--small) !important;
+    }
+
+    .sidebar-tree .caption, .sidebar-tree :not(.caption)>.caption-text {
+        font-size: medium;
+        color: cadetblue;
+    }
+
+    .sidebar-tree .reference {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        word-break: normal;
+    }
+
+    p .sig-inline,
+    p code.literal {
+        font-size: var(--font-size--small);
+        color: chocolate;
+        font-weight: 550;
+    }
+
+    .sig-inline, code.literal {
+        font-size: var(--font-size--small);
+    }
+
+    .sig-param {
+        font-style: italic;
+        color: darkgoldenrod;
+    }
+
+    dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple)>dt {
+        font-size: medium;
+    }
+
+    dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) dd>:first-child {
+        margin-top: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    div.highlight {
+        background-color: ivory;
+        font-size: 1.1em;
+        width: 42em;
+    }
+
+    p.rubric {
+        font-size: 0.95em;
+        margin-top: 2.0em;
+        margin-bottom: -0.75em;
+        color: steelblue;
+    }
+
+    .autosummary table {
+        text-align: left;
+        vertical-align: top;
+        margin-left: 0;
+        width: auto;
+    }
+
+    .autosummary td, .autosummary th {
+        vertical-align: top;
+    }
+
+    figcaption {
+        padding-bottom: 1.75em;
+    }
+
+    dl dd p.rubric {
+        font-weight: 700;
+        margin-top: 0;
+        margin-bottom: -1.0em;
+        font-size: var(--font-size--normal);
+    }
+
+    dd p.rubric {
+        line-height: 2.0;
+    }
+
+    dl dd p strong {
+        text-transform: uppercase;
+        font-size: var(--font-size--normal);
+        font-weight: 700;
+    }
+
+    .field-list dt,
+    .option-list dt,
+    dl.footnote dt,
+    dl.glossary dt,
+    dl.simple dt,
+    dl:not([class]) dt {
+        font-weight: 700;
+        font-size: var(--font-size--normal) !important;
+        margin-top: 2.0em;
+    }
+
+    ul.simple li p strong,
+    dd dl.field-list.simple dd p strong {
+        text-transform: none;
+        font-size: unset;
+        font-weight: 500;
+        font-style: italic;
+        color: darkgoldenrod;
+    }
+
+    span.examples-colon {
+        /*color: navy;*/
+        font-weight: 700;
+    }
+
+    .admonition p.admonition-title, p.topic-title {
+        font-size: 0.95em;
+    }
+
+    .admonition p.admonition-title:before, p.topic-title:before {
+        height: 1.05rem;
+        width: 1.05rem;
+    }
+
+    div.admonition {
+        font-size: 0.95em;
+        width: 46em;
+    }
+
+    span.caption-number:after {
+       content: ": ";
+       margin-left: -0.25em;
+    }
+
+    .wy-table-responsive table td,
+    .wy-table-responsive table th {
+        white-space: normal !important;
+    }
+
+    table colgroup col {
+        width: auto !important;
+    }
+
+    .wy-table-responsive {
+        overflow: visible !important;
+    }
+
+    .wy-nav-content {
+        max-width: 110% !important;
+    }
+
+    pre.literal-block {
+        margin-top: -0.8rem;
+        width: 44.5rem;
+    }
+
+    .highlight button.copybtn {
+        height: 0.45em;
+        right: 0.15em;
+    }
+
+    sub {
+        vertical-align: super;
+    }
+}

@@ -1,0 +1,587 @@
+"""
+Read OpenStreetMap data extracts available from BBBike free download server.
+"""
+
+from pydriosm.downloader import BBBikeDownloader
+from pydriosm.reader._base import BaseReader
+
+
+class BBBikeReader(BaseReader):
+    """
+    Read `BBBike <https://download.bbbike.org/>`_ exports of OpenStreetMap data.
+    """
+
+    #: Name of the data source.
+    NAME: str = BBBikeDownloader.NAME
+    #: Full name of the data source.
+    LONG_NAME: str = BBBikeDownloader.LONG_NAME
+    #: Default download directory.
+    DEFAULT_DATA_DIR: str = BBBikeDownloader.DEFAULT_DOWNLOAD_DIR
+    #: Valid file formats.
+    FILE_FORMATS: set = BBBikeDownloader.FILE_FORMATS
+
+    def __init__(self, data_dir=None, max_tmpfile_size=None):
+        """
+        :param data_dir: (a path or a name of) a directory where a data file is;
+            if ``None`` (default), a folder ``osm_bbbike`` under the current working directory
+        :type data_dir: str | None
+        :param max_tmpfile_size: defaults to ``None``,
+            see also :func:`gdal_configurations<pydriosm.settings.gdal_configurations>`
+        :type max_tmpfile_size: int | None
+
+        :ivar BBBikeDownloader downloader: instance of the class
+            :py:class:`BBBikeDownloader<pydriosm.downloader.BBBikeDownloader>`
+        :ivar str name: name of the data resource
+        :ivar str url: url of the homepage to the BBBike free download server
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> bbr = BBBikeReader()
+            >>> bbr.NAME
+            'BBBike'
+        """
+
+        # noinspection PyTypeChecker
+        super().__init__(data_source='bbbike', data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
+
+    def get_file_path(self, subregion_name, osm_file_format, data_dir=None):
+        # noinspection PyShadowingNames
+        """
+        Get the local path to an OSM data file of a geographic (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on Geofabrik free download server
+        :type subregion_name: str
+        :param osm_file_format: file format of the OSM data available on the free download server
+        :type osm_file_format: str
+        :param data_dir: directory where the data file of the ``subregion_name`` is located/saved;
+            if ``None`` (default), the default local directory
+        :type data_dir: str | None
+        :return: path to PBF (.osm.pbf) file
+        :rtype: str | None
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> from pyhelpers.dirs import delete_dir
+            >>> import os
+            >>> bbr = BBBikeReader()
+            >>> subregion_name = 'rutland'
+            >>> osm_file_format = ".pbf"
+            >>> data_dir = "tests/osm_data"
+            >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
+            Traceback (most recent call last):
+                ...
+            pydriosm.errors.InvalidSubregionNameError:
+              `subregion_name='rutland'` -> The input of `subregion_name` is not recognizable.
+              Check the `.data_source`, or try another one instead.
+            >>> subregion_name = 'birmingham'
+            >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
+            >>> # When "Birmingham.osm.pbf" is unavailable at the data directory
+            >>> os.path.isfile(path_to_pbf)
+            False
+            >>> # Download the PBF data file of Birmingham to "./tests/osm_data/"
+            >>> bbr.downloader.download_data(
+            ...     subregion_name, osm_file_format, data_dir, verbose=True)
+            Proceed to download data in the format '.pbf' for the following geographic (sub)reg...
+              "Birmingham"
+              to "./tests/osm_data/birmingham/"
+            ? [No]|Yes: yes
+            Downloading "Birmingham.osm.pbf" 100%|██████████| 55.8M/55.8M | 15.3MB/s | ET...
+              Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
+            >>> # Check again
+            >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
+            >>> os.path.isfile(path_to_pbf)
+            True
+            >>> os.path.relpath(path_to_pbf)  # (on Windows)
+            'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
+            >>> # Delete the test data directory
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        path_to_file = super().get_file_path(
+            subregion_name=subregion_name, osm_file_format=osm_file_format, data_dir=data_dir)
+
+        return path_to_file
+
+    def get_pbf_layer_names(self, subregion_name, data_dir=None):
+        # noinspection PyShadowingNames
+        """
+        Get indices and names of all layers in the PBF data file of a given (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on Geofabrik free download server
+        :type subregion_name: str
+        :param data_dir:
+        :type data_dir:
+        :return: indices and names of each layer of the PBF data file
+        :rtype: dict
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> from pyhelpers.dirs import delete_dir
+            >>> import os
+            >>> bbr = BBBikeReader()
+            >>> # Download the PBF data of Birmingham as an example
+            >>> subregion_name = 'birmingham'
+            >>> osm_file_format = ".pbf"
+            >>> data_dir = "tests/osm_data"
+            >>> # Download the PBF data of Birmingham to "./tests/osm_data/"
+            >>> bbr.downloader.download_data(
+            ...     subregion_name, osm_file_format, data_dir, verbose=True)
+            Proceed to download data in the format '.pbf' for the following geographic (sub)reg...
+              "Birmingham"
+              to "./tests/osm_data/birmingham/"
+            ? [No]|Yes: yes
+            Downloading "Birmingham.osm.pbf" 100%|██████████| 55.8M/55.8M | 15.3MB/s | ET...
+              Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
+            >>> path_to_pbf = bbr.data_paths[0]
+            >>> os.path.relpath(path_to_pbf)
+            'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
+            >>> lyr_idx_names = bbr.get_pbf_layer_names(subregion_name)
+            >>> lyr_idx_names
+            {0: 'points',
+             1: 'lines',
+             2: 'multilinestrings',
+             3: 'multipolygons',
+             4: 'other_relations'}
+            >>> # Delete the example data and the test data directory
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        return super().get_pbf_layer_names(subregion_name=subregion_name, data_dir=data_dir)
+
+    def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
+                 parse_geometry=False, parse_properties=False, parse_other_tags=False,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
+                 rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
+        # noinspection PyShadowingNames
+        """
+        Read a PBF (.osm.pbf) data file of a geographic (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on Geofabrik free download server
+        :type subregion_name: str
+        :param data_dir: directory where the .osm.pbf data file is located/saved;
+            if ``None``, the default local directory
+        :type data_dir: str | None
+        :param readable: whether to parse each feature in the raw data, defaults to ``False``
+        :type readable: bool
+        :param expand: whether to expand dict-like data into separate columns, defaults to ``False``
+        :type expand: bool
+        :param parse_geometry: whether to represent the ``'geometry'`` field
+            in a `shapely.geometry`_ format, defaults to ``False``
+        :type parse_geometry: bool
+        :param parse_properties: whether to represent the ``'properties'`` field
+            in a tabular format, defaults to ``False``
+        :type parse_properties: bool
+        :param parse_other_tags: whether to represent a ``'other_tags'`` (of ``'properties'``)
+            in a `dict`_ format, defaults to ``False``
+        :type parse_other_tags: bool
+        :param download: whether to download/update the PBF data file of the given subregion,
+            if it is not available at the specified path, defaults to ``True``
+        :type download: bool
+        :param update: whether to check to update pickle backup (if available), defaults to ``False``
+        :type update: bool
+        :param pickle_it: whether to save the .pbf data as a pickle file, defaults to ``False``
+        :type pickle_it: bool
+        :param ret_pickle_path: (when ``pickle_it=True``)
+            whether to return a path to the saved pickle file
+        :type ret_pickle_path: bool
+        :param rm_pbf_file: whether to delete the downloaded .osm.pbf file, defaults to ``False``
+        :type rm_pbf_file: bool
+        :param chunk_size_limit: threshold (in MB) that triggers the use of chunk parser,
+            defaults to ``50``;
+            if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``,
+            it will be parsed in a chunk-wise way
+        :type chunk_size_limit: int | None
+        :param verbose: whether to print relevant information in console as the function runs,
+            defaults to ``False``
+        :type verbose: bool | int
+        :param kwargs: [optional] parameters of the method
+            :meth:`BaseReader.read_pbf()<pydriosm.reader._base.BaseReader.read_pbf>`
+        :return: dictionary of the .osm.pbf data;
+            when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
+        :rtype: dict | tuple | None
+
+        .. _`shapely.geometry`:
+            https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
+        .. _`dict`:
+            https://docs.python.org/3/library/stdtypes.html#dict
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> from pyhelpers.dirs import delete_dir
+            >>> bbr = BBBikeReader()
+            >>> subregion_name = 'Leeds'
+            >>> data_dir = "tests/osm_data"
+            >>> leeds_pbf_raw = bbr.read_pbf(subregion_name, data_dir=data_dir, verbose=True)
+            The .osm.pbf file for "Leeds" is not found.
+            >>> leeds_pbf_raw is None
+            True
+            >>> # Set `download=True`
+            >>> leeds_pbf_raw = bbr.read_pbf(
+            ...     subregion_name, data_dir=data_dir, download=True, verbose=True)
+            Downloading "Leeds.osm.pbf" 100%|██████████| 38.1M/38.1M | 18.9MB/s | ETA: 00:00
+              Saving "Leeds.osm.pbf" to "./tests/osm_data/leeds/" ... Done.
+            Reading "./tests/osm_data/leeds/Leeds.osm.pbf" ... Done.
+            >>> type(leeds_pbf_raw)
+            dict
+            >>> list(leeds_pbf_raw.keys())
+            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+            >>> pbf_raw_points = leeds_pbf_raw['points']
+            >>> type(pbf_raw_points)
+            list
+            >>> type(pbf_raw_points[0])
+            osgeo.ogr.Feature
+            >>> # (Parsing the data in this example might take up to a few minutes.)
+            >>> leeds_pbf_parsed = bbr.read_pbf(
+            ...     subregion_name, data_dir=data_dir, readable=True, expand=True,
+            ...     parse_geometry=True, parse_other_tags=True, parse_properties=True,
+            ...     verbose=True)
+            Parsing "./tests/osm_data/leeds/Leeds.osm.pbf" ... Done.
+            >>> list(leeds_pbf_parsed.keys())
+            ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+            >>> # Data of the 'multipolygons' layer
+            >>> leeds_pbf_parsed_multipolygons = leeds_pbf_parsed['multipolygons']
+            >>> leeds_pbf_parsed_multipolygons.shape
+            (481516, 26)
+            >>> leeds_pbf_parsed_multipolygons.head()
+                  id  ...                      other_tags
+            0  10595  ...                            None
+            1  10600  ...                            None
+            2  10601  ...                            None
+            3  10612  ...  {'ref:GB:uprn': '10025043089'}
+            4  10776  ...                            None
+            [5 rows x 26 columns]
+            >>> # Delete the example data and the test data directory
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+
+        .. seealso::
+
+            - Examples for the method
+              :meth:`GeofabrikReader.read_pbf()<pydriosm.reader.GeofabrikReader.read_pbf>`.
+        """
+
+        osm_pbf_data = super().read_pbf(
+            subregion_name=subregion_name, data_dir=data_dir, readable=readable, expand=expand,
+            parse_geometry=parse_geometry, parse_properties=parse_properties,
+            parse_other_tags=parse_other_tags, update=update, download=download,
+            pickle_it=pickle_it, ret_pickle_path=ret_pickle_path, rm_pbf_file=rm_pbf_file,
+            chunk_size_limit=chunk_size_limit, verbose=verbose, **kwargs)
+
+        return osm_pbf_data
+
+    def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
+                 rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
+        """
+        Read a shapefile of a geographic (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on BBBike free download server
+        :type subregion_name: str
+        :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
+            if ``None`` (default), all available layers
+        :type layer_names: str | list | None
+        :param feature_names: name of a feature, e.g. 'rail', or names of multiple features;
+            if ``None`` (default), all available features
+        :type feature_names: str | list | None
+        :param data_dir: directory where the .shp.zip data file is located/saved;
+            if ``None``, the default directory
+        :type data_dir: str | None
+        :param update: whether to check to update pickle backup (if available), defaults to ``False``
+        :type update: bool
+        :param download: whether to ask for confirmation
+            before starting to download a file, defaults to ``True``
+        :type download: bool
+        :param pickle_it: whether to save the .shp data as a pickle file, defaults to ``False``
+        :type pickle_it: bool
+        :param ret_pickle_path: (when ``pickle_it=True``)
+            whether to return a path to the saved pickle file
+        :type ret_pickle_path: bool
+        :param rm_extracts: whether to delete extracted files from the .shp.zip file,
+            defaults to ``False``
+        :type rm_extracts: bool
+        :param rm_shp_zip: whether to delete the downloaded .shp.zip file, defaults to ``False``
+        :type rm_shp_zip: bool
+        :param verbose: whether to print relevant information in console as the function runs,
+            defaults to ``False``
+        :type verbose: bool | int
+        :return: dictionary of the shapefile data, with keys and values being layer names
+            and tabular data (in the format of `geopandas.GeoDataFrame`_), respectively;
+            when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
+        :rtype: dict | collections.OrderedDict | tuple | None
+
+        .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> from pyhelpers.dirs import delete_dir
+            >>> import os
+
+            >>> bbr = BBBikeReader()
+
+            >>> subrgn_name = 'Birmingham'
+            >>> dat_dir = "tests/osm_data"
+
+            >>> bham_shp = bbr.read_shp(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=False, verbose=True)
+            The .shp.zip file for "Birmingham" is not found.
+
+            >>> # Set `download=True`
+            >>> bham_shp = bbr.read_shp(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.0M/79.0M | 28.5MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
+            Extracting "./tests/osm_data/birmingham/Birmingham.osm.shp.zip"
+              to "./tests/osm_data/birmingham/" ... Done.
+            Reading the shapefile(s) at "./tests/osm_data/birmingham/Birmingham-shp/shape/" ......
+            >>> type(bham_shp)
+            dict
+            >>> list(bham_shp.keys())
+            ['buildings',
+             'landuse',
+             'natural',
+             'places',
+             'points',
+             'railways',
+             'roads',
+             'waterways']
+
+            >>> # Data of 'railways' layer
+            >>> bham_railways_shp = bham_shp['railways']
+            >>> bham_railways_shp.shape
+            (3994, 5)
+            >>> bham_railways_shp.head()
+                osm_id  ... shape_type
+            0      740  ...          3
+            1     2148  ...          3
+            2  2950000  ...          3
+            3  3491845  ...          3
+            4  3981454  ...          3
+            [5 rows x 5 columns]
+
+            >>> # Read data of 'road' layer only from the original .shp.zip file
+            >>> # (and delete all extracts)
+            >>> lyr_name = 'roads'
+            >>> bham_roads_shp = bbr.read_shp(
+            ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir,
+            ...     rm_extracts=True, verbose=True)
+            Reading "./tests/osm_data/birmingham/Birmingham-shp/shape/roads.shp" ... Done.
+            Deleting the extracts "./tests/osm_data/birmingham/Birmingham-shp/" ... Done.
+            >>> type(bham_roads_shp)
+            dict
+            >>> list(bham_roads_shp.keys())
+            ['roads']
+            >>> bham_roads_shp[lyr_name].shape
+            (170370, 9)
+            >>> bham_roads_shp[lyr_name].head()
+               osm_id  ... shape_type
+            0      37  ...          3
+            1      38  ...          3
+            2      41  ...          3
+            3      42  ...          3
+            4      45  ...          3
+            [5 rows x 9 columns]
+
+            >>> # Read data of multiple layers and features from the original .shp.zip file
+            >>> # (and delete all extracts)
+            >>> lyr_names = ['railways', 'waterways']
+            >>> feat_names = ['rail', 'canal']
+            >>> bham_rw_rc_shp = bbr.read_shp(
+            ...     subregion_name=subrgn_name, layer_names=lyr_names, feature_names=feat_names,
+            ...     data_dir=dat_dir, rm_extracts=True, rm_shp_zip=True, verbose=True)
+            Extracting the following layer(s):
+              'railways'
+              'waterways'
+                from "./tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
+                  to "./tests/osm_data/birmingham/" ... Done.
+            Reading the shapefile(s) at "./tests/osm_data/birmingham/Birmingham-shp/shape/" ......
+            Deleting the extracts "./tests/osm_data/birmingham/Birmingham-shp/" ... Done.
+            Deleting "tests/osm_data/birmingham/Birmingham.osm.shp.zip" ... Done.
+            >>> type(bham_rw_rc_shp)
+            dict
+            >>> list(bham_rw_rc_shp.keys())
+            ['railways', 'waterways']
+
+            >>> # Data of the 'railways' layer
+            >>> bham_rw_rc_shp_railways = bham_rw_rc_shp['railways']
+            >>> bham_rw_rc_shp_railways[['type', 'name']].head()
+               type                                             name
+            0  rail                                  Cross-City Line
+            1  rail                                  Cross-City Line
+            2  rail  Derby to Birmingham (Proof House Junction) Line
+            3  rail                  Birmingham to Peterborough Line
+            4  rail          Water Orton to Park Lane Junction Curve
+
+            >>> # Data of the 'waterways' layer
+            >>> bham_rw_rc_shp_waterways = bham_rw_rc_shp['waterways']
+            >>> bham_rw_rc_shp_waterways[['type', 'name']].head()
+                 type                          name
+            2   canal  Birmingham and Fazeley Canal
+            9   canal  Birmingham and Fazeley Canal
+            10  canal      Icknield Port Loop Canal
+            11  canal     Oozells Street Loop Canal
+            12  canal  Worcester & Birmingham Canal
+
+            >>> # Delete the example data and the test data directory
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        shp_data = super().read_shp(
+            subregion_name=subregion_name, layer_names=layer_names, feature_names=feature_names,
+            data_dir=data_dir, update=update, download=download, pickle_it=pickle_it,
+            ret_pickle_path=ret_pickle_path, rm_extracts=rm_extracts, rm_shp_zip=rm_shp_zip,
+            verbose=verbose, **kwargs)
+
+        return shp_data
+
+    def read_csv_xz(self, subregion_name, data_dir=None, download=False, verbose=False, **kwargs):
+        # noinspection PyShadowingNames
+        """
+        Read a compressed CSV (.csv.xz) data file of a geographic (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on BBBike free download server
+        :type subregion_name: str
+        :param data_dir: directory where the .csv.xz data file is located/saved;
+            if ``None`` (default), the default directory
+        :type data_dir: str | None
+        :param download: whether to try to download the requisite data file if it does not exist,
+            defaults to ``True``
+        :type download: bool
+        :param verbose: whether to print relevant information in console as the function runs,
+            defaults to ``False``
+        :type verbose: bool | int
+        :return: tabular data of the .csv.xz file
+        :rtype: pandas.DataFrame | None
+
+        .. _pydriosm-BBBikeReader-read_csv_xz:
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> from pyhelpers.dirs import cd, delete_dir
+            >>> bbr = BBBikeReader()
+            >>> subregion_name = 'Leeds'
+            >>> data_dir = "tests/osm_data"
+            >>> leeds_csv_xz = bbr.read_csv_xz(subregion_name, data_dir, verbose=True)
+            The requisite data file "./tests/osm_data/leeds/Leeds.osm.csv.xz" does not exist.
+            >>> leeds_csv_xz = bbr.read_csv_xz(
+            ...     subregion_name, data_dir=data_dir, verbose=True, download=True)
+            Downloading "Leeds.osm.csv.xz" 100%|██████████| 4.08M/4.08M | 17.5MB/s | ETA:...
+              Saving "Leeds.osm.csv.xz" to "./tests/osm_data/leeds/" ... Done.
+            Parsing the data ... Done.
+            >>> leeds_csv_xz.head()
+               type      id feature  note
+            0  node  154915    None  None
+            1  node  154916    None  None
+            2  node  154919    None  None
+            3  node  154921    None  None
+            4  node  154922    None  None
+            >>> delete_dir(data_dir, verbose=True)  # Delete the downloaded .csv.xz data file
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        csv_xz_data = self.read_var_osm(
+            self.VAR.read_csv_xz, subregion_name=subregion_name, osm_file_format=".csv.xz",
+            data_dir=data_dir, download=download, verbose=verbose, **kwargs)
+
+        return csv_xz_data
+
+    def read_geojson_xz(self, subregion_name, data_dir=None, parse_geometry=False, download=False,
+                        verbose=False, **kwargs):
+        """
+        Read a .geojson.xz data file of a geographic (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on BBBike free download server
+        :type subregion_name: str
+        :param data_dir: directory where the .geojson.xz data file is located/saved;
+            if ``None`` (default), the default directory
+        :type data_dir: str | None
+        :param parse_geometry: whether to represent coordinates in a format of a geometric object,
+            defaults to ``False``
+        :type parse_geometry: bool
+        :param download: whether to try to download the requisite data file if it does not exist,
+            defaults to ``True``
+        :type download: bool
+        :param verbose: whether to print relevant information in console as the function runs,
+            defaults to ``False``
+        :type verbose: bool | int
+        :return: tabular data of the .csv.xz file
+        :rtype: pandas.DataFrame | None
+
+        .. _pydriosm-BBBikeReader-read_geojson_xz:
+
+        **Examples**::
+
+            >>> from pydriosm.reader import BBBikeReader
+            >>> from pyhelpers.dirs import cd, delete_dir
+            >>> import os
+
+            >>> bbr = BBBikeReader()
+
+            >>> subrgn_name = 'Leeds'
+            >>> dat_dir = "tests\\osm_data"
+
+            >>> leeds_geoj = bbr.read_geojson_xz(subrgn_name, dat_dir, verbose=True)
+            The requisite data file "./tests/osm_data/leeds/Leeds.osm.geojson.xz" does not exist.
+
+            >>> # Set `try_download=True`
+            >>> leeds_geoj = bbr.read_geojson_xz(subrgn_name, dat_dir, verbose=True, download=True)
+            Downloading "Leeds.osm.geojson.xz" 100%|██████████| 60.4M/60.4M | 20.7MB/s | ...
+              Saving "Leeds.osm.geojson.xz" to "./tests/osm_data/leeds/" ... Done.
+            Parsing the data ... Done.
+            >>> leeds_geoj.head()
+                                            geometry                                    properties
+            0  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+            1  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+            2  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+            3  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+            4  {'type': 'Point', 'coordinates': [...  {'highway': 'motorway_junction', 'name': ...
+
+            >>> # Set `parse_geometry` to be True
+            >>> leeds_geoj_ = bbr.read_geojson_xz(
+            ...     subrgn_name, dat_dir, parse_geometry=True, verbose=True)
+            Parsing "./tests/osm_data/leeds/Leeds.osm.geojson.xz" ... Done.
+            >>> leeds_geoj_['geometry'].head()
+            0    POINT (-1.5560511 53.6879848)
+            1       POINT (-1.34293 53.844618)
+            2     POINT (-1.517335 53.7499667)
+            3     POINT (-1.514175 53.7418444)
+            4     POINT (-1.516511 53.7256632)
+            Name: geometry, dtype: object
+
+            >>> # Delete the download directory
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        geojson_xz_data = self.read_var_osm(
+            self.VAR.read_geojson_xz, subregion_name=subregion_name, osm_file_format=".geojson.xz",
+            data_dir=data_dir, download=download, verbose=verbose, parse_geometry=parse_geometry,
+            **kwargs)
+
+        return geojson_xz_data

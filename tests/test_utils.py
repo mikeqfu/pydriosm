@@ -58,7 +58,7 @@ def test_check_json_engine(engine):
 def test_remove_osm_file(capfd):
     from pydriosm.utils import remove_osm_file
 
-    path_to_pseudo_pbf_file = os.path.join("tests\\data\\pseudo\\pseudo.osm.pbf")
+    path_to_pseudo_pbf_file = os.path.join("tests", "data", "pseudo", "pseudo.osm.pbf")
 
     remove_osm_file(path_to_pseudo_pbf_file, verbose=True)
     out, _ = capfd.readouterr()
@@ -77,11 +77,11 @@ def test_remove_osm_file(capfd):
 
     remove_osm_file(path_to_pseudo_pbf_file, verbose=True)
     out, _ = capfd.readouterr()
-    assert "Deleting" in out and path_to_pseudo_pbf_file in out
+    assert "Deleting" in out and "Done." in out
     assert not os.path.exists(path_to_pseudo_pbf_file)
 
     remove_osm_file(pseudo_dir, verbose=True)
-    assert "Deleting" in out and pseudo_dir in out
+    assert "Deleting" in out and "Done." in out
     assert not os.path.exists(pseudo_dir)
 
 

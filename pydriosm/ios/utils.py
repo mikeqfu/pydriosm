@@ -2,9 +2,11 @@
 Utilities for the :mod:`~pydriosm.ios` module.
 """
 
+import pandas as pd
 from pyhelpers.text import find_similar_str, remove_punctuation
 
-from pydriosm.reader import PBFReadParse, SHPReadParse
+from pydriosm.reader._pbf import PBF
+from pydriosm.reader._shp import SHP
 
 
 def get_default_layer_name(schema_name):
@@ -21,20 +23,18 @@ def get_default_layer_name(schema_name):
 
     **Examples**::
 
-        >>> from pydriosm.ios import get_default_layer_name
-
+        >>> from pydriosm.ios.utils import get_default_layer_name
         >>> lyr_name = get_default_layer_name(schema_name='point')
         >>> lyr_name
         'points'
-
         >>> lyr_name = get_default_layer_name(schema_name='land')
         >>> lyr_name
         'landuse'
     """
 
-    valid_layer_names = set(PBFReadParse.LAYER_GEOM.keys()).union(SHPReadParse.LAYER_NAMES)
+    valid_layer_names = set(PBF.LAYER_GEOM.keys()).union(SHP.LAYER_NAMES)
 
-    layer_name_ = find_similar_str(x=schema_name, lookup_list=valid_layer_names)
+    layer_name_ = find_similar_str(schema_name, lookup_list=valid_layer_names)
 
     return layer_name_
 
@@ -53,17 +53,14 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
 
     **Examples**::
 
-        >>> from pydriosm.ios import validate_schema_names
-
+        >>> from pydriosm.ios.utils import validate_schema_names
         >>> valid_names = validate_schema_names()
         >>> valid_names
         []
-
         >>> input_schema_names = ['point', 'polygon']
         >>> valid_names = validate_schema_names(input_schema_names)
         >>> valid_names
         ['point', 'polygon']
-
         >>> valid_names = validate_schema_names(input_schema_names, schema_named_as_layer=True)
         >>> valid_names
         ['points', 'multipolygons']
@@ -98,20 +95,18 @@ def validate_table_name(table_name, sub_space=''):
 
     **Examples**::
 
-        >>> from pydriosm.ios import validate_table_name
-
+        >>> from pydriosm.ios.utils import validate_table_name
         >>> subrgn_name = 'greater london'
         >>> valid_table_name = validate_table_name(subrgn_name)
         >>> valid_table_name
         'greater london'
-
         >>> subrgn_name = 'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Wales'
         >>> valid_table_name = validate_table_name(subrgn_name, sub_space='_')
         >>> valid_table_name
         'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch_W..'
     """
 
-    table_name_ = remove_punctuation(x=table_name, rm_whitespace=True)
+    table_name_ = remove_punctuation(table_name, rm_whitespace=True)
 
     if sub_space:
         table_name_ = table_name_.replace(' ', sub_space)
@@ -119,3 +114,93 @@ def validate_table_name(table_name, sub_space=''):
     table_name_ = table_name_[:60] + '..' if len(table_name_) >= 63 else table_name_
 
     return table_name_
+
+
+def make_data_items(osm_data, schema_names):
+    """
+    Map OSM data layers to specific schema names.
+
+    :param osm_data: Dictionary of OSM data where keys are layer names.
+    :type osm_data: dict
+    :param schema_names: List of layers, dict mapping schema to layer, or ``None``.
+    :type schema_names: list | dict | None
+    :return: An iterable of (schema_name, data) tuples.
+    :rtype: zip
+    :raises KeyError: If a requested layer name is missing from ``osm_data``.
+    """
+
+    # Handle the 'None' or 'All' case immediately
+    if not isinstance(schema_names, (list, dict)):
+        return osm_data.items()
+
+    # 2. Extract targets based on input type
+    if isinstance(schema_names, dict):
+        # e.g. schema_names = {'schema_0': 'lines', 'schema_1': 'points'}
+        keys_to_return = schema_names.keys()
+        layer_targets = list(schema_names.values())
+    else:  # list
+        keys_to_return = layer_targets = schema_names
+
+    # Validate and check keys
+    validated_layers = validate_schema_names(
+        schema_names=layer_targets,
+        schema_named_as_layer=True
+    )
+
+    missing_keys = [k for k in validated_layers if k not in osm_data]
+
+    if missing_keys:
+        raise KeyError(f"The following layers are missing from osm_data: {missing_keys}")
+
+    # Construct generator
+    return zip(keys_to_return, (osm_data[layer] for layer in validated_layers))
+
+
+def preprocess_pdf_layer(layer_data, layer_name):
+    """
+    Preprocess PBF layer data into a pandas DataFrame with WKT geometries.
+
+    :param layer_data: Layer data as a list of OGR features, a Series, or a DataFrame.
+    :type layer_data: list | pandas.Series | pandas.DataFrame
+    :param layer_name: Name of the layer for column labeling.
+    :type layer_name: str
+    :return: Processed DataFrame with serialized geometries.
+    :rtype: pandas.DataFrame
+    """
+
+    # Handle OGR Feature list
+    if isinstance(layer_data, list):
+        # osgeo_ogr = _check_dependency('osgeo.ogr')
+        # if all(isinstance(f, osgeo_ogr.Feature) for f in layer_data):
+        lyr_dat = pd.DataFrame([f.ExportToJson() for f in layer_data], columns=[layer_name])
+
+    else:
+        # Ensure we have a DataFrame to work with
+        lyr_dat = layer_data.to_frame() if isinstance(layer_data, pd.Series) else layer_data.copy()
+
+        if lyr_dat.empty:
+            return lyr_dat
+
+        # Handle 'coordinates' column (Check for existence first)
+        if 'coordinates' in lyr_dat.columns:
+            # Check first non-null value to avoid IndexError
+            valid_coords = lyr_dat['coordinates'].dropna()
+            if not valid_coords.empty:
+                first_val = valid_coords.iloc[0]
+                # If it's a shapely object/geometry (has .wkt) but isn't a list
+                if not isinstance(first_val, list) and hasattr(first_val, 'wkt'):
+                    lyr_dat['coordinates'] = lyr_dat['coordinates'].map(
+                        lambda x: x.wkt if hasattr(x, 'wkt') else x,
+                        na_action='ignore')
+
+        # Handle Geometry columns
+        geom_cols = [
+            col for col in lyr_dat.columns
+            if any(hasattr(val, 'wkt') for val in lyr_dat[col].dropna().head(1))
+        ]
+        for col in geom_cols:
+            lyr_dat[col] = lyr_dat[col].map(
+                lambda x: x.wkt if hasattr(x, 'wkt') else x,
+                na_action='ignore')
+
+    return lyr_dat

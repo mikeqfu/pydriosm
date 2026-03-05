@@ -16,7 +16,6 @@ Check data pathnames
     :toctree: _generated/
     :template: function.rst
 
-    check_relpath
     cdd_geofabrik
     cdd_bbbike
 

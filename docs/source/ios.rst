@@ -46,3 +46,5 @@ Other utilities
     get_default_layer_name
     validate_schema_names
     validate_table_name
+    make_data_items
+    preprocess_pdf_layer
