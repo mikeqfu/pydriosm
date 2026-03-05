@@ -525,22 +525,23 @@ class BaseIOS(PostgreSQL):
             >>> from pydriosm.ios._base import BaseIOS
             >>> from pyhelpers.dirs import delete_dir
 
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
+            >>> osmdb = BaseIOS(database_name='osmdb_test', verbose=True)
             Password (postgres@localhost:5432): ***
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
             >>> subrgn_name = 'Rutland'  # name of a subregion
-            >>> dat_dir = "tests\\osm_data"  # name of a data directory where the subregion data is
+            >>> dat_dir = "tests/osm_data"  # name of a data directory where the subregion data is
 
         *Example 1* - Import data of the 'points' layer of a PBF file::
 
             >>> # First, read the PBF data of Rutland (from Geofabrik free download server)
             >>> # (If the data file is not available, it'll be downloaded by confirmation)
-            >>> raw_pbf = osmdb.reader.read_pbf(subrgn_name, data_dir=dat_dir, verbose=True)
-            Downloading "rutland-latest.osm.pbf"
-                to "tests\\osm_data\\rutland\\" ... Done.
-            Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            >>> raw_pbf = osmdb.reader.read_pbf(
+            ...     subrgn_name, data_dir=dat_dir, download=True, verbose=True)
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 5.76MB/s ...
+              Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
+            Reading "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> type(raw_pbf)
             dict
             >>> list(raw_pbf.keys())
@@ -558,10 +559,10 @@ class BaseIOS(PostgreSQL):
             >>> osmdb.import_osm_layer(
             ...     layer_data=raw_pbf_points, table_name=subrgn_name, schema_name=points_key,
             ...     verbose=True)
-            Proceed to import data into "points"."Rutland" at postgres:***@localhost:5432/osmdb_test
+            To import data into the table "points"."Rutland" at postgres:***@localhost:5432/osm...
             ? [No]|Yes: yes
             Creating a schema: "points" ... Done.
-            Importing the data into the table "points"."Rutland" ... Done.
+            Importing the data into "points"."Rutland" ... Done.
 
             >>> tbl_col_info = osmdb.get_table_column_info(subrgn_name, points_key)
             >>> tbl_col_info.head()
@@ -574,21 +575,23 @@ class BaseIOS(PostgreSQL):
 
             >>> # Parse the 'geometry' of the PBF data of Rutland
             >>> parsed_pbf = osmdb.reader.read_pbf(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True, parse_geometry=True)
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True,
+            ...     parse_geometry=True)
             >>> type(parsed_pbf)
             dict
             >>> list(parsed_pbf.keys())
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
-            >>> parsed_pbf_points = parsed_pbf[points_key]  # Get the parsed data of 'points' layer
+            >>> # Get the parsed data of 'points' layer
+            >>> parsed_pbf_points = parsed_pbf[points_key]
             >>> type(parsed_pbf_points)
-            pandas.core.series.Series
+            pandas.DataFrame
             >>> parsed_pbf_points.head()
                      id  ...                                         properties
-            0    488432  ...  {'osm_id': '488432', 'name': None, 'barrier': ...
-            1    488658  ...  {'osm_id': '488658', 'name': 'Tickencote Inter...
-            2  13883868  ...  {'osm_id': '13883868', 'name': None, 'barrier'...
-            3  14049101  ...  {'osm_id': '14049101', 'name': None, 'barrier'...
-            4  14558402  ...  {'osm_id': '14558402', 'name': None, 'barrier'...
+            0    488658  ...  {'osm_id': '488658', 'name': 'Tickencote Inter...
+            1  13883868  ...  {'osm_id': '13883868', 'name': None, 'barrier'...
+            2  14049101  ...  {'osm_id': '14049101', 'name': None, 'barrier'...
+            3  14558402  ...  {'osm_id': '14558402', 'name': None, 'barrier'...
+            4  14558409  ...  {'osm_id': '14558409', 'name': None, 'barrier'...
             [5 rows x 3 columns]
 
             >>> # Import the parsed 'points' data into the PostgreSQL database
@@ -616,17 +619,17 @@ class BaseIOS(PostgreSQL):
             >>> lyr_name = 'railways'
             >>> rutland_railways_shp = osmdb.reader.read_shp(
             ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir,
-            ...     rm_extracts=True, verbose=True)
-            Downloading "rutland-latest-free.shp.zip"
-                to "tests\\osm_data\\rutland\\" ... Done.
+            ...     download=True, rm_extracts=True, verbose=True)
+            Downloading "rutland-latest-free.shp.zip" 100%|██████████| 2.71M/2.71M | 7.07...
+              Saving "rutland-latest-free.shp.zip" to "./tests/osm_data/rutland/" ... Done.
             Extracting the following layer(s):
                 'railways'
-                from "tests\\osm_data\\rutland\\rutland-latest-free.shp.zip"
-                  to "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
-            Reading "tests\\osm_data\\rutland\\rutland-latest-free-shp\\gis_osm_railways_free_1.s...
-            Deleting the extracts "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+              from: "./tests/osm_data/rutland/rutland-latest-free.shp.zip" ...
+                to: "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
+            Reading "./tests/osm_data/rutland/rutland-latest-free-shp/gis_osm_railways_free_1.s...
+            Deleting the extracts "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
             >>> type(rutland_railways_shp)
-            collections.OrderedDict
+            dict
             >>> list(rutland_railways_shp.keys())
             ['railways']
 
@@ -634,11 +637,11 @@ class BaseIOS(PostgreSQL):
             >>> rutland_railways_shp_ = rutland_railways_shp[lyr_name]
             >>> rutland_railways_shp_.head()
                 osm_id  code  ...                                        coordinates shape_type
-            0  2162114  6101  ...  [(-0.4528083, 52.6993402), (-0.4521571, 52.698...          3
+            0  2162114  6101  ...  [(-0.4644873, 52.7104315), (-0.4611095, 52.706...          3
             1  3681043  6101  ...  [(-0.6531215, 52.5730787), (-0.6531793, 52.572...          3
-            2  3693985  6101  ...  [(-0.7323403, 52.6782102), (-0.7319059, 52.678...          3
+            2  3693985  6101  ...  [(-0.7220263, 52.696584), (-0.7218164, 52.6973...          3
             3  3693986  6101  ...  [(-0.6173072, 52.6132317), (-0.6241869, 52.614...          3
-            4  4806329  6101  ...  [(-0.4576926, 52.7035194), (-0.4565358, 52.702...          3
+            4  8044108  6101  ...  [(-0.6978245, 52.6285831), (-0.7027126, 52.633...          3
             [5 rows x 9 columns]
 
             >>> # Import the 'railways' data into the PostgreSQL database
@@ -742,22 +745,23 @@ class BaseIOS(PostgreSQL):
             >>> from pydriosm.ios._base import BaseIOS
             >>> from pyhelpers.dirs import delete_dir
 
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
+            >>> osmdb = BaseIOS(database_name='osmdb_test', verbose=True)
             Password (postgres@localhost:5432): ***
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
             >>> subrgn_name = 'Rutland'  # name of a subregion
-            >>> dat_dir = "tests\\osm_data"  # name of a data directory where the subregion data is
+            >>> dat_dir = "tests/osm_data"  # name of a data directory where the subregion data is
 
         *Example 1* - Import data of a PBF file::
 
             >>> # First, read the PBF data of Rutland
             >>> # (If the data file is not available, it'll be downloaded by confirmation)
-            >>> raw_rutland_pbf = osmdb.reader.read_pbf(subrgn_name, dat_dir, verbose=True)
-            Downloading "rutland-latest.osm.pbf"
-                to "tests\\osm_data\\rutland\\" ... Done.
-            Reading "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            >>> raw_rutland_pbf = osmdb.reader.read_pbf(
+            ...     subrgn_name, dat_dir, download=True, verbose=True)
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 7.41MB/s ...
+              Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
+            Reading "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> type(raw_rutland_pbf)
             dict
             >>> list(raw_rutland_pbf.keys())
@@ -768,17 +772,17 @@ class BaseIOS(PostgreSQL):
             Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Importing the data ...
-                "points" ... Done. (<total of rows> features)
-                "lines" ... Done. (<total of rows> features)
-                "multilinestrings" ... Done. (<total of rows> features)
-                "multipolygons" ... Done. (<total of rows> features)
-                "other_relations" ... Done. (<total of rows> features)
+              "points" ... Done. (<total of rows> features)
+              "lines" ... Done. (<total of rows> features)
+              "multilinestrings" ... Done. (<total of rows> features)
+              "multipolygons" ... Done. (<total of rows> features)
+              "other_relations" ... Done. (<total of rows> features)
 
             >>> # Get parsed PBF data
             >>> parsed_rutland_pbf = osmdb.reader.read_pbf(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True, parse_geometry=True,
             ...     parse_other_tags=True, verbose=True)
-            Parsing "tests\\osm_data\\rutland\\rutland-latest.osm.pbf" ... Done.
+            Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> type(parsed_rutland_pbf)
             dict
             >>> list(parsed_rutland_pbf.keys())
@@ -794,31 +798,31 @@ class BaseIOS(PostgreSQL):
             Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Importing the data ...
-                "schema_0" ... Done. (<total of rows> features)
-                "schema_1" ... Done. (<total of rows> features)
-                "schema_2" ... Done. (<total of rows> features)
+              "schema_0" ... Done. (<total of rows> features)
+              "schema_1" ... Done. (<total of rows> features)
+              "schema_2" ... Done. (<total of rows> features)
 
             >>> # To drop the schemas "schema_0", "schema_1" and "schema_2"
             >>> osmdb.drop_schema(schemas.keys(), confirmation_required=False, verbose=True)
             Dropping the following schemas from postgres:***@localhost:5432/osmdb_test:
-                "schema_0" ... Done.
-                "schema_1" ... Done.
-                "schema_2" ... Done.
+              "schema_0" ... Done.
+              "schema_1" ... Done.
+              "schema_2" ... Done.
 
         *Example 2* - Import data of a shapefile::
 
             >>> # Read shapefile data of Rutland
             >>> rutland_shp = osmdb.reader.read_shp(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
-            Downloading "rutland-latest-free.shp.zip"
-                to "tests\\osm_data\\rutland\\" ... Done.
-            Extracting "tests\\osm_data\\rutland\\rutland-latest-free.shp.zip"
-                to "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
-            Reading the shapefile(s) at
-                "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
-            Deleting the extracts "tests\\osm_data\\rutland\\rutland-latest-free-shp\\" ... Done.
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True,
+            ...     rm_extracts=True, verbose=True)
+            Downloading "rutland-latest-free.shp.zip" 100%|██████████| 2.71M/2.71M | 4.81...
+              Saving "rutland-latest-free.shp.zip" to "./tests/osm_data/rutland/" ... Done.
+            Extracting "./tests/osm_data/rutland/rutland-latest-free.shp.zip"
+              to "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
+            Reading the shapefile(s) at "./tests/osm_data/rutland/rutland-latest-free-shp/" ......
+            Deleting the extracts "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
             >>> type(rutland_shp)
-            collections.OrderedDict
+            dict
             >>> list(rutland_shp.keys())
             ['buildings',
              'landuse',
@@ -838,18 +842,18 @@ class BaseIOS(PostgreSQL):
             Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Importing the data ...
-                "buildings" ... Done. (<total of rows> features)
-                "landuse" ... Done. (<total of rows> features)
-                "natural" ... Done. (<total of rows> features)
-                "places" ... Done. (<total of rows> features)
-                "pofw" ... Done. (<total of rows> features)
-                "pois" ... Done. (<total of rows> features)
-                "railways" ... Done. (<total of rows> features)
-                "roads" ... Done. (<total of rows> features)
-                "traffic" ... Done. (<total of rows> features)
-                "transport" ... Done. (<total of rows> features)
-                "water" ... Done. (<total of rows> features)
-                "waterways" ... Done. (<total of rows> features)
+              "buildings" ... Done. (<total of rows> features)
+              "landuse" ... Done. (<total of rows> features)
+              "natural" ... Done. (<total of rows> features)
+              "places" ... Done. (<total of rows> features)
+              "pofw" ... Done. (<total of rows> features)
+              "pois" ... Done. (<total of rows> features)
+              "railways" ... Done. (<total of rows> features)
+              "roads" ... Done. (<total of rows> features)
+              "traffic" ... Done. (<total of rows> features)
+              "transport" ... Done. (<total of rows> features)
+              "water" ... Done. (<total of rows> features)
+              "waterways" ... Done. (<total of rows> features)
 
         *Example 3* - Import BBBike shapefile data file of Leeds::
 
@@ -859,16 +863,16 @@ class BaseIOS(PostgreSQL):
 
             >>> # Read shapefile data of Leeds
             >>> leeds_shp = osmdb.reader.read_shp(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
-            Downloading "Leeds.osm.shp.zip"
-                to "tests\\osm_data\\leeds\\" ... Done.
-            Extracting "tests\\osm_data\\leeds\\Leeds.osm.shp.zip"
-                to "tests\\osm_data\\leeds\\" ... Done.
-            Reading the shapefile(s) at
-                "tests\\osm_data\\leeds\\Leeds-shp\\shape\\" ... Done.
-            Deleting the extracts "tests\\osm_data\\leeds\\Leeds-shp\\" ... Done.
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, rm_extracts=True,
+            ...     verbose=True)
+            Downloading "Leeds.osm.shp.zip" 100%|██████████| 57.7M/57.7M | 20.6MB/s | ETA...
+              Saving "Leeds.osm.shp.zip" to "./tests/osm_data/leeds/" ... Done.
+            Extracting "./tests/osm_data/leeds/Leeds.osm.shp.zip"
+              to "./tests/osm_data/leeds/" ... Done.
+            Reading the shapefile(s) at "./tests/osm_data/leeds/Leeds-shp/shape/" ... Done.
+            Deleting the extracts "./tests/osm_data/leeds/Leeds-shp/" ... Done.
             >>> type(leeds_shp)
-            collections.OrderedDict
+            dict
             >>> list(leeds_shp.keys())
             ['buildings',
              'landuse',
@@ -884,14 +888,14 @@ class BaseIOS(PostgreSQL):
             Proceed to import data into table "Leeds" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Importing the data ...
-                "buildings" ... Done. (<total of rows> features)
-                "landuse" ... Done. (<total of rows> features)
-                "natural" ... Done. (<total of rows> features)
-                "places" ... Done. (<total of rows> features)
-                "points" ... Done. (<total of rows> features)
-                "railways" ... Done. (<total of rows> features)
-                "roads" ... Done. (<total of rows> features)
-                "waterways" ... Done. (<total of rows> features)
+              "buildings" ... Done. (<total of rows> features)
+              "landuse" ... Done. (<total of rows> features)
+              "natural" ... Done. (<total of rows> features)
+              "places" ... Done. (<total of rows> features)
+              "points" ... Done. (<total of rows> features)
+              "railways" ... Done. (<total of rows> features)
+              "roads" ... Done. (<total of rows> features)
+              "waterways" ... Done. (<total of rows> features)
 
         Delete the test database and downloaded data files::
 
