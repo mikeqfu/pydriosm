@@ -6,7 +6,7 @@ from pyhelpers.ops import get_number_of_chunks, split_list
 from pyhelpers.store import save_data
 
 from pydriosm.ios._base import BaseIOS
-from pydriosm.reader import PBF
+from pydriosm.reader._pbf import PBF
 
 
 class ImportPBF(BaseIOS):

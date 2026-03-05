@@ -5,7 +5,8 @@ Utilities for the :mod:`~pydriosm.ios` module.
 import pandas as pd
 from pyhelpers.text import find_similar_str, remove_punctuation
 
-from pydriosm.reader import PBF, SHP
+from pydriosm.reader._pbf import PBF
+from pydriosm.reader._shp import SHP
 
 
 def get_default_layer_name(schema_name):

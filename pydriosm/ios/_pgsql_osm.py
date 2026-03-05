@@ -15,7 +15,8 @@ from pyhelpers.text import find_similar_str
 
 from pydriosm.ios._pbf_importer import ImportPBF
 from pydriosm.ios.utils import validate_schema_names
-from pydriosm.reader import PBF, SHP
+from pydriosm.reader._pbf import PBF
+from pydriosm.reader._shp import SHP
 from pydriosm.utils import remove_osm_file
 
 
@@ -165,8 +166,8 @@ class PostgresOSM(ImportPBF):
         :param verbose: whether to print relevant information in console, defaults to ``False``
         :type verbose: bool | int
         :param kwargs: [optional] parameters of the method
-            :meth:`~pydriosm.ios.PostgresOSM._import_subregion_osm_pbf` or
-            :meth:`~pydriosm.ios.PostgresOSM._import_subregion_osm_pbf_chunk_wisely`
+            :meth:`~pydriosm.ios.PostgresOSM._import_pbf` or
+            :meth:`~pydriosm.ios.PostgresOSM._import_pbf_chunk_wisely`
 
         .. _`shapely.geometry`:
             https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
@@ -366,7 +367,7 @@ class PostgresOSM(ImportPBF):
 
         .. seealso::
 
-            - Examples of the method :meth:`~pydriosm.ios.PostgresOSM.fetch_osm_data`.
+            - Examples of the method :meth:`~pydriosm.ios.PostgresOSM.fetch_data`.
         """
 
         # if engine:
@@ -634,9 +635,8 @@ class PostgresOSM(ImportPBF):
 
         .. seealso::
 
-            - More details of the above data can be found in the examples for the methods
-              :meth:`~pydriosm.ios.PostgresOSM.import_osm_data`
-              and :meth:`~pydriosm.ios.PostgresOSM.import_subregion_osm_pbf`.
+            - More details of the above data can be found in the examples for
+              :meth:`~pydriosm.ios.PostgresOSM.import_osm_data`.
             - Similar examples about
               :ref:`fetching data from the database<quickstart-ios-fetch-data>`
               are available in :doc:`../quick-start`.

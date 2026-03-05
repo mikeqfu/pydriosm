@@ -19,11 +19,6 @@ import datetime
 import json
 import pkgutil
 
-from . import downloader, ios, reader
-from ._updater import _update_prepacked_data
-from .errors import InvalidFileFormatError, InvalidSubregionNameError, MethodNotAvailableError, \
-    OtherTagsReformatError
-
 metadata = json.loads(pkgutil.get_data(__name__, "data/.metadata").decode())
 
 __project__ = metadata['Project']
@@ -41,14 +36,3 @@ __version__ = metadata['Version']
 __license__ = metadata['License']
 
 __first_release__ = metadata['First release']
-
-__all__ = [
-    'InvalidSubregionNameError',
-    'InvalidFileFormatError',
-    'OtherTagsReformatError',
-    'MethodNotAvailableError',
-    '_update_prepacked_data',
-    'downloader',
-    'reader',
-    'ios',
-]

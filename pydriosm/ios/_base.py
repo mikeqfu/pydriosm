@@ -14,10 +14,10 @@ from pyhelpers.dbms import PostgreSQL
 from pyhelpers.ops import confirmed
 from pyhelpers.text import find_similar_str
 
-from pydriosm.downloader import Downloader
+from pydriosm.downloader._wrapper import Downloader
 from pydriosm.ios.utils import get_default_layer_name, make_data_items, preprocess_pdf_layer, \
     validate_schema_names, validate_table_name
-from pydriosm.reader import Reader
+from pydriosm.reader._wrapper import Reader
 
 
 class BaseIOS(PostgreSQL):
@@ -1083,7 +1083,7 @@ class BaseIOS(PostgreSQL):
         .. seealso::
 
             Examples of the :meth:`PostgresOSM.drop_subregion_tables
-            <pydriosm.ios._interface.PostgresOSM.drop_subregion_tables>` method.
+            <pydriosm.ios.PostgresOSM.drop_subregion_tables>` method.
         """
 
         existing_schema_names_, table_names_ = self._check_schema_and_table_names(
