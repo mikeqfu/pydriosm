@@ -29,18 +29,18 @@ class BaseReader:
     Initialization of a data reader.
     """
 
-    #: str: Name of the free download server.
-    NAME = 'OSM Reader'
-    #: str: Full name of the data resource.
-    LONG_NAME = 'OpenStreetMap data reader and parser'
-    #: str: Default data directory.
-    DEFAULT_DATA_DIR = 'osm_data'
+    #: Name of the free download server.
+    NAME: str = 'OSM Reader'
+    #: Full name of the data resource.
+    LONG_NAME: str = 'OpenStreetMap data reader and parser'
+    #: Default data directory.
+    DEFAULT_DATA_DIR: str = 'osm_data'
 
-    #: PBFReadParse: Read/parse `PBF <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ data.
+    #: Read/parse `PBF <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ data.
     PBF = PBF
-    #: SHPReadParse: Read/parse `Shapefile <https://wiki.openstreetmap.org/wiki/Shapefiles>`_ data.
+    #: Read/parse `Shapefile <https://wiki.openstreetmap.org/wiki/Shapefiles>`_ data.
     SHP = SHP
-    #: VarReadParse: Read/parse OSM data of various formats (other than PBF and Shapefile).
+    #: Read/parse OSM data of various formats (other than PBF and Shapefile).
     VAR = VAR
 
     def __init__(self, data_source=None, data_dir=None, max_tmpfile_size=None, **kwargs):
@@ -72,7 +72,7 @@ class BaseReader:
             >>> brd.NAME
             'OSM Reader'
             >>> brd.SHP
-            pydriosm.reader.SHPReadParse
+            pydriosm.reader.SHP
         """
 
         if data_source is None:
@@ -369,7 +369,7 @@ class BaseReader:
             defaults to ``False``
         :type verbose: bool | int
         :param kwargs: [optional] parameters of the method
-            :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`
+            :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`
         :return: dictionary of the .osm.pbf data;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
         :rtype: dict | tuple | None
@@ -501,8 +501,8 @@ class BaseReader:
         :rtype: str
 
         See examples for the methods
-        :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` and
-        :meth:`BBBikeReader.read_shp_zip()<pydriosm.reader.BBBikeReader.read_shp_zip>`.
+        :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` and
+        :meth:`BBBikeReader.read_shp()<pydriosm.reader.BBBikeReader.read_shp>`.
         """
 
         if layer_names_:  # layer is not None
@@ -564,8 +564,8 @@ class BaseReader:
         :rtype: list
 
         See examples for the methods
-        :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` and
-        :meth:`BBBikeReader.read_shp_zip()<pydriosm.reader.BBBikeReader.read_shp_zip>`.
+        :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` and
+        :meth:`BBBikeReader.read_shp()<pydriosm.reader.BBBikeReader.read_shp>`.
         """
 
         if self.NAME == 'Geofabrik':
@@ -644,8 +644,8 @@ class BaseReader:
         :type verbose: bool | int
 
         See examples for the methods
-        :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` and
-        :meth:`BBBikeReader.read_shp_zip()<pydriosm.reader.BBBikeReader.read_shp_zip>`.
+        :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` and
+        :meth:`BBBikeReader.read_shp()<pydriosm.reader.BBBikeReader.read_shp>`.
         """
 
         if verbose:
@@ -763,7 +763,7 @@ class BaseReader:
             defaults to ``False``
         :type verbose: bool | int
         :param kwargs: [optional] parameters of the method
-            :meth:`SHPReadParse.read_shp()<pydriosm.reader.SHPReadParse.read_shp>`
+            :meth:`SHP.read_shp()<pydriosm.reader._shp.SHP.read_shp>`
         :return: dictionary of the shapefile data,
             with keys and values being layer names and tabular data
             (in the format of `geopandas.GeoDataFrame`_), respectively
@@ -772,8 +772,8 @@ class BaseReader:
         .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
 
         See examples for the methods
-        :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` and
-        :meth:`BBBikeReader.read_shp_zip()<pydriosm.reader.BBBikeReader.read_shp_zip>`.
+        :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` and
+        :meth:`BBBikeReader.read_shp()<pydriosm.reader.BBBikeReader.read_shp>`.
         """
 
         osm_file_format = ".shp.zip"

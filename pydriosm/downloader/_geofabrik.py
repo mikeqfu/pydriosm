@@ -153,7 +153,7 @@ class GeofabrikDownloader(BaseDownloader):
         """
         Get the official index of downloads for all available geographic (sub)regions.
 
-        Similar to the method :meth:`~pydriosm.downloader.GeofabrikDownloader.get_catalogue`.
+        Similar to :meth:`~pydriosm.downloader.GeofabrikDownloader.get_catalogue`.
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
@@ -361,7 +361,7 @@ class GeofabrikDownloader(BaseDownloader):
         data_name = f'{self.NAME} continent tables'
 
         continents_subregion_tables = self.get_prepacked_data(
-            meth=fetch_geofabrik_continent_tables, url=self.URL, data_name=data_name, update=update,
+            meth=fetch_geofabrik_continent_tables, data_name=data_name, update=update,
             confirmation_required=confirmation_required, verbose=verbose, raise_error=raise_error,
             **kwargs)
 
@@ -447,7 +447,7 @@ class GeofabrikDownloader(BaseDownloader):
         """
         Get a catalogue (index) of all available downloads.
 
-        Similar to the method :meth:`~pydriosm.downloader.GeofabrikDownloader.get_download_index`.
+        Similar to :meth:`~pydriosm.downloader.GeofabrikDownloader.get_download_index`.
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
@@ -815,8 +815,8 @@ class GeofabrikDownloader(BaseDownloader):
         :type subregion_name: str
         :param region_subregion_tiers: region-subregion tier, defaults to ``None``;
             when ``region_subregion_tier=None``,
-            it defaults to the dictionary returned by the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.get_region_subregion_tiers`
+            it defaults to the dictionary returned by
+            :meth:`~pydriosm.downloader.GeofabrikDownloader.get_region_subregion_tiers`.
         :type region_subregion_tiers: dict
         :return: name(s) of subregion(s) of the given geographic (sub)region
         :rtype: generator object
@@ -854,7 +854,7 @@ class GeofabrikDownloader(BaseDownloader):
         """
         Retrieve names of all subregions (if any) of the given geographic (sub)region(s).
 
-        The returned result is based on the region-subregion tier structured by the method
+        The returned result is based on the region-subregion tier structured by
         :meth:`~pydriosm.downloader.GeofabrikDownloader.get_region_subregion_tiers`.
 
         See also [`RNS-1 <https://stackoverflow.com/questions/9807634/>`_].
@@ -940,8 +940,8 @@ class GeofabrikDownloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_geofabrik`.
+            :func:`~pydriosm.utils.cdd_geofabrik`
         :type download_dir: str | None
         :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_,
             including ``mkdir``(default: ``False``)
@@ -1022,8 +1022,7 @@ class GeofabrikDownloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_geofabrik`.
         :type download_dir: str | None
         :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_,
             including ``mkdir``(default: ``False``)
@@ -1087,8 +1086,8 @@ class GeofabrikDownloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param data_dir: directory where the data file (or files) is (or are) stored,
-            defaults to ``None``; when ``data_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
+            defaults to ``None``; when ``data_dir=None``, it refers to
+            :func:`~pydriosm.utils.cdd_geofabrik`.
         :type data_dir: str | None
         :param update: whether to (check and) update the data, defaults to ``False``
         :type update: bool
@@ -1155,8 +1154,7 @@ class GeofabrikDownloader(BaseDownloader):
             available on the download server
         :type osm_file_formats: str | list
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_geofabrik`.
         :type download_dir: str | None
         :param update: whether to update the data if it already exists, defaults to ``False``
         :type update: bool

@@ -27,9 +27,12 @@ from pydriosm.utils import first_unique
 def get_geofabrik_raw_directory_index(url):
     # noinspection PyShadowingNames
     """
+    Gets a raw directory index (including download information of older file logs).
 
-    :param url:
-    :return:
+    :param url: URL of a web page of a data resource (e.g. a subregion).
+    :type url: str
+    :return: Information of raw directory index.
+    :rtype: pandas.DataFrame | None
 
     **Examples**::
 
@@ -84,7 +87,7 @@ def get_geofabrik_raw_directory_index(url):
 
 def _parse_geofabrik_download_index_urls(urls):
     """
-    Parse the dictionary of download URLs in the (original) dataframe of download index.
+    Parses the dictionary of download URLs in the (original) dataframe of download index.
 
     :param urls: (original) series of the URLs provided in the official download index
     :type urls: pandas.Series
@@ -114,7 +117,7 @@ def _parse_geofabrik_download_index_urls(urls):
 
 def fetch_geofabrik_download_index():
     """
-    Get the official index of downloads for all available geographic (sub)regions.
+    Fetches the official index of downloads for all available geographic (sub)regions.
 
     :return: the official index of all downloads
     :rtype: pandas.DataFrame
@@ -182,7 +185,7 @@ def fetch_geofabrik_download_index():
 
 def _parse_geofabrik_subregion_table_tr(tr, url):
     """
-    Parse a <tr> tag under a <table> tag of the HTML data of a (sub)region.
+    Parses a <tr> tag under a <table> tag of the HTML data of a (sub)region.
 
     :param tr: <tr> tag under a <table> tag of a subregion's HTML data
     :type tr: bs4.element.Tag
@@ -225,7 +228,7 @@ def _parse_geofabrik_subregion_table_tr(tr, url):
 def fetch_geofabrik_subregion_table(url):
     # noinspection PyShadowingNames
     """
-    Get download information of all geographic (sub)regions on a web page.
+    Fetches download information of all geographic (sub)regions on a web page.
 
     :param url: URL of a subregion's web page
     :type url: str
@@ -306,18 +309,18 @@ def fetch_geofabrik_subregion_table(url):
         return subregion_table.replace({np.nan: None})
 
 
-def fetch_geofabrik_continent_tables(url='https://download.geofabrik.de/'):
+def fetch_geofabrik_continent_tables():
     # noinspection PyShadowingNames
     """
+    Fetches download catalogues for each continent.
 
-    :param url:
-    :return:
+    :return: Download catalogues for each continent.
+    :rtype: dict | None
 
     **Examples**::
 
         >>> from pydriosm.downloader.web_parser import fetch_geofabrik_continent_tables
-        >>> url = 'https://download.geofabrik.de/'
-        >>> continent_tables = fetch_geofabrik_continent_tables(url)
+        >>> continent_tables = fetch_geofabrik_continent_tables()
         >>> type(continent_tables)
         dict
         >>> list(continent_tables)
@@ -330,6 +333,8 @@ def fetch_geofabrik_continent_tables(url='https://download.geofabrik.de/'):
          'North America',
          'South America']
     """
+
+    url = 'https://download.geofabrik.de/'
 
     with requests.get(url=url, headers=fake_requests_headers()) as response:
         response.raise_for_status()
@@ -373,7 +378,7 @@ def compile_geofabrik_region_subregion_tiers(subregion_tables, verbose=2, indent
                                              end_message="\n"):
     # noinspection PyShadowingNames
     """
-    Find all (sub)regions and their subregions.
+    Finds all (sub)regions and their subregions.
 
     :param subregion_tables: download URLs of subregions;
         see examples of the methods
@@ -569,7 +574,7 @@ def fetch_geofabrik_catalogue():
 
 def fetch_valid_geofabrik_subregion_names():
     """
-    Get names of all available geographic (sub)regions.
+    Fetches names of all available geographic (sub)regions.
 
     :return: names of all geographic (sub)regions available on Geofabrik free download server
     :rtype: set
@@ -665,7 +670,7 @@ def fetch_bbbike_city_coordinates(url, raise_error=True):
 def fetch_bbbike_subregion_index(url, raise_error=True):
     # noinspection PyShadowingNames
     """
-    Fetch a catalogue for geographic (sub)regions.
+    Fetches a catalogue for geographic (sub)regions.
 
     :return: catalogue for subregions of BBBike data
     :rtype: pandas.DataFrame
@@ -707,7 +712,7 @@ def fetch_bbbike_subregion_index(url, raise_error=True):
 
 def fetch_bbbike_valid_subregion_names(cls_instance):
     """
-    Fetch a list of names of all geographic (sub)regions.
+    Fetches a list of names of all geographic (sub)regions.
 
     :return: a list of geographic (sub)region names available on BBBike free download server
     :rtype: list
@@ -755,7 +760,7 @@ def _parse_bbbike_tag_a(a, url):
 
 def fetch_bbbike_sub_catalogue(subregion_name, url, raise_error=True):
     """
-    Fetch the BBBike data catalogue of a specific subregion.
+    Fetches the BBBike data catalogue of a specific subregion.
 
     :param subregion_name: The subregion name.
     :type subregion_name: str
@@ -788,7 +793,7 @@ def fetch_bbbike_sub_catalogue(subregion_name, url, raise_error=True):
 
 def fetch_bbbike_catalogue(cls_instance, verbose=False):
     """
-    Get a dict-type index of available formats, data types and a download catalogue.
+    Fetches a dict-type index of available formats, data types and a download catalogue.
 
     :return: a list of available formats, a list of available data types and
         a dictionary of download catalogue

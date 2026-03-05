@@ -31,14 +31,11 @@ def get_layer_name(shp_filename):
 
     **Examples**::
 
-        >>> from pydriosm.reader import SHP
-
+        >>> from pydriosm.reader._shp import SHP
         >>> SHP.get_layer_name("") is None
         True
-
         >>> SHP.get_layer_name("gis_osm_railways_free_1.shp")
         'railways'
-
         >>> SHP.get_layer_name("gis_osm_transport_a_free_1.shp")
         'transport'
     """
@@ -123,7 +120,7 @@ class SHP:
 
     **Examples**::
 
-        >>> from pydriosm.reader import SHP
+        >>> from pydriosm.reader._shp import SHP
 
         >>> SHP.EPSG4326_WGS84_PROJ4
         '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
@@ -229,7 +226,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
 
             >>> SHP.validate_layer_names(None)
             []
@@ -280,7 +277,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
 
             >>> SHP.get_layer_name("") is None
             True
@@ -324,7 +321,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
@@ -332,7 +329,7 @@ class SHP:
             >>> # Download the shapefile data of London as an example
             >>> subrgn_name = 'london'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests\\osm_data"
+            >>> dwnld_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -506,7 +503,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
@@ -515,7 +512,7 @@ class SHP:
             >>> # Download the shapefile data of London as an example
             >>> subrgn_name = 'london'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests\\osm_data"
+            >>> dwnld_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -653,9 +650,8 @@ class SHP:
 
         .. seealso::
 
-            - Examples for the method
-              :meth:`SHPReadParse.write_to_shapefile()
-              <pydriosm.reader.SHPReadParse.write_to_shapefile>`.
+            - Examples for
+              :meth:`SHP.write_to_shapefile()<pydriosm.reader._shp.SHP.write_to_shapefile>`.
         """
 
         dtype_shp_type = {
@@ -711,7 +707,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
@@ -720,7 +716,7 @@ class SHP:
             >>> # Download the shapefile data of London as an example
             >>> subrgn_name = 'london'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests\\osm_data"
+            >>> dwnld_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -869,7 +865,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> import os
 
             >>> fn = "gis_osm_railways_free_1.shp"
@@ -957,7 +953,7 @@ class SHP:
             whether to return the path to the saved data of ``fclass``, defaults to ``False``
         :type ret_feat_shp_path: bool
         :param kwargs: [optional] parameters of the method
-            :meth:`SHPReadParse.read_shp()<pydriosm.reader.SHPReadParse.read_shp>`
+            :meth:`SHP.read_shp()<pydriosm.reader._shp.SHP.read_shp>`
         :return: parsed shapefile data; and optionally,
             pathnames of the shapefiles of the specified features (when ``ret_feat_shp_path=True``)
         :rtype: pandas.DataFrame | geopandas.GeoDataFrame | tuple
@@ -967,7 +963,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
@@ -975,7 +971,7 @@ class SHP:
             >>> # Download the shapefile data of London as an example
             >>> subrgn_name = 'london'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests\\osm_data"
+            >>> dwnld_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -1110,7 +1106,7 @@ class SHP:
 
         .. seealso::
 
-            - Examples for the function :func:`~pydriosm.reader.SHPReadParse.merge_layer_shps`.
+            - Examples for :meth:`~pydriosm.reader._shp.SHP.merge_layers`.
             - Resource: https://github.com/GeospatialPython/pyshp
         """
 
@@ -1267,13 +1263,13 @@ class SHP:
             - For valid ``layer_name``, check the function
               :func:`~pydriosm.utils.valid_shapefile_layer_names`.
 
-        .. _pydriosm-reader-SHPReadParse-merge_layer_shps:
+        .. _pydriosm-reader-SHP-merge_layer_shps:
 
         **Examples**::
 
             >>> # To merge 'railways' layers of Greater Manchester and West Yorkshire"
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
@@ -1281,7 +1277,7 @@ class SHP:
             >>> # Download the .shp.zip file of Manchester and West Yorkshire
             >>> subrgn_names = ['Greater Manchester', 'West Yorkshire']
             >>> file_fmt = ".shp"
-            >>> data_dir = "tests\\osm_data"
+            >>> data_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -1337,8 +1333,8 @@ class SHP:
         .. seealso::
 
             - Examples for the method
-              :meth:`GeofabrikReader.merge_subregion_layer_shp()
-              <pydriosm.reader.GeofabrikReader.merge_subregion_layer_shp>`.
+              :meth:`GeofabrikReader.merge_shp_layers()
+              <pydriosm.reader.GeofabrikReader.merge_shp_layers>`.
         """
 
         path_to_extract_dirs = cls._extract_files(

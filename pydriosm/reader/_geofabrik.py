@@ -212,8 +212,8 @@ class GeofabrikReader(BaseReader):
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
         :type verbose: bool | int
-        :param kwargs: [optional] parameters of the method
-            :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`
+        :param kwargs: [optional] parameters of
+            :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
         :return: dictionary of the .osm.pbf data;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
         :rtype: dict | tuple | None
@@ -473,7 +473,7 @@ class GeofabrikReader(BaseReader):
         .. _`shapefile.Writer()`:
             https://github.com/GeospatialPython/pyshp#writing-shapefiles
 
-        .. _pydriosm-GeofabrikReader-merge_subregion_layer_shp:
+        .. _pydriosm-GeofabrikReader-merge_shp_layers:
 
         **Examples**::
 

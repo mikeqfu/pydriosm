@@ -812,8 +812,7 @@ class Downloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_geofabrik`.
         :type download_dir: str | None
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=True`` (default), the error will be suppressed.
@@ -888,8 +887,7 @@ class Downloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_geofabrik`.
         :type download_dir: str | None
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=True`` (default), the error will be suppressed.
@@ -964,8 +962,8 @@ class Downloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param data_dir: directory where the data file (or files) is (or are) stored,
-            defaults to ``None``; when ``data_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
+            defaults to ``None``; when ``data_dir=None``, it refers to
+            :func:`~pydriosm.utils.cdd_geofabrik`.
         :type data_dir: str | None
         :param update: whether to (check and) update the data, defaults to ``False``
         :type update: bool
@@ -1267,8 +1265,7 @@ class Downloader(BaseDownloader):
             available on the download server
         :type osm_file_formats: str | list
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.GeofabrikDownloader.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_geofabrik`.
         :type download_dir: str | None
         :param update: whether to update the data if it already exists, defaults to ``False``
         :type update: bool
@@ -1389,10 +1386,10 @@ class Downloader(BaseDownloader):
         .. note::
 
             See also the examples of the methods:
-            :meth:`GeofabrikDownloader.download_subregion_data()
-            <pydriosm.downloader.geofabrik.GeofabrikDownloader.download_subregion_data` and
-            :meth:`BBBikeDownloader.download_subregion_data()
-            <pydriosm.downloader.geofabrik.BBBikeDownloader.download_subregion_data`.
+            :meth:`GeofabrikDownloader.download_data()
+            <pydriosm.downloader.GeofabrikDownloader.download_data` and
+            :meth:`BBBikeDownloader.download_data()
+            <pydriosm.downloader.BBBikeDownloader.download_data`.
         """
 
         args = dict(

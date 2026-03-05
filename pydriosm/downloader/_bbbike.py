@@ -100,9 +100,6 @@ class BBBikeDownloader(BaseDownloader):
         """
         Get the names of all the available cities.
 
-        This can be an alternative to the method
-        :meth:`~pydriosm.downloader.BBBikeDownloader.get_valid_subregion_names`.
-
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
         :param confirmation_required: whether asking for confirmation to proceed,
@@ -249,9 +246,6 @@ class BBBikeDownloader(BaseDownloader):
         # noinspection PyShadowingNames
         """
         Get a list of names of all geographic (sub)regions.
-
-        This can be an alternative to the method
-        :meth:`~pydriosm.downloader.BBBikeDownloader.get_names_of_cities`.
 
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
@@ -564,8 +558,7 @@ class BBBikeDownloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``,
-            it refers to the method :meth:`~pydriosm.downloader.BBBike.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_bbbike`.
         :type download_dir: str | None
         :return: valid subregion name, filename, download url and absolute file path
         :rtype: tuple
@@ -615,8 +608,8 @@ class BBBikeDownloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param data_dir: directory where the data file (or files) is (or are) stored,
-            defaults to ``None``; when ``data_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.BBBike.cdd`
+            defaults to ``None``; when ``data_dir=None``, it refers to
+            :func:`~pydriosm.utils.cdd_bbbike`.
         :type data_dir: str | None
         :param update: whether to (check and) update the data, defaults to ``False``
         :type update: bool
@@ -689,8 +682,7 @@ class BBBikeDownloader(BaseDownloader):
             available on the download server
         :type osm_file_formats: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.BBBike.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_bbbike`.
         :type download_dir: str | None
         :param update: whether to update the data if it already exists, defaults to ``False``
         :type update: bool

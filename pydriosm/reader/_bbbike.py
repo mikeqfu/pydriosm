@@ -207,7 +207,7 @@ class BBBikeReader(BaseReader):
             defaults to ``False``
         :type verbose: bool | int
         :param kwargs: [optional] parameters of the method
-            :meth:`_Reader.read_osm_pbf()<pydriosm.reader._Reader.read_osm_pbf>`
+            :meth:`BaseReader.read_pbf()<pydriosm.reader._base.BaseReader.read_pbf>`
         :return: dictionary of the .osm.pbf data;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
         :rtype: dict | tuple | None

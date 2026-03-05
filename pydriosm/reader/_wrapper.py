@@ -411,7 +411,7 @@ class Reader(BaseReader):
         :param raise_error: If ``True``, raise the error if any.
         :type raise_error: bool
         :param kwargs: [optional] parameters of the method
-            :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`
+            :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`
         :return: dictionary of the .osm.pbf data;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
         :rtype: dict | tuple | None
@@ -827,8 +827,8 @@ class Reader(BaseReader):
         .. seealso::
 
             - Examples for the method
-              :meth:`GeofabrikReader.merge_subregion_layer_shp()
-              <pydriosm.reader.GeofabrikReader.merge_subregion_layer_shp>`.
+              :meth:`GeofabrikReader.merge_shp_layers()
+              <pydriosm.reader.GeofabrikReader.merge_shp_layers>`.
         """
 
         method_name = self.merge_layers.__name__

@@ -20,7 +20,7 @@ class PBF:
 
     **Examples**::
 
-        >>> from pydriosm.reader import PBF
+        >>> from pydriosm.reader._pbf import PBF
 
         >>> PBF.LAYER_GEOM
         {'points': shapely.geometry.point.Point,
@@ -60,7 +60,7 @@ class PBF:
 
         **Examples**::
 
-            >>> from pydriosm.reader import PBF
+            >>> from pydriosm.reader._pbf import PBF
 
             >>> PBF.get_layer_geom_types()
             {'points': shapely.geometry.point.Point,
@@ -101,7 +101,7 @@ class PBF:
 
         **Examples**::
 
-            >>> from pydriosm.reader import PBF
+            >>> from pydriosm.reader._pbf import PBF
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
@@ -195,8 +195,7 @@ class PBF:
         .. _`dict`:
             https://docs.python.org/3/library/stdtypes.html#dict
 
-        See examples for the method
-        :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
+        See examples for :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
         """
 
         if not layer_data.empty:
@@ -280,8 +279,7 @@ class PBF:
         .. _`dict`:
             https://docs.python.org/3/library/stdtypes.html#dict
 
-        See examples for the method
-        :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
+        See examples for :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
         """
 
         if readable or expand:
@@ -319,12 +317,11 @@ class PBF:
         :param number_of_chunks: number of chunks
         :type number_of_chunks: int
         :param kwargs: [optional] parameters of the method
-            :meth:`PBFReadParse._read_pbf_layer()<pydriosm.reader.PBFReadParse._read_pbf_layer>`
+            :meth:`PBF._read_layer()<pydriosm.reader._pbf.PBF._read_layer>`
         :return: data of the given layer of the given OSM PBF layer
         :rtype: pandas.DataFrame | list
 
-        See examples for the method
-        :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
+        See examples for :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
         """
 
         layer_name = layer.GetName()
@@ -372,8 +369,7 @@ class PBF:
 
         .. seealso::
 
-            - Examples for the method
-              :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
+            - Examples for :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
         """
 
         layer_name = layer.GetName()  # Get the name of the i-th layer
@@ -464,11 +460,11 @@ class PBF:
               physical memory to parse large files, in which case it would be recommended that
               ``number_of_chunks`` is set to be a reasonable value.
 
-        .. _pydriosm-reader-PBFReadParse-read_osm_pbf:
+        .. _pydriosm-reader-PBF-read_pbf:
 
         **Examples**::
 
-            >>> from pydriosm.reader import PBF
+            >>> from pydriosm.reader._pbf import PBF
             >>> from pydriosm.downloader import Downloader
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
@@ -577,8 +573,8 @@ class PBF:
         .. seealso::
 
             - Examples for the methods:
-              :meth:`GeofabrikReader.read_osm_pbf()<pydriosm.reader.GeofabrikReader.read_osm_pbf>`
-              and :meth:`BBBikeReader.read_osm_pbf()<pydriosm.reader.BBBikeReader.read_osm_pbf>`.
+              :meth:`GeofabrikReader.read_pbf()<pydriosm.reader.GeofabrikReader.read_pbf>`
+              and :meth:`BBBikeReader.read_pbf()<pydriosm.reader.BBBikeReader.read_pbf>`.
         """
 
         osgeo_ogr, osgeo_gdal = _check_dependencies('osgeo.ogr', 'osgeo.gdal')
