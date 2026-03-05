@@ -2,6 +2,7 @@
 Utilities for the :mod:`~pydriosm.ios` module.
 """
 
+import pandas as pd
 from pyhelpers.text import find_similar_str, remove_punctuation
 
 from pydriosm.reader import PBF, SHP
@@ -21,7 +22,7 @@ def get_default_layer_name(schema_name):
 
     **Examples**::
 
-        >>> from pydriosm.ios._utils import get_default_layer_name
+        >>> from pydriosm.ios.utils import get_default_layer_name
         >>> lyr_name = get_default_layer_name(schema_name='point')
         >>> lyr_name
         'points'
@@ -51,7 +52,7 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
 
     **Examples**::
 
-        >>> from pydriosm.ios._utils import validate_schema_names
+        >>> from pydriosm.ios.utils import validate_schema_names
         >>> valid_names = validate_schema_names()
         >>> valid_names
         []
@@ -93,7 +94,7 @@ def validate_table_name(table_name, sub_space=''):
 
     **Examples**::
 
-        >>> from pydriosm.ios._utils import validate_table_name
+        >>> from pydriosm.ios.utils import validate_table_name
         >>> subrgn_name = 'greater london'
         >>> valid_table_name = validate_table_name(subrgn_name)
         >>> valid_table_name
@@ -112,3 +113,45 @@ def validate_table_name(table_name, sub_space=''):
     table_name_ = table_name_[:60] + '..' if len(table_name_) >= 63 else table_name_
 
     return table_name_
+
+
+def make_data_items(osm_data, schema_names):
+    if isinstance(schema_names, list):
+        schema_names_ = validate_schema_names(
+            schema_names=schema_names, schema_named_as_layer=True)
+        assert all(x in osm_data.keys() for x in schema_names)
+        data_items = zip(schema_names_, (osm_data[x] for x in schema_names_))
+
+    elif isinstance(schema_names, dict):
+        # e.g. schema_names = {'schema_0': 'lines', 'schema_1': 'points'}
+        schema_names_ = validate_schema_names(
+            schema_names=schema_names.values(), schema_named_as_layer=True)
+        assert all(x in osm_data.keys() for x in schema_names_)
+        data_items = zip(schema_names.keys(), (osm_data[x] for x in schema_names_))
+
+    else:
+        data_items = osm_data.items()
+
+    return data_items
+
+
+def preprocess_pdf_layer(layer_data, layer_name):
+    if isinstance(layer_data, list):
+        # osgeo_ogr = _check_dependency('osgeo.ogr')
+        # if all(isinstance(f, osgeo_ogr.Feature) for f in layer_data):
+        lyr_dat = pd.DataFrame([f.ExportToJson() for f in layer_data], columns=[layer_name])
+
+    else:
+        lyr_dat = layer_data.copy()
+        if isinstance(lyr_dat, pd.Series):
+            lyr_dat = pd.DataFrame(lyr_dat)
+
+        if 'coordinates' in lyr_dat.columns:
+            if not isinstance(lyr_dat.coordinates[0], list):
+                lyr_dat.coordinates = lyr_dat.coordinates.map(lambda x: x.wkt)
+
+        if 'geometry' in [x.name for x in lyr_dat.dtypes]:
+            geom_col_name = lyr_dat.dtypes[lyr_dat.dtypes == 'geometry'].index[0]
+            lyr_dat[geom_col_name] = lyr_dat[geom_col_name].map(lambda x: x.wkt)
+
+    return lyr_dat
