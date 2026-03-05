@@ -24,4 +24,4 @@ formats:
 # Optionally declare the Python requirements required to build the docs
 python:
   install:
-    - requirements: docs/source/rtd-req.txt
+    - requirements: docs/source/requirements.txt
