@@ -441,7 +441,7 @@ We can see the difference in ``'geometry'`` column between ``rutland_pbf_points_
 Shapefiles (.shp.zip / .shp)
 ----------------------------
 
-To read shapefile data, we can use the method :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` or :meth:`SHP.read_shp()<pydriosm.reader.SHP.read_shp>`, which relies on `PyShp <https://pypi.org/project/pyshp/>`_ (or optionally, `GeoPandas <http://geopandas.org/>`_.
+To read shapefile data, we can use the method :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` or :meth:`SHP.read_shp()<pydriosm.reader._shp.SHP.read_shp>`, which relies on `PyShp <https://pypi.org/project/pyshp/>`_ (or optionally, `GeoPandas <http://geopandas.org/>`_.
 
 
 .. note::
@@ -449,7 +449,7 @@ To read shapefile data, we can use the method :meth:`GeofabrikReader.read_shp_zi
     - `GeoPandas <http://geopandas.org/>`_ is not required for the `installation of pydriosm <https://pydriosm.readthedocs.io/en/latest/installation.html>`_.
 
 
-For example, let's now try to read the ``'railways'`` layer of the shapefile of ``'London'`` by using :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>`:
+For example, let's now try to read the ``'railways'`` layer of the shapefile of ``'London'`` by using :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>`:
 
 
 .. code-block:: python
@@ -519,9 +519,9 @@ Similar to the parsed PBF data, ``london_shp`` is also in `dict <https://docs.py
 
     - The parameter ``feature_names`` is related to ``'fclass'`` in ``london_railways_shp``. You can specify one feature name (or multiple feature names) to get a subset of ``london_railways_shp``.
 
-    - If the method :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` could not find the target *.shp* file at the default or specified directory (i.e. ``dat_dir``), it will try to extract the *.shp* file from the *.shp.zip* file.
+    - If the method :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` could not find the target *.shp* file at the default or specified directory (i.e. ``dat_dir``), it will try to extract the *.shp* file from the *.shp.zip* file.
 
-    - If the *.shp.zip* file is not available either, the method :meth:`GeofabrikReader.read_shp_zip()<pydriosm.reader.GeofabrikReader.read_shp_zip>` will try download the data first, provided that ``download=True``; otherwise, setting ``update=True`` would allow the method to download the latest version of the data despite the availability of the *.shp.zip* file.
+    - If the *.shp.zip* file is not available either, the method :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` will try download the data first, provided that ``download=True``; otherwise, setting ``update=True`` would allow the method to download the latest version of the data despite the availability of the *.shp.zip* file.
 
     - If you'd like to delete the *.shp* files and/or the downloaded *.shp.zip* file, set the parameters ``rm_extracts=True`` and/or ``rm_shp_zip=True``.
 
@@ -559,7 +559,7 @@ For example, let's now merge the ``'railways'`` layers of ``'London'`` and ``'Ke
     "tests\osm_data\gre_lon-ken-railways\linestring.shp"
 
 
-We can read the merged shapefile data by using the method :meth:`SHP.read_layer_shps()<pydriosm.reader.SHP.read_layer_shps>`:
+We can read the merged shapefile data by using the method :meth:`SHP.read_layer_shps()<pydriosm.reader._shp.SHP.read_layer_shps>`:
 
 
 .. code-block:: python
@@ -577,7 +577,7 @@ We can read the merged shapefile data by using the method :meth:`SHP.read_layer_
     [5 rows x 9 columns]
 
 
-For more details, also check out the methods :meth:`SHP.merge_shps()<pydriosm.reader.SHP.merge_shps>` and :meth:`SHP.merge_layer_shps()<pydriosm.reader.SHP.merge_layer_shps>`.
+For more details, also check out the methods :meth:`SHP.merge_shps()<pydriosm.reader._shp.SHP.merge_shps>` and :meth:`SHP.merge_layers()<pydriosm.reader._shp.SHP.merge_layers>`.
 
 
 .. _quickstart-ios-examples:
@@ -643,7 +643,7 @@ The example is illustrated in :numref:`pbf_db_example`:
 Import data into the database
 -----------------------------
 
-To import any of the above OSM data to a database in the connected PostgreSQL server, we can use the method :meth:`~pydriosm.ios.PostgresOSM.import_osm_data` or :meth:`~pydriosm.ios.PostgresOSM.import_subregion_osm_pbf`.
+To import any of the above OSM data to a database in the connected PostgreSQL server, we can use the method :meth:`~pydriosm.ios.PostgresOSM.import_osm_data`.
 
 For example, let's now try to import ``rutland_pbf_parsed_1`` (*see also* :ref:`the parsed PBF data of Rutland above<quickstart-reader-rutland_pbf_parsed_1>` that we've got from previous :ref:`PBF data (.pbf / .osm.pbf)<quickstart-reader-parse-pbf-data>` section:
 
@@ -1017,10 +1017,10 @@ Let's delete the directory **"tests/osm_data/"**:
 
 .. _quickstart-the-end:
 
-**This is the end of the** :doc:`quick-start`.
+**This is the end of the** :doc:`quick-start tutorial<quick-start>`.
 
 --------------------------------------------------------------
 
 Any issues regarding the use of the package are all welcome and should be logged/reported onto the `Issue Tracker <https://github.com/mikeqfu/pydriosm/issues>`_.
 
-For more details and examples, check :doc:`modules`.
+For more details and examples, check :doc:`subpackages<subpackages>` and :doc:`modules<modules>`.

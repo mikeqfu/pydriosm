@@ -2,6 +2,8 @@
 PyDriosm
 ########
 
+*A Python package for downloading, reading and PostgreSQL-based I/O of OpenStreetMap data.*
+
 |PyPI| |Python Version| |Documentation Status| |License| |Codacy Badge| |DOI|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/pydriosm

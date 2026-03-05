@@ -1,5 +1,5 @@
 =======
-modules
+Modules
 =======
 
 The following modules provide supporting functions and utilities for the subpackages :doc:`downloader`, :doc:`reader` and :doc:`ios`.

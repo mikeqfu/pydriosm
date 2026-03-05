@@ -13,13 +13,15 @@ reader
 Parse OSM data
 --------------
 
+.. currentmodule:: pydriosm.reader
+
 .. autosummary::
     :toctree: _generated/
     :template: class.rst
 
-    SHP
-    PBF
-    VAR
+    ~_shp.SHP
+    ~_pbf.PBF
+    ~_var.VAR
 
 Read OSM data
 -------------
