@@ -362,7 +362,7 @@ class Reader(BaseReader):
 
     def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
                  parse_geometry=False, parse_properties=False, parse_other_tags=False,
-                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_pbf_file=False, chunk_size_limit=50, verbose=False, raise_error=True,
                  **kwargs):
         # noinspection PyShadowingNames
@@ -389,7 +389,7 @@ class Reader(BaseReader):
             in a `dict`_ format, defaults to ``False``
         :type parse_other_tags: bool
         :param download: whether to download/update the PBF data file of the given subregion,
-            if it is not available at the specified path, defaults to ``True``
+            if it is not available at the specified path, defaults to ``False``
         :type download: bool
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
@@ -526,7 +526,7 @@ class Reader(BaseReader):
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
     def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
-                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_extracts=False, rm_shp_zip=False, verbose=False, raise_error=True, **kwargs):
         """
         Read a shapefile of a geographic (sub)region.
@@ -546,7 +546,7 @@ class Reader(BaseReader):
         :param update: whether to check to update pickle backup (if available), defaults to ``False``
         :type update: bool
         :param download: whether to ask for confirmation
-            before starting to download a file, defaults to ``True``
+            before starting to download a file, defaults to ``False``
         :type download: bool
         :param pickle_it: whether to save the .shp data as a pickle file, defaults to ``False``
         :type pickle_it: bool
