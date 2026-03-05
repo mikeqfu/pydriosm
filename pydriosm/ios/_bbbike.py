@@ -3,14 +3,17 @@ Implement storage I/O of (parsed) OSM data extracts (available from BBBike free 
 with `PostgreSQL <https://www.postgresql.org/>`_.
 """
 
-from pydriosm.ios._ios import PostgresOSM
+from pydriosm.ios._pgsql_osm import PostgresOSM
 
 
-class BBBikeIOS:
+class BBBikeIOS(PostgresOSM):
     """
     Implement storage I/O of `BBBike exports of OpenStreetMap data <https://download.bbbike.org/>`_
     with PostgreSQL.
     """
+
+    #: Data source.
+    DATA_SOURCES: list = ['BBBike']
 
     def __init__(self, **kwargs):
         """
@@ -24,22 +27,19 @@ class BBBikeIOS:
         **Examples**::
 
             >>> from pydriosm.ios import BBBikeIOS
-
-            >>> bbi = BBBikeIOS(database_name='osmdb_test')
+            >>> bbi = BBBikeIOS(database_name='osmdb_test', verbose=True)
             Password (postgres@localhost:5432): ***
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> type(bbi.dbms)
-            pydriosm.ios.PostgresOSM
-
-            >>> bbi.dbms.name
-            'BBBike exports of OpenStreetMap data'
+            >>> type(bbi.downloader)
+            pydriosm.downloader._wrapper.Downloader
+            >>> type(bbi.reader)
+            pydriosm.downloader._wrapper.Reader
 
         .. seealso::
 
             - Examples for all the methods of the class :class:`~pydriosm.ios.PostgresOSM`.
         """
 
-        kwargs.update({'data_source': 'BBBike'})
-        self.dbms = PostgresOSM(**kwargs)
+        kwargs['data_source'] = self.DATA_SOURCES[0]
+        super().__init__(**kwargs)
