@@ -6,7 +6,7 @@ import time
 
 from pyhelpers.ops import confirmed
 
-from .downloader import BBBikeDownloader, GeofabrikDownloader
+from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader
 
 
 def _update_prepacked_data(verbose=True, interval=5):
@@ -22,13 +22,12 @@ def _update_prepacked_data(verbose=True, interval=5):
     **Examples**::
 
         >>> from pydriosm._updater import _update_prepacked_data
-
         >>> _update_prepacked_data(verbose=True)
         To update resources (which may take a few minutes)
         ? [No]|Yes: no
     """
 
-    if confirmed("To update resources (which may take a few minutes)\n?"):
+    if confirmed("Proceed to update resources (which may take a few minutes)\n?"):
 
         meth_args = {
             'update': True,
