@@ -2,6 +2,7 @@ import lzma
 import multiprocessing
 import os
 
+import numpy as np
 import pandas as pd
 
 from pydriosm.reader.formatter import convert_simplex_geometry
@@ -65,6 +66,9 @@ class VAR:
                 csv_xz = pd.DataFrame.from_records(
                     p.map(cls._prep_csv_xz, f.readlines()), columns=col_names)
 
+        object_cols = csv_xz.select_dtypes(include=['object', 'str']).columns
+        csv_xz[object_cols] = csv_xz[object_cols].replace({np.nan: None})
+
         return csv_xz
 
     # == .geojson.xz =============================================================================
@@ -115,5 +119,8 @@ class VAR:
                 geom_data = p.map(convert_simplex_geometry, data['geometry'])
 
             data.loc[:, 'geometry'] = pd.Series(geom_data)
+
+        object_cols = data.select_dtypes(include=['object', 'str']).columns
+        data[object_cols] = data[object_cols].replace({np.nan: None})
 
         return data

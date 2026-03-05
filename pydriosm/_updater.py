@@ -6,7 +6,7 @@ import time
 
 from pyhelpers.ops import confirmed
 
-from .downloader import BBBikeDownloader, GeofabrikDownloader
+from pydriosm.downloader import BBBikeDownloader, GeofabrikDownloader
 
 
 def _update_prepacked_data(verbose=True, interval=5):
@@ -22,13 +22,12 @@ def _update_prepacked_data(verbose=True, interval=5):
     **Examples**::
 
         >>> from pydriosm._updater import _update_prepacked_data
-
         >>> _update_prepacked_data(verbose=True)
         To update resources (which may take a few minutes)
         ? [No]|Yes: no
     """
 
-    if confirmed("To update resources (which may take a few minutes)\n?"):
+    if confirmed("Proceed to update resources (which may take a few minutes)\n?"):
 
         meth_args = {
             'update': True,
@@ -62,13 +61,13 @@ def _update_prepacked_data(verbose=True, interval=5):
         # -- BBBike --------------------------------------------------------------------------------
         bbd = BBBikeDownloader()
 
-        _ = bbd.get_bbbike_cities(**meth_args)
-
-        time.sleep(interval)
-
-        _ = bbd.get_coordinates_of_cities(**meth_args)
-
-        time.sleep(interval)
+        # _ = bbd.get_bbbike_cities(**meth_args)
+        #
+        # time.sleep(interval)
+        #
+        # _ = bbd.get_coordinates_of_cities(**meth_args)
+        #
+        # time.sleep(interval)
 
         _ = bbd.get_subregion_index(**meth_args)
 

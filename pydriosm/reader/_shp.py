@@ -11,10 +11,11 @@ import re
 import shutil
 import zipfile
 
+import numpy as np
 import pandas as pd
 import shapefile as pyshp
 import shapely.geometry
-from pyhelpers._cache import _check_dependency, _print_failure_message
+from pyhelpers._cache import _check_dependencies, _print_failure_message
 from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, validate_dir
 from pyhelpers.text import find_similar_str
 
@@ -30,14 +31,11 @@ def get_layer_name(shp_filename):
 
     **Examples**::
 
-        >>> from pydriosm.reader import SHP
-
+        >>> from pydriosm.reader._shp import SHP
         >>> SHP.get_layer_name("") is None
         True
-
         >>> SHP.get_layer_name("gis_osm_railways_free_1.shp")
         'railways'
-
         >>> SHP.get_layer_name("gis_osm_transport_a_free_1.shp")
         'transport'
     """
@@ -69,16 +67,16 @@ def _unzip_prep(shp_zip_pathname, extract_to=None, layer_names=None, verbose=Fal
         layer_names_ = layer_names
         if verbose:
             print(
-                f"Extracting {add_slashes(shp_zip_rel_path)}\n\t"
-                f"to {add_slashes(extrdir_rel_path)}",
+                f"Extracting {add_slashes(shp_zip_rel_path)}\n"
+                f"  to {add_slashes(extrdir_rel_path)}",
                 end=" ... ")
     else:
         layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
         if verbose:
             layer_name_list = "\t" + "\n\t".join([f"'{x}'" for x in layer_names_])
             print(f"Extracting the following layer(s):\n{layer_name_list}")
-            print(f"\t\tfrom {add_slashes(shp_zip_rel_path)} ... \n"
-                  f"\t\t\tto {add_slashes(extrdir_rel_path)}",
+            print(f"  from: {add_slashes(shp_zip_rel_path)} ... \n"
+                  f"    to: {add_slashes(extrdir_rel_path)}",
                   end=" ... ")
 
     return extract_dir, layer_names_
@@ -122,7 +120,7 @@ class SHP:
 
     **Examples**::
 
-        >>> from pydriosm.reader import SHP
+        >>> from pydriosm.reader._shp import SHP
 
         >>> SHP.EPSG4326_WGS84_PROJ4
         '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
@@ -228,7 +226,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
 
             >>> SHP.validate_layer_names(None)
             []
@@ -279,7 +277,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
 
             >>> SHP.get_layer_name("") is None
             True
@@ -323,7 +321,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
@@ -331,7 +329,7 @@ class SHP:
             >>> # Download the shapefile data of London as an example
             >>> subrgn_name = 'london'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests\\osm_data"
+            >>> dwnld_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -415,9 +413,9 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         extract_dir, layer_names_ = _unzip_prep(
@@ -505,7 +503,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
@@ -514,7 +512,7 @@ class SHP:
             >>> # Download the shapefile data of London as an example
             >>> subrgn_name = 'london'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests\\osm_data"
+            >>> dwnld_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -581,13 +579,13 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         if engine in {'geopandas', 'gpd'}:
-            gpd = _check_dependency(name='geopandas')
+            gpd = _check_dependencies('geopandas')
             shp_data = gpd.read_file(shp_pathname, **kwargs)
 
         else:  # method == 'pyshp':  # default
@@ -609,6 +607,9 @@ class SHP:
                 # shp_data.drop(columns=shape_geom_colnames, inplace=True)
             else:
                 shp_data = pd.concat([shp_data, shape_geom], axis=1)
+
+        object_cols = shp_data.select_dtypes(include=['object', 'str']).columns
+        shp_data[object_cols] = shp_data[object_cols].replace({np.nan: None})
 
         return shp_data
 
@@ -649,19 +650,20 @@ class SHP:
 
         .. seealso::
 
-            - Examples for the method
-              :meth:`SHPReadParse.write_to_shapefile()
-              <pydriosm.reader.SHPReadParse.write_to_shapefile>`.
+            - Examples for
+              :meth:`SHP.write_to_shapefile()<pydriosm.reader._shp.SHP.write_to_shapefile>`.
         """
 
         dtype_shp_type = {
-            'object': 'C',
-            'int64': 'N',
+            'object': 'C',  # Character
+            'str': 'C',
+            'int64': 'N',  # Numeric
             'int32': 'N',
-            'float64': 'F',
+            'float64': 'F',  # Float
             'float32': 'F',
-            'bool': 'L',
-            'datetime64': 'D',
+            'bool': 'L',  # Logical
+            'datetime64': 'D',  # Date
+            'datetime64[ns]': 'D',  # Explicit pandas datetime
         }
 
         fields = []
@@ -672,9 +674,10 @@ class SHP:
             except TypeError:
                 max_size = data[field_name].astype(str).map(len).max()
 
+            shp_type = dtype_shp_type.get(dtype.name, 'C')
             decimal = decimal_precision if 'float' in dtype.name else 0
 
-            fields.append((field_name, dtype_shp_type[dtype.name], max_size, decimal))
+            fields.append((field_name, shp_type, int(max_size), decimal))
 
         return fields
 
@@ -704,7 +707,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
@@ -713,7 +716,7 @@ class SHP:
             >>> # Download the shapefile data of London as an example
             >>> subrgn_name = 'london'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests\\osm_data"
+            >>> dwnld_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -779,9 +782,9 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         filename_ = os.path.basename(write_to) if shp_filename is None else copy.copy(shp_filename)
@@ -795,7 +798,7 @@ class SHP:
             key_column_names = ['coordinates', 'shape_type']
             dat = data.copy()
 
-            if 'geometry' in data:
+            if 'geometry' in data.columns:
                 coords_and_shape_type = pd.DataFrame(
                     dat['geometry'].map(cls._convert_to_coords_and_shape_type).to_list(),
                     columns=key_column_names, index=dat.index)
@@ -807,11 +810,16 @@ class SHP:
             shape_type = dat['shape_type'].unique()[0]
 
             with pyshp.Writer(target=write_to_, shapeType=shape_type, autoBalance=True) as w:
-                w.fields = cls._specify_pyshp_fields(
+                field_info_list = cls._specify_pyshp_fields(
                     data=dat, field_names=field_names, decimal_precision=decimal_precision)
 
+                for f in field_info_list:
+                    w.field(*f)
+
                 for i in dat.index:
-                    w.record(*dat.loc[i, field_names].to_list())
+                    rec_list = dat.loc[i, field_names].values.tolist()
+                    rec_list = [val.item() if hasattr(val, 'item') else val for val in rec_list]
+                    w.record(*rec_list)
 
                     # s = pyshp.Shape(shapeType=w.shapeType, points=dat.loc[i, 'coordinates'])
                     coordinates = dat.loc[i, 'coordinates']
@@ -857,7 +865,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> import os
 
             >>> fn = "gis_osm_railways_free_1.shp"
@@ -919,10 +927,9 @@ class SHP:
             if isinstance(dat, pd.DataFrame) and not hasattr(dat, 'crs'):
                 cls.write_to_shapefile(data=dat, write_to=feat_shp_pathname)
             else:
-                gpd = _check_dependency('geopandas')
-                assert isinstance(dat, gpd.GeoDataFrame)
+                gpd = _check_dependencies('geopandas')
                 # os.makedirs(os.path.dirname(feat_shp_pathnames), exist_ok=True)
-                dat.to_file(
+                gpd.GeoDataFrame(dat).to_file(
                     feat_shp_pathname, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
 
             feat_shp_pathnames.append(feat_shp_pathname)
@@ -946,7 +953,7 @@ class SHP:
             whether to return the path to the saved data of ``fclass``, defaults to ``False``
         :type ret_feat_shp_path: bool
         :param kwargs: [optional] parameters of the method
-            :meth:`SHPReadParse.read_shp()<pydriosm.reader.SHPReadParse.read_shp>`
+            :meth:`SHP.read_shp()<pydriosm.reader._shp.SHP.read_shp>`
         :return: parsed shapefile data; and optionally,
             pathnames of the shapefiles of the specified features (when ``ret_feat_shp_path=True``)
         :rtype: pandas.DataFrame | geopandas.GeoDataFrame | tuple
@@ -956,7 +963,7 @@ class SHP:
 
         **Examples**::
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
@@ -964,7 +971,7 @@ class SHP:
             >>> # Download the shapefile data of London as an example
             >>> subrgn_name = 'london'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests\\osm_data"
+            >>> dwnld_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -1017,9 +1024,9 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(dwnld_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         lyr_shp_pathnames = [shp_pathnames] if isinstance(shp_pathnames, str) else shp_pathnames
@@ -1099,12 +1106,12 @@ class SHP:
 
         .. seealso::
 
-            - Examples for the function :func:`~pydriosm.reader.SHPReadParse.merge_layer_shps`.
+            - Examples for :meth:`~pydriosm.reader._shp.SHP.merge_layers`.
             - Resource: https://github.com/GeospatialPython/pyshp
         """
 
         if engine in {'geopandas', 'gpd'}:
-            gpd = _check_dependency(name='geopandas')
+            gpd = _check_dependencies('geopandas')
 
             shp_data = collections.defaultdict(list)
             for shp_pathname in shp_pathnames:
@@ -1158,7 +1165,7 @@ class SHP:
         paths_to_temp_files = []
 
         for subregion_name, path_to_extract_dir in zip(subrgn_names_, path_to_extract_dirs):
-            orig_filename_list = glob.glob1(path_to_extract_dir, f"*_{layer_name}_*")
+            orig_filename_list = glob.glob(f"*_{layer_name}_*", root_dir=path_to_extract_dir)
 
             for orig_filename in orig_filename_list:
                 orig = os.path.join(path_to_extract_dir, orig_filename)
@@ -1256,13 +1263,13 @@ class SHP:
             - For valid ``layer_name``, check the function
               :func:`~pydriosm.utils.valid_shapefile_layer_names`.
 
-        .. _pydriosm-reader-SHPReadParse-merge_layer_shps:
+        .. _pydriosm-reader-SHP-merge_layer_shps:
 
         **Examples**::
 
             >>> # To merge 'railways' layers of Greater Manchester and West Yorkshire"
 
-            >>> from pydriosm.reader import SHP
+            >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
@@ -1270,7 +1277,7 @@ class SHP:
             >>> # Download the .shp.zip file of Manchester and West Yorkshire
             >>> subrgn_names = ['Greater Manchester', 'West Yorkshire']
             >>> file_fmt = ".shp"
-            >>> data_dir = "tests\\osm_data"
+            >>> data_dir = "tests/osm_data"
 
             >>> gfd = GeofabrikDownloader()
 
@@ -1319,15 +1326,15 @@ class SHP:
 
             >>> # Delete the test data directory
             >>> delete_dir(gfd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
 
         .. seealso::
 
             - Examples for the method
-              :meth:`GeofabrikReader.merge_subregion_layer_shp()
-              <pydriosm.reader.GeofabrikReader.merge_subregion_layer_shp>`.
+              :meth:`GeofabrikReader.merge_shp_layers()
+              <pydriosm.reader.GeofabrikReader.merge_shp_layers>`.
         """
 
         path_to_extract_dirs = cls._extract_files(
@@ -1357,7 +1364,7 @@ class SHP:
         if verbose:
             print("Merging the following shapefiles:")
             print("\t" + "\n\t".join(f"\"{os.path.basename(f)}\"" for f in paths_to_shp_files))
-            print("\t\tIn progress ... ", end="")
+            print("  In progress ... ", flush=True, end="")
 
         try:
             path_to_merged_dir = cls._make_merged_dir(
@@ -1383,8 +1390,8 @@ class SHP:
                 shutil.rmtree(path_to_merged_dir_temp)
 
             if verbose:
-                m_rel_path = check_relative_pathname(path_to_merged_dir)
-                print(f"\t\tFind the merged shapefile at \"{m_rel_path}\\\".")
+                m_rel_path = add_slashes(check_relative_pathname(path_to_merged_dir))
+                print(f"    Find the merged shapefile in {m_rel_path}.")
 
             if ret_shp_pathname:
                 path_to_merged_shp = glob.glob(os.path.join(f"{path_to_merged_dir}*", "*.shp"))

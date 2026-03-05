@@ -47,10 +47,10 @@ class TestBaseDownloader:
     @staticmethod
     def test_format_confirmation_prompt():
         test_1 = BaseDownloader.format_confirmation_prompt()
-        assert test_1 == 'To retrieve/compile data of <data_name>\n?'
+        assert test_1 == 'Proceed to retrieve/compile data of <data_name>\n?'
 
         test2 = BaseDownloader.format_confirmation_prompt(update=True)
-        assert test2 == 'To update the data of <data_name>\n?'
+        assert test2 == 'Proceed to update the data of <data_name>\n?'
 
     @staticmethod
     def test_print_action_prompt(capfd):
@@ -201,7 +201,7 @@ class TestBaseDownloader:
         assert output[0] == ['Greater London']
         assert output[1] == ['.osm.pbf']
         assert output[2] is True
-        assert output[3].startswith('To download data in the format')
+        assert output[3].startswith('Proceed to download data in the format')
         assert output[4] == []
 
         output = bbd.file_exists_and_more(
@@ -209,7 +209,7 @@ class TestBaseDownloader:
         assert output[0] == ['London']
         assert output[1] == ['.pbf']
         assert output[2] is True
-        assert output[3].startswith('To download data in the format')
+        assert output[3].startswith('Proceed to download data in the format')
         assert output[4] == []
 
         subrgn_names = ['london', 'rutland']
@@ -218,7 +218,7 @@ class TestBaseDownloader:
         assert output[0] == ['Greater London', 'Rutland']
         assert output[1] == ['.osm.pbf']
         assert output[2] is True
-        assert output[3].startswith('To download data in the format')
+        assert output[3].startswith('Proceed to download data in the format')
         assert output[4] == []
 
         subrgn_names = ['birmingham', 'leeds']
@@ -227,7 +227,7 @@ class TestBaseDownloader:
         assert output[0] == ['Birmingham', 'Leeds']
         assert output[1] == ['.pbf']
         assert output[2] is True
-        assert output[3].startswith('To download data in the format')
+        assert output[3].startswith('Proceed to download data in the format')
         assert output[4] == []
 
     def test_verify_download_dir(self, bd):

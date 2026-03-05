@@ -100,9 +100,6 @@ class BBBikeDownloader(BaseDownloader):
         """
         Get the names of all the available cities.
 
-        This can be an alternative to the method
-        :meth:`~pydriosm.downloader.BBBikeDownloader.get_valid_subregion_names`.
-
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
         :param confirmation_required: whether asking for confirmation to proceed,
@@ -160,6 +157,8 @@ class BBBikeDownloader(BaseDownloader):
             >>> coords_of_cities = bbd.get_coordinates_of_cities()
             >>> type(coords_of_cities)
             pandas.core.frame.DataFrame
+            >>> coords_of_cities.shape
+            (240, 13)
             >>> coords_of_cities.head()
                       City  ... ur_latitude
             0       Aachen  ...       50.99
@@ -219,6 +218,8 @@ class BBBikeDownloader(BaseDownloader):
             >>> bbd = BBBikeDownloader()
             >>> # A BBBike catalogue of geographic (sub)regions
             >>> subregion_index = bbd.get_subregion_index()
+            >>> subregion_index.shape
+            (238, 3)
             >>> subregion_index.head()
                       name  ...                                                url
             0       Aachen  ...     https://download.bbbike.org/osm/bbbike/Aachen/
@@ -246,9 +247,6 @@ class BBBikeDownloader(BaseDownloader):
         """
         Get a list of names of all geographic (sub)regions.
 
-        This can be an alternative to the method
-        :meth:`~pydriosm.downloader.BBBikeDownloader.get_names_of_cities`.
-
         :param update: whether to (check on and) update the prepacked data, defaults to ``False``
         :type update: bool
         :param confirmation_required: whether asking for confirmation to proceed,
@@ -270,6 +268,8 @@ class BBBikeDownloader(BaseDownloader):
             >>> subregion_names = bbd.get_valid_subregion_names()
             >>> type(subregion_names)
             list
+            >>> len(subregion_names)
+            237
         """
 
         data_name = f'{cls.NAME} subregion names'
@@ -358,13 +358,15 @@ class BBBikeDownloader(BaseDownloader):
             To retrieve/compile data of a download catalogue for "Birmingham"
             ? [No]|Yes: yes
             Retrieving/compiling the data ... Done.
+            >>> bham_catalogue.shape
+            (15, 5)
             >>> bham_catalogue.head()
                                                filename  ...                last_update
-            0                        Birmingham.osm.pbf  ...  2025-03-15 23:04:23+00:00
-            1                         Birmingham.osm.gz  ...  2025-03-16 06:48:42+00:00
-            2                    Birmingham.osm.shp.zip  ...  2025-03-16 07:02:01+00:00
-            3  Birmingham.osm.garmin-ontrail-latin1.zip  ...  2025-03-16 08:05:24+00:00
-            4   Birmingham.osm.garmin-onroad-latin1.zip  ...  2025-03-16 08:05:02+00:00
+            0                        Birmingham.osm.pbf  ...  2026-02-28 18:54:17+00:00
+            1                         Birmingham.osm.gz  ...  2026-03-01 04:52:14+00:00
+            2                    Birmingham.osm.shp.zip  ...  2026-03-01 05:40:06+00:00
+            3  Birmingham.osm.garmin-ontrail-latin1.zip  ...  2026-03-01 06:15:16+00:00
+            4   Birmingham.osm.garmin-onroad-latin1.zip  ...  2026-03-01 06:14:56+00:00
             [5 rows x 5 columns]
             >>> bham_catalogue.columns.tolist()
             ['filename', 'url', 'data_type', 'size', 'last_update']
@@ -375,7 +377,7 @@ class BBBikeDownloader(BaseDownloader):
         data_name = f'a download catalogue for "{subregion_name_}"'
 
         sub_catalogue = self.get_prepacked_data(
-            fetch_bbbike_sub_catalogue, subregion_name=subregion_name_, url=self.URL,
+            meth=fetch_bbbike_sub_catalogue, subregion_name=subregion_name_, url=self.URL,
             raise_error=raise_error,
             data_name=data_name, update=update, confirmation_required=confirmation_required,
             dump_backup=False, verbose=verbose)
@@ -416,6 +418,16 @@ class BBBikeDownloader(BaseDownloader):
             >>> bham_catalogue = catalogue['Birmingham']
             >>> type(bham_catalogue)
             pandas.core.frame.DataFrame
+            >>> bham_catalogue.shape
+            (13, 5)
+            >>> bham_catalogue.head()
+                                               filename  ...                last_update
+            0                        Birmingham.osm.pbf  ...  2025-09-27 18:51:39+00:00
+            1                         Birmingham.osm.gz  ...  2025-09-28 05:37:57+00:00
+            2                    Birmingham.osm.shp.zip  ...  2025-09-28 05:54:16+00:00
+            3  Birmingham.osm.garmin-ontrail-latin1.zip  ...  2025-09-28 07:05:18+00:00
+            4   Birmingham.osm.garmin-onroad-latin1.zip  ...  2025-09-28 07:04:54+00:00
+            [5 rows x 5 columns]
         """
 
         data_name = f'{cls.NAME} downloads catalogue'
@@ -424,7 +436,7 @@ class BBBikeDownloader(BaseDownloader):
             fetch_bbbike_catalogue, cls_instance=cls, data_name=data_name, update=update,
             confirmation_required=confirmation_required, verbose=verbose, action_prompt_note="",
             action_prompt_end=" ... \n" if verbose == 2 else " ... ",
-            ending_message="\t\tFetching completed.", raise_error=raise_error)
+            ending_message="    Fetching completed.", raise_error=raise_error)
 
         return download_index
 
@@ -546,8 +558,7 @@ class BBBikeDownloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``,
-            it refers to the method :meth:`~pydriosm.downloader.BBBike.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_bbbike`.
         :type download_dir: str | None
         :return: valid subregion name, filename, download url and absolute file path
         :rtype: tuple
@@ -597,8 +608,8 @@ class BBBikeDownloader(BaseDownloader):
             available on the download server
         :type osm_file_format: str
         :param data_dir: directory where the data file (or files) is (or are) stored,
-            defaults to ``None``; when ``data_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.BBBike.cdd`
+            defaults to ``None``; when ``data_dir=None``, it refers to
+            :func:`~pydriosm.utils.cdd_bbbike`.
         :type data_dir: str | None
         :param update: whether to (check and) update the data, defaults to ``False``
         :type update: bool
@@ -625,11 +636,12 @@ class BBBikeDownloader(BaseDownloader):
             False
             >>> # Download the PBF data of Birmingham (to the default directory)
             >>> bbd.download_data(subregion_name, osm_file_format, data_dir, verbose=True)
-            To download .pbf data of the following geographic (sub)region(s):
-                Birmingham
+            Proceed to download data in the format '.shp.zip' for the following geographic (sub...
+                "Birmingham"
+              to "./tests/osm_data/birmingham/"
             ? [No]|Yes: yes
-            Downloading "Birmingham.osm.pbf"
-                to "tests\\osm_data\\birmingham\\" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.0M/79.0M | 949kB/s |...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
             >>> bbd.file_exists(subregion_name, osm_file_format, data_dir)
             True
             >>> # Set `ret_file_path=True`
@@ -640,9 +652,9 @@ class BBBikeDownloader(BaseDownloader):
             True
             >>> # Remove the directory or the PBF file and check again:
             >>> delete_dir(bbd.download_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
             >>> # Since the default download directory has been deleted
             >>> bbd.file_exists(subregion_name, osm_file_format, data_dir)
             False
@@ -670,8 +682,7 @@ class BBBikeDownloader(BaseDownloader):
             available on the download server
         :type osm_file_formats: str
         :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.BBBike.cdd`
+            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_bbbike`.
         :type download_dir: str | None
         :param update: whether to update the data if it already exists, defaults to ``False``
         :type update: bool
@@ -702,11 +713,12 @@ class BBBikeDownloader(BaseDownloader):
             >>> subregion_name = 'London'
             >>> osm_file_format = "pbf"
             >>> bbd.download_data(subregion_name, osm_file_format, verbose=True)
-            To download data in the format '.pbf' for the following geographic (sub)region(s):
+            Proceed to download data in the format '.pbf' for the following geographic (sub)reg...
                 "London"
+              to "./osm_data/bbbike/london/"
             ? [No]|Yes: yes
-            Downloading "London.osm.pbf" 100%|██████████| 131M/131M | 36.1MB/s | ETA: 00:00
-                Saving "London.osm.pbf" to "./osm_data/bbbike/london/" ... Done.
+            Downloading "London.osm.pbf" 100%|██████████| 188M/188M | 1.06MB/s | ETA: 00:00
+              Saving "London.osm.pbf" to "./osm_data/bbbike/london/" ... Done.
             >>> len(bbd.data_paths)
             1
             >>> os.path.relpath(bbd.data_paths[0])  # (on Windows)
@@ -722,12 +734,15 @@ class BBBikeDownloader(BaseDownloader):
             >>> download_paths = bbd.download_data(
             ...     subregion_names, osm_file_format, download_dir, verbose=2,
             ...     ret_download_path=True)
-            To download data in the formats ('.shp.zip', '.pbf') for the following geographic (...
-                "Leeds"
+            Proceed to download data in the formats ('.shp.zip', '.pbf') for the following geog...
                 "Birmingham"
+                "Leeds"
+              to "./tests/osm_data/"
             ? [No]|Yes: yes
             Downloading "Leeds.osm.shp.zip" to "./tests/osm_data/leeds/" ... Done.
+            Downloading "Leeds.osm.pbf" to "./tests/osm_data/leeds/" ... Done.
             Downloading "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
+            Downloading "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
             >>> len(download_paths)
             4
             >>> len(bbd.data_paths)
@@ -740,11 +755,12 @@ class BBBikeDownloader(BaseDownloader):
             >>> # Delete the above download directories
             >>> delete_dir([os.path.dirname(london_download_dir), download_dir], verbose=True)
             To delete the following directories:
-                "./osm_data/" (Not empty)
-                "./tests/osm_data/" (Not empty)
+              "./osm_data/" (Not empty)
+              "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "./osm_data/" ... Done.
-            Deleting "./tests/osm_data/" ... Done.
+            Deleting:
+              "./osm_data/" ... Done.
+              "./tests/osm_data/" ... Done.
         """
 
         (subregion_names_, osm_file_formats_, confirmation_required_, confirmation_prompt,

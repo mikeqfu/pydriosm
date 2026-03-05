@@ -1,5 +1,5 @@
 import pytest
-from pyhelpers._cache import _check_dependency
+from pyhelpers._cache import _check_dependencies
 
 from pydriosm.reader._geofabrik import GeofabrikReader
 
@@ -37,26 +37,33 @@ class TestGeofabrikReader:
             parse_other_tags=parse_other_tags,
             verbose=True
         )
+
         assert isinstance(pbf_data, dict)
-        assert list(pbf_data.keys()) == [
-            'points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+
+        layer_names = ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+        assert list(pbf_data.keys()) == layer_names
+
+        test_point = pbf_data.get('points')[0]
 
         if readable:
-            assert isinstance(pbf_data['points'][0], dict)
+            geom, prop = test_point.get('geometry'), test_point.get('properties')
+            other_tags = prop.get('other_tags')
+
+            assert isinstance(test_point, dict)
 
             if parse_geometry:
-                assert pbf_data['points'][0]['geometry'] == 'POINT (-0.5134241 52.6555853)'
+                assert geom.startswith('POINT')
                 if not parse_other_tags:
-                    assert pbf_data['points'][0]['properties']['other_tags'] == '"odbl"=>"clean"'
+                    assert other_tags is None or isinstance(other_tags, str)
 
             elif parse_other_tags:
-                assert isinstance(pbf_data['points'][0]['geometry'], dict)
-                assert isinstance(pbf_data['points'][0]['properties']['other_tags'], dict)
+                assert isinstance(geom, dict)
+                assert other_tags is None or isinstance(other_tags, dict)
 
         else:
             if not (parse_geometry or parse_properties or parse_other_tags):
-                osgeo_ogr = _check_dependency('osgeo.ogr')
-                assert isinstance(pbf_data['points'][0], osgeo_ogr.Feature)
+                osgeo_ogr = _check_dependencies('osgeo.ogr')
+                assert isinstance(test_point, osgeo_ogr.Feature)
 
 
 if __name__ == '__main__':

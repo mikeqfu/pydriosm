@@ -1,6 +1,19 @@
 # Include package data
+include CHANGELOG.md
 include LICENSE
+include README.md
+
+# Include package data in pydriosm/data
 recursive-include pydriosm/data *
 
-# Exclude tests
+# Exclude development and build directories
 prune tests
+prune docs
+prune tutorials
+prune .venv
+prune venv
+prune dist
+prune *.egg-info
+
+# Global exclusions (optional but good)
+global-exclude __pycache__

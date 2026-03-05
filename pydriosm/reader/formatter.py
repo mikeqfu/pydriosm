@@ -38,7 +38,7 @@ def reformat_multipolygon_point(coords):
 
     **Examples**::
 
-        >>> from pydriosm.reader import reformat_multipolygon_point
+        >>> from pydriosm.reader.formatter import reformat_multipolygon_point
         >>> geometry = {
         ...     'type': 'MultiPolygon',
         ...     'coordinates': [[[[-0.6920145, 52.6753268], [-0.6920145, 52.6753268]]]]
@@ -90,7 +90,7 @@ def convert_simplex_geometry(geometry, mode=1, to_wkt=False):
 
     **Examples**::
 
-        >>> from pydriosm.reader import reformat_multipolygon_point
+        >>> from pydriosm.reader.formatter import reformat_multipolygon_point
 
         >>> g1_dat = {'type': 'Point', 'coordinates': [-0.5134241, 52.6555853]}
         >>> g1_data = convert_simplex_geometry(g1_dat)
@@ -266,7 +266,7 @@ def process_geometry_layer(layer_data, layer_name):
 
     **Examples**::
 
-        >>> from pydriosm.reader import process_geometry_layer
+        >>> from pydriosm.reader.formatter import process_geometry_layer
 
         >>> # An example of points layer data
         >>> lyr_name = 'points'
@@ -299,8 +299,7 @@ def process_geometry_layer(layer_data, layer_name):
 
     .. seealso::
 
-        - Examples for the method
-          :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
+        - Examples for :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
     """
 
     geom_col_name = 'geometry'
@@ -333,7 +332,7 @@ def reformat_other_tags(other_tags):
 
     **Examples**::
 
-        >>> from pydriosm.reader import reformat_other_tags
+        >>> from pydriosm.reader.formatter import reformat_other_tags
 
         >>> other_tags_dat = reformat_other_tags(other_tags='"odbl"=>"clean"')
         >>> other_tags_dat
@@ -341,8 +340,7 @@ def reformat_other_tags(other_tags):
 
     .. seealso::
 
-        - Examples for the method
-          :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
+        - Examples for :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
     """
 
     if other_tags:
@@ -375,7 +373,7 @@ def refresh_other_tags(prop_or_feat, mode=1):
 
     **Examples**::
 
-        >>> from pydriosm.reader import refresh_other_tags
+        >>> from pydriosm.reader.formatter import refresh_other_tags
         >>> prop_dat = {
         ...     'properties': {
         ...         'osm_id': '488432',
@@ -405,8 +403,7 @@ def refresh_other_tags(prop_or_feat, mode=1):
 
     .. seealso::
 
-        - Examples for the method
-          :meth:`PBF.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`.
+        - Examples for :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
     """
 
     if mode == 1:

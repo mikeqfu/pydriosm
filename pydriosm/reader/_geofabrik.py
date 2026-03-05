@@ -15,14 +15,14 @@ class GeofabrikReader(BaseReader):
     Read `Geofabrik <https://download.geofabrik.de/>`_ OpenStreetMap data extracts.
     """
 
-    #:
+    #: Name of the data source.
     NAME: str = GeofabrikDownloader.NAME
-    #:
+    #: Full name of the data source.
     LONG_NAME: str = GeofabrikDownloader.LONG_NAME
     #: str: Default download directory.
-    DEFAULT_DATA_DIR = GeofabrikDownloader.DEFAULT_DOWNLOAD_DIR
+    DEFAULT_DATA_DIR: str = GeofabrikDownloader.DEFAULT_DOWNLOAD_DIR
     #: set: Valid file formats.
-    FILE_FORMATS = GeofabrikDownloader.FILE_FORMATS
+    FILE_FORMATS: set = GeofabrikDownloader.FILE_FORMATS
 
     def __init__(self, data_dir=None, max_tmpfile_size=None):
         """
@@ -47,9 +47,7 @@ class GeofabrikReader(BaseReader):
         **Examples**::
 
             >>> from pydriosm.reader import GeofabrikReader
-
             >>> gfr = GeofabrikReader()
-
             >>> gfr.NAME
             'Geofabrik'
         """
@@ -83,20 +81,19 @@ class GeofabrikReader(BaseReader):
             >>> subrgn_name = 'rutland'
             >>> file_format = ".pbf"
             >>> dat_dir = "tests\\osm_data"
-
             >>> path_to_rutland_pbf = gfr.get_file_path(subrgn_name, file_format, data_dir=dat_dir)
-
             >>> # When "rutland-latest.osm.pbf" is unavailable at the package data directory
             >>> os.path.isfile(path_to_rutland_pbf)
             False
 
             >>> # Download the PBF data file of Rutland to "tests\\osm_data\\"
-            >>> gfr.downloader.download_osm_data(subrgn_name, file_format, dat_dir, verbose=True)
-            To download .osm.pbf data of the following geographic (sub)region(s):
-                Rutland
+            >>> gfr.downloader.download_data(subrgn_name, file_format, dat_dir, verbose=True)
+            To download data in the format '.osm.pbf' for the following geographic (sub)region(s):
+              "Rutland"
+              to "./tests/osm_data/rutland/"
             ? [No]|Yes: yes
-            Downloading "rutland-latest.osm.pbf"
-                to "tests\\osm_data\\rutland\\" ... Done.
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 730kB/s |...
+              Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
 
             >>> # Check again
             >>> path_to_rutland_pbf = gfr.get_file_path(subrgn_name, file_format, data_dir=dat_dir)
@@ -107,9 +104,9 @@ class GeofabrikReader(BaseReader):
 
             >>> # Delete the test data directory
             >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         path_to_file = super().get_file_path(
@@ -215,8 +212,8 @@ class GeofabrikReader(BaseReader):
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
         :type verbose: bool | int
-        :param kwargs: [optional] parameters of the method
-            :meth:`PBFReadParse.read_pbf()<pydriosm.reader.PBFReadParse.read_pbf>`
+        :param kwargs: [optional] parameters of
+            :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
         :return: dictionary of the .osm.pbf data;
             when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
         :rtype: dict | tuple | None
@@ -267,38 +264,38 @@ class GeofabrikReader(BaseReader):
             >>> pbf_parsed_points_ = pbf_parsed_['points']
             >>> pbf_parsed_points_.head()
                      id  ...                                         properties
-            0    488432  ...  {'osm_id': '488432', 'name': None, 'barrier': ...
-            1    488658  ...  {'osm_id': '488658', 'name': 'Tickencote Inter...
-            2  13883868  ...  {'osm_id': '13883868', 'name': None, 'barrier'...
-            3  14049101  ...  {'osm_id': '14049101', 'name': None, 'barrier'...
-            4  14558402  ...  {'osm_id': '14558402', 'name': None, 'barrier'...
+            0    488658  ...  {'osm_id': '488658', 'name': 'Tickencote Inter...
+            1  13883868  ...  {'osm_id': '13883868', 'name': None, 'barrier'...
+            2  14049101  ...  {'osm_id': '14049101', 'name': None, 'barrier'...
+            3  14558402  ...  {'osm_id': '14558402', 'name': None, 'barrier'...
+            4  14558409  ...  {'osm_id': '14558409', 'name': None, 'barrier'...
             [5 rows x 3 columns]
             >>> # Set `readable` and `parse_geometry` to be `True`
             >>> pbf_parsed_1 = gfr.read_pbf(
             ...     subregion_name, data_dir, readable=True, parse_geometry=True)
             >>> pbf_parsed_1_point = pbf_parsed_1['points'][0]
             >>> pbf_parsed_1_point['geometry']
-            'POINT (-0.5134241 52.6555853)'
-            >>> pbf_parsed_1_point['properties']['other_tags']
-            '"odbl"=>"clean"'
+            'POINT (-0.5313354 52.6737716)'
+            >>> pbf_parsed_1_point['properties']['highway']
+            'motorway_junction'
 
             >>> # Set `readable` and `parse_other_tags` to be `True`
             >>> pbf_parsed_2 = gfr.read_pbf(
             ...     subregion_name, data_dir, readable=True, parse_other_tags=True)
             >>> pbf_parsed_2_point = pbf_parsed_2['points'][0]
             >>> pbf_parsed_2_point['geometry']
-            {'type': 'Point', 'coordinates': [-0.5134241, 52.6555853]}
-            >>> pbf_parsed_2_point['properties']['other_tags']
-            {'odbl': 'clean'}
+            {'type': 'Point', 'coordinates': [-0.5313354, 52.6737716]}
+            >>> pbf_parsed_2_point['properties']['highway']
+            'motorway_junction'
             >>> # Set `readable`, `parse_geometry` and `parse_other_tags` to be `True`
             >>> pbf_parsed_3 = gfr.read_pbf(
             ...     subregion_name, data_dir, readable=True, parse_geometry=True,
             ...     parse_other_tags=True)
             >>> pbf_parsed_3_point = pbf_parsed_3['points'][0]
             >>> pbf_parsed_3_point['geometry']
-            'POINT (-0.5134241 52.6555853)'
-            >>> pbf_parsed_3_point['properties']['other_tags']
-            {'odbl': 'clean'}
+            'POINT (-0.5313354 52.6737716)'
+            >>> pbf_parsed_3_point['properties']['highway']
+            'motorway_junction'
             >>> # Delete the example data and the test data directory
             >>> delete_dir(data_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
@@ -352,13 +349,15 @@ class GeofabrikReader(BaseReader):
             []
 
             >>> # Download the shapefiles of London
-            >>> path_to_london_shp_zip = gfr.downloader.download_osm_data(
+            >>> path_to_london_shp_zip = gfr.downloader.download_data(
             ...     subrgn_name, file_format, dat_dir, verbose=True, ret_download_path=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater London
+            To download data in the format '.shp.zip' for the following geographic (sub)region(s):
+              "Greater London"
+              to "./tests/osm_data/greater-london/"
             ? [No]|Yes: yes
-            Downloading "greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\" ... Done.
+            Downloading "greater-london-latest-free.shp.zip" 100%|██████████| 196M/196M |...
+              Saving "greater-london-latest-free.shp.zip" ...
+                  to "./tests/osm_data/greater-london/" ... Done.
 
             >>> type(path_to_london_shp_zip)
             list
@@ -366,9 +365,9 @@ class GeofabrikReader(BaseReader):
             1
 
             >>> # Extract the downloaded .zip file
-            >>> gfr.SHP.unzip(path_to_london_shp_zip[0], verbose=True)
-            Extracting "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
+            >>> gfr.SHP.unzip_shp_zip(path_to_london_shp_zip[0], verbose=True)
+            Extracting "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip"
+                to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" ... Done.
 
             >>> # Try again to get the shapefiles' pathnames
             >>> london_shp_path = gfr.get_shp_pathname(subrgn_name, data_dir=dat_dir)
@@ -382,7 +381,7 @@ class GeofabrikReader(BaseReader):
             1
             >>> railways_shp_path = railways_shp_path[0]
             >>> os.path.relpath(railways_shp_path)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\gis_osm_railways_fr...
+            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\gis_osm_railways_...
 
             >>> # Get/save shapefile data of features labelled 'rail' only
             >>> feat_name = 'rail'
@@ -403,7 +402,7 @@ class GeofabrikReader(BaseReader):
             1
             >>> rail_shp_path = rail_shp_path[0]
             >>> os.path.relpath(rail_shp_path)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\railways\\rail.shp'
+            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\gis_osm_railways_...
 
             >>> # Retrieve the data of 'rail' feature
             >>> railways_rail_shp = gfr.SHP.read_layer_shps(rail_shp_path)
@@ -418,9 +417,9 @@ class GeofabrikReader(BaseReader):
 
             >>> # Delete the example data and the test data directory
             >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         path_to_osm_shp_file = super().get_shp_pathname(
@@ -430,7 +429,7 @@ class GeofabrikReader(BaseReader):
         return path_to_osm_shp_file
 
     def merge_shp_layers(self, subregion_names, layer_name, data_dir=None, engine='pyshp',
-                         update=False, download=True, rm_zip_extracts=True,
+                         update=False, download=False, rm_zip_extracts=True,
                          merged_shp_dir=None, rm_shp_temp=True, verbose=False,
                          ret_merged_shp_path=False):
         """
@@ -474,7 +473,7 @@ class GeofabrikReader(BaseReader):
         .. _`shapefile.Writer()`:
             https://github.com/GeospatialPython/pyshp#writing-shapefiles
 
-        .. _pydriosm-GeofabrikReader-merge_subregion_layer_shp:
+        .. _pydriosm-GeofabrikReader-merge_shp_layers:
 
         **Examples**::
 
@@ -490,23 +489,26 @@ class GeofabrikReader(BaseReader):
             >>> subrgn_name = ['Manchester', 'West Yorkshire']
             >>> lyr_name = 'railways'
             >>> dat_dir = "tests\\osm_data"
-
             >>> path_to_merged_shp_file = gfr.merge_shp_layers(
             ...     subrgn_name, lyr_name, dat_dir, verbose=True, ret_merged_shp_path=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater Manchester
-                West Yorkshire
-            ? [No]|Yes: yes
-            Downloading "greater-manchester-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-manchester\\" ... Done.
-            Downloading "west-yorkshire-latest-free.shp.zip"
-                to "tests\\osm_data\\west-yorkshire\\" ... Done.
+            To download data in the format '.shp.zip' for the following geographic (sub)region(s):
+              "West Yorkshire"
+              "Greater Manchester"
+              to "./tests/osm_data/"
+            ? [No]|Yes: >? yes
+            Downloading "greater-manchester-latest-free.shp.zip" 100%|██████████| 87.5M/8...
+              Saving "greater-manchester-latest-free.shp.zip" ...
+                  to "./tests/osm_data/greater-manchester/" ... Done.
+            Downloading "west-yorkshire-latest-free.shp.zip" 100%|██████████| 87.3M/87.3M...
+              Saving "west-yorkshire-latest-free.shp.zip" ...
+                  to "./tests/osm_data/west-yorkshire/" ... Done.
             Merging the following shapefiles:
                 "greater-manchester_gis_osm_railways_free_1.shp"
                 "west-yorkshire_gis_osm_railways_free_1.shp"
                     In progress ... Done.
-                    Find the merged shapefile at "tests\\osm_data\\gre_man-wes_yor-railways\\".
+                    Find the merged shapefile at "tests/osm_data/gre_man-wes_yor-railways\".
 
+            >>> path_to_merged_shp_file = path_to_merged_shp_file[0]
             >>> os.path.relpath(path_to_merged_shp_file)
             'tests\\osm_data\\gre_man-wes_yor-railways\\linestring.shp'
 
@@ -523,18 +525,19 @@ class GeofabrikReader(BaseReader):
 
             >>> # Delete the merged files
             >>> delete_dir(os.path.dirname(path_to_merged_shp_file), verbose=True)
-            To delete the directory "tests\\osm_data\\gre_man-wes_yor-railways\\" (Not empty)
+            To delete the directory "./tests/osm_data/gre_man-wes_yor-railways/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\gre_man-wes_yor-railways\\" ... Done.
+            Deleting "./tests/osm_data/gre_man-wes_yor-railways/" ... Done.
 
             >>> # Delete the downloaded .shp.zip data files
             >>> delete_dir(list(map(os.path.dirname, gfr.downloader.data_paths)), verbose=True)
             To delete the following directories:
-                "tests\\osm_data\\greater-manchester\\" (Not empty)
-                "tests\\osm_data\\west-yorkshire\\" (Not empty)
+              "./tests/osm_data/greater-manchester/" (Not empty)
+              "./tests/osm_data/west-yorkshire/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\greater-manchester\\" ... Done.
-            Deleting "tests\\osm_data\\west-yorkshire\\" ... Done.
+            Deleting:
+              "./tests/osm_data/greater-manchester/" ... Done.
+              "./tests/osm_data/west-yorkshire/" ... Done.
 
         **Example 2**::
 
@@ -542,20 +545,21 @@ class GeofabrikReader(BaseReader):
 
             >>> subrgn_name = ['London', 'Kent', 'Surrey']
             >>> lyr_name = 'transport'
-
             >>> path_to_merged_shp_file = gfr.merge_shp_layers(
             ...     subrgn_name, lyr_name, dat_dir, verbose=True, ret_merged_shp_path=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater London
-                Kent
-                Surrey
-            ? [No]|Yes: yes
-            Downloading "greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\" ... Done.
-            Downloading "kent-latest-free.shp.zip"
-                to "tests\\osm_data\\kent\\" ... Done.
-            Downloading "surrey-latest-free.shp.zip"
-                to "tests\\osm_data\\surrey\\" ... Done.
+            To download data in the format '.shp.zip' for the following geographic (sub)region(s):
+              "Kent"
+              "Surrey"
+              "Greater London"
+              to "./tests/osm_data/"
+            ? [No]|Yes: >? yes
+            Downloading "greater-london-latest-free.shp.zip" 100%|██████████| 196M/196M |...
+              Saving "greater-london-latest-free.shp.zip" ...
+                  to "./tests/osm_data/greater-london/" ... Done.
+            Downloading "kent-latest-free.shp.zip" 100%|██████████| 89.1M/89.1M | 912kB/s...
+              Saving "kent-latest-free.shp.zip" to "./tests/osm_data/kent/" ... Done.
+            Downloading "surrey-latest-free.shp.zip" 100%|██████████| 73.7M/73.7M | 1.00M...
+              Saving "surrey-latest-free.shp.zip" to "./tests/osm_data/surrey/" ... Done.
             Merging the following shapefiles:
                 "greater-london_gis_osm_transport_a_free_1.shp"
                 "greater-london_gis_osm_transport_free_1.shp"
@@ -564,14 +568,14 @@ class GeofabrikReader(BaseReader):
                 "surrey_gis_osm_transport_a_free_1.shp"
                 "surrey_gis_osm_transport_free_1.shp"
                     In progress ... Done.
-                    Find the merged shapefile at "tests\\osm_data\\gre_lon-ken-sur-transport\\".
+                    Find the merged shapefile at "tests/osm_data/gre_lon-ken-sur-transport".
 
             >>> type(path_to_merged_shp_file)
             list
             >>> len(path_to_merged_shp_file)
             2
             >>> os.path.relpath(path_to_merged_shp_file[0])
-            'tests\\osm_data\\gre-lon_ken_sur_transport\\point.shp'
+            'tests\\osm_data\\gre_lon-ken-sur-transport\\point.shp'
             >>> os.path.relpath(path_to_merged_shp_file[1])
             'tests\\osm_data\\gre-lon_ken_sur_transport\\polygon.shp'
 
@@ -588,15 +592,15 @@ class GeofabrikReader(BaseReader):
 
             >>> # Delete the merged files
             >>> delete_dir(os.path.commonpath(path_to_merged_shp_file), verbose=True)
-            To delete the directory "tests\\osm_data\\gre_lon-ken-sur-transport\\" (Not empty)
+            To delete the directory "./tests/osm_data/gre_lon-ken-sur-transport/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\gre_lon-ken-sur-transport\\" ... Done.
+            Deleting "./tests/osm_data/gre_lon-ken-sur-transport/" ... Done.
 
             >>> # Delete the example data and the test data directory
             >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         # Make sure all the required shape files are ready
@@ -606,10 +610,10 @@ class GeofabrikReader(BaseReader):
         osm_file_format = ".shp.zip"
 
         # Download the files if not available
-        paths_to_shp_zip_files = self.downloader.download_osm_data(
-            subregion_names_, osm_file_format=osm_file_format, download_dir=data_dir,
-            update=update, confirmation_required=False if download else True,
-            deep_retry=True, interval=1, verbose=verbose, ret_download_path=True)
+        paths_to_shp_zip_files = self.downloader.download_data(
+            subregion_names=subregion_names_, osm_file_formats=osm_file_format,
+            download_dir=data_dir, update=update, confirmation_required=False if download else True,
+            deep=True, interval=1, verbose=verbose, ret_download_path=True)
 
         if all(os.path.isfile(shp_zip_path_file) for shp_zip_path_file in paths_to_shp_zip_files):
             path_to_merged_shp = self.SHP.merge_layers(
@@ -621,7 +625,7 @@ class GeofabrikReader(BaseReader):
                 return path_to_merged_shp
 
     def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
-                 update=False, download=True, pickle_it=False, ret_pickle_path=False,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
         """
         Read a .shp.zip data file of a geographic (sub)region.
@@ -659,7 +663,7 @@ class GeofabrikReader(BaseReader):
         :return: dictionary of the shapefile data,
             with keys and values being layer names and tabular data
             (in the format of `geopandas.GeoDataFrame`_), respectively
-        :rtype: dict | collections.OrderedDict | None
+        :rtype: dict | None
 
         .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
 
@@ -671,8 +675,7 @@ class GeofabrikReader(BaseReader):
             >>> gfr = GeofabrikReader()
 
             >>> subrgn_name = 'London'
-            >>> dat_dir = "tests\\osm_data"
-
+            >>> dat_dir = "tests/osm_data"
             >>> london_shp_data = gfr.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=False, verbose=True)
             The .shp.zip file for "Greater London" is not found.
@@ -680,14 +683,14 @@ class GeofabrikReader(BaseReader):
             >>> # Set `download=True`
             >>> london_shp_data = gfr.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
-            Downloading "greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\" ... Done.
-            Extracting "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
-            Reading the shapefile(s) at
-                "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
+            Downloading "greater-london-latest-free.shp.zip" 100%|██████████| 196M/196M |...
+              Saving "greater-london-latest-free.shp.zip" ...
+                  to "./tests/osm_data/greater-london/" ... Done.
+            Extracting "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip"
+                to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" ... Done.
+            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
             >>> type(london_shp_data)
-            collections.OrderedDict
+            dict
             >>> list(london_shp_data.keys())
             ['buildings',
              'landuse',
@@ -721,11 +724,10 @@ class GeofabrikReader(BaseReader):
             >>> london_shp_transport = gfr.read_shp(
             ...     subregion_name=subrgn_name, layer_names=subrgn_layer, data_dir=dat_dir,
             ...     rm_extracts=True, verbose=True)
-            Reading the shapefile(s) at
-                "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
-            Deleting the extracts "tests\\osm_data\\greater-london\\greater-london-latest-free-sh...
+            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
+            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
             >>> type(london_shp_transport)
-            collections.OrderedDict
+            dict
             >>> list(london_shp_transport.keys())
             ['transport']
             >>> london_shp_transport_ = london_shp_transport['transport']
@@ -746,19 +748,20 @@ class GeofabrikReader(BaseReader):
             ...     data_dir=dat_dir, rm_extracts=True, verbose=True)
             Extracting the following layer(s):
                 'transport'
-                from "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                  to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
-            Reading the shapefile(s) at
-                "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
-            Deleting the extracts "tests\\osm_data\\greater-london\\greater-london-latest-free-sh...
+                    from "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ...
+                        to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" .....
+            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
+            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
             >>> type(london_bus_stop)
-            collections.OrderedDict
+            dict
             >>> list(london_bus_stop.keys())
             ['transport']
 
             >>> fclass = london_bus_stop['transport'].fclass.unique()
             >>> fclass
-            array(['bus_stop'], dtype=object)
+            <StringArray>
+            ['bus_stop']
+            Length: 1, dtype: str
 
             >>> # Read multiple features of multiple layers
             >>> # (and delete both the original .shp.zip file and extracts)
@@ -770,14 +773,13 @@ class GeofabrikReader(BaseReader):
             Extracting the following layer(s):
                 'traffic'
                 'roads'
-                from "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                  to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
-            Reading the shapefile(s) at
-                "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
-            Deleting the extracts "tests\\osm_data\\greater-london\\greater-london-latest-free-sh...
-            Deleting "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip" ... Done.
+                    from "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ...
+                        to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" .....
+            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
+            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
+            Deleting "tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ... Done.
             >>> type(london_shp_tra_roa_par_tru)
-            collections.OrderedDict
+            dict
             >>> list(london_shp_tra_roa_par_tru.keys())
             ['traffic', 'roads']
 
@@ -803,9 +805,9 @@ class GeofabrikReader(BaseReader):
 
             >>> # Delete the example data and the test data directory
             >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "tests\\osm_data\\" (Not empty)
+            To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
-            Deleting "tests\\osm_data\\" ... Done.
+            Deleting "./tests/osm_data/" ... Done.
         """
 
         shp_data = super().read_shp(
