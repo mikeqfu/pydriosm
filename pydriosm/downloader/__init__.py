@@ -8,4 +8,4 @@ from ._bbbike import BBBikeDownloader
 from ._geofabrik import GeofabrikDownloader
 from ._wrapper import Downloader
 
-__all__ = ['BBBikeDownloader', 'GeofabrikDownloader', 'Downloader']
+__all__ = ['BBBikeDownloader', 'GeofabrikDownloader', 'Downloader', '_base', 'web_parser']

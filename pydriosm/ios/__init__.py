@@ -7,4 +7,4 @@ from ._bbbike import BBBikeIOS
 from ._geofabrik import GeofabrikIOS
 from ._pgsql_osm import PostgresOSM
 
-__all__ = ['PostgresOSM', 'GeofabrikIOS', 'BBBikeIOS']
+__all__ = ['PostgresOSM', 'GeofabrikIOS', 'BBBikeIOS', '_base', 'utils']

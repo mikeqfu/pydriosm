@@ -21,5 +21,6 @@ __all__ = [
     'reformat_other_tags',
     'convert_simplex_geometry',
     'refresh_other_tags',
-    'PBF', 'SHP', 'VAR'
+    'PBF', 'SHP', 'VAR',
+    '_base'
 ]
