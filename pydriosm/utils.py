@@ -178,7 +178,8 @@ def check_json_engine(engine=None):
 
     if engine is not None:
         valid_mod_names = {'ujson', 'orjson', 'rapidjson', 'json'}
-        assert engine in valid_mod_names, f"`engine` must be on one of {valid_mod_names}."
+        if engine not in valid_mod_names:
+            raise ValueError(f"`engine` must be on one of {valid_mod_names}.")
         engine_ = _check_dependencies(engine)
 
     else:
