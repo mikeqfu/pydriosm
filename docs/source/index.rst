@@ -32,20 +32,27 @@ PyDriosm is an open-source tool that provides an effortless way to download and 
 .. toctree::
     :maxdepth: 1
     :includehidden:
-    :caption: Documentation
+    :caption: Getting Started
 
     installation
+    quick-start
+
+.. toctree::
+    :maxdepth: 1
+    :includehidden:
+    :caption: Usage & Reference
+
+    subpackages
     modules
-    license
-    acknowledgement
-    contributors
 
 .. toctree::
     :maxdepth: 2
     :includehidden:
-    :caption: Tutorial
+    :caption: Additional Info
 
-    quick-start
+    license
+    acknowledgement
+    contributors
 
 
 Indices

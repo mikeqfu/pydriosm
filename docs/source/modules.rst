@@ -1,30 +1,11 @@
-======================
-Sub-packages / modules
-======================
+=======
+modules
+=======
+
+The following modules provide supporting functions and utilities for the subpackages :doc:`downloader`, :doc:`reader` and :doc:`ios`.
 
 .. py:module:: pydriosm
-
-The package includes the following sub-packages and modules:
-
-Sub-packages
-============
-
-.. autosummary::
-
-    downloader
-    reader
-    ios
-
-.. toctree::
-    :maxdepth: 2
-    :hidden:
-
-    downloader
-    reader
-    ios
-
-Modules
-=======
+    :no-index:
 
 .. autosummary::
 

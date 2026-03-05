@@ -10,15 +10,6 @@ reader
     :no-inherited-members:
 
 
-Transform OSM data
-------------------
-
-.. autosummary::
-    :toctree: _generated/
-    :template: class.rst
-
-    Transformer
-
 Parse OSM data
 --------------
 
@@ -26,9 +17,9 @@ Parse OSM data
     :toctree: _generated/
     :template: class.rst
 
-    SHPReadParse
-    PBFReadParse
-    VarReadParse
+    SHP
+    PBF
+    VAR
 
 Read OSM data
 -------------
