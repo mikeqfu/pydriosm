@@ -76,7 +76,7 @@ def _unzip_prep(shp_zip_pathname, extract_to=None, layer_names=None, verbose=Fal
     else:
         layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
         if verbose:
-            layer_name_list = "\t" + f"\n\t".join([f"'{x}'" for x in layer_names_])
+            layer_name_list = "\t" + "\n\t".join([f"'{x}'" for x in layer_names_])
             print(f"Extracting the following layer(s):\n{layer_name_list}")
             print(f"  from: {add_slashes(shp_zip_rel_path)} ... \n"
                   f"    to: {add_slashes(extrdir_rel_path)}",
