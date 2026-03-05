@@ -2,12 +2,13 @@
 
 *A Python package for downloading, reading and PostgreSQL-based I/O of OpenStreetMap data.*
 
-[![PyPI](https://img.shields.io/pypi/v/pydriosm)](https://pypi.org/project/pydriosm/) 
-[![Python Version](https://img.shields.io/pypi/pyversions/pydriosm)](https://docs.python.org/3/) 
-[![Documentation Status](https://readthedocs.org/projects/pydriosm/badge/?version=latest)](https://pydriosm.readthedocs.io/en/latest/?badge=latest) 
-[![License](https://img.shields.io/pypi/l/pydriosm)](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE) 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/b411ce89cbc445f58377a5799646d4cb)](https://app.codacy.com/gh/mikeqfu/pydriosm/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) 
-[![DOI](https://zenodo.org/badge/92493726.svg)](https://zenodo.org/badge/latestdoi/92493726)
+[![PyPI Release Version](https://img.shields.io/pypi/v/pydriosm)](https://pypi.org/project/pydriosm/) 
+[![Python Version](https://img.shields.io/pypi/pyversions/pydriosm)](https://docs.python.org/3/)
+[![License](https://img.shields.io/github/license/mikeqfu/pydriosm)](https://github.com/mikeqfu/pydriosm/blob/master/LICENSE) 
+[![ReadTheDocs Documentation](https://img.shields.io/readthedocs/pydriosm?logo=readthedocs)](https://pydriosm.readthedocs.io/en/latest/?badge=latest)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mikeqfu/pydriosm/github-pages.yml?logo=github&branch=master)](https://github.com/mikeqfu/pydriosm/actions)
+[![Codacy - Code Quality](https://app.codacy.com/project/badge/Grade/b411ce89cbc445f58377a5799646d4cb)](https://app.codacy.com/gh/mikeqfu/pydriosm/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) 
+[![DOI](https://img.shields.io/badge/10.5281%2Fzenodo.4281194-blue?label=doi)](https://doi.org/10.5281/zenodo.4281194)
 
 PyDriosm is an open-source tool that provides an effortless way to download and access [OpenStreetMap](https://www.openstreetmap.org/) (OSM) data in popular file formats, such as [shapefile](https://wiki.openstreetmap.org/wiki/Shapefiles) and [protobuf binary format](https://wiki.openstreetmap.org/wiki/PBF_Format) (PBF), which are freely available from [Geofabrik](https://download.geofabrik.de/) and [BBBike](https://download.bbbike.org/). Additionally, the package offers a comprehensive solution for convenient I/O operations and efficient storage capabilities for parsed OSM data within [PostgreSQL](https://www.postgresql.org/) databases. This means that users can easily read from and write to PostgreSQL databases, enabling efficient data manipulation, querying, and other essential tasks. Whether you are a researcher, practitioner, or simply interested in working with OSM data, PyDriosm can be useful and helpful to streamline your workflow and enhance your experience. 
 
