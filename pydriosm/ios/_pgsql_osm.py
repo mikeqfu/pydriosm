@@ -427,7 +427,7 @@ class PostgresOSM(ImportPBF):
 
     def _fetch_layer(self, connection, table_name_, schema_name_, method, max_size_spooled,
                      chunk_size, decode_geojson, sort_by, **kwargs):
-        sql_query = f'SELECT * FROM "{schema_name_}"."{table_name_}"'
+        sql_query = f'SELECT * FROM "{schema_name_}"."{table_name_}"'  # noqa
 
         if method is not None:
             dtype = self._get_dtype(table_name_=table_name_, schema_name_=schema_name_)
