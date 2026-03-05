@@ -2,13 +2,8 @@
 Read the OSM data extracts in various file formats.
 """
 
-from .bbbike import BBBikeReader
-from .geofabrik import GeofabrikReader
-from .parser import PBFReadParse, SHPReadParse, VarReadParse
-from .transformer import Transformer
+from ._bbbike import BBBikeReader
+from ._geofabrik import GeofabrikReader
+from ._wrapper import Reader
 
-__all__ = [
-    'GeofabrikReader', 'BBBikeReader',
-    'Transformer',
-    'PBFReadParse', 'SHPReadParse', 'VarReadParse'
-]
+__all__ = ['GeofabrikReader', 'BBBikeReader', 'Reader']

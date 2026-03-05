@@ -22,6 +22,8 @@ dist/
 
 # Bespoke items
 *[!_]_.py
-.pypirc
+pydriosm/data/*
+!.metadata
 tutorials/*
+.pypirc
 cmd.md
