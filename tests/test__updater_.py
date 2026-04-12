@@ -1,4 +1,6 @@
-"""Test the module :py:mod:`pydriosm._updater`."""
+"""
+Tests the module: :mod:`pydriosm._updater`.
+"""
 
 import pytest
 
