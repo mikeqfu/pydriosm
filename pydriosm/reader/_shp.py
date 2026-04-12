@@ -38,20 +38,23 @@ def get_layer_name(shp_filename):
         'railways'
         >>> SHP.get_layer_name("gis_osm_transport_a_free_1.shp")
         'transport'
+        >>> SHP.get_layer_name("gis_osm_protected_areas_a_free_1.shp")
+        'protected_areas'
     """
 
-    try:
-        pattern = re.compile(r'(?<=gis_osm_)\w+(?=(_a)?_free_1)')
-        layer_name = re.search(pattern=pattern, string=shp_filename)
+    if not shp_filename:
+        return None
 
-    except AttributeError:
-        pattern = re.compile(r'(?<=(\\shape)\\)\w+(?=\.*)')
-        layer_name = re.search(pattern=pattern, string=shp_filename)
+    # The pattern captures everything between 'gis_osm_' and the suffix,
+    # then specifically strips the '_a' if it is there.
+    # pattern = re.compile(r'gis_osm_(.*?)_?a?_free_1(?:\.[a-z0-9]+)?$', re.IGNORECASE)
+    pattern = re.compile(r'^gis_osm_(.*?)(?=_?a?_free_1)', re.IGNORECASE)
+    match = re.search(pattern, shp_filename)
 
-    if layer_name:
-        layer_name = layer_name.group(0).replace("_a", "")
+    if match:
+        return match.group(1)
 
-    return layer_name
+    return None
 
 
 def _unzip_prep(shp_zip_pathname, extract_to=None, layer_names=None, verbose=False):
@@ -191,6 +194,7 @@ class SHP:
 
     #: Valid layer names for an OSM shapefile.
     LAYER_NAMES: set = {
+        'adminareas',
         'buildings',
         'landuse',
         'natural',
@@ -198,6 +202,7 @@ class SHP:
         'points',
         'pofw',
         'pois',
+        'protected_areas',
         'railways',
         'roads',
         'traffic',
@@ -939,6 +944,7 @@ class SHP:
     @classmethod
     def read_layer_shps(cls, shp_pathnames, feature_names=None, save_feat_shp=False,
                         ret_feat_shp_path=False, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Read a layer of OSM shapefile data.
 
@@ -1126,25 +1132,27 @@ class SHP:
                     filename=out_fn, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
 
         else:  # method == 'pyshp': (default)
-            kwargs.update({'ret_feat_shp_path': False})
+            kwargs.setdefault('ret_feat_shp_path', False)
             shp_data = cls.read_layer_shps(shp_pathnames, **kwargs)
-            if 'geometry' in shp_data.columns:
-                k = shp_data['geometry'].map(lambda x: x.geom_type)
-            else:
-                k = 'shape_type'
 
-            for geo_typ, dat in shp_data.groupby(k):
-                if isinstance(k, str):
-                    geo_typ = cls.SHAPE_TYPE_GEOM_NAME[geo_typ]
-                out_fn = os.path.join(path_to_merged_dir, f"{geo_typ.lower()}.shp")
-                cls.write_to_shapefile(data=dat, write_to=out_fn)
+            if isinstance(shp_data, pd.DataFrame):
+                if 'geometry' in shp_data.columns:
+                    k = shp_data['geometry'].map(lambda x: x.geom_type)
+                else:
+                    k = 'shape_type'
 
-                # Write .cpg
-                with open(out_fn.replace(".shp", ".cpg"), mode="w") as cpg:
-                    cpg.write(cls.ENCODING)
-                # Write .prj
-                with open(out_fn.replace(".shp", ".prj"), mode="w") as prj:
-                    prj.write(cls.EPSG4326_WGS84_ESRI_WKT)
+                for geo_typ, dat in shp_data.groupby(k):
+                    if isinstance(k, str):
+                        geo_typ = cls.SHAPE_TYPE_GEOM_NAME[geo_typ]
+                    out_fn = os.path.join(path_to_merged_dir, f"{geo_typ.lower()}.shp")
+                    cls.write_to_shapefile(data=dat, write_to=out_fn)
+
+                    # Write .cpg
+                    with open(out_fn.replace(".shp", ".cpg"), mode="w") as cpg:
+                        cpg.write(cls.ENCODING)
+                    # Write .prj
+                    with open(out_fn.replace(".shp", ".prj"), mode="w") as prj:
+                        prj.write(cls.EPSG4326_WGS84_ESRI_WKT)
 
     @classmethod
     def _extract_files(cls, shp_zip_pathnames, layer_name, verbose=False):
