@@ -1,7 +1,3 @@
-"""
-Tests the :py:mod:`pydriosm.downloader._downloader` module.
-"""
-
 import copy
 import os
 

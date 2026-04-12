@@ -28,7 +28,7 @@ dependencies = [
     "pyhelpers >= 2.3.4",
     "pyrcs >= 1.0.4",
     "pyshp >= 3.0.3",
-    "pandas >= 3.0.0"
+    "pandas >= 3.0.2"
 ]
 classifiers = [
     "Intended Audience :: Developers",

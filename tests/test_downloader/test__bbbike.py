@@ -1,6 +1,4 @@
-"""
-Tests the :py:class:`pydriosm.downloader._bbbike.BBBikeDownloader` class.
-"""
+"""Tests the class: :class:`pydriosm.downloader._bbbike.BBBikeDownloader`."""
 
 import os
 
