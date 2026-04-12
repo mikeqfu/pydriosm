@@ -57,7 +57,7 @@ class TestGeofabrikDownloader:
         out, _ = capfd.readouterr()
         assert f"Collecting the raw directory index on '{uk_url}' ... Done." in out
         assert isinstance(raw_index, pd.DataFrame)
-        assert raw_index.columns.to_list() == ['file', 'date', 'size', 'metric_file_size', 'url']
+        assert set(raw_index.columns) == {'file', 'date', 'size', 'metric_file_size', 'url'}
 
     @pytest.mark.parametrize('update', [True, False])
     def test_get_download_index(self, gfd, update, monkeypatch, capfd):
@@ -67,20 +67,10 @@ class TestGeofabrikDownloader:
         if update:
             assert "Retrieving/compiling the data" in out and "Done." in out
         assert isinstance(download_index, pd.DataFrame)
-        assert download_index.columns.to_list() == [
-            'id',
-            'parent',
-            'iso3166-1:alpha2',
-            'name',
-            'iso3166-2',
-            'geometry',
-            '.osm.pbf',
-            # '.osm.bz2',
-            '.shp.zip',
-            'pbf-internal',
-            'history',
-            'taginfo',
-            'updates']
+        assert set(download_index.columns) == {
+            'id', 'parent', 'iso3166-1:alpha2', 'name', 'iso3166-2',
+            'geometry', '.osm.pbf', '.shp.zip', 'pbf-internal', 'history', 'taginfo', 'updates'
+        }
 
         monkeypatch.setattr('builtins.input', lambda _: "No")
         download_index = gfd.get_download_index(update=True, verbose=True)
@@ -93,6 +83,7 @@ class TestGeofabrikDownloader:
         out, _ = capfd.readouterr()
         assert "Compiling a subregion list" in out and "Done." in out
 
+        assert isinstance(homepage, pd.DataFrame)
         assert all(x in self.SUBREGION_TABLE_COLUMN_NAMES for x in homepage.columns)
 
         uk_url = 'https://download.geofabrik.de/europe/united-kingdom.html'

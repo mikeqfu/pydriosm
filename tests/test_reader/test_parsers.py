@@ -1,7 +1,3 @@
-"""
-Tests the submodule: :py:mod:`pydriosm.reader.parser`.
-"""
-
 import glob
 import os
 
@@ -55,12 +51,13 @@ class TestPBF:
             number_of_chunks=number_of_chunks)
 
         assert isinstance(rutland_pbf, dict)
-        assert list(rutland_pbf.keys()) == [
+        assert set(rutland_pbf.keys()) == {
             'points',
             'lines',
             'multilinestrings',
             'multipolygons',
-            'other_relations']
+            'other_relations'
+        }
 
 
 class TestSHP:

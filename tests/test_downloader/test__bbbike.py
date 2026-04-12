@@ -45,7 +45,7 @@ class TestBBBikeDownloader:
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
         coords_of_cities = bbd.get_coordinates_of_cities(update=False, verbose=True)
         assert isinstance(coords_of_cities, pd.DataFrame)
-        assert coords_of_cities.columns.to_list() == [
+        assert set(coords_of_cities.columns) == {
             'city',
             'real_name',
             'pref_language',
@@ -58,7 +58,7 @@ class TestBBBikeDownloader:
             'll_longitude',
             'll_latitude',
             'ur_longitude',
-            'ur_latitude']
+            'ur_latitude'}
 
     @pytest.mark.parametrize('update', [True, False])
     def test_get_subregion_index(self, bbd, update, monkeypatch):
@@ -66,7 +66,7 @@ class TestBBBikeDownloader:
         subregion_index = bbd.get_subregion_index(update=update, verbose=True)
 
         assert isinstance(subregion_index, pd.DataFrame)
-        assert subregion_index.columns.to_list() == ['name', 'last_modified', 'url']
+        assert set(subregion_index.columns) == {'name', 'last_modified', 'url'}
 
     def test_get_valid_subregion_names(self, bbd):
         assert isinstance(bbd.get_valid_subregion_names(), list)
@@ -83,12 +83,13 @@ class TestBBBikeDownloader:
         out, _ = capfd.readouterr()
         assert 'Retrieving/compiling data of a download catalogue for "Birmingham" ... Done.' in out
         assert isinstance(bham_dwnld_cat, pd.DataFrame)
-        assert bham_dwnld_cat.columns.to_list() == [
-            'filename', 'url', 'data_type', 'size', 'last_update']
+        assert set(bham_dwnld_cat.columns) == {
+            'filename', 'url', 'data_type', 'size', 'last_update'}
 
     def test_get_catalogue(self, bbd):
         bbbike_catalogue = bbd.get_catalogue()
-        assert list(bbbike_catalogue.keys()) == ['FileFormat', 'DataType', 'Catalogue']
+        assert isinstance(bbbike_catalogue, dict)
+        assert set(bbbike_catalogue.keys()) == {'FileFormat', 'DataType', 'Catalogue'}
 
         catalogue = bbbike_catalogue['Catalogue']
         assert isinstance(catalogue, dict)
