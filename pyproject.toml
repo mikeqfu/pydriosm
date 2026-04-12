@@ -47,8 +47,3 @@ classifiers = [
 
 [tool.setuptools]
 packages = { find = {} }
-
-[tool.pydocstyle]
-convention = "pep257"
-add-ignore = ["D200", "D212"]
-add-select = ["D213"]

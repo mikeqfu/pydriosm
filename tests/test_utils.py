@@ -1,6 +1,4 @@
-"""
-Tests the module: :mod:`pydriosm.utils`.
-"""
+"""Tests the module: :mod:`pydriosm.utils`."""
 
 import os
 import shutil
