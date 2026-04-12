@@ -1,7 +1,3 @@
-"""
-Tests the submodule: :py:mod:`pydriosm.reader.parser`.
-"""
-
 import glob
 import os
 
