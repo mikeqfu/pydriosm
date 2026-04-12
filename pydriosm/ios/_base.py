@@ -411,6 +411,7 @@ class BaseIOS(PostgreSQL):
 
     def get_table_column_info(self, subregion_name, layer_name, as_dict=False,
                               table_named_as_subregion=False, schema_named_as_layer=False):
+        # noinspection PyUnresolvedReferences
         """
         Get information about columns of a specific schema and table data of a geographic (sub)region.
 
@@ -484,6 +485,7 @@ class BaseIOS(PostgreSQL):
                          table_named_as_subregion=False, schema_named_as_layer=False,
                          if_exists='fail', force_replace=False, chunk_size=None,
                          confirmation_required=True, verbose=False, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Import one layer of OSM data into a table.
 
@@ -704,6 +706,7 @@ class BaseIOS(PostgreSQL):
                         table_named_as_subregion=False, schema_named_as_layer=False,
                         if_exists='fail', force_replace=False, chunk_size=None,
                         confirmation_required=True, verbose=False, raise_error=True, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Import OSM data into a database.
 
@@ -918,51 +921,54 @@ class BaseIOS(PostgreSQL):
             subregion_name=table_name, table_named_as_subregion=table_named_as_subregion)
         tbl_name = f'"{table_name_}"'
 
-        if confirmed(f"Proceed to import data into the table {tbl_name} at {self.address}\n?",
-                     confirmation_required=confirmation_required):
-
+        if not confirmed(f"Proceed to import data into the table {tbl_name} at {self.address}\n?",
+                         confirmation_required=confirmation_required):
             if verbose:
-                status_msg = "Importing the data"
-                if not confirmation_required:
-                    status_msg += f" into the table {tbl_name}"
-                    if verbose != 2:
-                        status_msg += f" at {self.address}"
-                print(status_msg, end=" ... \n")
+                print("Canceled.")
+            return None
 
-            for geom_type, osm_layer in data_items:
+        if verbose:
+            status_msg = "Importing the data"
+            if not confirmation_required:
+                status_msg += f" into the table {tbl_name}"
+                if verbose != 2:
+                    status_msg += f" at {self.address}"
+            print(status_msg, end=" ... \n")
+
+        for geom_type, osm_layer in data_items:
+            if verbose:
+                print(f'  "{geom_type}"', end=" ... ")
+
+                if osm_layer is None or osm_layer.empty:
+                    print("Skipped (Empty).")
+                    continue
+
+            try:
+                import_args = {
+                    'layer_data': osm_layer,
+                    'schema_name': geom_type,
+                    'table_name': table_name_,
+                    'table_named_as_subregion': table_named_as_subregion,
+                    'schema_named_as_layer': schema_named_as_layer,
+                    'if_exists': if_exists,
+                    'force_replace': force_replace,
+                    'chunk_size': chunk_size,
+                    'confirmation_required': False,
+                    'verbose': False,
+                }
+                kwargs.update(import_args)
+                self.import_osm_layer(**kwargs)
+
                 if verbose:
-                    print(f'  "{geom_type}"', end=" ... ")
+                    print(f"Done. ({len(osm_layer)} features)")
 
-                    if len(osm_layer) == 0:
-                        print("The layer is empty. "
-                              "The corresponding table in the database is thus empty.")
+            except Exception as e:
+                _print_failure_message(
+                    e, prefix=f"Failed on the layer '{geom_type}'", verbose=verbose,
+                    raise_error=raise_error)
 
-                try:
-                    import_args = {
-                        'layer_data': osm_layer,
-                        'schema_name': geom_type,
-                        'table_name': table_name_,
-                        'table_named_as_subregion': table_named_as_subregion,
-                        'schema_named_as_layer': schema_named_as_layer,
-                        'if_exists': if_exists,
-                        'force_replace': force_replace,
-                        'chunk_size': chunk_size,
-                        'confirmation_required': False,
-                        'verbose': False,
-                    }
-                    kwargs.update(import_args)
-                    self.import_osm_layer(**kwargs)
-
-                    if verbose:
-                        print(f"Done. ({len(osm_layer)} features)")
-
-                except Exception as e:
-                    _print_failure_message(
-                        e, prefix=f'Failed on the layer "{geom_type}"', verbose=verbose,
-                        raise_error=raise_error)
-
-                del osm_layer
-                gc.collect()
+            del osm_layer
+            gc.collect()
 
     @staticmethod
     def _decode_layer_dat(dat, possible_col_names):
@@ -996,9 +1002,11 @@ class BaseIOS(PostgreSQL):
         # Validate the input `schema_names`
         if schema_names is None:
             inspector = sqlalchemy.inspection.inspect(self.engine)
+            # noinspection PyUnresolvedReferences
             schema_names_ = [
                 x for x in inspector.get_schema_names()
-                if x not in {'public', 'information_schema'}]
+                if x not in {'public', 'information_schema'}
+            ]
         else:
             schema_names_ = validate_schema_names(
                 schema_names=schema_names, schema_named_as_layer=schema_named_as_layer)
