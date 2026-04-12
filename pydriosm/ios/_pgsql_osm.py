@@ -308,11 +308,11 @@ class PostgresOSM(ImportPBF):
             if self.data_source == 'Geofabrik':
                 subregion_names_ = self.downloader.get_subregions(*subregion_names_)
 
-            subrgn_names_msg = '"\n\t"'.join(subregion_names_)
+            subrgn_names_msg = '"\n  "'.join(subregion_names_)
             confirm_msg = \
                 (f"Proceed to import {osm_file_format} data of the following geographic "
                  f"(sub)region(s):\n"
-                 f"\t\"{subrgn_names_msg}\"\n  into {self.address}\n?")
+                 f"  \"{subrgn_names_msg}\"\n  into {self.address}\n?")
 
         if confirmed(confirm_msg, confirmation_required=confirmation_required):
             err_subregion_names = []
@@ -358,8 +358,8 @@ class PostgresOSM(ImportPBF):
                     err_subregion_names.append(subregion_name_)
 
             if len(err_subregion_names) > 0:
-                print("Errors occurred when parsing data of the following subregion(s):", end="\n\t")
-                print('"' + '"\n\t"'.join(err_subregion_names) + '"')
+                print("Errors occurred when parsing data of the following subregion(s):", end="\n  ")
+                print('"' + '"\n  "'.join(err_subregion_names) + '"')
 
     def decode_pbf_layer(self, layer_dat, decode_geojson=True):
         """
@@ -661,7 +661,7 @@ class PostgresOSM(ImportPBF):
                 for schema_name_ in schema_names_:
                     if self.subregion_table_exists(table_name_, schema_name_):
                         if verbose:
-                            print(f'\t"{schema_name_}"', end=" ... ")
+                            print(f'  "{schema_name_}"', end=" ... ")
 
                         try:
                             layer_dat = self._fetch_layer(
