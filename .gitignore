@@ -20,7 +20,7 @@ cov_reports/
 dist/
 *.egg-info/
 
-# Bespoke items
+# Project-specific directories / files
 *[!_]_.py
 pydriosm/data/*
 !.metadata
