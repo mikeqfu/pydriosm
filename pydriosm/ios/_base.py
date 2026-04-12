@@ -939,7 +939,7 @@ class BaseIOS(PostgreSQL):
             if verbose:
                 print(f'  "{geom_type}"', end=" ... ")
 
-                if osm_layer is None or osm_layer.empty:
+                if osm_layer is None or len(osm_layer) == 0:
                     print("Skipped (Empty).")
                     continue
 
