@@ -25,8 +25,8 @@ keywords = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "pyhelpers >= 2.3.4",
-    "pyrcs >= 1.0.4",
+    "pyhelpers ~= 2.4.0",
+    "pyrcs ~= 1.1.0",
     "pyshp >= 3.0.3",
     "pandas >= 3.0.2"
 ]
