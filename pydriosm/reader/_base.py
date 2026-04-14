@@ -10,7 +10,7 @@ import shutil
 import warnings
 
 from pyhelpers._cache import _print_failure_message
-from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, validate_dir
+from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, resolve_dir
 from pyhelpers.ops import get_number_of_chunks
 from pyhelpers.settings import gdal_configurations
 from pyhelpers.store import load_pickle, save_pickle
@@ -139,7 +139,7 @@ class BaseReader:
         if hasattr(self.downloader, 'download_dir'):
             _data_dir = getattr(self.downloader, 'download_dir')
         else:
-            _data_dir = validate_dir(self.downloader.DEFAULT_DOWNLOAD_DIR)
+            _data_dir = resolve_dir(self.downloader.DEFAULT_DOWNLOAD_DIR)
 
         return _data_dir
 
@@ -252,7 +252,7 @@ class BaseReader:
             valid_file_path = path_to_file
 
         else:
-            pbf_dir = validate_dir(path_to_dir=data_dir)
+            pbf_dir = resolve_dir(path_to_dir=data_dir)
             filename_ = os.path.basename(path_to_file) if osm_filename is None else osm_filename
 
             valid_file_path = os.path.join(pbf_dir, filename_)
