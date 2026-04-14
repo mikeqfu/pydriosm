@@ -16,7 +16,7 @@ import pandas as pd
 import shapefile as pyshp
 import shapely.geometry
 from pyhelpers._cache import _check_dependencies, _print_failure_message
-from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, validate_dir
+from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, resolve_dir
 from pyhelpers.text import find_similar_str
 
 
@@ -1189,7 +1189,7 @@ class SHP:
     @classmethod
     def _make_merged_dir(cls, output_dir, path_to_data_dir, merged_dirname_temp, suffix):
         if output_dir:
-            path_to_merged_dir = validate_dir(path_to_dir=output_dir)
+            path_to_merged_dir = resolve_dir(path_to_dir=output_dir)
         else:
             path_to_merged_dir = os.path.join(
                 path_to_data_dir, merged_dirname_temp.replace(suffix, "", -1))

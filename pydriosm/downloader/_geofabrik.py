@@ -9,7 +9,7 @@ import time
 import urllib.parse
 
 from pyhelpers._cache import _print_failure_message
-from pyhelpers.dirs import cd, validate_dir
+from pyhelpers.dirs import cd, resolve_dir
 from pyhelpers.ops import confirmed
 from pyhelpers.store import save_data
 
@@ -98,7 +98,7 @@ class GeofabrikDownloader(BaseDownloader):
 
     @classmethod
     def get_raw_directory_index(cls, url, save_path=None, verbose=False, raise_error=False):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a raw directory index (including download information of older file logs).
 
@@ -215,7 +215,7 @@ class GeofabrikDownloader(BaseDownloader):
 
     @classmethod
     def get_subregion_table(cls, url, verbose=False, raise_error=False):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get download information of all geographic (sub)regions on a web page.
 
@@ -304,6 +304,7 @@ class GeofabrikDownloader(BaseDownloader):
 
     def get_continent_tables(self, update=False, confirmation_required=True, verbose=False,
                              raise_error=False, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Get download catalogues for each continent.
 
@@ -369,7 +370,7 @@ class GeofabrikDownloader(BaseDownloader):
 
     def get_region_subregion_tiers(self, update=False, confirmation_required=True, verbose=False,
                                    raise_error=False):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get region-subregion tier and all (sub)regions that have no subregions.
 
@@ -444,6 +445,7 @@ class GeofabrikDownloader(BaseDownloader):
 
     def get_catalogue(self, update=False, confirmation_required=True, verbose=False,
                       raise_error=False):
+        # noinspection PyUnresolvedReferences
         """
         Get a catalogue (index) of all available downloads.
 
@@ -1003,7 +1005,7 @@ class GeofabrikDownloader(BaseDownloader):
             else:
                 sub_download_dir = cd(self.download_dir, sub_path, sub_dir, **kwargs)
         else:
-            sub_download_dir = cd(validate_dir(path_to_dir=download_dir), sub_dir, **kwargs)
+            sub_download_dir = cd(resolve_dir(path_to_dir=download_dir), sub_dir, **kwargs)
 
         return sub_download_dir
 

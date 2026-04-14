@@ -1,7 +1,7 @@
 furo==2025.12.19
-pyrcs==1.0.4
+pyrcs==1.1.0
 pyshp==3.0.3
 sphinx-copybutton==0.5.2
 sphinx-new-tab-link==0.8.1
 sphinx-toggleprompt==0.6.0
-pyhelpers==2.3.4
+pyhelpers==2.4.0
