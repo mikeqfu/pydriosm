@@ -106,7 +106,7 @@ def validate_table_name(table_name, sub_space=''):
         'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch_W..'
     """
 
-    table_name_ = remove_punctuation(table_name, rm_whitespace=True)
+    table_name_ = remove_punctuation(table_name, normalize_whitespace=True)
 
     if sub_space:
         table_name_ = table_name_.replace(' ', sub_space)
