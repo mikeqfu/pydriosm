@@ -23,16 +23,22 @@ class BBBikeDownloader(BaseDownloader):
 
     #: Name of the free downloader server.
     NAME: str = 'BBBike'
+
     #: Full name of the data resource.
     LONG_NAME: str = 'BBBike exports of OpenStreetMap data'
+
     #: URL of the homepage to the free download server.
     URL: str = 'https://download.bbbike.org/osm/bbbike/'
+
     #: URL of a list of cities that are available on the free download server.
     CITIES_URL: str = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'
+
     #: URL of coordinates of all the available cities.
     CITIES_COORDS_URL: str = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.csv'
+
     #: Default download directory.
     DEFAULT_DOWNLOAD_DIR: str = "osm_data/bbbike"
+
     #: Valid file formats.
     FILE_FORMATS: set = {
         '.pbf',

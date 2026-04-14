@@ -14,7 +14,7 @@ import urllib.parse
 
 import requests
 from pyhelpers._cache import _print_failure_message
-from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, validate_dir
+from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, resolve_dir
 from pyhelpers.ops import confirmed, download_file_from_url, is_url
 from pyhelpers.store import _check_saving_path, load_data, save_data
 from pyhelpers.text import cosine_similarity_between_texts, find_similar_str
@@ -80,7 +80,7 @@ class BaseDownloader:
             'tests\\osm_data'
         """
 
-        self.download_dir = self.cdd() if download_dir is None else validate_dir(download_dir)
+        self.download_dir = self.cdd() if download_dir is None else resolve_dir(download_dir)
 
         self.data_paths = []
 
@@ -147,6 +147,7 @@ class BaseDownloader:
     @classmethod
     def print_action_prompt(cls, data_name='<data_name>', verbose=False, confirmation_required=True,
                             note="", end=" ... "):
+        # noinspection PyNoneFunctionAssignment
         """
         Print a short message showing the action as a function runs.
 
@@ -161,6 +162,8 @@ class BaseDownloader:
         :type note: str
         :param end: end string after printing the status message, defaults to ``" ... "``
         :type end: str
+        :return: None.
+        :rtype: None
 
         **Examples**::
 
@@ -183,9 +186,12 @@ class BaseDownloader:
             suffix = "the data" if confirmation_required else f"data of {data_name}"
             print(f"{action} {suffix}" + (" " + note if note else ""), end=end)
 
+        return None
+
     @classmethod
     def print_status(cls, data_name='<data_name>', path_to_file="<file_path>", verbose=False,
                      error_message=None, update=False, raise_error=False):
+        # noinspection PyNoneFunctionAssignment
         """
         Print a short message for an otherwise situation.
 
@@ -203,6 +209,8 @@ class BaseDownloader:
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=False`` (default), the error will be suppressed.
         :type raise_error: bool
+        :return: None.
+        :rtype: None
 
         **Examples**::
 
@@ -228,6 +236,8 @@ class BaseDownloader:
 
             elif verbose is True or verbose == 1:
                 print("Cancelled.")
+
+            return None
 
     @classmethod
     def get_prepacked_data(cls, meth, data_name='<data_name>', file_stem=None, ext=".pkl",
@@ -633,7 +643,7 @@ class BaseDownloader:
                     file_pathname = os.path.join(self.download_dir + sub_path, osm_filename)
 
             else:
-                download_dir_ = validate_dir(path_to_dir=download_dir)
+                download_dir_ = resolve_dir(path_to_dir=download_dir)
 
                 file_fmts_ = [y.replace('.', '-') for y in self.FILE_FORMATS]
                 if any(download_dir_.endswith(x) for x in file_fmts_):
@@ -905,13 +915,13 @@ class BaseDownloader:
         """
 
         if download_dir is not None and verify_download_dir:
-            download_dir_ = validate_dir(path_to_dir=download_dir)
+            download_dir_ = resolve_dir(path_to_dir=download_dir)
 
             if download_dir_ != self.download_dir:
                 self.download_dir = download_dir_
 
     def _download_data(self, url, path_to_file, interval=0.5, verbose=False, raise_error=False,
-                       print_state="Downloading", pbar_color='green', print_wrap_limit=None,
+                       print_state="Downloading", pbar_color='green', msg_wrap_limit=None,
                        verify_download_dir=True, **kwargs):
         # noinspection PyShadowingNames
         """
@@ -974,15 +984,15 @@ class BaseDownloader:
         verbose_ = verbose == 2 or False
 
         _check_saving_path(
-            path_to_file, verbose=verbose_, state_verb=print_state, print_end=" ... ",
-            print_wrap_limit=print_wrap_limit)
+            path=path_to_file, verbose=verbose_, state_verb=print_state, end=" ... ",
+            msg_wrap_limit=msg_wrap_limit)
 
         try:
             f = io.StringIO()
             with contextlib.redirect_stdout(f):
                 download_file_from_url(
                     url=url, path_to_file=path_to_file, verbose=(int(verbose) == 1 or False),
-                    print_wrap_limit=print_wrap_limit, pbar_color=pbar_color, **kwargs)
+                    print_wrap_limit=msg_wrap_limit, pbar_color=pbar_color, **kwargs)
 
             out = f.getvalue()
 
