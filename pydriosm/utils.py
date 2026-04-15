@@ -5,7 +5,9 @@ Provide various helper functions for use across the package.
 import importlib.resources
 import os
 import shutil
+from pathlib import Path
 
+import pandas as pd
 from pyhelpers._cache import _check_dependencies, _check_relative_pathname, _print_failure_message
 from pyhelpers.dirs import cd
 
@@ -17,7 +19,9 @@ from pyhelpers.dirs import cd
 
 def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
     """
-    Specify (or change to) a directory (or any subdirectories) for backup data of the package.
+    Specifies a directory or file path within the package's data directory.
+
+    This function automatically suffixes filenames based on the installed Pandas major version.
 
     :param sub_dir: [optional] name of a directory; names of directories (and/or a filename)
     :type sub_dir: str | os.PathLike[str]
@@ -41,18 +45,28 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
         'pydriosm\\data'
     """
 
-    pathname = importlib.resources.files(__package__).joinpath(data_dir)
-    for x in sub_dir:
-        pathname = os.path.join(pathname, x)
+    # Initialize base path
+    base_path = Path(str(importlib.resources.files(__package__).joinpath(data_dir)))
 
+    # Build the full path
+    full_path = base_path.joinpath(*sub_dir)
+
+    # Add Pandas version suffix to the filename if it is a file
+    if full_path.suffix:
+        ext = "".join(full_path.suffixes)
+        file_stem = full_path.name.replace(ext, '')
+        pandas_major = pd.__version__.split(".")[0]
+        suffix = f"-v{pandas_major}"
+
+        # Insert suffix before the extension (e.g., 'cities.pkl' -> 'cities_v3.pkl')
+        full_path = full_path.with_name(f"{file_stem}{suffix}{ext}")
+
+    # Handle directory creation
     if mkdir:
-        path_to_file, ext = os.path.splitext(pathname)
-        if ext == '':
-            os.makedirs(path_to_file, exist_ok=True, **kwargs)
-        else:
-            os.makedirs(os.path.dirname(pathname), exist_ok=True, **kwargs)
+        target_dir = full_path.parent if full_path.suffix else full_path
+        target_dir.mkdir(parents=True, exist_ok=True, **kwargs)
 
-    return pathname
+    return str(full_path)
 
 
 def cdd_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
