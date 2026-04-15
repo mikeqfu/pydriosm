@@ -38,13 +38,13 @@ Fu, Q. (2020). PyDriosm: An open-source tool for downloading, reading and Postgr
 
 ```bibtex
 @software{qian_fu_pydriosm_4281194,
-  author    = {Qian Fu},
-  title     = {{PyDriosm: An open-source tool for downloading, reading
-                and PostgreSQL-based I/O of OpenStreetMap data}},
-  year      = 2020,
+  author    = {Fu, Qian},
+  title     = {{PyDriosm: An open-source tool for downloading, reading and PostgreSQL-based I/O of OpenStreetMap data}},
+  year      = {2020},
   publisher = {Zenodo},
   doi       = {10.5281/zenodo.4281194},
-  url       = {https://doi.org/10.5281/zenodo.4281194}
+  license   = {GPLv3},
+  url       = {https://github.com/mikeqfu/pydriosm}
 }
 ```
 
