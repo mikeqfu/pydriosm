@@ -55,8 +55,12 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
     if full_path.suffix:
         ext = "".join(full_path.suffixes)
         file_stem = full_path.name.replace(ext, '')
-        pandas_major = pd.__version__.split(".")[0]
-        suffix = f"-v{pandas_major}"
+
+        if ext.startswith((".pkl", ".pickle")):
+            pandas_major = pd.__version__.split(".")[0]
+            suffix = f"-v{pandas_major}"
+        else:
+            suffix = ""
 
         # Insert suffix before the extension (e.g., 'cities.pkl' -> 'cities_v3.pkl')
         full_path = full_path.with_name(f"{file_stem}{suffix}{ext}")

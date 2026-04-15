@@ -4,6 +4,7 @@ import os
 import shutil
 import types
 
+import pandas as pd
 import pytest
 
 
@@ -22,6 +23,10 @@ def test__cdd(mkdir):
     assert os.path.basename(pathname) == "tests.ext"
     if mkdir:
         shutil.rmtree(os.path.dirname(pathname))
+
+    test_file_path = "pytest_pydriosm_data\\tests.pkl"
+    pathname = _cdd(data_dir=test_file_path, mkdir=False)
+    assert os.path.basename(pathname) == f"tests-v{pd.__version__.split(".")[0]}.pkl"
 
 
 def test_cdd_geofabrik():
