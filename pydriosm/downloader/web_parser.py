@@ -4,7 +4,6 @@
 
 import collections
 import concurrent.futures
-import csv
 import json
 import os
 import re
@@ -724,6 +723,7 @@ def fetch_bbbike_subregion_index(url, raise_error=True):
           :meth:`~pydriosm.downloader.BBBikeDownloader.get_subregion_index`.
     """
 
+    # url='https://download.bbbike.org/osm/bbbike/'
     with requests.get(url, headers=fake_requests_headers()) as response:
         if raise_error:
             response.raise_for_status()
@@ -745,6 +745,60 @@ def fetch_bbbike_subregion_index(url, raise_error=True):
     data['url'] = [urllib.parse.urljoin(url, x.get('href')) for x in soup.find_all('a')[1:]]
 
     return data
+
+
+def fetch_bbbike_city_poly(poly_url, raise_error=True):
+    # noinspection PyShadowingNames
+    """
+    Fetches and parses a .poly file from BBBike to a shapely Polygon.
+
+    :param poly_url: URL to the .poly file (e.g. from download.bbbike.org)
+    :type poly_url: str
+    :param raise_error: whether to raise an exception if the request fails, defaults to True
+    :type raise_error: bool
+    :return: a polygon representing the city's boundaries
+    :rtype: shapely.Polygon
+
+    **Examples**::
+
+        >>> from pydriosm.downloader.web_parser import get_bbbike_city_poly
+        >>> poly_url = 'https://download.bbbike.org/osm/bbbike/Aachen/Aachen.poly'
+        >>> aachen_poly = get_bbbike_city_poly(poly_url)
+        >>> type(aachen_poly)
+        shapely.geometry.polygon.Polygon
+        >>> print(aachen_poly)
+        POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5.88 50.99, 5.88 50.6))
+    """
+
+    # poly_url = 'https://download.bbbike.org/osm/bbbike/Aachen/Aachen.poly'
+    try:
+        response = requests.get(poly_url, headers=fake_requests_headers(), timeout=10)
+        if raise_error:
+            response.raise_for_status()
+        elif not response.ok:
+            return None
+
+        # Decode content and split into lines correctly
+        lines = response.content.decode('utf-8').splitlines()
+
+    except Exception as e:
+        if raise_error:
+            raise e
+        return None
+
+    # Osmosis polygon format:
+    # Line 0: Name, Line 1: Polygon ID, Line 2 to -2: Coords, Line -1: END
+    coords = []
+    for line in lines:
+        parts = line.strip().split()
+        # Only process lines that have exactly two numbers (Longitude and Latitude)
+        if len(parts) == 2:
+            try:
+                coords.append([float(x) for x in parts])
+            except ValueError:
+                continue  # Skip lines that aren't numeric (like the header or "END")
+
+    return shapely.geometry.Polygon(coords)  # (ll, lr, ur, ul)
 
 
 def fetch_bbbike_valid_subregion_names(cls_instance):
