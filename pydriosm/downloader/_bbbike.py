@@ -103,6 +103,7 @@ class BBBikeDownloader(BaseDownloader):
     @classmethod
     def get_bbbike_cities(cls, update=False, confirmation_required=True, verbose=False,
                           raise_error=False):
+        # noinspection PyUnresolvedReferences
         """
         Get the names of all the available cities.
 
@@ -123,22 +124,23 @@ class BBBikeDownloader(BaseDownloader):
 
             >>> from pydriosm.downloader import BBBikeDownloader
             >>> bbd = BBBikeDownloader()
-            >>> bbbike_cities_names = bbd.get_bbbike_cities()
-            >>> type(bbbike_cities_names)
-            list
+            >>> bbbike_cities = bbd.get_bbbike_cities()
+            >>> bbbike_cities[:5]
+            ['Aachen', 'Aarhus', 'Adelaide', 'Albuquerque', 'Alexandria']
         """
 
         data_name = f'{cls.NAME} cities'
 
-        cities_names = cls.get_prepacked_data(
-            fetch_bbbike_cities, url=cls.CITIES_URL, data_name=data_name, update=update,
+        cities = cls.get_prepacked_data(
+            fetch_bbbike_cities, url=cls.URL, data_name=data_name, update=update,
             confirmation_required=confirmation_required, verbose=verbose, raise_error=raise_error)
 
-        return cities_names
+        return cities
 
     @classmethod
     def get_coordinates_of_cities(cls, update=False, confirmation_required=True, verbose=False,
                                   raise_error=False):
+        # noinspection PyUnresolvedReferences
         """
         Get location information of all cities available on the download server.
 
@@ -201,7 +203,7 @@ class BBBikeDownloader(BaseDownloader):
     @classmethod
     def get_subregion_index(cls, update=False, confirmation_required=True, verbose=False,
                             raise_error=False):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a catalogue for geographic (sub)regions.
 
@@ -335,7 +337,7 @@ class BBBikeDownloader(BaseDownloader):
 
     def get_sub_catalogue(self, subregion_name, update=False, confirmation_required=True,
                           verbose=False, raise_error=False):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a download catalogue of OSM data available for a given geographic (sub)region.
 
@@ -393,6 +395,7 @@ class BBBikeDownloader(BaseDownloader):
     @classmethod
     def get_catalogue(cls, update=False, confirmation_required=True, verbose=False,
                       raise_error=False):
+        # noinspection PyUnresolvedReferences
         """
         Get a dict-type index of available formats, data types and a download catalogue.
 

@@ -595,27 +595,64 @@ def fetch_valid_geofabrik_subregion_names():
 # == BBBike ========================================================================================
 
 
-def fetch_bbbike_cities(url):
+def fetch_bbbike_cities(url, raise_error=True):
+    # noinspection PyShadowingNames
     """
     Fetches the names of all the available cities.
 
     :return: list of names of cities available on BBBike free download server
     :rtype: list
 
-    url = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'
+    .. note::
 
+        - This function is used internally by
+          :meth:`BBBikeDownloader.get_bbbike_cities
+          <pydriosm.downloader.BBBikeDownloader.get_bbbike_cities>`, which uses
+          :attr:`BBBikeDownloader.URL<pydriosm.downloader.BBBikeDownloader.URL>`
+          as the default ``url``.
+        - The ``url`` used to default to
+          ``'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'``, which
+          has been unavailable.
+
+    **Examples**::
+
+        >>> from pydriosm.downloader.web_parser import fetch_bbbike_cities
+        >>> url = 'https://download.bbbike.org/osm/bbbike/'
+        >>> cities = fetch_bbbike_cities(url)
 
     .. seealso::
 
-        - Examples for the method
-          :meth:`~pydriosm.downloader.BBBikeDownloader.get_names_of_cities`.
+        - Examples for :meth:`~pydriosm.downloader.BBBikeDownloader.get_bbbike_cities`.
     """
 
-    names_of_cities_ = pd.read_csv(url, header=None)
+    try:  # url = 'https://download.bbbike.org/osm/bbbike/'
+        response = requests.get(url, headers=fake_requests_headers(), timeout=10)
+        if raise_error:
+            response.raise_for_status()
+        elif not response.ok:
+            return []  # Return empty list if we shouldn't raise error
 
-    names_of_cities = list(names_of_cities_.values.flatten())
+        soup = bs4.BeautifulSoup(response.content, features='html.parser')
+    except Exception as e:
+        if raise_error:
+            raise e
+        return []
 
-    return names_of_cities
+    # Find the table or the specific links directly
+    links = soup.find_all('a')  # Directory listings are consistently <a> tags inside <tr> or <td>
+
+    if not links and raise_error:
+        raise ValueError(
+            f"Could not find any links at '{url}'. The page structure might have changed.")
+
+    cities = []
+    for a in links:
+        text = a.get_text(strip=True)
+        # Filter: Must have text; Not parent dir
+        if text and not text.startswith((".", "Parent")):
+            cities.append(text.rstrip("/"))
+
+    return cities
 
 
 def fetch_bbbike_city_coordinates(url, raise_error=True):

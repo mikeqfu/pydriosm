@@ -29,10 +29,10 @@ class TestBBBikeDownloader:
         assert isinstance(bbd.subregion_index, pd.DataFrame)
         assert isinstance(bbd.catalogue, dict)
 
-    # @pytest.mark.parametrize('update', [True, False])
-    def test_get_names_of_cities(self, bbd, monkeypatch, capfd):
+    @pytest.mark.parametrize('update', [True, False])
+    def test_get_bbbike_cities(self, bbd, update, monkeypatch, capfd):
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        bbbike_cities = bbd.get_bbbike_cities(update=False, verbose=True)
+        bbbike_cities = bbd.get_bbbike_cities(update=update, verbose=True)
         out, _ = capfd.readouterr()
         # if update:
         #     assert "Retrieving/compiling the data" in out and "Done." in out
