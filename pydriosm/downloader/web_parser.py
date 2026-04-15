@@ -752,7 +752,7 @@ def fetch_bbbike_city_poly(poly_url, raise_error=True):
     return shapely.geometry.Polygon(coords)  # (ll, lr, ur, ul)
 
 
-def fetch_bbbike_city_coordinates(url, max_workers=10, raise_error=True):
+def fetch_bbbike_city_polygons(url, max_workers=10, raise_error=True):
     # noinspection PyShadowingNames
     """
     Fetches poly information of all cities available on the BBBike download server.
@@ -768,9 +768,9 @@ def fetch_bbbike_city_coordinates(url, max_workers=10, raise_error=True):
 
     **Examples**::
 
-        >>> from pydriosm.downloader.web_parser import fetch_bbbike_city_coordinates
+        >>> from pydriosm.downloader.web_parser import fetch_bbbike_city_polygons
         >>> url = 'https://download.bbbike.org/osm/bbbike/'
-        >>> bbbike_cities_poly = fetch_bbbike_city_coordinates(url)
+        >>> bbbike_cities_poly = fetch_bbbike_city_polygons(url)
         >>> bbbike_cities_poly.head()
                   name                                           geometry
         0       Aachen  POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5....
