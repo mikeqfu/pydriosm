@@ -1076,8 +1076,9 @@ class Downloader(BaseDownloader):
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
-    def get_coordinates_of_cities(self, update=False, confirmation_required=True, verbose=False,
-                                  raise_error=True):
+    def get_bbbike_city_polygons(self, update=False, confirmation_required=True, verbose=False,
+                                 raise_error=True):
+        # noinspection PyUnresolvedReferences
         """
         Get location information of all cities available on the download server.
 
@@ -1099,37 +1100,24 @@ class Downloader(BaseDownloader):
             >>> from pydriosm.downloader import Downloader
             >>> downloader = Downloader(data_source='bbbike')
             >>> # Location information of BBBike cities
-            >>> coords_of_cities = downloader.get_coordinates_of_cities()
-            >>> type(coords_of_cities)
-            pandas.core.frame.DataFrame
-            >>> coords_of_cities.head()
-                      City  ... ur_latitude
-            0       Aachen  ...       50.99
-            1       Aarhus  ...      56.287
-            2     Adelaide  ...     -34.753
-            3  Albuquerque  ...     35.2173
-            4   Alexandria  ...       31.34
-            [5 rows x 13 columns]
-            >>> coords_of_cities.columns.to_list()
-            ['city',
-             'real_name',
-             'pref._language',
-             'local_language',
-             'country',
-             'area_or_continent',
-             'population',
-             'step',
-             'other_cities',
-             'll_longitude',
-             'll_latitude',
-             'ur_longitude',
-             'ur_latitude']
+            >>> bbbike_city_polygons = downloader.get_bbbike_city_polygons()
+            >>> type(bbbike_city_polygons)
+            pandas.DataFrame
+            >>> bbbike_city_polygons.shape
+            (238, 2)
+            >>> bbbike_city_polygons.head()
+                      name                                           geometry
+            0       Aachen  POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5....
+            1       Aarhus  POLYGON ((9.82 55.99, 10.37 55.99, 10.37 56.29...
+            2     Adelaide  POLYGON ((138.46 -35.03, 138.74 -35.03, 138.74...
+            3  Albuquerque  POLYGON ((-106.8 35, -106.47 35, -106.47 35.22...
+            4   Alexandria  POLYGON ((29.7 31.02, 30.21 31.02, 30.21 31.34...
         """
 
-        method_name = self.get_coordinates_of_cities.__name__
+        method_name = self.get_bbbike_city_polygons.__name__
 
         if hasattr(self.downloader, method_name):
-            return self.downloader.get_coordinates_of_cities(
+            return self.downloader.get_bbbike_city_polygons(
                 update=update,
                 confirmation_required=confirmation_required,
                 verbose=verbose,

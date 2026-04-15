@@ -10,7 +10,7 @@ from pyhelpers.ops import confirmed
 
 from pydriosm.downloader._base import BaseDownloader
 from pydriosm.downloader.web_parser import fetch_bbbike_catalogue, fetch_bbbike_cities, \
-    fetch_bbbike_city_coordinates, fetch_bbbike_sub_catalogue, fetch_bbbike_subregion_index, \
+    fetch_bbbike_city_polygons, fetch_bbbike_sub_catalogue, fetch_bbbike_subregion_index, \
     fetch_bbbike_valid_subregion_names
 
 
@@ -29,9 +29,6 @@ class BBBikeDownloader(BaseDownloader):
 
     #: URL of the homepage to the free download server.
     URL: str = 'https://download.bbbike.org/osm/bbbike/'
-
-    #: URL of coordinates of all the available cities.
-    CITIES_COORDS_URL: str = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.csv'
 
     #: Default download directory.
     DEFAULT_DOWNLOAD_DIR: str = "osm_data/bbbike"
@@ -92,7 +89,7 @@ class BBBikeDownloader(BaseDownloader):
         kwargs.update({'update': update})
 
         self.valid_subregion_names = self.get_bbbike_cities(**kwargs)
-        self.subregion_coordinates = self.get_coordinates_of_cities(**kwargs)
+        self.subregion_coordinates = self.get_bbbike_city_polygons(**kwargs)
         self.subregion_index = self.get_subregion_index(**kwargs)
         self.catalogue = self.get_catalogue(**kwargs)
         # self.valid_file_formats = set(self.catalogue['FileFormat'])
@@ -135,8 +132,8 @@ class BBBikeDownloader(BaseDownloader):
         return cities
 
     @classmethod
-    def get_coordinates_of_cities(cls, update=False, confirmation_required=True, verbose=False,
-                                  raise_error=False):
+    def get_bbbike_city_polygons(cls, update=False, confirmation_required=True, verbose=False,
+                                 raise_error=False):
         # noinspection PyUnresolvedReferences
         """
         Get location information of all cities available on the download server.
@@ -158,40 +155,24 @@ class BBBikeDownloader(BaseDownloader):
 
             >>> from pydriosm.downloader import BBBikeDownloader
             >>> bbd = BBBikeDownloader()
-            >>> # Location information of BBBike cities
-            >>> coords_of_cities = bbd.get_coordinates_of_cities()
-            >>> type(coords_of_cities)
-            pandas.core.frame.DataFrame
-            >>> coords_of_cities.shape
-            (240, 13)
-            >>> coords_of_cities.head()
-                      City  ... ur_latitude
-            0       Aachen  ...       50.99
-            1       Aarhus  ...      56.287
-            2     Adelaide  ...     -34.753
-            3  Albuquerque  ...     35.2173
-            4   Alexandria  ...       31.34
-            [5 rows x 13 columns]
-            >>> coords_of_cities.columns.to_list()
-            ['city',
-             'real_name',
-             'pref._language',
-             'local_language',
-             'country',
-             'area_or_continent',
-             'population',
-             'step',
-             'other_cities',
-             'll_longitude',
-             'll_latitude',
-             'ur_longitude',
-             'ur_latitude']
+            >>> bbbike_city_polygons = bbd.get_bbbike_city_polygons()
+            >>> type(bbbike_city_polygons)
+            pandas.DataFrame
+            >>> bbbike_city_polygons.shape
+            (238, 2)
+            >>> bbbike_city_polygons.head()
+                      name                                           geometry
+            0       Aachen  POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5....
+            1       Aarhus  POLYGON ((9.82 55.99, 10.37 55.99, 10.37 56.29...
+            2     Adelaide  POLYGON ((138.46 -35.03, 138.74 -35.03, 138.74...
+            3  Albuquerque  POLYGON ((-106.8 35, -106.47 35, -106.47 35.22...
+            4   Alexandria  POLYGON ((29.7 31.02, 30.21 31.02, 30.21 31.34...
         """
 
-        data_name = f'{cls.NAME} cities coordinates'
+        data_name = f'{cls.NAME} cities poly'
 
         cities_coords = cls.get_prepacked_data(
-            fetch_bbbike_city_coordinates, url=cls.CITIES_COORDS_URL, raise_error=raise_error,
+            fetch_bbbike_city_polygons, url=cls.URL, raise_error=raise_error,
             data_name=data_name, update=update, confirmation_required=confirmation_required,
             verbose=verbose)
 
