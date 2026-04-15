@@ -4,7 +4,6 @@
 
 import collections
 import concurrent.futures
-import csv
 import json
 import os
 import re
@@ -655,55 +654,6 @@ def fetch_bbbike_cities(url, raise_error=True):
     return cities
 
 
-def fetch_bbbike_city_coordinates(url, raise_error=True):
-    """
-    Fetches location information of all cities available on the BBBike download server.
-
-    :return: location information of BBBike cities, i.e. geographic (sub)regions
-    :rtype: pandas.DataFrame
-
-    .. seealso::
-
-        - Examples for the method
-          :meth:`~pydriosm.downloader.BBBikeDownloader.get_coordinates_of_cities`.
-    """
-
-    # Fetch data from the URL
-    with requests.get(url, headers=fake_requests_headers()) as response:
-        if raise_error:
-            response.raise_for_status()
-        # Decode content and parse CSV
-        csv_data = response.content.decode('utf-8')
-        csv_reader = list(csv.reader(csv_data.splitlines(), delimiter=':'))
-
-    clean_data = [
-        [cell.strip().strip('\u200e').replace('#', '') for cell in row] for row in csv_reader[5:-1]
-    ]
-    column_names = [col.replace('#', '').strip().capitalize() for col in csv_reader[0]]
-    cities_coords = pd.DataFrame(clean_data, columns=column_names)
-
-    # Extract coordinates and assign proper column names
-    coord_cols = ['ll_longitude', 'll_latitude', 'ur_longitude', 'ur_latitude']
-    cities_coords[coord_cols] = cities_coords['Coord'].str.split(' ', expand=True)
-    cities_coords.drop(columns=['Coord'], inplace=True)
-
-    # Drop rows with missing coordinate values
-    cities_coords.dropna(subset=coord_cols, inplace=True)
-
-    # Process 'Real name' column
-    cities_coords['Real name'] = cities_coords['Real name'].str.split(r'[!,]').map(
-        lambda x: None if not x or x[0] == '' else dict(zip(x[::2], x[1::2]))
-    )
-
-    # Rename columns to lowercase with underscores
-    cities_coords.columns = [
-        col.replace(' ', '_').replace('/', '_or_').replace('?', '').replace('.', '').lower()
-        for col in cities_coords.columns
-    ]
-
-    return cities_coords
-
-
 def fetch_bbbike_subregion_index(url, raise_error=True):
     # noinspection PyShadowingNames
     """
@@ -724,6 +674,7 @@ def fetch_bbbike_subregion_index(url, raise_error=True):
           :meth:`~pydriosm.downloader.BBBikeDownloader.get_subregion_index`.
     """
 
+    # url='https://download.bbbike.org/osm/bbbike/'
     with requests.get(url, headers=fake_requests_headers()) as response:
         if raise_error:
             response.raise_for_status()
@@ -745,6 +696,125 @@ def fetch_bbbike_subregion_index(url, raise_error=True):
     data['url'] = [urllib.parse.urljoin(url, x.get('href')) for x in soup.find_all('a')[1:]]
 
     return data
+
+
+def fetch_bbbike_city_poly(poly_url, raise_error=True):
+    # noinspection PyShadowingNames
+    """
+    Fetches and parses a .poly file from BBBike to a shapely Polygon.
+
+    :param poly_url: URL to the .poly file (e.g. from download.bbbike.org)
+    :type poly_url: str
+    :param raise_error: whether to raise an exception if the request fails, defaults to True
+    :type raise_error: bool
+    :return: a polygon representing the city's boundaries
+    :rtype: shapely.Polygon
+
+    **Examples**::
+
+        >>> from pydriosm.downloader.web_parser import get_bbbike_city_poly
+        >>> poly_url = 'https://download.bbbike.org/osm/bbbike/Aachen/Aachen.poly'
+        >>> aachen_poly = get_bbbike_city_poly(poly_url)
+        >>> type(aachen_poly)
+        shapely.geometry.polygon.Polygon
+        >>> print(aachen_poly)
+        POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5.88 50.99, 5.88 50.6))
+    """
+
+    # poly_url = 'https://download.bbbike.org/osm/bbbike/Aachen/Aachen.poly'
+    try:
+        response = requests.get(poly_url, headers=fake_requests_headers(), timeout=10)
+        if raise_error:
+            response.raise_for_status()
+        elif not response.ok:
+            return None
+
+        # Decode content and split into lines correctly
+        lines = response.content.decode('utf-8').splitlines()
+
+    except Exception as e:
+        if raise_error:
+            raise e
+        return None
+
+    # Osmosis polygon format:
+    # Line 0: Name, Line 1: Polygon ID, Line 2 to -2: Coords, Line -1: END
+    coords = []
+    for line in lines:
+        parts = line.strip().split()
+        # Only process lines that have exactly two numbers (Longitude and Latitude)
+        if len(parts) == 2:
+            try:
+                coords.append([float(x) for x in parts])
+            except ValueError:
+                continue  # Skip lines that aren't numeric (like the header or "END")
+
+    return shapely.geometry.Polygon(coords)  # (ll, lr, ur, ul)
+
+
+def fetch_bbbike_city_polygons(url, max_workers=10, raise_error=True):
+    # noinspection PyShadowingNames
+    """
+    Fetches poly information of all cities available on the BBBike download server.
+
+    :param url: The base URL of the BBBike download server.
+    :type url: str
+    :param max_workers: Number of parallel threads to use. Defaults to ``10``.
+    :type max_workers: int
+    :param raise_error: Whether to raise an exception if a request fails. Defaults to ``True``.
+    :type raise_error: bool
+    :return: A DataFrame containing poly information of BBBike cities, i.e. geographic (sub)regions.
+    :rtype: pandas.DataFrame
+
+    **Examples**::
+
+        >>> from pydriosm.downloader.web_parser import fetch_bbbike_city_polygons
+        >>> url = 'https://download.bbbike.org/osm/bbbike/'
+        >>> bbbike_cities_poly = fetch_bbbike_city_polygons(url)
+        >>> bbbike_cities_poly.head()
+                  name                                           geometry
+        0       Aachen  POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5....
+        1       Aarhus  POLYGON ((9.82 55.99, 10.37 55.99, 10.37 56.29...
+        2     Adelaide  POLYGON ((138.46 -35.03, 138.74 -35.03, 138.74...
+        3  Albuquerque  POLYGON ((-106.8 35, -106.47 35, -106.47 35.22...
+        4   Alexandria  POLYGON ((29.7 31.02, 30.21 31.02, 30.21 31.34...
+
+    .. seealso::
+
+        - Examples for the method
+          :meth:`~pydriosm.downloader.BBBikeDownloader.get_coordinates_of_cities`.
+    """
+
+    # Fetch the data of BBBike cities
+    subregion_index = fetch_bbbike_subregion_index(url=url, raise_error=raise_error)
+
+    if subregion_index is None:
+        return None
+
+    def _get_poly(row):
+        """Helper to construct URL and fetch the polygon."""
+        city_url = row['url']
+        city_name = city_url.rstrip('/').split('/')[-1]
+        poly_url = urllib.parse.urljoin(city_url, f"{city_name}.poly")
+
+        # Returns (index, polygon) to maintain order during threading
+        return row.name, fetch_bbbike_city_poly(poly_url, raise_error=False)
+
+    # Convert the DataFrame rows to a list of dicts/tuples for the executor
+    rows = [row for _, row in subregion_index.iterrows()]
+
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # map ensures we can process them as they complete
+        results = list(executor.map(_get_poly, rows))
+
+    # Reconstruct DataFrame, sorting it by index to ensure name and geometry match correctly
+    results.sort(key=lambda x: x[0])
+    geometries = [res[1] for res in results]
+
+    cities_poly = pd.DataFrame({'name': subregion_index['name'], 'geometry': geometries})
+
+    return cities_poly
 
 
 def fetch_bbbike_valid_subregion_names(cls_instance):

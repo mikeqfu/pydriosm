@@ -38,25 +38,12 @@ class TestBBBikeDownloader:
         #     assert "Retrieving/compiling the data" in out and "Done." in out
         assert isinstance(bbbike_cities, list)
 
-    # @pytest.mark.parametrize('update', [True, False])
-    def test_get_coordinates_of_cities(self, bbd, monkeypatch):
+    @pytest.mark.parametrize('update', [True, False])
+    def test_get_bbbike_city_polygons(self, bbd, update, monkeypatch):
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        coords_of_cities = bbd.get_coordinates_of_cities(update=False, verbose=True)
-        assert isinstance(coords_of_cities, pd.DataFrame)
-        assert set(coords_of_cities.columns) == {
-            'city',
-            'real_name',
-            'pref_language',
-            'local_language',
-            'country',
-            'area_or_continent',
-            'population',
-            'step',
-            'other_cities',
-            'll_longitude',
-            'll_latitude',
-            'ur_longitude',
-            'ur_latitude'}
+        bbbike_city_polygons = bbd.get_bbbike_city_polygons(update=update, verbose=True)
+        assert isinstance(bbbike_city_polygons, pd.DataFrame)
+        assert set(bbbike_city_polygons.columns) == {'name', 'geometry'}
 
     @pytest.mark.parametrize('update', [True, False])
     def test_get_subregion_index(self, bbd, update, monkeypatch):
