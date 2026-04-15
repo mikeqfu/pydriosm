@@ -23,7 +23,7 @@ def _update_prepacked_data(verbose=True, interval=5):
 
         >>> from pydriosm._updater import _update_prepacked_data
         >>> _update_prepacked_data(verbose=True)
-        To update resources (which may take a few minutes)
+        Proceed to update resources (which may take a few minutes)
         ? [No]|Yes: no
     """
 
@@ -61,13 +61,13 @@ def _update_prepacked_data(verbose=True, interval=5):
         # -- BBBike --------------------------------------------------------------------------------
         bbd = BBBikeDownloader()
 
-        # _ = bbd.get_bbbike_cities(**meth_args)
-        #
-        # time.sleep(interval)
-        #
-        # _ = bbd.get_coordinates_of_cities(**meth_args)
-        #
-        # time.sleep(interval)
+        _ = bbd.get_bbbike_cities(**meth_args)
+
+        time.sleep(interval)
+
+        _ = bbd.get_bbbike_cities_poly(**meth_args)
+
+        time.sleep(interval)
 
         _ = bbd.get_subregion_index(**meth_args)
 
