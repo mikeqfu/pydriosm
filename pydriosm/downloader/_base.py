@@ -184,7 +184,7 @@ class BaseDownloader:
         if verbose:
             action = "Retrieving/compiling"
             suffix = "the data" if confirmation_required else f"data of {data_name}"
-            print(f"{action} {suffix}" + (" " + note if note else ""), end=end)
+            print(f"{action} {suffix}" + (" " + note if note else ""), end=end, flush=True)
 
         return None
 
@@ -240,7 +240,7 @@ class BaseDownloader:
             return None
 
     @classmethod
-    def get_prepacked_data(cls, meth, data_name='<data_name>', file_stem=None, ext=".pkl",
+    def get_prepacked_data(cls, meth, data_name='<data_name>', file_stem=None, ext=".pkl.xz",
                            update=False, confirmation_required=True, dump_backup=True,
                            verbose=False, confirmation_prompt_note="", action_prompt_note="",
                            action_prompt_end=" ... ", ending_message="Done.", raise_error=False,
@@ -298,7 +298,7 @@ class BaseDownloader:
 
         data_name = cls.NAME if data_name is None else data_name
 
-        path_to_file = _cdd(file_stem or data_name.replace(" ", "-").lower() + ext)
+        path_to_file = _cdd((file_stem or data_name.replace(" ", "-").lower()) + ext)
 
         if os.path.isfile(path_to_file) and not update:
             return load_data(path_to_file, verbose=(verbose == 3 or False))
@@ -324,8 +324,8 @@ class BaseDownloader:
                     data = meth(**kwargs)
 
                     if verbose:
-                        leading_tabs = len(re.match(r'^\t*', ending_message).group())
-                        end = "\n" + " " * (leading_tabs + 1) if verbose == 2 else "\n"
+                        indent = len(re.match(r'^ *', ending_message).group())
+                        end = "\n  " + " " * indent if verbose == 2 else "\n"
                         print(ending_message, end=end)
 
                     if dump_backup:
