@@ -39,9 +39,9 @@ class TestBBBikeDownloader:
         assert isinstance(bbbike_cities, list)
 
     @pytest.mark.parametrize('update', [True, False])
-    def test_get_bbbike_city_polygons(self, bbd, update, monkeypatch):
+    def test_get_bbbike_cities_poly(self, bbd, update, monkeypatch):
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        bbbike_city_polygons = bbd.get_bbbike_city_polygons(update=update, verbose=True)
+        bbbike_city_polygons = bbd.get_bbbike_cities_poly(update=update, verbose=True)
         assert isinstance(bbbike_city_polygons, pd.DataFrame)
         assert set(bbbike_city_polygons.columns) == {'name', 'geometry'}
 

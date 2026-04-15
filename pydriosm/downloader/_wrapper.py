@@ -1076,8 +1076,8 @@ class Downloader(BaseDownloader):
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
-    def get_bbbike_city_polygons(self, update=False, confirmation_required=True, verbose=False,
-                                 raise_error=True):
+    def get_bbbike_cities_poly(self, update=False, confirmation_required=True, verbose=False,
+                               raise_error=True):
         # noinspection PyUnresolvedReferences
         """
         Get location information of all cities available on the download server.
@@ -1100,12 +1100,12 @@ class Downloader(BaseDownloader):
             >>> from pydriosm.downloader import Downloader
             >>> downloader = Downloader(data_source='bbbike')
             >>> # Location information of BBBike cities
-            >>> bbbike_city_polygons = downloader.get_bbbike_city_polygons()
-            >>> type(bbbike_city_polygons)
+            >>> bbbike_cities_poly = downloader.get_bbbike_cities_poly()
+            >>> type(bbbike_cities_poly)
             pandas.DataFrame
-            >>> bbbike_city_polygons.shape
+            >>> bbbike_cities_poly.shape
             (238, 2)
-            >>> bbbike_city_polygons.head()
+            >>> bbbike_cities_poly.head()
                       name                                           geometry
             0       Aachen  POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5....
             1       Aarhus  POLYGON ((9.82 55.99, 10.37 55.99, 10.37 56.29...
@@ -1114,10 +1114,10 @@ class Downloader(BaseDownloader):
             4   Alexandria  POLYGON ((29.7 31.02, 30.21 31.02, 30.21 31.34...
         """
 
-        method_name = self.get_bbbike_city_polygons.__name__
+        method_name = self.get_bbbike_cities_poly.__name__
 
         if hasattr(self.downloader, method_name):
-            return self.downloader.get_bbbike_city_polygons(
+            return self.downloader.get_bbbike_cities_poly(
                 update=update,
                 confirmation_required=confirmation_required,
                 verbose=verbose,
