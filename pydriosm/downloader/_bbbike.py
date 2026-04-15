@@ -30,9 +30,6 @@ class BBBikeDownloader(BaseDownloader):
     #: URL of the homepage to the free download server.
     URL: str = 'https://download.bbbike.org/osm/bbbike/'
 
-    #: URL of a list of cities that are available on the free download server.
-    CITIES_URL: str = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'
-
     #: URL of coordinates of all the available cities.
     CITIES_COORDS_URL: str = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.csv'
 
