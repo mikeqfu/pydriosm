@@ -429,6 +429,201 @@ class GeofabrikReader(BaseReader):
 
         return path_to_osm_shp_file
 
+    def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
+                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
+                 rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
+        # noinspection PyUnresolvedReferences
+        """
+        Read a .shp.zip data file of a geographic (sub)region.
+
+        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+            that is available on Geofabrik free download server
+        :type subregion_name: str
+        :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
+            if ``None`` (default), all available layers
+        :type layer_names: str | list | None
+        :param feature_names: name of a feature, e.g. 'rail', or names of multiple features;
+            if ``None`` (default), all available features
+        :type feature_names: str | list | None
+        :param data_dir: directory where the .shp.zip data file is located/saved;
+            if ``None``, the default directory
+        :type data_dir: str | None
+        :param update: whether to check to update pickle backup (if available), defaults to ``False``
+        :type update: bool
+        :param download: whether to ask for confirmation
+            before starting to download a file, defaults to ``True``
+        :type download: bool
+        :param pickle_it: whether to save the .shp data as a pickle file, defaults to ``False``
+        :type pickle_it: bool
+        :param ret_pickle_path: (when ``pickle_it=True``)
+            whether to return a path to the saved pickle file
+        :type ret_pickle_path: bool
+        :param rm_extracts: whether to delete extracted files from the .shp.zip file,
+            defaults to ``False``
+        :type rm_extracts: bool
+        :param rm_shp_zip: whether to delete the downloaded .shp.zip file, defaults to ``False``
+        :type rm_shp_zip: bool
+        :param verbose: whether to print relevant information in console as the function runs,
+            defaults to ``False``
+        :type verbose: bool | int
+        :return: dictionary of the shapefile data,
+            with keys and values being layer names and tabular data
+            (in the format of `geopandas.GeoDataFrame`_), respectively
+        :rtype: dict | None
+
+        .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
+
+        **Examples**::
+
+            >>> from pydriosm.reader import GeofabrikReader
+            >>> from pyhelpers.dirs import delete_dir
+
+            >>> gfr = GeofabrikReader()
+
+            >>> subrgn_name = 'London'
+            >>> dat_dir = "tests/osm_data"
+            >>> london_shp_data = gfr.read_shp(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=False, verbose=True)
+            The .shp.zip file for "Greater London" is not found.
+
+            >>> # Set `download=True`
+            >>> london_shp_data = gfr.read_shp(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
+            Downloading "greater-london-latest-free.shp.zip" 100%|██████████| 196M/196M |...
+              Saving "greater-london-latest-free.shp.zip" ...
+                  to "./tests/osm_data/greater-london/" ... Done.
+            Extracting "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip"
+                to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" ... Done.
+            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
+            >>> type(london_shp_data)
+            dict
+            >>> list(london_shp_data.keys())
+            ['buildings',
+             'landuse',
+             'natural',
+             'places',
+             'pofw',
+             'pois',
+             'railways',
+             'roads',
+             'traffic',
+             'transport',
+             'water',
+             'waterways']
+
+            >>> # Data of the 'railways' layer
+            >>> london_shp_railways = london_shp_data['railways']
+            >>> london_shp_railways.head()
+               osm_id  code  ...                                        coordinates shape_type
+            0   30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
+            1  101298  6103  ...  [(-0.2249906, 51.493682), (-0.2251678, 51.4945...          3
+            2  101486  6103  ...  [(-0.2055497, 51.5195429), (-0.2051377, 51.519...          3
+            3  101511  6101  ...  [(-0.2119027, 51.5241906), (-0.2108059, 51.523...          3
+            4  282898  6103  ...  [(-0.1862586, 51.6159083), (-0.1868721, 51.613...          3
+            [5 rows x 9 columns]
+
+            >>> # Read data of the 'transport' layer only from the original .shp.zip file
+            >>> # (and delete any extracts)
+            >>> subrgn_layer = 'transport'
+
+            >>> # Set `rm_extracts=True` to remove the extracts
+            >>> london_shp_transport = gfr.read_shp(
+            ...     subregion_name=subrgn_name, layer_names=subrgn_layer, data_dir=dat_dir,
+            ...     rm_extracts=True, verbose=True)
+            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
+            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
+            >>> type(london_shp_transport)
+            dict
+            >>> list(london_shp_transport.keys())
+            ['transport']
+            >>> london_shp_transport_ = london_shp_transport['transport']
+            >>> london_shp_transport_.head()
+                 osm_id  ...  shape_type
+            0   5077928  ...           5
+            1   8610280  ...           5
+            2  15705264  ...           5
+            3  23077379  ...           5
+            4  24016945  ...           5
+            [5 rows x 6 columns]
+
+            >>> # Read data of only the 'bus_stop' feature (in the 'transport' layer)
+            >>> # from the original .shp.zip file (and delete any extracts)
+            >>> feat_name = 'bus_stop'
+            >>> london_bus_stop = gfr.read_shp(
+            ...     subregion_name=subrgn_name, layer_names=subrgn_layer, feature_names=feat_name,
+            ...     data_dir=dat_dir, rm_extracts=True, verbose=True)
+            Extracting the following layer(s):
+                'transport'
+                    from "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ...
+                        to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" .....
+            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
+            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
+            >>> type(london_bus_stop)
+            dict
+            >>> list(london_bus_stop.keys())
+            ['transport']
+
+            >>> fclass = london_bus_stop['transport'].fclass.unique()
+            >>> fclass
+            <StringArray>
+            ['bus_stop']
+            Length: 1, dtype: str
+
+            >>> # Read multiple features of multiple layers
+            >>> # (and delete both the original .shp.zip file and extracts)
+            >>> subrgn_layers = ['traffic', 'roads']
+            >>> feat_names = ['parking', 'trunk']
+            >>> london_shp_tra_roa_par_tru = gfr.read_shp(
+            ...     subregion_name=subrgn_name, layer_names=subrgn_layers, feature_names=feat_names,
+            ...     data_dir=dat_dir, rm_extracts=True, rm_shp_zip=True, verbose=True)
+            Extracting the following layer(s):
+                'traffic'
+                'roads'
+                    from "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ...
+                        to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" .....
+            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
+            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
+            Deleting "tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ... Done.
+            >>> type(london_shp_tra_roa_par_tru)
+            dict
+            >>> list(london_shp_tra_roa_par_tru.keys())
+            ['traffic', 'roads']
+
+            >>> # Data of the 'traffic' layer
+            >>> london_shp_tra_roa_par_tru['traffic'].head()
+                osm_id  code  ...                                        coordinates shape_type
+            0  2956081  5260  ...  [(-0.0218269, 51.4369515), (-0.020097, 51.4372...          5
+            1  2956183  5260  ...  [(-0.0224697, 51.4452646), (-0.0223272, 51.445...          5
+            2  2956184  5260  ...  [(-0.0186703, 51.444221), (-0.0185442, 51.4447...          5
+            3  2956185  5260  ...  [(-0.0189846, 51.4481958), (-0.0189417, 51.448...          5
+            4  2956473  5260  ...  [(-0.0059602, 51.4579088), (-0.0058695, 51.457...          5
+            [5 rows x 6 columns]
+
+            >>> # Data of the 'roads' layer
+            >>> london_shp_tra_roa_par_tru['roads'].head()
+               osm_id  code  ...                                        coordinates shape_type
+            7    1200  5112  ...  [(-0.2916285, 51.5160418), (-0.2915517, 51.516...          3
+            8    1201  5112  ...  [(-0.2925582, 51.5300857), (-0.2925916, 51.529...          3
+            9    1202  5112  ...  [(-0.2230893, 51.5735075), (-0.2228416, 51.573...          3
+            10   1203  5112  ...  [(-0.139105, 51.6101568), (-0.1395372, 51.6100...          3
+            11   1208  5112  ...  [(-0.1176027, 51.6124616), (-0.1169584, 51.612...          3
+            [5 rows x 12 columns]
+
+            >>> # Delete the example data and the test data directory
+            >>> delete_dir(dat_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        shp_data = super().read_shp(
+            subregion_name=subregion_name, layer_names=layer_names, feature_names=feature_names,
+            data_dir=data_dir, update=update, download=download, pickle_it=pickle_it,
+            ret_pickle_path=ret_pickle_path, rm_extracts=rm_extracts, rm_shp_zip=rm_shp_zip,
+            verbose=verbose, **kwargs)
+
+        return shp_data
+
     def merge_shp_layers(self, subregion_names, layer_name, data_dir=None, engine='pyshp',
                          update=False, download=False, rm_zip_extracts=True,
                          merged_shp_dir=None, rm_shp_temp=True, verbose=False,
@@ -624,201 +819,6 @@ class GeofabrikReader(BaseReader):
 
             if ret_merged_shp_path:
                 return path_to_merged_shp
-
-    def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
-                 update=False, download=False, pickle_it=False, ret_pickle_path=False,
-                 rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
-        # noinspection PyUnresolvedReferences
-        """
-        Read a .shp.zip data file of a geographic (sub)region.
-
-        :param subregion_name: name of a geographic (sub)region (case-insensitive)
-            that is available on Geofabrik free download server
-        :type subregion_name: str
-        :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
-            if ``None`` (default), all available layers
-        :type layer_names: str | list | None
-        :param feature_names: name of a feature, e.g. 'rail', or names of multiple features;
-            if ``None`` (default), all available features
-        :type feature_names: str | list | None
-        :param data_dir: directory where the .shp.zip data file is located/saved;
-            if ``None``, the default directory
-        :type data_dir: str | None
-        :param update: whether to check to update pickle backup (if available), defaults to ``False``
-        :type update: bool
-        :param download: whether to ask for confirmation
-            before starting to download a file, defaults to ``True``
-        :type download: bool
-        :param pickle_it: whether to save the .shp data as a pickle file, defaults to ``False``
-        :type pickle_it: bool
-        :param ret_pickle_path: (when ``pickle_it=True``)
-            whether to return a path to the saved pickle file
-        :type ret_pickle_path: bool
-        :param rm_extracts: whether to delete extracted files from the .shp.zip file,
-            defaults to ``False``
-        :type rm_extracts: bool
-        :param rm_shp_zip: whether to delete the downloaded .shp.zip file, defaults to ``False``
-        :type rm_shp_zip: bool
-        :param verbose: whether to print relevant information in console as the function runs,
-            defaults to ``False``
-        :type verbose: bool | int
-        :return: dictionary of the shapefile data,
-            with keys and values being layer names and tabular data
-            (in the format of `geopandas.GeoDataFrame`_), respectively
-        :rtype: dict | None
-
-        .. _`geopandas.GeoDataFrame`: https://geopandas.org/reference.html#geodataframe
-
-        **Examples**::
-
-            >>> from pydriosm.reader import GeofabrikReader
-            >>> from pyhelpers.dirs import delete_dir
-
-            >>> gfr = GeofabrikReader()
-
-            >>> subrgn_name = 'London'
-            >>> dat_dir = "tests/osm_data"
-            >>> london_shp_data = gfr.read_shp(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=False, verbose=True)
-            The .shp.zip file for "Greater London" is not found.
-
-            >>> # Set `download=True`
-            >>> london_shp_data = gfr.read_shp(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
-            Downloading "greater-london-latest-free.shp.zip" 100%|██████████| 196M/196M |...
-              Saving "greater-london-latest-free.shp.zip" ...
-                  to "./tests/osm_data/greater-london/" ... Done.
-            Extracting "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip"
-                to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" ... Done.
-            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
-            >>> type(london_shp_data)
-            dict
-            >>> list(london_shp_data.keys())
-            ['buildings',
-             'landuse',
-             'natural',
-             'places',
-             'pofw',
-             'pois',
-             'railways',
-             'roads',
-             'traffic',
-             'transport',
-             'water',
-             'waterways']
-
-            >>> # Data of the 'railways' layer
-            >>> london_shp_railways = london_shp_data['railways']
-            >>> london_shp_railways.head()
-               osm_id  code  ...                                        coordinates shape_type
-            0   30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
-            1  101298  6103  ...  [(-0.2249906, 51.493682), (-0.2251678, 51.4945...          3
-            2  101486  6103  ...  [(-0.2055497, 51.5195429), (-0.2051377, 51.519...          3
-            3  101511  6101  ...  [(-0.2119027, 51.5241906), (-0.2108059, 51.523...          3
-            4  282898  6103  ...  [(-0.1862586, 51.6159083), (-0.1868721, 51.613...          3
-            [5 rows x 9 columns]
-
-            >>> # Read data of the 'transport' layer only from the original .shp.zip file
-            >>> # (and delete any extracts)
-            >>> subrgn_layer = 'transport'
-
-            >>> # Set `rm_extracts=True` to remove the extracts
-            >>> london_shp_transport = gfr.read_shp(
-            ...     subregion_name=subrgn_name, layer_names=subrgn_layer, data_dir=dat_dir,
-            ...     rm_extracts=True, verbose=True)
-            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
-            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
-            >>> type(london_shp_transport)
-            dict
-            >>> list(london_shp_transport.keys())
-            ['transport']
-            >>> london_shp_transport_ = london_shp_transport['transport']
-            >>> london_shp_transport_.head()
-                 osm_id  ...  shape_type
-            0   5077928  ...           5
-            1   8610280  ...           5
-            2  15705264  ...           5
-            3  23077379  ...           5
-            4  24016945  ...           5
-            [5 rows x 6 columns]
-
-            >>> # Read data of only the 'bus_stop' feature (in the 'transport' layer)
-            >>> # from the original .shp.zip file (and delete any extracts)
-            >>> feat_name = 'bus_stop'
-            >>> london_bus_stop = gfr.read_shp(
-            ...     subregion_name=subrgn_name, layer_names=subrgn_layer, feature_names=feat_name,
-            ...     data_dir=dat_dir, rm_extracts=True, verbose=True)
-            Extracting the following layer(s):
-                'transport'
-                    from "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ...
-                        to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" .....
-            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
-            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
-            >>> type(london_bus_stop)
-            dict
-            >>> list(london_bus_stop.keys())
-            ['transport']
-
-            >>> fclass = london_bus_stop['transport'].fclass.unique()
-            >>> fclass
-            <StringArray>
-            ['bus_stop']
-            Length: 1, dtype: str
-
-            >>> # Read multiple features of multiple layers
-            >>> # (and delete both the original .shp.zip file and extracts)
-            >>> subrgn_layers = ['traffic', 'roads']
-            >>> feat_names = ['parking', 'trunk']
-            >>> london_shp_tra_roa_par_tru = gfr.read_shp(
-            ...     subregion_name=subrgn_name, layer_names=subrgn_layers, feature_names=feat_names,
-            ...     data_dir=dat_dir, rm_extracts=True, rm_shp_zip=True, verbose=True)
-            Extracting the following layer(s):
-                'traffic'
-                'roads'
-                    from "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ...
-                        to "./tests/osm_data/greater-london/greater-london-latest-free-shp/" .....
-            Reading the shapefile(s) at "./tests/osm_data/greater-london/greater-london-latest-...
-            Deleting the extracts "./tests/osm_data/greater-london/greater-london-latest-free-s...
-            Deleting "tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ... Done.
-            >>> type(london_shp_tra_roa_par_tru)
-            dict
-            >>> list(london_shp_tra_roa_par_tru.keys())
-            ['traffic', 'roads']
-
-            >>> # Data of the 'traffic' layer
-            >>> london_shp_tra_roa_par_tru['traffic'].head()
-                osm_id  code  ...                                        coordinates shape_type
-            0  2956081  5260  ...  [(-0.0218269, 51.4369515), (-0.020097, 51.4372...          5
-            1  2956183  5260  ...  [(-0.0224697, 51.4452646), (-0.0223272, 51.445...          5
-            2  2956184  5260  ...  [(-0.0186703, 51.444221), (-0.0185442, 51.4447...          5
-            3  2956185  5260  ...  [(-0.0189846, 51.4481958), (-0.0189417, 51.448...          5
-            4  2956473  5260  ...  [(-0.0059602, 51.4579088), (-0.0058695, 51.457...          5
-            [5 rows x 6 columns]
-
-            >>> # Data of the 'roads' layer
-            >>> london_shp_tra_roa_par_tru['roads'].head()
-               osm_id  code  ...                                        coordinates shape_type
-            7    1200  5112  ...  [(-0.2916285, 51.5160418), (-0.2915517, 51.516...          3
-            8    1201  5112  ...  [(-0.2925582, 51.5300857), (-0.2925916, 51.529...          3
-            9    1202  5112  ...  [(-0.2230893, 51.5735075), (-0.2228416, 51.573...          3
-            10   1203  5112  ...  [(-0.139105, 51.6101568), (-0.1395372, 51.6100...          3
-            11   1208  5112  ...  [(-0.1176027, 51.6124616), (-0.1169584, 51.612...          3
-            [5 rows x 12 columns]
-
-            >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "./tests/osm_data/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
-        """
-
-        shp_data = super().read_shp(
-            subregion_name=subregion_name, layer_names=layer_names, feature_names=feature_names,
-            data_dir=data_dir, update=update, download=download, pickle_it=pickle_it,
-            ret_pickle_path=ret_pickle_path, rm_extracts=rm_extracts, rm_shp_zip=rm_shp_zip,
-            verbose=verbose, **kwargs)
-
-        return shp_data
 
     def read_gpkg(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
                   update=False, download=False, verbose=False, raise_error=True, **kwargs):
