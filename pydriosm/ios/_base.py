@@ -7,7 +7,7 @@ import gc
 import itertools
 
 import numpy as np
-import shapely.wkt
+import shapely.wkb
 import sqlalchemy
 from pyhelpers._cache import _print_failure_message
 from pyhelpers.dbms import PostgreSQL
@@ -15,7 +15,7 @@ from pyhelpers.ops import confirmed
 from pyhelpers.text import find_similar_str
 
 from pydriosm.downloader._wrapper import Downloader
-from pydriosm.ios.utils import get_default_layer_name, make_data_items, preprocess_pdf_layer, \
+from pydriosm.ios.utils import get_default_layer_name, make_data_items, preprocess_osm_layer, \
     validate_schema_names, validate_table_name
 from pydriosm.reader._wrapper import Reader
 
@@ -695,7 +695,7 @@ class BaseIOS(PostgreSQL):
             'verbose': 2 if verbose else False,
         }
 
-        lyr_dat = preprocess_pdf_layer(layer_data=layer_data, layer_name=schema_name_)
+        lyr_dat = preprocess_osm_layer(layer_data=layer_data, layer_name=schema_name_)
 
         import_args.update({'data': lyr_dat, 'chunk_size': chunk_size})
 
@@ -775,11 +775,11 @@ class BaseIOS(PostgreSQL):
             Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Importing the data ...
-              "points" ... Done. (<total of rows> features)
-              "lines" ... Done. (<total of rows> features)
-              "multilinestrings" ... Done. (<total of rows> features)
-              "multipolygons" ... Done. (<total of rows> features)
-              "other_relations" ... Done. (<total of rows> features)
+              "points" ... Done. (6473 features)
+              "lines" ... Done. (11057 features)
+              "multilinestrings" ... Done. (71 features)
+              "multipolygons" ... Done. (9423 features)
+              "other_relations" ... Done. (33 features)
 
             >>> # Get parsed PBF data
             >>> parsed_rutland_pbf = osmdb.reader.read_pbf(
@@ -801,9 +801,9 @@ class BaseIOS(PostgreSQL):
             Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Importing the data ...
-              "schema_0" ... Done. (<total of rows> features)
-              "schema_1" ... Done. (<total of rows> features)
-              "schema_2" ... Done. (<total of rows> features)
+              "schema_0" ... Done. (11057 features)
+              "schema_1" ... Done. (6473 features)
+              "schema_2" ... Done. (9423 features)
 
             >>> # To drop the schemas "schema_0", "schema_1" and "schema_2"
             >>> osmdb.drop_schema(schemas.keys(), confirmation_required=False, verbose=True)
@@ -812,51 +812,51 @@ class BaseIOS(PostgreSQL):
               "schema_1" ... Done.
               "schema_2" ... Done.
 
-        *Example 2* - Import data of a shapefile::
+        *Example 2* - Import OSM GeoPackage data::
 
             >>> # Read shapefile data of Rutland
-            >>> rutland_shp = osmdb.reader.read_shp(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True,
-            ...     rm_extracts=True, verbose=True)
-            Downloading "rutland-latest-free.shp.zip" 100%|██████████| 2.71M/2.71M | 4.81...
-              Saving "rutland-latest-free.shp.zip" to "./tests/osm_data/rutland/" ... Done.
-            Extracting "./tests/osm_data/rutland/rutland-latest-free.shp.zip"
-              to "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
-            Reading the shapefile(s) at "./tests/osm_data/rutland/rutland-latest-free-shp/" ......
-            Deleting the extracts "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
-            >>> type(rutland_shp)
+            >>> rutland_gpkg = osmdb.reader.read_gpkg(
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
+            Downloading "rutland-latest-free.gpkg.zip" 100%|██████████| 3.30M/3.30M | 5.0...
+              Saving "rutland-latest-free.gpkg.zip" to "./tests/osm_data/rutland/" ... Done.
+            Parsing the data ... Done.
+            >>> type(rutland_gpkg)
             dict
-            >>> list(rutland_shp.keys())
-            ['buildings',
-             'landuse',
-             'natural',
+            >>> list(rutland_gpkg.keys())
+            ['traffic',
              'places',
-             'pofw',
              'pois',
+             'transport',
+             'pofw',
+             'natural',
              'railways',
              'roads',
-             'traffic',
-             'transport',
+             'waterways',
+             'protected_areas',
              'water',
-             'waterways']
+             'landuse',
+             'buildings',
+             'adminareas']
 
             >>> # Import all layers of the shapefile data of Rutland
-            >>> osmdb.import_osm_data(osm_data=rutland_shp, table_name=subrgn_name, verbose=True)
+            >>> osmdb.import_osm_data(osm_data=rutland_gpkg, table_name=subrgn_name, verbose=True)
             Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Importing the data ...
-              "buildings" ... Done. (<total of rows> features)
-              "landuse" ... Done. (<total of rows> features)
-              "natural" ... Done. (<total of rows> features)
-              "places" ... Done. (<total of rows> features)
-              "pofw" ... Done. (<total of rows> features)
-              "pois" ... Done. (<total of rows> features)
-              "railways" ... Done. (<total of rows> features)
-              "roads" ... Done. (<total of rows> features)
-              "traffic" ... Done. (<total of rows> features)
-              "transport" ... Done. (<total of rows> features)
-              "water" ... Done. (<total of rows> features)
-              "waterways" ... Done. (<total of rows> features)
+              "traffic" ... Done. (557 features)
+              "places" ... Done. (301 features)
+              "pois" ... Done. (1081 features)
+              "transport" ... Done. (65 features)
+              "pofw" ... Done. (65 features)
+              "natural" ... Done. (665 features)
+              "railways" ... Done. (141 features)
+              "roads" ... Done. (7315 features)
+              "waterways" ... Done. (379 features)
+              "protected_areas" ... Done. (20 features)
+              "water" ... Done. (233 features)
+              "landuse" ... Done. (2461 features)
+              "buildings" ... Done. (5706 features)
+              "adminareas" ... Done. (58 features)
 
         *Example 3* - Import BBBike shapefile data file of Leeds::
 
@@ -891,14 +891,14 @@ class BaseIOS(PostgreSQL):
             Proceed to import data into table "Leeds" at postgres:***@localhost:5432/osmdb_test
             ? [No]|Yes: yes
             Importing the data ...
-              "buildings" ... Done. (<total of rows> features)
-              "landuse" ... Done. (<total of rows> features)
-              "natural" ... Done. (<total of rows> features)
-              "places" ... Done. (<total of rows> features)
-              "points" ... Done. (<total of rows> features)
-              "railways" ... Done. (<total of rows> features)
-              "roads" ... Done. (<total of rows> features)
-              "waterways" ... Done. (<total of rows> features)
+              "buildings" ... Done. (432701 features)
+              "landuse" ... Done. (22180 features)
+              "natural" ... Done. (7759 features)
+              "places" ... Done. (892 features)
+              "points" ... Done. (47332 features)
+              "railways" ... Done. (2897 features)
+              "roads" ... Done. (152155 features)
+              "waterways" ... Done. (3520 features)
 
         Delete the test database and downloaded data files::
 
@@ -982,7 +982,7 @@ class BaseIOS(PostgreSQL):
                     pass
 
                 try:
-                    dat[col_name] = dat[col_name].map(shapely.wkt.loads)
+                    dat[col_name] = dat[col_name].map(shapely.wkb.loads)
                 except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
                     pass
 
