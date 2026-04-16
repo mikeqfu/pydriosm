@@ -9,11 +9,12 @@ import re
 import shutil
 import warnings
 
+import geopandas as gpd
 from pyhelpers._cache import _print_failure_message
 from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, resolve_dir
 from pyhelpers.ops import get_number_of_chunks
 from pyhelpers.settings import gdal_configurations
-from pyhelpers.store import load_pickle, save_pickle
+from pyhelpers.store import load_geopackage, load_pickle, save_pickle
 from pyhelpers.text import find_similar_str
 
 from pydriosm.downloader import Downloader
@@ -21,7 +22,8 @@ from pydriosm.downloader._base import BaseDownloader
 from pydriosm.reader._pbf import PBF
 from pydriosm.reader._shp import SHP
 from pydriosm.reader._var import VAR
-from pydriosm.utils import remove_osm_file
+from pydriosm.utils import find_matched_layer_names, get_layer_name, merge_dicts_by_values, \
+    remove_osm_file
 
 
 class BaseReader:
@@ -836,6 +838,165 @@ class BaseReader:
                         print(f'The {osm_file_format} file for "{subregion_name_}" is not found.')
 
             return shp_data
+
+    @staticmethod
+    def _extract_layer_features(dat, feature_names_):
+        if not feature_names_:
+            return dat
+
+        feat_names = [feature_names_] if isinstance(feature_names_, str) else feature_names_
+        feat_col_name = [x for x in dat.columns if x in {'type', 'fclass'}][0]
+
+        # noinspection PyUnusedLocal
+        feat_names_ = [find_similar_str(x, dat[feat_col_name].unique()) for x in feat_names]
+
+        dat_ = dat.query(f'{feat_col_name} in @feat_names_')
+        if dat_.empty:
+            dat_ = None
+
+        return dat_
+
+    @staticmethod
+    def _update_layer_names(data):
+        if isinstance(data, dict):
+            from pyhelpers.ops import update_dict_keys
+
+            repl_key_dict = {k: get_layer_name(k) for k in data.keys()}
+            return update_dict_keys(data, repl_key_dict)
+
+    def read_gpkg(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
+                  update=False, download=False, verbose=False, raise_error=True, **kwargs):
+        # noinspection PyShadowingNames
+        """
+        Reads GeoPackage (.gpkg.zip) data for a specific subregion.
+
+        This method retrieves, downloads (optional), and parses OSM data in GeoPackage format.
+        It supports selective layer loading and feature extraction, with automatic concatenation
+        of related layers (e.g. merging multiple layers into a single key).
+
+        :param subregion_name: Name of the subregion (e.g. 'West Midlands' or 'london').
+        :type subregion_name: str
+        :param layer_names: Specific OSM layer(s) to load (e.g., 'points', 'roads');
+            defaults to ``None`` (loads all available layers).
+        :type layer_names: str | list | None
+        :param feature_names: Specific feature type(s) to extract from the loaded layers
+            (e.g., 'residential', 'motorway'); defaults to ``None``.
+        :type feature_names: str | list | None
+        :param data_dir: Directory where the data file is stored or will be downloaded to;
+            defaults to ``None``.
+        :type data_dir: str | os.PathLike | None
+        :param update: Whether to update the local file by re-downloading it; defaults to ``False``.
+        :type update: bool
+        :param download: Whether to download the file if it is missing locally;
+            defaults to ``False``.
+        :type download: bool
+        :param verbose: Whether to print progress messages to the console; defaults to ``False``.
+        :type verbose: bool
+        :param raise_error: Whether to raise an exception if an error occurs during parsing;
+            defaults to ``True``.
+        :type raise_error: bool
+        :param kwargs: Additional optional arguments for :func:`pyhelpers.store.load_geopackage`.
+        :type kwargs: Any
+        :return: A GeoDataFrame (if a single layer is resolved) or a dictionary of
+            GeoDataFrames (keyed by layer names).
+        :rtype: geopandas.GeoDataFrame | dict | None
+
+        **Examples**::
+
+            >>> from pydriosm.reader import GeofabrikReader
+            >>> from pyhelpers.dirs import delete_dir
+            >>> reader = GeofabrikReader()
+            >>> # Read 'railways' layer for Rutland
+            >>> data_dir = "tests/osm_data"
+            >>> wm_railways = reader.read_gpkg(
+            ...     subregion_name='Rutland',
+            ...     layer_names='railways',
+            ...     data_dir=data_dir,
+            ...     download=True,
+            ...     verbose=True)
+            Downloading "rutland-latest-free.gpkg.zip" 100%|██████████| 3.30M/3.30M | 4.5...
+              Saving "rutland-latest-free.gpkg.zip" to "./tests/osm_data/rutland/" ... Done.
+            Parsing the data ... Done.
+            >>> type(wm_railways)
+            dict
+            >>> list(wm_railways.keys())
+            ['railways']
+            >>> delete_dir(data_dir, verbose=True)
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        osm_file_format = ".gpkg.zip"
+
+        subregion_name_, gpkg_zip_filename, _, gpkg_zip_pathname = (
+            self.downloader.get_valid_download_info(
+                subregion_name=subregion_name,
+                osm_file_format=osm_file_format,
+                download_dir=data_dir
+            )
+        )
+
+        if gpkg_zip_filename is None and gpkg_zip_pathname is None:
+            if verbose:
+                print(f'The {osm_file_format} file for "{subregion_name_}" is not found.')
+            return None
+
+        if not os.path.isfile(gpkg_zip_pathname) and not (update or download):
+            raise FileNotFoundError(
+                f'The GeoPackage "{os.path.basename(gpkg_zip_pathname)}" is not available.\n'
+                f'  Set `download=True` to download it.')
+
+        if download or (os.path.isfile(gpkg_zip_pathname) and update):
+            self.downloader.download_data(
+                subregion_names=subregion_name, osm_file_formats=osm_file_format,
+                download_dir=data_dir, update=update, confirmation_required=False,
+                verbose=verbose)
+
+        if verbose:
+            print("Parsing the data", end=" ... ")
+
+        try:
+            layer_names_, feature_names_ = map(self.validate_dtype, [layer_names, feature_names])
+            available_layers = gpd.list_layers(gpkg_zip_pathname)
+
+            layer_name_list = find_matched_layer_names(
+                layer_names_, available_layers['name'].to_list())
+
+            if not layer_name_list:
+                kwargs['verbose'] = False
+                data = load_geopackage(gpkg_zip_pathname, **kwargs)
+
+                if isinstance(data, dict):
+                    repl_key_dict = {k: get_layer_name(k) for k in data.keys()}
+                    data = merge_dicts_by_values(data_dict=data, mapping_dict=repl_key_dict)
+
+                if len(feature_names_) > 0:
+                    if isinstance(data, dict):
+                        for lyr_name, lyr_data in data.items():
+                            data[lyr_name] = self._extract_layer_features(lyr_data, feature_names_)
+                    else:
+                        data = self._extract_layer_features(data, feature_names_)
+
+                if verbose:
+                    print("Done.")
+                return data
+
+            if len(layer_name_list) > 0:
+                data = {
+                    layer: load_geopackage(gpkg_zip_pathname, layer=layer, **kwargs)
+                    for layer in layer_name_list
+                }
+                repl_key_dict = {k: get_layer_name(k) for k in layer_name_list}
+                data = merge_dicts_by_values(data_dict=data, mapping_dict=repl_key_dict)
+
+                if verbose:
+                    print("Done.")
+                return data
+
+        except Exception as e:
+            _print_failure_message(
+                e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
 
     def read_var_osm(self, meth, subregion_name, osm_file_format, data_dir=None, download=False,
                      verbose=False, raise_error=True, **kwargs):
