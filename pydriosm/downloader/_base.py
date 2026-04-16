@@ -42,6 +42,7 @@ class BaseDownloader:
         '.garmin-opentopo.zip',
         '.garmin-osm.zip',
         '.geojson.xz',
+        '.gpkg.zip',
         '.gz',
         '.mapsforge-osm.zip',
         '.osm.bz2',
@@ -424,6 +425,7 @@ class BaseDownloader:
 
     @classmethod
     def validate_file_format(cls, osm_file_format, valid_formats=None, raise_error=True, **kwargs):
+        # noinspection PyShadowingNames
         """
         Validate an input file format of OSM data.
 
@@ -458,13 +460,15 @@ class BaseDownloader:
               `osm_file_format='abc'` -> The input `osm_file_format` is unidentifiable.
                 Valid options include: {'.csv.xz', '.osm.bz2', '.garmin-onroad-latin1.zip', '.s...
 
-            >>> avail_file_fmts = ['.osm.pbf', '.shp.zip', '.osm.bz2']
             >>> file_fmt = 'pbf'
-            >>> BaseDownloader.validate_file_format(file_fmt, avail_file_fmts)
+            >>> BaseDownloader.validate_file_format(file_fmt)
             '.osm.pbf'
             >>> file_fmt = 'shp'
-            >>> BaseDownloader.validate_file_format(file_fmt, avail_file_fmts)
+            >>> BaseDownloader.validate_file_format(file_fmt)
             '.shp.zip'
+            >>> file_fmt = 'geopackage'
+            >>> BaseDownloader.validate_file_format(file_fmt)
+            '.gpkg.zip'
 
         .. seealso::
 
@@ -482,8 +486,12 @@ class BaseDownloader:
             osm_file_format_ = copy.copy(osm_file_format)
 
         else:
-            osm_file_format_ = find_similar_str(
-                osm_file_format, lookup_list=valid_formats, **kwargs)
+            file_fmt = osm_file_format.lower()
+            if file_fmt.endswith('geopackage'):
+                file_fmt = '.gpkg.zip'
+            if file_fmt.endswith('shapefile'):
+                file_fmt = '.shp.zip'
+            osm_file_format_ = find_similar_str(file_fmt, lookup_list=valid_formats, **kwargs)
 
             if osm_file_format_ is None and raise_error:
                 raise InvalidFileFormatError(osm_file_format, set(valid_formats))
