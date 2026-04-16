@@ -169,7 +169,7 @@ class GeofabrikReader(BaseReader):
                  parse_geometry=False, parse_properties=False, parse_other_tags=False,
                  update=False, download=True, pickle_it=False, ret_pickle_path=False,
                  rm_pbf_file=False, chunk_size_limit=50, verbose=False, **kwargs):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Read a PBF (.osm.pbf) data file of a geographic (sub)region.
 
@@ -313,6 +313,7 @@ class GeofabrikReader(BaseReader):
         return osm_pbf_data
 
     def get_shp_pathname(self, subregion_name, layer_name=None, feature_name=None, data_dir=None):
+        # noinspection PyUnresolvedReferences
         """
         Get path(s) to .shp file(s) for a geographic (sub)region
         (by searching a local data directory).
@@ -627,6 +628,7 @@ class GeofabrikReader(BaseReader):
     def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
                  update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_extracts=False, rm_shp_zip=False, verbose=False, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Read a .shp.zip data file of a geographic (sub)region.
 
@@ -817,3 +819,90 @@ class GeofabrikReader(BaseReader):
             verbose=verbose, **kwargs)
 
         return shp_data
+
+    def read_gpkg(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
+                  update=False, download=False, verbose=False, raise_error=True, **kwargs):
+        # noinspection PyShadowingNames,PyUnresolvedReferences
+        """
+        Reads GeoPackage (.gpkg.zip) data for a specific subregion.
+
+        :param subregion_name: Name of the subregion (e.g. 'West Midlands' or 'london').
+        :type subregion_name: str
+        :param layer_names: Specific OSM layer(s) to load (e.g., 'points', 'roads');
+            defaults to ``None`` (loads all available layers).
+        :type layer_names: str | list | None
+        :param feature_names: Specific feature type(s) to extract from the loaded layers
+            (e.g., 'residential', 'motorway'); defaults to ``None``.
+        :type feature_names: str | list | None
+        :param data_dir: Directory where the data file is stored or will be downloaded to;
+            defaults to ``None``.
+        :type data_dir: str | os.PathLike | None
+        :param update: Whether to update the local file by re-downloading it; defaults to ``False``.
+        :type update: bool
+        :param download: Whether to download the file if it is missing locally;
+            defaults to ``False``.
+        :type download: bool
+        :param verbose: Whether to print progress messages to the console; defaults to ``False``.
+        :type verbose: bool
+        :param raise_error: Whether to raise an exception if an error occurs during parsing;
+            defaults to ``True``.
+        :type raise_error: bool
+        :param kwargs: Additional optional arguments for :func:`pyhelpers.store.load_geopackage`.
+        :type kwargs: Any
+        :return: A GeoDataFrame (if a single layer is resolved) or a dictionary of
+            GeoDataFrames (keyed by layer names).
+        :rtype: geopandas.GeoDataFrame | dict | None
+
+        **Examples**::
+
+            >>> from pydriosm.reader import GeofabrikReader
+            >>> from pyhelpers.dirs import cd, delete_dir
+            >>> gbr = GeofabrikReader()
+            >>> subregion_name = 'West midlands'
+            >>> data_dir = "tests/osm_data"
+            >>> wm_gpkg = gbr.read_gpkg(subregion_name, data_dir=data_dir, verbose=True)
+            Traceback (most recent call last):
+                ...
+            FileNotFoundError: The shapefile "west-midlands-latest-free.gpkg.zip" is not availa...
+              Set `download=True` to download it.
+            >>> wm_gpkg = gbr.read_gpkg(
+            ...     subregion_name, data_dir=data_dir, verbose=True, download=True)
+            Downloading "west-midlands-latest-free.gpkg.zip" 100%|██████████| 103M/103M |...
+              Saving "west-midlands-latest-free.gpkg.zip" to "./tests/osm_data/west-midlands/" ...
+            Parsing the data ... Done.
+            >>> type(wm_gpkg)
+            dict
+            >>> list(wm_gpkg.keys())
+            ['traffic',
+             'pois',
+             'transport',
+             'places',
+             'pofw',
+             'natural',
+             'roads',
+             'railways',
+             'waterways',
+             'landuse',
+             'water',
+             'protected_areas',
+             'buildings',
+             'adminareas']
+            >>> delete_dir(data_dir, verbose=True)  # Delete the downloaded .csv.xz data file
+            To delete the directory "./tests/osm_data/" (Not empty)
+            ? [No]|Yes: yes
+            Deleting "./tests/osm_data/" ... Done.
+        """
+
+        gpkg_data = super().read_gpkg(
+            subregion_name=subregion_name,
+            layer_names=layer_names,
+            feature_names=feature_names,
+            data_dir=data_dir,
+            update=update,
+            download=download,
+            verbose=verbose,
+            raise_error=raise_error,
+            **kwargs
+        )
+
+        return gpkg_data
