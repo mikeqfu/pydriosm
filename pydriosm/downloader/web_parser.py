@@ -24,7 +24,7 @@ from pydriosm.utils import first_unique
 
 
 def get_geofabrik_raw_directory_index(url):
-    # noinspection PyShadowingNames
+    # noinspection PyShadowingNames,PyUnresolvedReferences
     """
     Gets a raw directory index (including download information of older file logs).
 
@@ -224,19 +224,23 @@ def _parse_geofabrik_subregion_table_tr(tr, url):
     return td_data
 
 
-def fetch_geofabrik_subregion_table(url):
+def fetch_geofabrik_subregion_table(url, return_soup=False):
     # noinspection PyShadowingNames
     """
     Fetches download information of all geographic (sub)regions on a web page.
 
     :param url: URL of a subregion's web page
     :type url: str
+    :param return_soup: Whether to return the scraped HTML object. Defaults to ``False``.
+    :type return_soup: bool
     :return: download information of all available subregions on the given ``url``
-    :rtype: pandas.DataFrame | None
+    :rtype: tuple[pandas.DataFrame, bs4.BeautifulSoup] | tuple[None, bs4.BeautifulSoup] |
+        pandas.DataFrame | None
 
     **Examples**::
 
         >>> from pydriosm.downloader.web_parser import fetch_geofabrik_subregion_table
+
         >>> # Download information on the homepage
         >>> url = 'https://download.geofabrik.de/'
         >>> subregion_table = fetch_geofabrik_subregion_table(url)
@@ -250,33 +254,31 @@ def fetch_geofabrik_subregion_table(url):
         5                 Europe  ...     None
         6          North America  ...     None
         7          South America  ...     None
-        [8 rows x 6 columns]
+        [8 rows x 7 columns]
         >>> subregion_table.columns.to_list()
         ['subregion',
          'subregion-url',
          '.osm.pbf',
          '.osm.pbf-size',
+         '.gpkg.zip',
          '.shp.zip',
          '.osm.bz2']
+
         >>> # Download information about 'Great Britain'
         >>> url = 'https://download.geofabrik.de/europe/united-kingdom.html'
         >>> subregion_table = fetch_geofabrik_subregion_table(url)
         >>> subregion_table
-          subregion  ... .osm.bz2
-        0   England  ...     None
-        1  Scotland  ...     None
-        2     Wales  ...     None
-        [3 rows x 6 columns]
+                  subregion  ... .osm.bz2
+        0           Bermuda  ...     None
+        1           England  ...     None
+        2  Falkland Islands  ...     None
+        3          Scotland  ...     None
+        4             Wales  ...     None
+        [5 rows x 7 columns]
+
         >>> # Download information about 'Antarctica'
         >>> url = 'https://download.geofabrik.de/antarctica.html'
         >>> subregion_table = fetch_geofabrik_subregion_table(url)
-        Compiling information about subregions of "Antarctica" ... Failed.
-        >>> subregion_table.empty
-        True
-        >>> # To get more information about the above failure, set `verbose=2`
-        >>> subregion_table = fetch_geofabrik_subregion_table(url)
-        Compiling information about subregions of "Antarctica" ... Failed.
-        No subregion data is available for "Antarctica" on Geofabrik's free download server.
         >>> subregion_table is None
         True
     """
@@ -298,14 +300,39 @@ def fetch_geofabrik_subregion_table(url):
             trs = table.find_all('tr', onmouseover=True)
             tr_data.extend([_parse_geofabrik_subregion_table_tr(tr=tr, url=url) for tr in trs])
 
-    column_names = [  # Specify column names
-        'subregion', 'subregion-url', '.osm.pbf', '.osm.pbf-size', '.shp.zip', '.osm.bz2']
+    if tr_data:
+        ths = tables[-1].find_all('th')
+        column_names = [
+            th.get_text(strip=True) if th.get_text(strip=True) else '.osm.pbf-size' for th in ths]
 
-    tr_data_ = [dat + [None] if len(dat) == 5 else dat for dat in tr_data]
+        i1, i2 = column_names.index('.osm.pbf-size'), column_names.index('.osm.pbf')
+        column_names[i1], column_names[i2] = column_names[i2], column_names[i1]
 
-    if tr_data_:
-        subregion_table = pd.DataFrame(data=tr_data_, columns=column_names)
-        return subregion_table.replace({np.nan: None})
+        column_names += [x for x in ['.shp.zip', '.osm.bz2'] if x not in column_names]
+
+        # column_names = [  # Specify column names
+        #     'subregion',
+        #     'subregion-url',
+        #     '.osm.pbf',
+        #     '.osm.pbf-size',
+        #     '.gpkg.zip',
+        #     '.shp.zip',
+        #     '.osm.bz2'
+        # ]
+
+        tr_data_ = [dat + [None] * (len(column_names) - len(dat)) for dat in tr_data]
+        if tr_data_:
+            subregion_table = pd.DataFrame(data=tr_data_, columns=column_names)
+            subregion_table = subregion_table.rename(
+                columns={'Sub Region': 'subregion', 'Quick Links': 'subregion-url'})
+            subregion_table = subregion_table.replace({np.nan: None}).convert_dtypes()
+            if return_soup:
+                return subregion_table, soup
+            return subregion_table
+
+    if return_soup:
+        return None, soup
+    return None
 
 
 def fetch_geofabrik_continent_tables():
@@ -341,9 +368,9 @@ def fetch_geofabrik_continent_tables():
 
     # Scan the homepage to collect info of regions for each continent
     tds = soup.find_all('td', attrs={'class': 'subregion'})
-    continent_names = [td.a.text for td in tds]
+    continent_names = [td.a.get_text() for td in tds]
 
-    continent_links = [urllib.parse.urljoin(url, url=td.a['href']) for td in tds]
+    continent_links = [urllib.parse.urljoin(url, url=td.a.get('href')) for td in tds]
     continent_links_dat = [fetch_geofabrik_subregion_table(url=url) for url in continent_links]
     continent_tables = dict(zip(continent_names, continent_links_dat))
 
@@ -385,13 +412,15 @@ def compile_geofabrik_region_subregion_tiers(subregion_tables, verbose=2, indent
         :meth:`~pydriosm.downloader.GeofabrikDownloader.get_continent_tables`
     :type subregion_tables: dict
     :param verbose:
-    :type verbose:
+    :type verbose: bool | int
     :param indent_level:
-    :type indent_level: str
+    :type indent_level: str | int
     :param is_root:
     :type is_root: bool
     :param starting_message:
+    :type starting_message: str | None
     :param end_message:
+    :type end_message: str
     :return: a dictionary of region-subregion, and a list of (sub)regions without subregions
     :rtype: tuple[dict, list]
 
@@ -481,22 +510,23 @@ def fetch_geofabrik_catalogue():
     **Examples**::
 
         >>> from pydriosm.downloader.web_parser import fetch_geofabrik_catalogue
-        >>> downloads_catalogue = fetch_geofabrik_catalogue()
-        >>> type(downloads_catalogue)
+        >>> geofabrik_catalogue = fetch_geofabrik_catalogue()
+        >>> type(geofabrik_catalogue)
         pandas.core.frame.DataFrame
-        >>> catalogue.head()
+        >>> geofabrik_catalogue.head()
                        subregion  ... .osm.bz2
         0                 Africa  ...     None
         1             Antarctica  ...     None
         2                   Asia  ...     None
         3  Australia and Oceania  ...     None
         4        Central America  ...     None
-        [5 rows x 6 columns]
-        >>> catalogue.columns.to_list()
+        [5 rows x 7 columns]
+        >>> geofabrik_catalogue.columns.to_list()
         ['subregion',
          'subregion-url',
          '.osm.pbf',
          '.osm.pbf-size',
+         '.gpkg.zip',
          '.shp.zip',
          '.osm.bz2']
 
@@ -508,21 +538,7 @@ def fetch_geofabrik_catalogue():
 
     url = 'https://download.geofabrik.de/'
 
-    with requests.get(url, headers=fake_requests_headers()) as response:
-        response.raise_for_status()
-        soup = bs4.BeautifulSoup(markup=response.content, features='html.parser')
-
-    # Home table
-    home_tr_data = []
-    table_tags = soup.find_all(name='table', attrs={'id': re.compile(r'(special)?subregions')})
-    for table_tag in table_tags:
-        trs = table_tag.find_all(name='tr', onmouseover=True)
-        home_tr_data += [_parse_geofabrik_subregion_table_tr(tr=tr, url=url) for tr in trs]
-
-    column_names = [  # Specify column names
-        'subregion', 'subregion-url', '.osm.pbf', '.osm.pbf-size', '.shp.zip', '.osm.bz2']
-    home_tr_data_ = [entry + [None] if len(entry) == 5 else entry for entry in home_tr_data]
-    home_table = pd.DataFrame(data=home_tr_data_, columns=column_names)
+    home_table, soup = fetch_geofabrik_subregion_table(url=url, return_soup=True)
 
     # Fetch subregion tables concurrently
     subregion_urls = [
