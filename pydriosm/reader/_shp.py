@@ -44,13 +44,14 @@ def get_layer_name(shp_filename):
     if not shp_filename:
         return None
 
-    if not shp_filename.startswith('gis_osm_') and 'a_free' not in shp_filename:
+    if (not shp_filename.startswith('gis_osm_') and 'a_free' not in shp_filename and
+            'README' not in shp_filename):
         return os.path.splitext(shp_filename)[0]
 
     # The pattern captures everything between 'gis_osm_' and the suffix,
     # then specifically strips the '_a' if it is there.
     # pattern = re.compile(r'gis_osm_(.*?)_?a?_free_1(?:\.[a-z0-9]+)?$', re.IGNORECASE)
-    pattern = re.compile(r'^gis_osm_(.*?)(?=_?a?_free_1)', re.IGNORECASE)
+    pattern = re.compile(r'^gis_osm_(.*?)(?=_?a?_free)(_1)?', re.IGNORECASE)
     match = re.search(pattern, shp_filename)
 
     if match:
