@@ -2,59 +2,65 @@
 Installation
 ============
 
-To install the latest release of PyDriosm from `PyPI`_ via `pip`_:
+The easiest way to install the latest stable release of ``pydriosm`` is via `pip`_:
 
-.. _`PyPI`: https://pypi.org/project/pydriosm/
 .. _`pip`: https://pip.pypa.io/en/stable/cli/pip/
 
 .. code-block:: console
 
     pip install --upgrade pydriosm
 
-
-To install the most recent version of PyDriosm hosted on `GitHub`_:
+To install the development version directly from `GitHub`_:
 
 .. _`GitHub`: https://github.com/mikeqfu/pydriosm
 
 .. code-block:: console
 
-    pip install --upgrade git+https://github.com/mikeqfu/pydriosm.git
+    pip install --upgrade git+https://github.com/mikeqfu/pydriosm.git@develop
 
+
+Dependencies
+============
+
+``pydriosm`` requires Python 3.12+ and several core geospatial libraries.
 
 .. warning::
 
-    - `Pip`_ may fail to install the dependency package `GDAL`_. In such a circumstance, try instead to `install their .whl files`_, which can be downloaded from the web page of the `archived "unofficial Windows binaries for Python extension packages"`_ (by Christoph Gohlke) or a `mirror site`_ (by Erin Turnbull). For how to install a .whl file, see the answers to this `StackOverflow question`_.
+    **GDAL Installation**
+
+    Parsing PBF data relies on `GDAL`_. While ``pip`` will attempt to install it, GDAL often requires specific system binaries.
+
+    - **Windows users:** If ``pip install gdal`` fails, it is highly recommended to use pre-built binary wheels. You can find them at the `Geospatial library wheels for Python on Windows`_ repository.
+    - **Conda users:** Alternatively, installing via ``conda install -c conda-forge gdal`` often resolves binary dependency issues automatically.
 
     .. _`GDAL`: https://pypi.org/project/GDAL/
-    .. _`archived "unofficial Windows binaries for Python extension packages"`: https://www.lfd.uci.edu/~gohlke/pythonlibs/
-    .. _`mirror site`: http://eturnbull.ca/pythonlibs/
-    .. _`StackOverflow question`: https://stackoverflow.com/questions/27885397
-
+    .. _`Geospatial library wheels for Python on Windows`: https://github.com/cgohlke/geospatial-wheels
 
 .. note::
 
-    - If using a `virtual environment`_, make sure it is activated.
-    - It is recommended to add `pip install`_ the option ``--upgrade`` (or ``-U``) to ensure that you are getting the latest stable release of the package.
-    - Non-essential dependencies (e.g. `GeoPandas`_) of PyDriosm are not enforced to be installed along with the installation of the package. This is intended to optimise the installation requirements. If a `ModuleNotFoundError`_ or an `ImportError`_ pops out when importing/running a function or a method, first try to install the module(s)/package(s) mentioned in the error message, and then try to import/run the function or method again.
-    - For more general instructions on the installation of Python packages, please refer to the official guide of `Installing Packages`_.
+    - **Environment:** It is strongly recommended to install ``pydriosm`` within a `virtual environment`_.
+    - **GeoPandas:** This package requires ``geopandas >= 1.1.0``. If you have an older version of GeoPandas installed, ``pip`` will attempt to upgrade it to ensure compatibility with modern GeoPackage (GPKG) parsing.
+    - **Optimization:** To keep the installation lightweight, non-essential tools (e.g. `PyShp`_) are excluded from the base dependencies. If a feature requires an uninstalled library, a ``ModuleNotFoundError`` will guide you on what to install.
 
     .. _`virtual environment`: https://packaging.python.org/glossary/#term-Virtual-Environment
-    .. _`pip install`: https://pip.pypa.io/en/stable/cli/pip_install/
-    .. _`ModuleNotFoundError`: https://docs.python.org/3/library/exceptions.html#ModuleNotFoundError
-    .. _`ImportError`: https://docs.python.org/3/library/exceptions.html#ImportError
-    .. _`GeoPandas`: https://geopandas.org/en/stable/getting_started/install.html#installing-with-pip
-    .. _`install their .whl files`: https://stackoverflow.com/a/27909082/4981844
-    .. _`Installing Packages`: https://packaging.python.org/tutorials/installing-packages/
+    .. _`PyShp`: https://pypi.org/project/pyshp/
 
 
-To check whether PyDriosm has been correctly installed, try to import the package via an interpreter shell:
+Verification
+============
+
+To verify that ``pydriosm`` has been correctly installed, check the version in a Python interpreter:
 
 .. code-block:: python
     :name: cmd current version
 
     >>> import pydriosm
-
     >>> pydriosm.__version__  # Check the latest version
 
 .. parsed-literal::
     The latest version is: |version|
+
+
+.. tip::
+
+    For more general instructions on installing Python packages, refer to the official `Installing Packages <https://packaging.python.org/tutorials/installing-packages/>`_ guide.
