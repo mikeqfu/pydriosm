@@ -1047,13 +1047,10 @@ class SHP:
             data = pd.concat(dat_dict.values(), axis=0, ignore_index=True)
 
             if feature_names:
-                if isinstance(feature_names, str):
-                    feat_names = [feature_names]
-                else:
-                    feat_names = feature_names
+                feat_names = [feature_names] if isinstance(feature_names, str) else feature_names
                 feat_col_name = [x for x in data.columns if x in {'type', 'fclass'}][0]
                 feat_names_ = [
-                    find_similar_str(x, data[feat_col_name].unique()) for x in feat_names]
+                    find_similar_str(x, set(data[feat_col_name].unique())) for x in feat_names]
 
                 data = data.query(f'{feat_col_name} in @feat_names_')
 
