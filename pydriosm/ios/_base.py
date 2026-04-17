@@ -53,26 +53,27 @@ class BaseIOS(PostgreSQL):
         :param username: username of a PostgreSQL server; when ``username=None`` (default),
             it is initialized as ``'postgres'`` (default by installation of PostgreSQL)
         :type username: str | None
-        :param password: user password; when ``password=None`` (default),
-            it is required to mannually type in the correct password to connect the PostgreSQL server
+        :param password: user password. When ``password=None`` (default), it requires to
+            mannually type in the correct password to connect the PostgreSQL server.
         :type password: str | int | None
         :param database_name: name of a database; when ``database=None`` (default),
-            it is initialized as ``'postgres'`` (default by installation of PostgreSQL)
+            it is initialized as ``'postgres'`` (default by installation of PostgreSQL).
         :type database_name: str | None
         :param confirm_db_creation: whether to prompt a confirmation before creating a new database
-            (if the specified database does not exist), defaults to ``False``
-        :param data_source: name of data source, defaults to ``'Geofabrik'``;
-            options include ``{'Geofabrik', 'BBBike'}``
+            (if the specified database does not exist). Defaults to ``False``
+        :param data_source: name of data source. Valid options include ``{'Geofabrik', 'BBBike'}``.
+            Defaults to ``'Geofabrik'``.
         :type data_source: str
-        :param max_tmpfile_size: defaults to ``None``,
-            see also the function `pyhelpers.settings.gdal_configurations()`_
+        :param max_tmpfile_size: See the function `pyhelpers.settings.gdal_configurations()`_.
+            Defaults to ``None``.
         :type max_tmpfile_size: int | None
-        :param data_dir: directory where the data file is located/saved, defaults to ``None``;
-            when ``data_dir=None``, it should be the same as the directory specified by
+        :param data_dir: directory where the data file is located/saved.
+            When ``data_dir=None``, it should be the same as the directory specified by
             the corresponding
-            :attr:`~pydriosm.ios.PostgresOSM.downloader`/:attr:`~pydriosm.ios.PostgresOSM.reader`
+            :attr:`~pydriosm.ios.PostgresOSM.downloader`/:attr:`~pydriosm.ios.PostgresOSM.reader`.
+            Defaults to ``None``.
         :type data_dir: str | None
-        :param kwargs: [optional] parameters of the class `pyhelpers.sql.PostgreSQL`_
+        :param kwargs: [optional] parameters of the class `pyhelpers.sql.PostgreSQL`_.
 
         :ivar str data_source: name of data sources, options include ``{'Geofabrik', 'BBBike'}``
 
@@ -368,7 +369,8 @@ class BaseIOS(PostgreSQL):
         :param table_named_as_subregion: whether to use subregion name as table name,
             defaults to ``False``
         :type table_named_as_subregion: bool
-        :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
+        :param schema_named_as_layer: whether a schema is named as a layer name.
+            Defaults to ``False``.
         :type schema_named_as_layer: bool
         :return: ``True`` if the table exists, ``False`` otherwise
         :rtype: bool
@@ -413,19 +415,22 @@ class BaseIOS(PostgreSQL):
                               table_named_as_subregion=False, schema_named_as_layer=False):
         # noinspection PyUnresolvedReferences
         """
-        Get information about columns of a specific schema and table data of a geographic (sub)region.
+        Get information about columns of a specific schema and table data
+        for a geographic (sub)region.
 
-        :param subregion_name: name of a geographic (sub)region, which acts as a table name
+        :param subregion_name: name of a geographic (sub)region, which acts as a table name.
         :type subregion_name: str
         :param layer_name: name of an OSM layer (e.g. 'points', 'railways', ...),
-            which acts as a schema name
+            which acts as a schema name.
         :type layer_name: str
-        :param as_dict: whether to return the column information as a dictionary, defaults to ``True``
+        :param as_dict: whether to return the column information as a dictionary.
+            Defaults to ``True``.
         :type as_dict: bool
         :param table_named_as_subregion: whether to use subregion name as table name,
             defaults to ``False``
         :type table_named_as_subregion: bool
-        :param schema_named_as_layer: whether a schema is named as a layer name, defaults to ``False``
+        :param schema_named_as_layer: whether a schema is named as a layer name.
+            Defaults to ``False``.
         :type schema_named_as_layer: bool
         :return: information about each column of the given table
         :rtype: pandas.DataFrame | dict
@@ -483,8 +488,8 @@ class BaseIOS(PostgreSQL):
 
     def import_osm_layer(self, layer_data, table_name, schema_name,
                          table_named_as_subregion=False, schema_named_as_layer=False,
-                         if_exists='fail', force_replace=False, chunk_size=None,
-                         confirmation_required=True, verbose=False, **kwargs):
+                         if_exists='fail', chunk_size=None, confirmation_required=True,
+                         verbose=False, raise_error=True, **kwargs):
         # noinspection PyUnresolvedReferences
         """
         Import one layer of OSM data into a table.
@@ -495,30 +500,32 @@ class BaseIOS(PostgreSQL):
         :type schema_name: str
         :param table_name: name of a table
         :type table_name: str
-        :param table_named_as_subregion: whether to use subregion name as a table name,
-            defaults to ``False``
+        :param table_named_as_subregion: whether to use subregion name as a table name.
+            Defaults to ``False``.
         :type table_named_as_subregion: bool
-        :param schema_named_as_layer: whether a schema is named as a layer name,
-            defaults to ``False``
+        :param schema_named_as_layer: whether a schema is named as a layer name.
+            Defaults to ``False``.
         :type schema_named_as_layer: bool
-        :param if_exists: if the table already exists, defaults to ``'fail'``;
-            valid options include ``{'replace', 'append', 'fail'}``
+        :param if_exists: if the table already exists.
+            Valid options include ``{'replace', 'append', 'fail'}``. Defaults to ``'fail'``.
         :type if_exists: str
-        :param force_replace: whether to force to replace existing table, defaults to ``False``
-        :type force_replace: bool
-        :param chunk_size: the number of rows in each batch to be written at a time,
-            defaults to ``None``
+        :param chunk_size: the number of rows in each batch to be written at a time.
+            Defaults to ``None``.
         :type chunk_size: int | None
-        :param confirmation_required: whether to prompt a message for confirmation to proceed,
-            defaults to ``True``
+        :param confirmation_required: whether to prompt a message for confirmation to proceed.
+            Defaults to ``True``.
         :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console as the function runs,
-            defaults to ``False``
+        :param verbose: whether to print relevant information in console as the function runs.
+            Defaults to ``False``.
         :type verbose: bool
-        :param kwargs: [optional] parameters of `pyhelpers.sql.PostgreSQL.dump_data()`_
+        :param raise_error: Whether to raise the provided exception.
+            If ``raise_error=False``, the error will be suppressed. Defaults to ``True``.
+        :type raise_error: bool
+        :param kwargs: Ooptional parameters of `pyhelpers.dbms.PostgreSQL.import_data`_.
 
-        .. _`pyhelpers.sql.PostgreSQL.dump_data()`:
-            https://pyhelpers.readthedocs.io/en/latest/sql.html#sql-postgresql-dump-data
+        .. _`pyhelpers.dbms.PostgreSQL.import_data`:
+            https://pyhelpers.readthedocs.io/en/stable/_generated/
+            pyhelpers.dbms.PostgreSQL.import_data.html
 
         .. _pydriosm-PostgresOSM-import_osm_layer:
 
@@ -578,7 +585,7 @@ class BaseIOS(PostgreSQL):
             >>> # Parse the 'geometry' of the PBF data of Rutland
             >>> parsed_pbf = osmdb.reader.read_pbf(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True,
-            ...     parse_geometry=True)
+            ...     parse_geometry=True, verbose=True)
             >>> type(parsed_pbf)
             dict
             >>> list(parsed_pbf.keys())
@@ -599,11 +606,10 @@ class BaseIOS(PostgreSQL):
             >>> # Import the parsed 'points' data into the PostgreSQL database
             >>> osmdb.import_osm_layer(
             ...     layer_data=parsed_pbf_points, table_name=subrgn_name, schema_name=points_key,
-            ...     verbose=True, if_exists='replace')
-            Proceed to import data into "points"."Rutland" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
-            The table "points"."Rutland" already exists and is replaced.
-            Importing the data into the table "points"."Rutland" ... Done.
+            ...     if_exists='replace', verbose=True)
+            Import data into "points"."Rutland" at postgres:***@localhost:5432/osmdb_test?
+             [No]|Yes: yes
+            Importing the data ... Done.
 
             >>> # Get the information of the table "points"."Rutland"
             >>> tbl_col_info = osmdb.get_table_column_info(subrgn_name, points_key)
@@ -615,63 +621,58 @@ class BaseIOS(PostgreSQL):
             column_name               id    geometry  properties
             ordinal_position           1           2           3
 
-        *Example 2* - Import data of the 'railways' layer of a shapefile*::
+        *Example 2* - Import data of the 'railways' layer of a GeoPackage*::
 
             >>> # Read the data of 'railways' layer and delete the extracts
             >>> lyr_name = 'railways'
-            >>> rutland_railways_shp = osmdb.reader.read_shp(
+            >>> rutland_railways_gpkg = osmdb.reader.read_gpkg(
             ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir,
-            ...     download=True, rm_extracts=True, verbose=True)
-            Downloading "rutland-latest-free.shp.zip" 100%|██████████| 2.71M/2.71M | 7.07...
-              Saving "rutland-latest-free.shp.zip" to "./tests/osm_data/rutland/" ... Done.
-            Extracting the following layer(s):
-                'railways'
-              from: "./tests/osm_data/rutland/rutland-latest-free.shp.zip" ...
-                to: "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
-            Reading "./tests/osm_data/rutland/rutland-latest-free-shp/gis_osm_railways_free_1.s...
-            Deleting the extracts "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
-            >>> type(rutland_railways_shp)
+            ...     download=True, verbose=True)
+            Downloading "rutland-latest-free.gpkg.zip" 100%|██████████| 3.30M/3.30M | 3.6...
+              Saving "rutland-latest-free.gpkg.zip" to "./tests/osm_data/rutland/" ... Done.
+            Parsing the data ... Done.
+            >>> type(rutland_railways_gpkg)
             dict
-            >>> list(rutland_railways_shp.keys())
+            >>> list(rutland_railways_gpkg.keys())
             ['railways']
 
             >>> # Get the data of 'railways' layer
-            >>> rutland_railways_shp_ = rutland_railways_shp[lyr_name]
-            >>> rutland_railways_shp_.head()
-                osm_id  code  ...                                        coordinates shape_type
-            0  2162114  6101  ...  [(-0.4644873, 52.7104315), (-0.4611095, 52.706...          3
-            1  3681043  6101  ...  [(-0.6531215, 52.5730787), (-0.6531793, 52.572...          3
-            2  3693985  6101  ...  [(-0.7220263, 52.696584), (-0.7218164, 52.6973...          3
-            3  3693986  6101  ...  [(-0.6173072, 52.6132317), (-0.6241869, 52.614...          3
-            4  8044108  6101  ...  [(-0.6978245, 52.6285831), (-0.7027126, 52.633...          3
-            [5 rows x 9 columns]
+            >>> rutland_railways_gpkg_ = rutland_railways_gpkg[lyr_name]
+            >>> rutland_railways_gpkg_.head()
+                osm_id  code  ... tunnel                                           geometry
+            0  2162114  6101  ...      F  LINESTRING (-0.46449 52.71043, -0.46111 52.706...
+            1  3681043  6101  ...      F  LINESTRING (-0.65312 52.57308, -0.65318 52.572...
+            2  3693985  6101  ...      F  LINESTRING (-0.72203 52.69658, -0.72182 52.697...
+            3  3693986  6101  ...      F  LINESTRING (-0.61731 52.61323, -0.62419 52.614...
+            4  8044108  6101  ...      T  LINESTRING (-0.69782 52.62858, -0.70271 52.63395)
+            [5 rows x 8 columns]
 
             >>> # Import the 'railways' data into the PostgreSQL database
             >>> osmdb.import_osm_layer(
-            ...     layer_data=rutland_railways_shp_, table_name=subrgn_name, schema_name=lyr_name,
+            ...     rutland_railways_gpkg_, table_name=subrgn_name, schema_name=lyr_name,
             ...     verbose=True)
-            Proceed to import data into "railways"."Rutland" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
+            Import data into "railways"."Rutland" at postgres:***@localhost:5432/osmdb_test?
+             [No]|Yes: yes
             Creating a schema: "railways" ... Done.
-            Importing the data into the table "railways"."Rutland" ... Done.
+            Importing the data ... Done.
 
             >>> # Get the information of the table "railways"."Rutland"
             >>> tbl_col_info = osmdb.get_table_column_info(subrgn_name, lyr_name)
             >>> tbl_col_info.head()
-                                column_0    column_1  ...     column_7    column_8
-            table_catalog     osmdb_test  osmdb_test  ...   osmdb_test  osmdb_test
-            table_schema        railways    railways  ...     railways    railways
-            table_name           Rutland     Rutland  ...      Rutland     Rutland
-            column_name           osm_id        code  ...  coordinates  shape_type
-            ordinal_position           1           2  ...            8           9
-            [5 rows x 9 columns]
+                                column_0    column_1  ...    column_6    column_7
+            table_catalog     osmdb_test  osmdb_test  ...  osmdb_test  osmdb_test
+            table_schema        railways    railways  ...    railways    railways
+            table_name           Rutland     Rutland  ...     Rutland     Rutland
+            column_name           osm_id        code  ...      tunnel    geometry
+            ordinal_position           1           2  ...           7           8
+            [5 rows x 8 columns]
 
         Delete the test database and downloaded data files::
 
             >>> # Delete the database 'osmdb_test'
             >>> osmdb.drop_database(verbose=True)
-            To drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
+            Drop the database "osmdb_test" from postgres:***@localhost:5432?
+             [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
 
             >>> # Delete the downloaded data files
@@ -685,27 +686,33 @@ class BaseIOS(PostgreSQL):
 
         schema_name_ = get_default_layer_name(schema_name) if schema_named_as_layer else schema_name
 
-        import_args = {
-            'table_name': table_name_,
-            'schema_name': schema_name_,
-            'if_exists': if_exists,
-            'force_replace': force_replace,
-            'method': self.psql_insert_copy,
-            'confirmation_required': confirmation_required,
-            'verbose': 2 if verbose else False,
-        }
+        table_exists = self.table_exists(table_name=table_name_, schema_name=schema_name_)
+        if table_exists and if_exists == 'fail':
+            msg = [
+                f'The table "{schema_name_}"."{table_name_}" already exists.',
+                "Use `if_exists='replace'` or drop the table first."
+            ]
+            if raise_error:
+                raise ValueError(f"{msg[0]} (Use `if_exists='replace'`)")
+            elif verbose:
+                print("\n  ".join(msg))
 
-        lyr_dat = preprocess_osm_layer(layer_data=layer_data, layer_name=schema_name_)
+        else:
+            lyr_dat = preprocess_osm_layer(layer_data=layer_data, layer_name=schema_name_)
 
-        import_args.update({'data': lyr_dat, 'chunk_size': chunk_size})
+            kwargs.setdefault('method', self.psql_insert_copy)
 
-        kwargs.update(import_args)
-        self.import_data(**kwargs)
+            self.import_data(
+                data=lyr_dat, table_name=table_name_, schema_name=schema_name_, if_exists=if_exists,
+                chunk_size=chunk_size, confirmation_required=confirmation_required,
+                verbose=2 if verbose else False,
+                **kwargs
+            )
 
     def import_osm_data(self, osm_data, table_name, schema_names=None,
                         table_named_as_subregion=False, schema_named_as_layer=False,
                         if_exists='fail', force_replace=False, chunk_size=None,
-                        confirmation_required=True, verbose=False, raise_error=True, **kwargs):
+                        confirmation_required=True, verbose=False, raise_error=False, **kwargs):
         # noinspection PyUnresolvedReferences
         """
         Import OSM data into a database.
@@ -714,7 +721,7 @@ class BaseIOS(PostgreSQL):
         :type osm_data: dict
         :param table_name: name of a table
         :type table_name: str
-        :param schema_names: names of schemas for each layer of the PBF data, defaults to ``None``;
+        :param schema_names: names of schemas for each layer of the PBF data. Defaults to ``None``;
             when ``schema_names=None``, the default layer names as schema names
         :type schema_names: list | dict | None
         :param table_named_as_subregion: whether to use subregion name as a table name,
@@ -723,10 +730,10 @@ class BaseIOS(PostgreSQL):
         :param schema_named_as_layer: whether a schema is named as a layer name,
             defaults to ``False``
         :type schema_named_as_layer: bool
-        :param if_exists: if the table already exists, defaults to ``'fail'``;
+        :param if_exists: if the table already exists. Defaults to ``'fail'``;
             valid options include ``{'replace', 'append', 'fail'}``
         :type if_exists: str
-        :param force_replace: whether to force to replace existing table, defaults to ``False``
+        :param force_replace: whether to force to replace existing table. Defaults to ``False``
         :type force_replace: bool
         :param chunk_size: the number of rows in each batch to be written at a time,
             defaults to ``None``
@@ -737,8 +744,8 @@ class BaseIOS(PostgreSQL):
         :param verbose: whether to print relevant information in console as the function runs,
             defaults to ``False``
         :type verbose: bool
-        :param raise_error: Whether to raise the provided exception; defaults to ``True``;
-            if ``raise_error=False``, the error will be suppressed.
+        :param raise_error: Whether to raise the provided exception.
+            If ``raise_error=False`` (default), the error will not be raised.
         :type raise_error: bool
         :param kwargs: [optional] parameters of the method
             :meth:`~pydriosm.ios.PostgresOSM.import_osm_layer`
@@ -762,7 +769,7 @@ class BaseIOS(PostgreSQL):
             >>> # (If the data file is not available, it'll be downloaded by confirmation)
             >>> raw_rutland_pbf = osmdb.reader.read_pbf(
             ...     subrgn_name, dat_dir, download=True, verbose=True)
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 7.41MB/s ...
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.92M/1.92M | 4.88MB/s ...
               Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
             Reading "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> type(raw_rutland_pbf)
@@ -783,8 +790,8 @@ class BaseIOS(PostgreSQL):
 
             >>> # Get parsed PBF data
             >>> parsed_rutland_pbf = osmdb.reader.read_pbf(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True, parse_geometry=True,
-            ...     parse_other_tags=True, verbose=True)
+            ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True,
+            ...     parse_geometry=True, parse_other_tags=True, verbose=True)
             Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> type(parsed_rutland_pbf)
             dict
@@ -814,7 +821,7 @@ class BaseIOS(PostgreSQL):
 
         *Example 2* - Import OSM GeoPackage data::
 
-            >>> # Read shapefile data of Rutland
+            >>> # Read GeoPackage data of Rutland
             >>> rutland_gpkg = osmdb.reader.read_gpkg(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
             Downloading "rutland-latest-free.gpkg.zip" 100%|██████████| 3.30M/3.30M | 5.0...
@@ -904,8 +911,8 @@ class BaseIOS(PostgreSQL):
 
             >>> # Delete the database 'osmdb_test'
             >>> osmdb.drop_database(verbose=True)
-            To drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
+            Drop the database "osmdb_test" from postgres:***@localhost:5432?
+             [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
 
             >>> # Delete the downloaded data files
@@ -937,35 +944,28 @@ class BaseIOS(PostgreSQL):
 
         for geom_type, osm_layer in data_items:
             if verbose:
-                print(f'  "{geom_type}"', end=" ... ")
+                print(f'  "{geom_type}"', end=" ... ", flush=True)
 
                 if osm_layer is None or len(osm_layer) == 0:
                     print("Skipped (Empty).")
                     continue
 
             try:
-                import_args = {
-                    'layer_data': osm_layer,
-                    'schema_name': geom_type,
-                    'table_name': table_name_,
-                    'table_named_as_subregion': table_named_as_subregion,
-                    'schema_named_as_layer': schema_named_as_layer,
-                    'if_exists': if_exists,
-                    'force_replace': force_replace,
-                    'chunk_size': chunk_size,
-                    'confirmation_required': False,
-                    'verbose': False,
-                }
-                kwargs.update(import_args)
-                self.import_osm_layer(**kwargs)
+                self.import_osm_layer(
+                    layer_data=osm_layer, table_name=table_name_, schema_name=geom_type,
+                    table_named_as_subregion=table_named_as_subregion,
+                    schema_named_as_layer=schema_named_as_layer,
+                    if_exists=if_exists, force_replace=force_replace, chunk_size=chunk_size,
+                    confirmation_required=False, verbose=False, raise_error=True,
+                    **kwargs
+                )
 
                 if verbose:
                     print(f"Done. ({len(osm_layer)} features)")
 
             except Exception as e:
                 _print_failure_message(
-                    e, prefix=f"Failed on the layer '{geom_type}'", verbose=verbose,
-                    raise_error=raise_error)
+                    e, prefix=f"Failed. ", verbose=verbose, raise_error=raise_error)
 
             del osm_layer
             gc.collect()
@@ -1073,16 +1073,16 @@ class BaseIOS(PostgreSQL):
         :param schema_names: names of schemas for each layer of the PBF data,
             if ``None`` (default), the default layer names as schema names
         :type schema_names: str | list | None
-        :param table_named_as_subregion: whether to use subregion name as a table name,
-            defaults to ``False``
+        :param table_named_as_subregion: whether to use subregion name as a table name.
+            Defaults to ``False``
         :type table_named_as_subregion: bool
-        :param schema_named_as_layer: whether a schema is named as a layer name,
-            defaults to ``False``
+        :param schema_named_as_layer: whether a schema is named as a layer name.
+            Defaults to ``False``
         :type schema_named_as_layer: bool
-        :param confirmation_required: whether to ask for confirmation to proceed,
-            defaults to ``True``
+        :param confirmation_required: whether to ask for confirmation to proceed.
+            Defaults to ``True``
         :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param verbose: whether to print relevant information in console. Defaults to ``False``
         :type verbose: bool | int
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=False`` (default), the error will be suppressed.

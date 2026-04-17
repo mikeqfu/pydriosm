@@ -338,17 +338,15 @@ class PostgresOSM(ImportPBF):
                         'chunk_size_limit': chunk_size_limit,
                         'pickle_pbf_file': pickle_pbf_file,
                         'verbose': verbose,
-                        # 'if_exists': if_exists,
+                        **kwargs,
                     }
-                    import_args.update(read_pbf_args)
+                    final_import_args = read_pbf_args | import_args
 
                     file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
                     if file_size_in_mb <= chunk_size_limit:
-                        import_args.update({'if_exists': if_exists})
-                        self._import_pbf(**import_args, **kwargs)
+                        self._import_pbf(if_exists=if_exists, **final_import_args)
                     else:
-                        import_args.update({'if_exists': 'append'})
-                        self._import_pbf_chunk_wisely(**import_args, **kwargs)
+                        self._import_pbf_chunk_wisely(if_exists='append', **final_import_args)
 
                     if rm_pbf_file:
                         remove_osm_file(path_to_file=path_to_osm_pbf, verbose=verbose)
