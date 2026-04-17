@@ -291,17 +291,16 @@ class GeofabrikDownloader(BaseDownloader):
         try:
             subregion_table = fetch_geofabrik_subregion_table(url=url, return_soup=False)
 
-            if not subregion_table.empty:
-                if verbose:
-                    print("Done.")
+            if not subregion_table.empty and verbose:
+                print("Done.")
 
-                return subregion_table
+            return subregion_table
 
         except Exception as e:
             err_msg = f"Failed.\n  No data is available for '{region_name}'."
-            if verbose in {1, True}:
+            if int(verbose) == 1:
                 print(err_msg)
-            elif verbose == 2:
+            elif int(verbose) == 2:
                 _print_failure_message(
                     e, prefix=f"{err_msg}\n  Errors:", verbose=True, raise_error=raise_error)
 
@@ -1380,7 +1379,7 @@ class GeofabrikDownloader(BaseDownloader):
 
                     else:
                         if not os.path.isfile(file_pathname) or update:
-                            self._download_data(
+                            super().download_data(
                                 url=download_url, path_to_file=file_pathname, verbose=verbose,
                                 verify_download_dir=False, **kwargs)
 

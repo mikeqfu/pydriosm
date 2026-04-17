@@ -96,10 +96,11 @@ class TestGeofabrikDownloader:
         assert 'Compiling a subregion list of "Antarctica" ... Failed.' in out
         assert antarctica is None
 
-        antarctica2 = gfd.get_subregion_table(antarctica_url, verbose=2)
-        out, _ = capfd.readouterr()
-        assert 'Compiling a subregion list of "Antarctica" ... Failed.' in out
-        assert antarctica2 is None
+        with pytest.raises(AttributeError, match="'NoneType' object has no attribute 'empty'"):
+            antarctica2 = gfd.get_subregion_table(antarctica_url, verbose=2, raise_error=True)
+            out, _ = capfd.readouterr()
+            assert 'Compiling a subregion list of "Antarctica" ... Failed.' in out
+            assert antarctica2 is None
 
     @pytest.mark.parametrize('update', [True, False])
     def test_get_continent_tables(self, gfd, update):

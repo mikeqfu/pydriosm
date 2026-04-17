@@ -234,8 +234,7 @@ def fetch_geofabrik_subregion_table(url, return_soup=False):
     :param return_soup: Whether to return the scraped HTML object. Defaults to ``False``.
     :type return_soup: bool
     :return: download information of all available subregions on the given ``url``
-    :rtype: tuple[pandas.DataFrame, bs4.BeautifulSoup] | tuple[None, bs4.BeautifulSoup] |
-        pandas.DataFrame | None
+    :rtype: tuple[pandas.DataFrame | None, bs4.BeautifulSoup] | pandas.DataFrame | None
 
     **Examples**::
 

@@ -822,7 +822,7 @@ class BaseReader:
 
                 if len(layer_name_list) > 0:
                     shp_pathnames = [
-                        glob.glob(shp_pathname_.format(layer_name))
+                        glob.glob(str(shp_pathname_).format(layer_name))
                         for layer_name in layer_name_list]
 
                     shp_data = self._read_shp(
@@ -866,7 +866,7 @@ class BaseReader:
 
     def read_gpkg(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
                   update=False, download=False, verbose=False, raise_error=True, **kwargs):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Reads GeoPackage (.gpkg.zip) data for a specific subregion.
 
