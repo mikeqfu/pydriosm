@@ -18,7 +18,6 @@ from pyhelpers.store import load_geopackage, load_pickle, save_pickle
 from pyhelpers.text import find_similar_str
 
 from pydriosm.downloader import Downloader
-from pydriosm.downloader._base import BaseDownloader
 from pydriosm.reader._pbf import PBF
 from pydriosm.reader._shp import SHP
 from pydriosm.reader._var import VAR
@@ -77,10 +76,7 @@ class BaseReader:
             pydriosm.reader.SHP
         """
 
-        if data_source is None:
-            self.downloader = BaseDownloader(download_dir=data_dir)
-        else:
-            self.downloader = Downloader(data_source=data_source, download_dir=data_dir, **kwargs)
+        self.downloader = Downloader(data_source=data_source, download_dir=data_dir, **kwargs)
 
         self.max_tmpfile_size = max_tmpfile_size
 
@@ -847,8 +843,8 @@ class BaseReader:
         feat_names = [feature_names_] if isinstance(feature_names_, str) else feature_names_
         feat_col_name = [x for x in dat.columns if x in {'type', 'fclass'}][0]
 
-        feat_names_ = [find_similar_str(x, dat[feat_col_name].unique()) for x in feat_names]  # noqa
-        dat_ = dat.query(f'{feat_col_name} in @feat_names_')
+        _feat_names_ = [find_similar_str(x, dat[feat_col_name].unique()) for x in feat_names]
+        dat_ = dat.query(f'{feat_col_name} in @_feat_names_')
         if dat_.empty:
             dat_ = None
 
