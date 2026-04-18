@@ -234,6 +234,7 @@ class Reader(BaseReader):
 
     def get_shp_pathname(self, subregion_name, layer_name=None, feature_name=None, data_dir=None,
                          raise_error=True):
+        # noinspection PyUnresolvedReferences
         """
         Get path(s) to .shp file(s) for a geographic (sub)region
         (by searching a local data directory).
@@ -365,7 +366,7 @@ class Reader(BaseReader):
                  update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_pbf_file=False, chunk_size_limit=50, verbose=False, raise_error=True,
                  **kwargs):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Read a PBF (.osm.pbf) data file of a geographic (sub)region.
 
@@ -528,6 +529,7 @@ class Reader(BaseReader):
     def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
                  update=False, download=False, pickle_it=False, ret_pickle_path=False,
                  rm_extracts=False, rm_shp_zip=False, verbose=False, raise_error=True, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Read a shapefile of a geographic (sub)region.
 
@@ -583,7 +585,10 @@ class Reader(BaseReader):
 
             >>> bham_shp = reader.read_shp(
             ...     subregion_name=subrgn_name, data_dir=dat_dir, download=False, verbose=True)
-            The .shp.zip file for "Birmingham" is not found.
+            Traceback (most recent call last):
+                ...
+            FileNotFoundError: The shapefile "Birmingham.osm.shp.zip" is not available.
+              Set `download=True` to download it.
 
             >>> # Set `download=True`
             >>> bham_shp = reader.read_shp(
@@ -608,15 +613,15 @@ class Reader(BaseReader):
             >>> # Data of 'railways' layer
             >>> bham_railways_shp = bham_shp['railways']
             >>> bham_railways_shp.shape
-            (3994, 5)
+            (3994, 4)
             >>> bham_railways_shp.head()
-                osm_id  ... shape_type
-            0      740  ...          3
-            1     2148  ...          3
-            2  2950000  ...          3
-            3  3491845  ...          3
-            4  3981454  ...          3
-            [5 rows x 5 columns]
+                osm_id  ...                                           geometry
+            0      740  ...  LINESTRING (-1.81789 52.5701, -1.81793 52.5698...
+            1     2148  ...  LINESTRING (-1.87303 52.50542, -1.8727 52.5051...
+            2  2950000  ...  LINESTRING (-1.87933 52.48138, -1.87962 52.481...
+            3  3491845  ...  LINESTRING (-1.7406 52.51858, -1.73942 52.5186...
+            4  3981454  ...  LINESTRING (-1.77412 52.52249, -1.77376 52.522...
+            [5 rows x 4 columns]
 
             >>> # Read data of 'road' layer only from the original .shp.zip file
             >>> # (and delete all extracts)
@@ -631,15 +636,15 @@ class Reader(BaseReader):
             >>> list(bham_roads_shp.keys())
             ['roads']
             >>> bham_roads_shp[lyr_name].shape
-            (170370, 9)
+            (171062, 8)
             >>> bham_roads_shp[lyr_name].head()
-               osm_id  ... shape_type
-            0      37  ...          3
-            1      38  ...          3
-            2      41  ...          3
-            3      42  ...          3
-            4      45  ...          3
-            [5 rows x 9 columns]
+               osm_id  ...                                           geometry
+            0      37  ...  LINESTRING (-1.82675 52.5558, -1.82646 52.5556...
+            1      38  ...  LINESTRING (-1.81541 52.54785, -1.81475 52.547...
+            2      41  ...  LINESTRING (-1.81931 52.55219, -1.8186 52.5524...
+            3      42  ...  LINESTRING (-1.82492 52.55504, -1.82309 52.556...
+            4      45  ...  LINESTRING (-1.82121 52.55389, -1.82056 52.55432)
+            [5 rows x 8 columns]
 
             >>> # Read data of multiple layers and features from the original .shp.zip file
             >>> # (and delete all extracts)
@@ -709,9 +714,9 @@ class Reader(BaseReader):
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
-    def merge_layers(self, shp_zip_pathnames, layer_name, engine='pyshp', rm_zip_extracts=True,
-                     output_dir=None, rm_shp_temp=True, ret_shp_pathname=False, verbose=False,
-                     raise_error=False):
+    def merge_shp_layers(self, shp_zip_pathnames, layer_name, engine='geopandas',
+                         rm_zip_extracts=True, output_dir=None, rm_shp_temp=True,
+                         ret_shp_pathname=False, verbose=False, raise_error=False):
         """
         Merge shapefiles over a layer for multiple geographic regions.
 
@@ -720,7 +725,7 @@ class Reader(BaseReader):
         :param layer_name: name of a layer (e.g. 'railways')
         :type layer_name: str
         :param engine: the open-source package used to merge/save shapefiles;
-            options include: ``'pyshp'`` (default) and ``'geopandas'`` (or ``'gpd'``)
+            options include: ``'pyshp'`` and ``'geopandas'`` (default) (or ``'gpd'``)
             if ``engine='geopandas'``, this function relies on `geopandas.GeoDataFrame.to_file()`_;
             otherwise, it by default uses `shapefile.Writer()`_
         :type engine: str
@@ -765,25 +770,23 @@ class Reader(BaseReader):
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
 
-            >>> reader = Reader()
+            >>> reader = Reader(data_source='bbbike')
 
             >>> # Download the .shp.zip file of Manchester and West Yorkshire
-            >>> subrgn_names = ['Greater Manchester', 'West Yorkshire']
+            >>> subrgn_names = ['London', 'Birmingham']
             >>> file_fmt = ".shp"
-            >>> data_dir = "tests\\osm_data"
+            >>> data_dir = "tests/osm_data"
 
             >>> reader.downloader.download_data(subrgn_names, file_fmt, data_dir, verbose=True)
             Proceed to download data in the format '.shp.zip' for the following geographic (sub...
-              "Greater Manchester"
-              "West Yorkshire"
+                "Birmingham"
+                "London"
               to "./tests/osm_data/"
             ? [No]|Yes: yes
-            Downloading "greater-manchester-latest-free.shp.zip" 100%|██████████| 87.5M/8...
-              Saving "greater-manchester-latest-free.shp.zip" ...
-                to "./tests/osm_data/greater-manchester/" ... Done.
-            Downloading "west-yorkshire-latest-free.shp.zip" 100%|██████████| 87.3M/87.3M...
-              Saving "west-yorkshire-latest-free.shp.zip" ...
-                to "./tests/osm_data/west-yorkshire/" ... Done.
+            Downloading "London.osm.shp.zip" 100%|██████████| 248M/248M | 18.0MB/s | ETA:...
+              Saving "London.osm.shp.zip" to "./tests/osm_data/london/" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 16.4MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
 
             >>> os.path.relpath(reader.downloader.download_dir)
             'tests\\osm_data'
@@ -791,13 +794,21 @@ class Reader(BaseReader):
             2
 
             >>> # Merge the layers of 'railways' of the two subregions
-            >>> merged_shp_path = reader.merge_layers(
-            ...     reader.data_paths, layer_name='railways', verbose=True, ret_shp_pathname=True)
+            >>> merged_shp_path = reader.merge_shp_layers(
+            ...     reader.data_paths, layer_name='railways', verbose=2, ret_shp_pathname=True)
+            Extracting the following layer(s):
+              'railways'
+              from: "./tests/osm_data/london/London.osm.shp.zip" ...
+                to: "./tests/osm_data/london/London-osm-shp/" ... Done.
+            Extracting the following layer(s):
+              'railways'
+              from: "./tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
+                to: "./tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
             Merging the following shapefiles:
-              "greater-manchester_gis_osm_railways_free_1.shp"
-              "west-yorkshire_gis_osm_railways_free_1.shp"
-                In progress ... Done.
-              Find the merged shapefile at "tests/osm_data/gre_man-wes_yor-railways".
+              "london_railways.shp"
+              "birmingham_railways.shp"
+              In progress ... Done.
+                Find the merged shapefile in "./tests/osm_data/lon-bir-railways/".
 
             >>> # Check the pathname of the merged shapefile
             >>> type(merged_shp_path)
@@ -805,18 +816,18 @@ class Reader(BaseReader):
             >>> len(merged_shp_path)
             1
             >>> os.path.relpath(merged_shp_path[0])
-            'tests\\osm_data\\gre_man-wes_yor-railways\\linestring.shp'
+            'tests\\osm_data\\lon-bir-railways\\lon-bir-railways.shp'
 
             >>> # Read the merged .shp file
-            >>> merged_shp_data = reader.SHP.read_shp(merged_shp_path[0], emulate_gpd=True)
+            >>> merged_shp_data = reader.SHP.read_shp(merged_shp_path[0])
             >>> merged_shp_data.head()
-                osm_id  code  ... tunnel                                           geometry
-            0   928999  6101  ...      F  LINESTRING (-2.2844621 53.4802635, -2.2851997 ...
-            1   929904  6101  ...      F  LINESTRING (-2.2917977 53.4619559, -2.2924877 ...
-            2   929905  6102  ...      F  LINESTRING (-2.2794048 53.4605819, -2.2799722 ...
-            3  3663332  6102  ...      F  LINESTRING (-2.2382139 53.4817985, -2.2381708 ...
-            4  3996086  6101  ...      F  LINESTRING (-2.6003053 53.4604346, -2.6005261 ...
-            [5 rows x 8 columns]
+               osm_id  ...                                           geometry
+            0   30804  ...     LINESTRING (0.00486 51.62793, 0.0062 51.62927)
+            1  101298  ...  LINESTRING (-0.22499 51.4937, -0.22516 51.4945...
+            2  101486  ...  LINESTRING (-0.20555 51.51954, -0.20514 51.519...
+            3  101511  ...  LINESTRING (-0.2119 51.52419, -0.21081 51.5239...
+            4  282898  ...   LINESTRING (-0.1862 51.61592, -0.18687 51.61386)
+            [5 rows x 4 columns]
 
             >>> # Delete the test data directory
             >>> delete_dir(reader.downloader.download_dir, verbose=True)
@@ -831,7 +842,7 @@ class Reader(BaseReader):
               <pydriosm.reader.GeofabrikReader.merge_shp_layers>`.
         """
 
-        method_name = self.merge_layers.__name__
+        method_name = self.merge_shp_layers.__name__
 
         if hasattr(self.reader, method_name):
             return self.SHP.merge_layers(
@@ -851,7 +862,7 @@ class Reader(BaseReader):
 
     def read_csv_xz(self, subregion_name, data_dir=None, download=False, verbose=False,
                     raise_error=True, **kwargs):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Read a compressed CSV (.csv.xz) data file of a geographic (sub)region.
 
@@ -918,6 +929,7 @@ class Reader(BaseReader):
 
     def read_geojson_xz(self, subregion_name, data_dir=None, parse_geometry=False, download=False,
                         verbose=False, raise_error=True, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Read a .geojson.xz data file of a geographic (sub)region.
 

@@ -1,6 +1,5 @@
 import lzma
 import multiprocessing
-import os
 
 import numpy as np
 import pandas as pd
@@ -62,11 +61,11 @@ class VAR:
             col_names = ['type', 'id', 'feature', 'note']
 
         with lzma.open(path_to_file, mode='rt', encoding='utf-8') as f:
-            with multiprocessing.Pool(processes=os.cpu_count() - 1) as p:
+            with multiprocessing.Pool(processes=multiprocessing.cpu_count() - 1) as p:
                 csv_xz = pd.DataFrame.from_records(
                     p.map(cls._prep_csv_xz, f.readlines()), columns=col_names)
 
-        object_cols = csv_xz.select_dtypes(include=['object', 'str']).columns
+        object_cols = csv_xz.select_dtypes(include=['object', 'string']).columns
         csv_xz[object_cols] = csv_xz[object_cols].replace({np.nan: None})
 
         return csv_xz
@@ -115,12 +114,12 @@ class VAR:
 
         if parse_geometry:
             # data['geometry'] = data['geometry'].map(cls.transform_unitary_geometry)
-            with multiprocessing.Pool(processes=os.cpu_count() - 1) as p:
+            with multiprocessing.Pool(processes=multiprocessing.cpu_count() - 1) as p:
                 geom_data = p.map(convert_simplex_geometry, data['geometry'])
 
             data.loc[:, 'geometry'] = pd.Series(geom_data)
 
-        object_cols = data.select_dtypes(include=['object', 'str']).columns
+        object_cols = data.select_dtypes(include=['object', 'string']).columns
         data[object_cols] = data[object_cols].replace({np.nan: None})
 
         return data

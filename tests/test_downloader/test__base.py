@@ -239,12 +239,12 @@ class TestBaseDownloader:
         path_to_file = os.path.join(tmp_path, filename)
         url_ = 'https://download.geofabrik.de/europe/united-kingdom/england/'
 
-        bd._download_data(f'{url_}{filename}', path_to_file, verbose=True)
+        bd.download_data(f'{url_}{filename}', path_to_file, verbose=True)
         out, _ = capfd.readouterr()
         assert f'Saving "{filename}"' in out and ' ... Done.' in out
         assert os.path.isfile(path_to_file)
 
-        bd._download_data(f'{url_}{filename}', path_to_file, verbose=2)
+        bd.download_data(f'{url_}{filename}', path_to_file, verbose=2)
         out, _ = capfd.readouterr()
         assert f'Updating "{filename}"' in out and ' ... Done.' in out
         assert os.path.basename(bd.data_paths[0]) == filename
@@ -252,7 +252,8 @@ class TestBaseDownloader:
         assert bd.download_dir == str(tmp_path)
 
         with pytest.raises(Exception) as exc_info:
-            bd._download_data(f'{url_}unknown.osm.pbf', path_to_file, raise_error=True)
+            bd.download_data(
+                url=f'{url_}unknown.osm.pbf', path_to_file=path_to_file, raise_error=True)
         assert 'Failed' in str(exc_info.value)
 
         delete_dir(tmp_path, confirmation_required=False, verbose=True)

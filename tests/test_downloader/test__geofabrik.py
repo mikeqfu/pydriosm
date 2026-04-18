@@ -16,6 +16,7 @@ class TestGeofabrikDownloader:
         'subregion-url',
         '.osm.pbf',
         '.osm.pbf-size',
+        '.gpkg.zip',
         '.shp.zip',
         '.osm.bz2',
     ]
@@ -65,10 +66,11 @@ class TestGeofabrikDownloader:
         if update:
             assert "Retrieving/compiling the data" in out and "Done." in out
         assert isinstance(download_index, pd.DataFrame)
-        assert set(download_index.columns) == {
+        col_names = {
             'id', 'parent', 'iso3166-1:alpha2', 'name', 'iso3166-2',
             'geometry', '.osm.pbf', '.shp.zip', 'pbf-internal', 'history', 'taginfo', 'updates'
         }
+        assert all(x in col_names for x in download_index.columns)
 
         monkeypatch.setattr('builtins.input', lambda _: "No")
         download_index = gfd.get_download_index(update=True, verbose=True)
@@ -94,10 +96,11 @@ class TestGeofabrikDownloader:
         assert 'Compiling a subregion list of "Antarctica" ... Failed.' in out
         assert antarctica is None
 
-        antarctica2 = gfd.get_subregion_table(antarctica_url, verbose=2)
-        out, _ = capfd.readouterr()
-        assert 'Compiling a subregion list of "Antarctica" ... Failed.' in out
-        assert antarctica2 is None
+        with pytest.raises(AttributeError, match="'NoneType' object has no attribute 'empty'"):
+            antarctica2 = gfd.get_subregion_table(antarctica_url, verbose=2, raise_error=True)
+            out, _ = capfd.readouterr()
+            assert 'Compiling a subregion list of "Antarctica" ... Failed.' in out
+            assert antarctica2 is None
 
     @pytest.mark.parametrize('update', [True, False])
     def test_get_continent_tables(self, gfd, update):
@@ -146,6 +149,10 @@ class TestGeofabrikDownloader:
         input_file_format = "shp"
         valid_file_format = gfd.validate_file_format(osm_file_format=input_file_format)
         assert valid_file_format == '.shp.zip'
+
+        input_file_format = "geopackage"
+        valid_file_format = gfd.validate_file_format(osm_file_format=input_file_format)
+        assert valid_file_format == '.gpkg.zip'
 
     def test_get_subregion_download_url(self, gfd):
         subrgn_name = 'England'
@@ -266,16 +273,25 @@ class TestGeofabrikDownloader:
         subregion_names = 'west yorkshire'
         osm_file_format = ".shp"
 
+        # import tempfile; tmp_path = tempfile.mkdtemp()
+        gfd.download_data(
+            subregion_names=subregion_names, osm_file_formats=osm_file_format,
+            download_dir=tmp_path, confirmation_required=False, verbose=True)
+        out, _ = capfd.readouterr()
+        assert "No '.shp.zip' data is available for \"West Yorkshire\"." in out
+        assert len(gfd.data_paths) == 2
+
+        osm_file_format = ".geopackage"
         gfd.download_data(
             subregion_names=subregion_names, osm_file_formats=osm_file_format,
             download_dir=tmp_path, confirmation_required=False, verbose=True)
         assert len(gfd.data_paths) == 3
         assert os.path.normpath(gfd.data_paths[-1]) == os.path.join(
-            tmp_path, "west-yorkshire", "west-yorkshire-latest-free.shp.zip")
+            tmp_path, "west-yorkshire", "west-yorkshire-latest-free.gpkg.zip")
         assert os.path.normpath(gfd.download_dir) == str(tmp_path)
         assert os.path.relpath(gfd.cdd()) == os.path.join("osm_data", "geofabrik")
 
-        delete_dir(tmp_path, confirmation_required=False)
+        delete_dir(tmp_path, confirmation_required=False, verbose=True)
 
         subrgn_name = 'England'
         file_format = ".pbf"

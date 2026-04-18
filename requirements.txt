@@ -8,7 +8,6 @@ isoduration==20.11.0
 jsonpointer==3.0.0
 notebook==7.5.5
 orjson==3.11.8
-pandas-stubs==3.0.0.260204
 pyrcs==1.1.0
 pyshp==3.0.3
 pytest-cov==7.1.0

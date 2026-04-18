@@ -39,15 +39,11 @@ class ImportPBF(BaseIOS):
             print("Done.")
 
         if osm_pbf_data is not None:
-            import_args = {
-                'osm_data': osm_pbf_data,
-                'table_name': subregion_name_,
-                'if_exists': if_exists,
-                'confirmation_required': False,
-                'verbose': 2 if verbose else False,
-            }
-            kwargs.update(import_args)
-            self.import_osm_data(**kwargs)
+            self.import_osm_data(
+                osm_data=osm_pbf_data, table_name=subregion_name_, if_exists=if_exists,
+                confirmation_required=False, verbose=2 if verbose else False,
+                **kwargs
+            )
 
             if pickle_pbf_file:
                 path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")

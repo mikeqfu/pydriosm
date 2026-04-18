@@ -13,10 +13,9 @@ import zipfile
 
 import numpy as np
 import pandas as pd
-import shapefile as pyshp
 import shapely.geometry
 from pyhelpers._cache import _check_dependencies, _print_failure_message
-from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, resolve_dir
+from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, is_path_to_dir, resolve_dir
 from pyhelpers.text import find_similar_str
 
 
@@ -45,10 +44,14 @@ def get_layer_name(shp_filename):
     if not shp_filename:
         return None
 
+    if (not shp_filename.startswith('gis_osm_') and 'a_free' not in shp_filename and
+            'README' not in shp_filename):
+        return os.path.splitext(shp_filename)[0]
+
     # The pattern captures everything between 'gis_osm_' and the suffix,
     # then specifically strips the '_a' if it is there.
     # pattern = re.compile(r'gis_osm_(.*?)_?a?_free_1(?:\.[a-z0-9]+)?$', re.IGNORECASE)
-    pattern = re.compile(r'^gis_osm_(.*?)(?=_?a?_free_1)', re.IGNORECASE)
+    pattern = re.compile(r'^gis_osm_(.*?)(?=_?a?_free)(_1)?', re.IGNORECASE)
     match = re.search(pattern, shp_filename)
 
     if match:
@@ -76,7 +79,7 @@ def _unzip_prep(shp_zip_pathname, extract_to=None, layer_names=None, verbose=Fal
     else:
         layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
         if verbose:
-            layer_name_list = "\t" + "\n\t".join([f"'{x}'" for x in layer_names_])
+            layer_name_list = "  " + "\n  ".join([f"'{x}'" for x in layer_names_])
             print(f"Extracting the following layer(s):\n{layer_name_list}")
             print(f"  from: {add_slashes(shp_zip_rel_path)} ... \n"
                   f"    to: {add_slashes(extrdir_rel_path)}",
@@ -92,18 +95,20 @@ def _unzip_trail(extract_dir, extract_files, verbose):
 
     filenames, exts = map(lambda x: list(set(x)), zip(*map(os.path.splitext, file_list)))
 
-    layer_names_ = [get_layer_name(f) for f in filenames]
+    layer_names_ = [
+        os.path.basename(f) if is_path_to_dir(f) else get_layer_name(f)
+        for f in filenames]
 
     extract_dirs = []
     for lyr, fn in zip(layer_names_, filenames):
         extract_dir_ = os.path.join(extract_dir, lyr)
         if verbose == 2:
-            print("\t{}".format(lyr if '_a_' not in fn else lyr + '_a'), end=" ... ")
+            print("  {}".format(lyr if '_a_' not in fn else lyr + '_a'), end=" ... ")
 
         for ext in exts:
             filename = fn + ext
-            orig = cd(extract_dir, filename, mkdir=True)
-            dest = cd(extract_dir_, filename, mkdir=True)
+            orig = cd(extract_dir, filename)
+            dest = cd(extract_dir_, os.path.basename(filename), mkdir=True)
             shutil.copyfile(orig, dest)
             os.remove(orig)
 
@@ -112,9 +117,7 @@ def _unzip_trail(extract_dir, extract_files, verbose):
 
         extract_dirs.append(extract_dir_)
 
-    extract_dir = list(set(extract_dirs))
-
-    return extract_dir
+    return list(set(extract_dirs))
 
 
 class SHP:
@@ -327,97 +330,91 @@ class SHP:
         **Examples**::
 
             >>> from pydriosm.reader._shp import SHP
-            >>> from pydriosm.downloader import GeofabrikDownloader
+            >>> from pydriosm.downloader import BBBikeDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
 
             >>> # Download the shapefile data of London as an example
-            >>> subrgn_name = 'london'
+            >>> subrgn_name = 'birmingham'
             >>> file_format = ".shp"
             >>> dwnld_dir = "tests/osm_data"
 
-            >>> gfd = GeofabrikDownloader()
+            >>> bbd = BBBikeDownloader()
 
-            >>> gfd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater London
+            >>> bbd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
+            Proceed to update the data in the format '.shp.zip' for the following geographic (s...
+                "Birmingham"
+              in "./tests/osm_data/birmingham/"
             ? [No]|Yes: yes
-            Downloading "greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 17.7MB/s ...
+              Updating "Birmingham.osm.shp.zip" in "./tests/osm_data/birmingham/" ... Done.
 
-            >>> path_to_shp_zip = gfd.data_paths[0]
+            >>> path_to_shp_zip = bbd.data_paths[0]
             >>> os.path.relpath(path_to_shp_zip)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip'
+            'tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip'
 
             >>> # To extract data of a specific layer 'railways'
-            >>> london_railways_dir = SHP.unzip_shp_zip(
+            >>> bham_railways_dir = SHP.unzip_shp_zip(
             ...     path_to_shp_zip, layer_names='railways', verbose=True, ret_extract_dir=True)
             Extracting the following layer(s):
                 'railways'
                 from "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
                   to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
 
-            >>> os.path.relpath(london_railways_dir)  # Check the directory
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp'
+            >>> os.path.relpath(bham_railways_dir)  # Check the directory
+            'tests\\osm_data\\birmingham\\Birmingham-osm-shp'
 
             >>> # When multiple layer names are specified, the extracted files for each of the
             >>> # layers can be put into a separate subdirectory by setting `separate=True`:
-            >>> lyr_names = ['railways', 'transport', 'traffic']
+            >>> lyr_names = ['railways', 'landuse']
             >>> dirs_of_layers = SHP.unzip_shp_zip(
-            ...     path_to_shp_zip, layer_names=lyr_names, separate=True, verbose=2,
-            ...     ret_extract_dir=True)
+            ...     shp_zip_pathname=path_to_shp_zip, layer_names=lyr_names, separate=True,
+            ...     verbose=2, ret_extract_dir=True)
             Extracting the following layer(s):
-                'railways'
-                'transport'
-                'traffic'
-                from "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                  to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
+              'railways'
+              'landuse'
+              from: "./tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
+                to: "./tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
             Grouping files by layers ...
-                railways ... Done.
-                transport_a ... Done.
-                transport ... Done.
-                traffic_a ... Done.
-                traffic ... Done.
+              landuse ... Done.
+              railways ... Done.
             Done.
 
-            >>> len(dirs_of_layers) == 3
+            >>> len(dirs_of_layers) == 2
             True
             >>> os.path.relpath(os.path.commonpath(dirs_of_layers))
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp'
+            'tests\\osm_data\\birmingham\\Birmingham-osm-shp'
             >>> set(map(os.path.basename, dirs_of_layers))
-            {'railways', 'traffic', 'transport'}
+            {'landuse', 'railways'}
 
             >>> # Remove the subdirectories
             >>> delete_dir(dirs_of_layers, confirmation_required=False)
 
             >>> # To extract all (without specifying `layer_names`
-            >>> london_shp_dir = SHP.unzip_shp_zip(
+            >>> bham_shp_dir = SHP.unzip_shp_zip(
             ...     path_to_shp_zip, verbose=True, ret_extract_dir=True)
-            Extracting "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
+            Extracting "./tests/osm_data/birmingham/Birmingham.osm.shp.zip"
+              to "./tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
 
             >>> # Check the directory
-            >>> os.path.relpath(london_shp_dir)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp'
-            >>> len(os.listdir(london_shp_dir))
-            91
+            >>> os.path.relpath(bham_shp_dir)
+            'tests\\osm_data\\birmingham\\Birmingham-osm-shp'
+            >>> list_of_files = os.listdir(cd(bham_shp_dir, "Birmingham-shp/shape"))
+            >>> len(list_of_files)
+            40
             >>> # Get the names of all available layers
-            >>> set(filter(None, map(SHP.get_layer_name, os.listdir(london_shp_dir))))
+            >>> set(filter(None, map(SHP.get_layer_name, list_of_files)))
             {'buildings',
              'landuse',
              'natural',
              'places',
-             'pofw',
-             'pois',
+             'points',
              'railways',
              'roads',
-             'traffic',
-             'transport',
-             'water',
              'waterways'}
 
             >>> # Delete the download/data directory
-            >>> delete_dir(gfd.download_dir, verbose=True)
+            >>> delete_dir(bbd.download_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
             Deleting "./tests/osm_data/" ... Done.
@@ -439,26 +436,29 @@ class SHP:
 
             if verbose:
                 if isinstance(extract_files, list) and len(extract_files) == 0:
-                    print("\n\tThe specified layer does not exist. No data has been extracted.")
+                    print("\n  The specified layer does not exist. No data has been extracted.")
                 else:
                     print("Done.")
+
+            if not separate and ret_extract_dir:
+                return extract_dir
 
             if separate:
                 if verbose:
                     print("Grouping files by layers ... ", end="\n" if verbose == 2 else "")
 
-                extract_dir = _unzip_trail(
+                extract_dir_list = _unzip_trail(
                     extract_dir=extract_dir, extract_files=extract_files, verbose=verbose)
 
                 if verbose:
                     print("Done.")
 
+                if ret_extract_dir:
+                    return extract_dir_list
+
         except Exception as e:
             _print_failure_message(
                 e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
-
-        if ret_extract_dir:
-            return extract_dir
 
     @classmethod
     def _covert_to_geometry(cls, x):
@@ -478,14 +478,14 @@ class SHP:
         return y
 
     @classmethod
-    def read_shp(cls, shp_pathname, engine='pyshp', emulate_gpd=False, **kwargs):
+    def read_shp(cls, shp_pathname, engine='geopandas', emulate_gpd=False, **kwargs):
         """
         Read a shapefile.
 
         :param shp_pathname: pathname of a shape format file (.shp)
         :type shp_pathname: str
         :param engine: method used to read shapefiles;
-            options include: ``'pyshp'`` (default) and ``'geopandas'`` (or ``'gpd'``)
+            options include: ``'pyshp'`` and ``'geopandas'`` (default) (or ``'gpd'``)
             this function by default relies on `shapefile.reader()`_;
             when ``engine='geopandas'`` (or ``engine='gpd'``),
             it relies on `geopandas.read_file()`_;
@@ -509,81 +509,73 @@ class SHP:
         **Examples**::
 
             >>> from pydriosm.reader._shp import SHP
-            >>> from pydriosm.downloader import GeofabrikDownloader
+            >>> from pydriosm.downloader import BBBikeDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
             >>> import glob
 
             >>> # Download the shapefile data of London as an example
-            >>> subrgn_name = 'london'
+            >>> subrgn_name = 'birmingham'
             >>> file_format = ".shp"
             >>> dwnld_dir = "tests/osm_data"
 
-            >>> gfd = GeofabrikDownloader()
+            >>> bbd = BBBikeDownloader()
 
-            >>> gfd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater London
+            >>> bbd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
+            Proceed to download data in the format '.shp.zip' for the following geographic (sub...
+                "Birmingham"
+              to "./tests/osm_data/birmingham/"
             ? [No]|Yes: yes
-            Downloading "greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 17.4MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
 
-            >>> london_shp_zip = gfd.data_paths[0]
-            >>> os.path.relpath(london_shp_zip)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip'
+            >>> bham_shp_zip = bbd.data_paths[0]
+            >>> os.path.relpath(bham_shp_zip)
+            'tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip'
 
             >>> # Extract all
-            >>> london_shp_dir = SHP.unzip_shp_zip(london_shp_zip, ret_extract_dir=True)
+            >>> bham_shp_dir = SHP.unzip_shp_zip(bham_shp_zip, ret_extract_dir=True)
 
             >>> # Get the pathname of the .shp data of 'railways'
-            >>> path_to_railways_shp = glob.glob(cd(london_shp_dir, "*railways*.shp"))[0]
+            >>> path_to_railways_shp = glob.glob(
+            ...     cd(bham_shp_dir, "Birmingham-shp", "shape", "*railways*.shp"))[0]
             >>> os.path.relpath(path_to_railways_shp)  # Check the pathname of the .shp file
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\gis_osm_railwa...
+            'tests\\osm_data\\birmingham\\Birmingham-osm-shp\\Birmingham-shp\\shape\\railways.shp'
 
             >>> # Read the data of 'railways'
-            >>> london_railways = SHP.read_shp(path_to_railways_shp)
-            >>> london_railways.head()
-               osm_id  code  ...                                        coordinates shape_type
-            0   30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
-            1  101298  6103  ...  [(-0.2249906, 51.493682), (-0.2251678, 51.4945...          3
-            2  101486  6103  ...  [(-0.2055497, 51.5195429), (-0.2051377, 51.519...          3
-            3  101511  6101  ...  [(-0.2119027, 51.5241906), (-0.2108059, 51.523...          3
-            4  282898  6103  ...  [(-0.1862586, 51.6159083), (-0.1868721, 51.613...          3
-            [5 rows x 9 columns]
+            >>> bham_railways = SHP.read_shp(path_to_railways_shp)
+            >>> bham_railways.head()
+                osm_id  ...                                           geometry
+            0      740  ...  LINESTRING (-1.81789 52.5701, -1.81793 52.5698...
+            1     2148  ...  LINESTRING (-1.87303 52.50542, -1.8727 52.5051...
+            2  2950000  ...  LINESTRING (-1.87933 52.48138, -1.87962 52.481...
+            3  3491845  ...  LINESTRING (-1.7406 52.51858, -1.73942 52.5186...
+            4  3981454  ...  LINESTRING (-1.77412 52.52249, -1.77376 52.522...
+            [5 rows x 4 columns]
 
             >>> # Set `emulate_gpd=True` to return data of similar format to what GeoPandas does
-            >>> london_railways = SHP.read_shp(path_to_railways_shp, emulate_gpd=True)
-            >>> london_railways.head()
-               osm_id  code  ... tunnel                                           geometry
-            0   30804  6101  ...      F  LINESTRING (0.0048644 51.6279262, 0.0061979 51...
-            1  101298  6103  ...      F  LINESTRING (-0.2249906 51.493682, -0.2251678 5...
-            2  101486  6103  ...      F  LINESTRING (-0.2055497 51.5195429, -0.2051377 ...
-            3  101511  6101  ...      F  LINESTRING (-0.2119027 51.5241906, -0.2108059 ...
-            4  282898  6103  ...      F  LINESTRING (-0.1862586 51.6159083, -0.1868721 ...
-            [5 rows x 8 columns]
-
-            >>> # Alternatively, set `engine` to be 'geopandas' (or 'gpd') to use GeoPandas
-            >>> london_railways_ = SHP.read_shp(path_to_railways_shp, engine='geopandas')
-            >>> london_railways_.head()
-               osm_id  code  ... tunnel                                           geometry
-            0   30804  6101  ...      F    LINESTRING (0.00486 51.62793, 0.00620 51.62927)
-            1  101298  6103  ...      F  LINESTRING (-0.22499 51.49368, -0.22517 51.494...
-            2  101486  6103  ...      F  LINESTRING (-0.20555 51.51954, -0.20514 51.519...
-            3  101511  6101  ...      F  LINESTRING (-0.21190 51.52419, -0.21081 51.523...
-            4  282898  6103  ...      F  LINESTRING (-0.18626 51.61591, -0.18687 51.61384)
-            [5 rows x 8 columns]
+            >>> bham_railways_ = SHP.read_shp(
+            ...     path_to_railways_shp, engine='pyshp', emulate_gpd=True)
+            >>> bham_railways_.head()
+                osm_id  ...                                           geometry
+            0      740  ...  LINESTRING (-1.8178905 52.5700974, -1.8179287 ...
+            1     2148  ...  LINESTRING (-1.873028 52.5054182, -1.8726964 5...
+            2  2950000  ...  LINESTRING (-1.8793303 52.4813778, -1.8796237 ...
+            3  3491845  ...  LINESTRING (-1.7406017 52.5185831, -1.7394216 ...
+            4  3981454  ...  LINESTRING (-1.7741212 52.5224935, -1.7737563 ...
+            [5 rows x 4 columns]
 
             >>> # Check the data types of `london_railways` and `london_railways_`
-            >>> railways_data = [london_railways, london_railways_]
+            >>> railways_data = [bham_railways, bham_railways_]
             >>> list(map(type, railways_data))
-            [pandas.core.frame.DataFrame, geopandas.geodataframe.GeoDataFrame]
+            [geopandas.geodataframe.GeoDataFrame, pandas.DataFrame]
             >>> # Check the geometry data of `london_railways` and `london_railways_`
             >>> geom1, geom2 = map(lambda x: x['geometry'].map(lambda y: y.wkt), railways_data)
             >>> geom1.equals(geom2)
             True
 
             >>> # Delete the download/data directory
-            >>> delete_dir(gfd.download_dir, verbose=True)
+            >>> delete_dir(bbd.download_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
             Deleting "./tests/osm_data/" ... Done.
@@ -594,6 +586,8 @@ class SHP:
             shp_data = gpd.read_file(shp_pathname, **kwargs)
 
         else:  # method == 'pyshp':  # default
+            pyshp = _check_dependencies('shapefile')
+
             # Read .shp file using shapefile.reader()
             with pyshp.Reader(shp_pathname, **kwargs) as f:
                 # Transform the data to a DataFrame
@@ -613,8 +607,9 @@ class SHP:
             else:
                 shp_data = pd.concat([shp_data, shape_geom], axis=1)
 
-        object_cols = shp_data.select_dtypes(include=['object', 'str']).columns
-        shp_data[object_cols] = shp_data[object_cols].replace({np.nan: None})
+        object_cols = shp_data.select_dtypes(include=['object', 'string']).columns
+        shp_data[object_cols] = shp_data[object_cols].replace(
+            {np.nan: None, 'None': None, '': None})
 
         return shp_data
 
@@ -662,6 +657,7 @@ class SHP:
         dtype_shp_type = {
             'object': 'C',  # Character
             'str': 'C',
+            'string': 'C',
             'int64': 'N',  # Numeric
             'int32': 'N',
             'float64': 'F',  # Float
@@ -674,10 +670,7 @@ class SHP:
         fields = []
 
         for field_name, dtype, in data[field_names].dtypes.items():
-            try:
-                max_size = data[field_name].map(len).max()
-            except TypeError:
-                max_size = data[field_name].astype(str).map(len).max()
+            max_size = data[field_name].fillna('None').astype(str).map(len).max()
 
             shp_type = dtype_shp_type.get(dtype.name, 'C')
             decimal = decimal_precision if 'float' in dtype.name else 0
@@ -713,84 +706,86 @@ class SHP:
         **Examples**::
 
             >>> from pydriosm.reader._shp import SHP
-            >>> from pydriosm.downloader import GeofabrikDownloader
+            >>> from pydriosm.downloader import BBBikeDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
             >>> import glob
 
             >>> # Download the shapefile data of London as an example
-            >>> subrgn_name = 'london'
+            >>> subrgn_name = 'Birmingham'
             >>> file_format = ".shp"
             >>> dwnld_dir = "tests/osm_data"
 
-            >>> gfd = GeofabrikDownloader()
+            >>> bbd = BBBikeDownloader()
 
-            >>> gfd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater London
+            >>> bbd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
+            Proceed to download data in the format '.shp.zip' for the following geographic (sub...
+                "Birmingham"
+              to "./tests/osm_data/birmingham/"
             ? [No]|Yes: yes
-            Downloading "greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 18.1MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
 
-            >>> london_shp_zip = gfd.data_paths[0]
-            >>> os.path.relpath(london_shp_zip)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip'
+            >>> bham_shp_zip = bbd.data_paths[0]
+            >>> os.path.relpath(bham_shp_zip)
+            'tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip'
 
             >>> # Extract the 'railways' layer of the downloaded .shp.zip file
             >>> lyr_name = 'railways'
 
             >>> railways_shp_dir = SHP.unzip_shp_zip(
-            ...     london_shp_zip, layer_names=lyr_name, verbose=True, ret_extract_dir=True)
+            ...     bham_shp_zip, layer_names=lyr_name, verbose=True, ret_extract_dir=True)
             Extracting the following layer(s):
-                'railways'
-                from "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                  to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\"
-            Done.
+              'railways'
+              from: "./tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
+                to: "./tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
             >>> # Check out the output directory
             >>> os.path.relpath(railways_shp_dir)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp'
+            'tests\\osm_data\\birmingham\\Birmingham-osm-shp'
 
             >>> # Get the pathname of the .shp data of 'railways'
-            >>> path_to_railways_shp = glob.glob(cd(railways_shp_dir, f"*{lyr_name}*.shp"))[0]
+            >>> path_to_railways_shp = glob.glob(
+            ...     cd(railways_shp_dir, "Birmingham-shp", "shape", f"*{lyr_name}*.shp"))[0]
             >>> os.path.relpath(path_to_railways_shp)  # Check the pathname of the .shp file
-            'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\gis_osm_railwa...
+            'tests\\osm_data\\birmingham\\Birmingham-osm-shp\\Birmingham-shp\\shape\\railways.shp'
 
             >>> # Read the .shp file
-            >>> london_railways_shp = SHP.read_shp(path_to_railways_shp)
+            >>> bham_railways_shp = SHP.read_shp(path_to_railways_shp)
 
             >>> # Create a new directory for saving the 'railways' data
             >>> railways_subdir = cd(os.path.dirname(railways_shp_dir), lyr_name)
             >>> os.path.relpath(railways_subdir)
-            'tests\\osm_data\\greater-london\\railways'
+            'tests\\osm_data\\birmingham\\railways'
 
             >>> # Save the data of 'railways' to the new directory
             >>> path_to_railways_shp_ = SHP.write_to_shapefile(
-            ...     london_railways_shp, railways_subdir, ret_shp_pathname=True, verbose=True)
-            Writing data to "tests\\osm_data\\greater-london\\railways\\railways.*" ... Done.
+            ...     bham_railways_shp, railways_subdir, ret_shp_pathname=True, verbose=True)
+            Writing data to "tests/osm_data/birmingham/railways.*" ... Done.
             >>> os.path.basename(path_to_railways_shp_)
             'railways.shp'
 
             >>> # If `shp_filename` is specified
             >>> path_to_railways_shp_ = SHP.write_to_shapefile(
-            ...     london_railways_shp, railways_subdir, shp_filename="rail_data",
+            ...     bham_railways_shp, railways_subdir, shp_filename="rail_data",
             ...     ret_shp_pathname=True, verbose=True)
-            Writing data to "tests\\osm_data\\greater-london\\railways\\rail_data.*" ... Done.
+            Writing data to "tests/osm_data/birmingham/rail_data.*" ... Done.
             >>> os.path.basename(path_to_railways_shp_)
             'rail_data.shp'
 
             >>> # Retrieve the saved the .shp file
-            >>> london_railways_shp_ = SHP.read_shp(path_to_railways_shp_)
-
+            >>> bham_railways_shp_ = SHP.read_shp(path_to_railways_shp_)
             >>> # Check if the retrieved .shp data is equal to the original one
-            >>> london_railways_shp_.equals(london_railways_shp)
+            >>> bham_railways_shp_.equals(bham_railways_shp)
             True
 
             >>> # Delete the download/data directory
-            >>> delete_dir(gfd.download_dir, verbose=True)
+            >>> delete_dir(bbd.download_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
             Deleting "./tests/osm_data/" ... Done.
         """
+
+        pyshp = _check_dependencies('shapefile')
 
         filename_ = os.path.basename(write_to) if shp_filename is None else copy.copy(shp_filename)
         filename = os.path.splitext(filename_)[0]
@@ -934,8 +929,8 @@ class SHP:
             else:
                 gpd = _check_dependencies('geopandas')
                 # os.makedirs(os.path.dirname(feat_shp_pathnames), exist_ok=True)
-                gpd.GeoDataFrame(dat).to_file(
-                    feat_shp_pathname, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
+                gpd.GeoDataFrame(dat).to_crs(cls.EPSG4326_WGS84_PROJ4).to_file(
+                    feat_shp_pathname, driver=cls.VECTOR_DRIVER)
 
             feat_shp_pathnames.append(feat_shp_pathname)
 
@@ -970,63 +965,66 @@ class SHP:
         **Examples**::
 
             >>> from pydriosm.reader._shp import SHP
-            >>> from pydriosm.downloader import GeofabrikDownloader
+            >>> from pydriosm.downloader import BBBikeDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
 
             >>> # Download the shapefile data of London as an example
-            >>> subrgn_name = 'london'
+            >>> subrgn_name = 'Birmingham'
             >>> file_format = ".shp"
             >>> dwnld_dir = "tests/osm_data"
 
-            >>> gfd = GeofabrikDownloader()
+            >>> bbd = BBBikeDownloader()
 
-            >>> gfd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater London
-            ? [No]|Yes: yes
-            Downloading "greater-london-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-london\\" ... Done.
+            >>> bbd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
+            Proceed to download data in the format '.shp.zip' for the following geographic (sub...
+                "Birmingham"
+              to "./tests/osm_data/birmingham/"
+            ? [No]|Yes: >? yes
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 17.7MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
 
-            >>> london_shp_zip = gfd.data_paths[0]
-            >>> os.path.relpath(london_shp_zip)
-            'tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip'
+            >>> bham_shp_zip = bbd.data_paths[0]
+            >>> os.path.relpath(bham_shp_zip)
+            'tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip'
 
             >>> # Extract the downloaded .shp.zip file
-            >>> london_shp_dir = SHP.unzip_shp_zip(
-            ...     london_shp_zip, layer_names='railways', ret_extract_dir=True)
-            >>> os.listdir(london_shp_dir)
-            ['gis_osm_railways_free_1.cpg',
-             'gis_osm_railways_free_1.dbf',
-             'gis_osm_railways_free_1.prj',
-             'gis_osm_railways_free_1.shp',
-             'gis_osm_railways_free_1.shx']
-            >>> london_railways_shp_path = cd(london_shp_dir, "gis_osm_railways_free_1.shp")
+            >>> bham_shp_dir = SHP.unzip_shp_zip(
+            ...     bham_shp_zip, layer_names='railways', ret_extract_dir=True)
+            >>> os.listdir(cd(bham_shp_dir, "Birmingham-shp/shape"))
+            ['railways.cpg',
+             'railways.dbf',
+             'railways.prj',
+             'railways.shp',
+             'railways.shx']
+            >>> bham_railways_shp_path = cd(bham_shp_dir, "Birmingham-shp/shape", "railways.shp")
 
             >>> # Read the 'railways' layer
-            >>> london_railways_shp = SHP.read_layer_shps(london_railways_shp_path)
-            >>> london_railways_shp.head()
-               osm_id  code  ...                                        coordinates shape_type
-            0   30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
-            1  101298  6103  ...  [(-0.2249906, 51.493682), (-0.2251678, 51.4945...          3
-            2  101486  6103  ...  [(-0.2055497, 51.5195429), (-0.2051377, 51.519...          3
-            3  101511  6101  ...  [(-0.2119027, 51.5241906), (-0.2108059, 51.523...          3
-            4  282898  6103  ...  [(-0.1862586, 51.6159083), (-0.1868721, 51.613...          3
-            [5 rows x 9 columns]
+            >>> bham_railways_shp = SHP.read_layer_shps(bham_railways_shp_path)
+            >>> bham_railways_shp.head()
+                osm_id  ...                                           geometry
+            0      740  ...  LINESTRING (-1.81789 52.5701, -1.81793 52.5698...
+            1     2148  ...  LINESTRING (-1.87303 52.50542, -1.8727 52.5051...
+            2  2950000  ...  LINESTRING (-1.87933 52.48138, -1.87962 52.481...
+            3  3491845  ...  LINESTRING (-1.7406 52.51858, -1.73942 52.5186...
+            4  3981454  ...  LINESTRING (-1.77412 52.52249, -1.77376 52.522...
+            [5 rows x 4 columns]
 
             >>> # Extract only the features labelled 'rail' and save the extracted data to file
             >>> railways_rail_shp, railways_rail_shp_path = SHP.read_layer_shps(
-            ...     london_railways_shp_path, feature_names='rail', save_feat_shp=True,
+            ...     bham_railways_shp_path, feature_names='rail', save_feat_shp=True,
             ...     ret_feat_shp_path=True)
-            >>> railways_rail_shp['fclass'].unique()
-            array(['rail'], dtype=object)
+            >>> railways_rail_shp['type'].unique()
+            <StringArray>
+            ['rail']
+            Length: 1, dtype: str
 
             >>> type(railways_rail_shp_path)
             list
             >>> len(railways_rail_shp_path)
             1
             >>> os.path.basename(railways_rail_shp_path[0])
-            'gis_osm_railways_free_1_rail.shp'
+            'railways_rail.shp'
 
             >>> # Delete the download/data directory
             >>> delete_dir(dwnld_dir, verbose=True)
@@ -1049,13 +1047,10 @@ class SHP:
             data = pd.concat(dat_dict.values(), axis=0, ignore_index=True)
 
             if feature_names:
-                if isinstance(feature_names, str):
-                    feat_names = [feature_names]
-                else:
-                    feat_names = feature_names
+                feat_names = [feature_names] if isinstance(feature_names, str) else feature_names
                 feat_col_name = [x for x in data.columns if x in {'type', 'fclass'}][0]
                 feat_names_ = [
-                    find_similar_str(x, data[feat_col_name].unique()) for x in feat_names]
+                    find_similar_str(x, set(data[feat_col_name].unique())) for x in feat_names]
 
                 data = data.query(f'{feat_col_name} in @feat_names_')
 
@@ -1085,7 +1080,7 @@ class SHP:
         return data
 
     @classmethod
-    def merge_shps(cls, shp_pathnames, path_to_merged_dir, engine='pyshp', **kwargs):
+    def merge_shps(cls, shp_pathnames, path_to_merged_dir, engine='geopandas', **kwargs):
         """
         Merge multiple shapefiles.
 
@@ -1116,6 +1111,11 @@ class SHP:
             - Resource: https://github.com/GeospatialPython/pyshp
         """
 
+        file_stem = os.path.basename(path_to_merged_dir).lower()
+        shp_filename = f"{file_stem}.shp"
+
+        out_file_path = os.path.join(path_to_merged_dir, shp_filename)
+
         if engine in {'geopandas', 'gpd'}:
             gpd = _check_dependencies('geopandas')
 
@@ -1126,10 +1126,10 @@ class SHP:
                 shp_data[geo_typ].append(dat)
 
             for geo_typ, shp_dat_list in shp_data.items():
-                out_fn = os.path.join(path_to_merged_dir, f"{geo_typ.lower()}.shp")
+
                 shp_dat = gpd.GeoDataFrame(pd.concat(shp_dat_list, ignore_index=True))
-                shp_dat.to_file(
-                    filename=out_fn, driver=cls.VECTOR_DRIVER, crs=cls.EPSG4326_WGS84_PROJ4)
+                shp_dat.to_crs(cls.EPSG4326_WGS84_PROJ4).to_file(
+                    filename=out_file_path, driver=cls.VECTOR_DRIVER)
 
         else:  # method == 'pyshp': (default)
             kwargs.setdefault('ret_feat_shp_path', False)
@@ -1142,21 +1142,21 @@ class SHP:
                     k = 'shape_type'
 
                 for geo_typ, dat in shp_data.groupby(k):
-                    if isinstance(k, str):
-                        geo_typ = cls.SHAPE_TYPE_GEOM_NAME[geo_typ]
-                    out_fn = os.path.join(path_to_merged_dir, f"{geo_typ.lower()}.shp")
-                    cls.write_to_shapefile(data=dat, write_to=out_fn)
+                    # if isinstance(k, str):
+                    #     geo_typ = cls.SHAPE_TYPE_GEOM_NAME[geo_typ]
+                    cls.write_to_shapefile(data=dat, write_to=out_file_path)
 
                     # Write .cpg
-                    with open(out_fn.replace(".shp", ".cpg"), mode="w") as cpg:
+                    with open(out_file_path.replace(".shp", ".cpg"), mode="w") as cpg:
                         cpg.write(cls.ENCODING)
                     # Write .prj
-                    with open(out_fn.replace(".shp", ".prj"), mode="w") as prj:
+                    with open(out_file_path.replace(".shp", ".prj"), mode="w") as prj:
                         prj.write(cls.EPSG4326_WGS84_ESRI_WKT)
 
     @classmethod
     def _extract_files(cls, shp_zip_pathnames, layer_name, verbose=False):
         path_to_extract_dirs = []
+
         for zfp in shp_zip_pathnames:
             extract_dir = cls.unzip_shp_zip(
                 shp_zip_pathname=zfp, layer_names=layer_name,
@@ -1173,15 +1173,16 @@ class SHP:
         paths_to_temp_files = []
 
         for subregion_name, path_to_extract_dir in zip(subrgn_names_, path_to_extract_dirs):
-            orig_filename_list = glob.glob(f"*_{layer_name}_*", root_dir=path_to_extract_dir)
+            # orig_filename_list = glob.glob(f"*{layer_name}*", root_dir=path_to_extract_dir)
+            orig_file_list = glob.glob(
+                os.path.join(path_to_extract_dir, "**", f"*{layer_name}*"), recursive=True)
 
-            for orig_filename in orig_filename_list:
-                orig = os.path.join(path_to_extract_dir, orig_filename)
+            for orig_file in orig_file_list:
+                fn = os.path.basename(orig_file)
                 dest = os.path.join(
-                    path_to_merged_dir_temp,
-                    f"{subregion_name.lower().replace(' ', '-')}_{orig_filename}")
+                    path_to_merged_dir_temp, f"{subregion_name.lower().replace(' ', '-')}_{fn}")
 
-                shutil.copyfile(orig, dest)
+                shutil.copyfile(orig_file, dest)
                 paths_to_temp_files.append(dest)
 
         return paths_to_temp_files
@@ -1225,7 +1226,7 @@ class SHP:
                 shutil.move(temp_output_f, output_file)
 
     @classmethod
-    def merge_layers(cls, shp_zip_pathnames, layer_name, engine='pyshp', rm_zip_extracts=True,
+    def merge_layers(cls, shp_zip_pathnames, layer_name, engine='geopandas', rm_zip_extracts=True,
                      output_dir=None, rm_shp_temp=True, ret_shp_pathname=False, verbose=False,
                      raise_error=False):
         """
@@ -1236,7 +1237,7 @@ class SHP:
         :param layer_name: name of a layer (e.g. 'railways')
         :type layer_name: str
         :param engine: the open-source package used to merge/save shapefiles;
-            options include: ``'pyshp'`` (default) and ``'geopandas'`` (or ``'gpd'``)
+            options include: ``'pyshp'`` and ``'geopandas'`` (default) (or ``'gpd'``)
             if ``engine='geopandas'``, this function relies on `geopandas.GeoDataFrame.to_file()`_;
             otherwise, it by default uses `shapefile.Writer()`_
         :type engine: str
@@ -1278,40 +1279,41 @@ class SHP:
             >>> # To merge 'railways' layers of Greater Manchester and West Yorkshire"
 
             >>> from pydriosm.reader._shp import SHP
-            >>> from pydriosm.downloader import GeofabrikDownloader
+            >>> from pydriosm.downloader import BBBikeDownloader
             >>> from pyhelpers.dirs import delete_dir
             >>> import os
 
             >>> # Download the .shp.zip file of Manchester and West Yorkshire
-            >>> subrgn_names = ['Greater Manchester', 'West Yorkshire']
+            >>> subrgn_names = ['London', 'Birmingham']
             >>> file_fmt = ".shp"
             >>> data_dir = "tests/osm_data"
 
-            >>> gfd = GeofabrikDownloader()
+            >>> bbd = BBBikeDownloader()
 
-            >>> gfd.download_data(subrgn_names, file_fmt, data_dir, verbose=True)
-            To download .shp.zip data of the following geographic (sub)region(s):
-                Greater Manchester
-                West Yorkshire
+            >>> bbd.download_data(subrgn_names, file_fmt, data_dir, verbose=True)
+            Proceed to download data in the format '.shp.zip' for the following geographic (sub...
+                "London"
+                "Birmingham"
+              to "./tests/osm_data/"
             ? [No]|Yes: yes
-            Downloading "greater-manchester-latest-free.shp.zip"
-                to "tests\\osm_data\\greater-manchester\\" ... Done.
-            Downloading "west-yorkshire-latest-free.shp.zip"
-                to "tests\\osm_data\\west-yorkshire\\" ... Done.
+            Downloading "London.osm.shp.zip" 100%|██████████| 248M/248M | 18.1MB/s | ETA:...
+              Saving "London.osm.shp.zip" to "./tests/osm_data/london/" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 16.0MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
 
-            >>> os.path.relpath(gfd.download_dir)
+            >>> os.path.relpath(bbd.download_dir)
             'tests\\osm_data'
-            >>> len(gfd.data_paths)
+            >>> len(bbd.data_paths)
             2
 
             >>> # Merge the layers of 'railways' of the two subregions
-            >>> merged_shp_path = SHP.merge_layers(
-            ...     gfd.data_paths, layer_name='railways', verbose=True, ret_shp_pathname=True)
+            >>> merged_shp_path = SHP.merge_shp_layers(
+            ...     bbd.data_paths, layer_name='railways', verbose=True, ret_shp_pathname=True)
             Merging the following shapefiles:
-                "greater-manchester_gis_osm_railways_free_1.shp"
-                "west-yorkshire_gis_osm_railways_free_1.shp"
-                    In progress ... Done.
-                    Find the merged shapefile at "tests\\osm_data\\gre_man-wes_yor-railways\\".
+              "london_railways.shp"
+              "birmingham_railways.shp"
+              In progress ... Done.
+                Find the merged shapefile in "./tests/osm_data/lon-bir-railways/".
 
             >>> # Check the pathname of the merged shapefile
             >>> type(merged_shp_path)
@@ -1319,21 +1321,21 @@ class SHP:
             >>> len(merged_shp_path)
             1
             >>> os.path.relpath(merged_shp_path[0])
-            'tests\\osm_data\\gre_man-wes_yor-railways\\linestring.shp'
+            'tests\\osm_data\\lon-bir-railways\\lon-bir-railways.shp'
 
             >>> # Read the merged .shp file
-            >>> merged_shp_data = SHP.read_shp(merged_shp_path[0], emulate_gpd=True)
+            >>> merged_shp_data = SHP.read_shp(merged_shp_path[0])
             >>> merged_shp_data.head()
-                osm_id  code  ... tunnel                                           geometry
-            0   928999  6101  ...      F  LINESTRING (-2.2844621 53.4802635, -2.2851997 ...
-            1   929904  6101  ...      F  LINESTRING (-2.2917977 53.4619559, -2.2924877 ...
-            2   929905  6102  ...      F  LINESTRING (-2.2794048 53.4605819, -2.2799722 ...
-            3  3663332  6102  ...      F  LINESTRING (-2.2382139 53.4817985, -2.2381708 ...
-            4  3996086  6101  ...      F  LINESTRING (-2.6003053 53.4604346, -2.6005261 ...
-            [5 rows x 8 columns]
+               osm_id  ...                                           geometry
+            0   30804  ...     LINESTRING (0.00486 51.62793, 0.0062 51.62927)
+            1  101298  ...  LINESTRING (-0.22499 51.4937, -0.22516 51.4945...
+            2  101486  ...  LINESTRING (-0.20555 51.51954, -0.20514 51.519...
+            3  101511  ...  LINESTRING (-0.2119 51.52419, -0.21081 51.5239...
+            4  282898  ...   LINESTRING (-0.1862 51.61592, -0.18687 51.61386)
+            [5 rows x 4 columns]
 
             >>> # Delete the test data directory
-            >>> delete_dir(gfd.download_dir, verbose=True)
+            >>> delete_dir(bbd.download_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
             ? [No]|Yes: yes
             Deleting "./tests/osm_data/" ... Done.
@@ -1350,7 +1352,9 @@ class SHP:
 
         # Specify a directory that stores files for the specific layer
         subrgn_names_ = [
-            re.search(r'.*(?=\.shp\.zip)', os.path.basename(x).replace("-latest-free", "")).group(0)
+            re.search(
+                r'.*(?=\.shp\.zip)',
+                os.path.basename(x).replace("-latest-free", "").replace(".osm", "")).group().lower()
             for x in shp_zip_pathnames]
 
         suffix = "_temp"
@@ -1371,7 +1375,7 @@ class SHP:
 
         if verbose:
             print("Merging the following shapefiles:")
-            print("\t" + "\n\t".join(f"\"{os.path.basename(f)}\"" for f in paths_to_shp_files))
+            print("  " + "\n  ".join(f"\"{os.path.basename(f)}\"" for f in paths_to_shp_files))
             print("  In progress ... ", flush=True, end="")
 
         try:

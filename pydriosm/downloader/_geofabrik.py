@@ -38,7 +38,7 @@ class GeofabrikDownloader(BaseDownloader):
     #: Default download directory.
     DEFAULT_DOWNLOAD_DIR: str = "osm_data/geofabrik"
     #: Valid file formats.
-    FILE_FORMATS: set = {'.osm.pbf', '.shp.zip', '.osm.bz2'}
+    FILE_FORMATS: set = {'.osm.pbf', '.gpkg.zip', '.shp.zip', '.osm.bz2'}
 
     # noinspection PyUnresolvedReferences
     def __init__(self, download_dir=None, update=False, **kwargs):
@@ -125,7 +125,7 @@ class GeofabrikDownloader(BaseDownloader):
             >>> url = 'https://download.geofabrik.de/europe/great-britain.html'
             >>> raw_directory_index = gfd.get_raw_directory_index(url)
             >>> type(raw_directory_index)
-            pandas.core.frame.DataFrame
+            pandas.DataFrame
             >>> raw_directory_index.columns.tolist()
             ['file', 'date', 'size', 'metric_file_size', 'url']
         """
@@ -174,26 +174,25 @@ class GeofabrikDownloader(BaseDownloader):
             >>> gfd = GeofabrikDownloader()
             >>> download_index = gfd.get_download_index()
             >>> type(download_index)
-            pandas.core.frame.DataFrame
+            pandas.DataFrame
             >>> download_index.shape
-            (512, 12)
+            (544, 12)
             >>> download_index.head()
                         id  ...                                            updates
-            0  afghanistan  ...  https://download.geofabrik.de/asia/afghanistan...
-            1       africa  ...       https://download.geofabrik.de/africa-updates
-            2      albania  ...  https://download.geofabrik.de/europe/albania-u...
-            3      alberta  ...  https://download.geofabrik.de/north-america/ca...
-            4      algeria  ...  https://download.geofabrik.de/africa/algeria-u...
-            [5 rows x 13 columns]
+            0          act  ...  https://download.geofabrik.de/australia-oceani...
+            1  afghanistan  ...  https://download.geofabrik.de/asia/afghanistan...
+            2       africa  ...       https://download.geofabrik.de/africa-updates
+            3      albania  ...  https://download.geofabrik.de/europe/albania-u...
+            4      alberta  ...  https://download.geofabrik.de/north-america/ca...
+            [5 rows x 12 columns]
             >>> download_index.columns.to_list()
             ['id',
              'parent',
-             'iso3166-1:alpha2',
              'name',
+             'iso3166-1:alpha2',
              'iso3166-2',
              'geometry',
              '.osm.pbf',
-             '.osm.bz2',
              '.shp.zip',
              'pbf-internal',
              'history',
@@ -233,6 +232,7 @@ class GeofabrikDownloader(BaseDownloader):
 
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> gfd = GeofabrikDownloader()
+
             >>> # Download information on the homepage
             >>> subregion_table = gfd.get_subregion_table(url=gfd.URL)
             >>> subregion_table
@@ -245,14 +245,16 @@ class GeofabrikDownloader(BaseDownloader):
             5                 Europe  ...     None
             6          North America  ...     None
             7          South America  ...     None
-            [8 rows x 6 columns]
+            [8 rows x 7 columns]
             >>> subregion_table.columns.to_list()
             ['subregion',
              'subregion-url',
              '.osm.pbf',
              '.osm.pbf-size',
+             '.gpkg.zip',
              '.shp.zip',
              '.osm.bz2']
+
             >>> # Download information about 'Great Britain'
             >>> url = 'https://download.geofabrik.de/europe/united-kingdom.html'
             >>> subregion_table = gfd.get_subregion_table(url)
@@ -263,7 +265,8 @@ class GeofabrikDownloader(BaseDownloader):
             2  Falkland Islands  ...     None
             3          Scotland  ...     None
             4             Wales  ...     None
-            [5 rows x 6 columns]
+            [5 rows x 7 columns]
+
             >>> # Download information about 'Antarctica'
             >>> url = 'https://download.geofabrik.de/antarctica.html'
             >>> subregion_table = gfd.get_subregion_table(url, verbose=True)
@@ -286,19 +289,18 @@ class GeofabrikDownloader(BaseDownloader):
                 f' of "{region_name}"' if region_name else ''), end=" ... ")
 
         try:
-            subregion_table = fetch_geofabrik_subregion_table(url)
+            subregion_table = fetch_geofabrik_subregion_table(url=url, return_soup=False)
 
-            if not subregion_table.empty:
-                if verbose:
-                    print("Done.")
+            if not subregion_table.empty and verbose:
+                print("Done.")
 
-                return subregion_table
+            return subregion_table
 
         except Exception as e:
             err_msg = f"Failed.\n  No data is available for '{region_name}'."
-            if verbose in {1, True}:
+            if int(verbose) == 1:
                 print(err_msg)
-            elif verbose == 2:
+            elif int(verbose) == 2:
                 _print_failure_message(
                     e, prefix=f"{err_msg}\n  Errors:", verbose=True, raise_error=raise_error)
 
@@ -325,6 +327,7 @@ class GeofabrikDownloader(BaseDownloader):
 
             >>> from pydriosm.downloader import GeofabrikDownloader
             >>> gfd = GeofabrikDownloader()
+
             >>> # Download information of subregions for each continent
             >>> continent_tables = gfd.get_continent_tables()
             >>> type(continent_tables)
@@ -338,10 +341,11 @@ class GeofabrikDownloader(BaseDownloader):
              'Europe',
              'North America',
              'South America']
+
             >>> # Information about the data of subregions in Asia
             >>> asia_table = continent_tables['Asia']
             >>> asia_table.shape
-            (40, 6)
+            (40, 7)
             >>> asia_table.head()
                  subregion  ... .osm.bz2
             0  Afghanistan  ...     None
@@ -349,12 +353,13 @@ class GeofabrikDownloader(BaseDownloader):
             2   Azerbaijan  ...     None
             3   Bangladesh  ...     None
             4       Bhutan  ...     None
-            [5 rows x 6 columns]
+            [5 rows x 7 columns]
             >>> asia_table.columns.to_list()
             ['subregion',
              'subregion-url',
              '.osm.pbf',
              '.osm.pbf-size',
+             '.gpkg.zip',
              '.shp.zip',
              '.osm.bz2']
         """
@@ -410,7 +415,7 @@ class GeofabrikDownloader(BaseDownloader):
             >>> type(having_no_subregions)
             list
             >>> len(having_no_subregions)
-            484
+            513
             >>> # Example: five regions that have no subregions
             >>> having_no_subregions[0:5]
             ['Antarctica', 'Algeria', 'Angola', 'Benin', 'Botswana']
@@ -471,9 +476,9 @@ class GeofabrikDownloader(BaseDownloader):
             >>> # A download catalogue for all subregions
             >>> dwnld_catalog = gfd.get_catalogue()
             >>> type(dwnld_catalog)
-            pandas.core.frame.DataFrame
+            pandas.DataFrame
             >>> dwnld_catalog.shape
-            (511, 6)
+            (543, 7)
             >>> dwnld_catalog.head()
                            subregion  ... .osm.bz2
             0                 Africa  ...     None
@@ -481,12 +486,13 @@ class GeofabrikDownloader(BaseDownloader):
             2                   Asia  ...     None
             3  Australia and Oceania  ...     None
             4        Central America  ...     None
-            [5 rows x 6 columns]
+            [5 rows x 7 columns]
             >>> dwnld_catalog.columns.to_list()
             ['subregion',
              'subregion-url',
              '.osm.pbf',
              '.osm.pbf-size',
+             '.gpkg.zip',
              '.shp.zip',
              '.osm.bz2']
 
@@ -629,6 +635,9 @@ class GeofabrikDownloader(BaseDownloader):
             >>> osm_file_format = "shp"
             >>> gfd.validate_file_format(osm_file_format)
             '.shp.zip'
+            >>> osm_file_format = "geopackage"
+            >>> gfd.validate_file_format(osm_file_format)
+            '.gpkg.zip'
         """
 
         if valid_formats is None:
@@ -637,8 +646,11 @@ class GeofabrikDownloader(BaseDownloader):
             valid_file_formats_ = valid_formats
 
         osm_file_format_ = super().validate_file_format(
-            osm_file_format=osm_file_format, valid_formats=valid_file_formats_,
-            raise_error=raise_error, **kwargs)
+            osm_file_format=osm_file_format,
+            valid_formats=valid_file_formats_,
+            raise_error=raise_error,
+            **kwargs
+        )
 
         return osm_file_format_
 
@@ -677,7 +689,7 @@ class GeofabrikDownloader(BaseDownloader):
             >>> download_url  # The URL of the PBF data file
             'https://download.geofabrik.de/europe/united-kingdom/england-latest.osm.pbf'
             >>> subregion_name = 'britain'
-            >>> osm_file_format = ".shp"
+            >>> osm_file_format = ".geopackage"  # Or, osm_file_format = ".gpkg"
             >>> subregion_name_, download_url = gfd.get_subregion_download_url(
             ...     subregion_name, osm_file_format)
             >>> subregion_name_
@@ -699,8 +711,8 @@ class GeofabrikDownloader(BaseDownloader):
 
         # Fetch the download URL
         try:
-            download_url = \
-                self.catalogue.set_index("subregion").loc[subregion_name_, osm_file_format_]
+            download_url = self.catalogue.set_index("subregion").loc[
+                subregion_name_, osm_file_format_]
 
             return subregion_name_, download_url
 
@@ -733,8 +745,8 @@ class GeofabrikDownloader(BaseDownloader):
             >>> gfd.get_default_filename(subregion_name='london', osm_file_format=".pbf")
             'greater-london-latest.osm.pbf'
             >>> # Default filename of the shapefile data of Great Britain
-            >>> gfd.get_default_filename(subregion_name='britain', osm_file_format=".shp")
-            No ".shp.zip" data is available to download for "Great Britain".
+            >>> gfd.get_default_filename(subregion_name='britain', osm_file_format=".gpkg")
+            No ".gpkg.zip" data is available to download for "Great Britain".
         """
 
         subregion_name_, download_url = self.get_subregion_download_url(
@@ -779,12 +791,12 @@ class GeofabrikDownloader(BaseDownloader):
             >>> gfd = GeofabrikDownloader()
 
             >>> # Default filename and download path of the PBF data of London
-            >>> subregion_name, osm_file_format = 'london', ".pbf"
+            >>> subregion_name, osm_file_format = 'london', ".geopackage"
             >>> pathname, filename = gfd.get_default_pathname(subregion_name, osm_file_format)
             >>> os.path.relpath(os.path.dirname(pathname))
             'osm_data\\geofabrik\\europe\\united-kingdom\\england\\greater-london'
             >>> filename
-            'greater-london-latest.osm.pbf'
+            'greater-london-latest-free.gpkg.zip'
         """
 
         subregion_name_, download_url = self.get_subregion_download_url(
@@ -892,11 +904,11 @@ class GeofabrikDownloader(BaseDownloader):
 
             >>> # Names of subregions of Great Britain
             >>> gb_subrgn_names = gfd.get_subregions('britain')
-            >>> len(gb_subrgn_names) == 3
+            >>> len(gb_subrgn_names) == 1
             True
 
             >>> # Names of all subregions of Great Britain's subregions
-            >>> gb_subrgn_names_ = gfd.get_subregions('britain', deep=True)
+            >>> gb_subrgn_names_ = gfd.get_subregions('unitied kingdom', deep=True)
             >>> len(gb_subrgn_names_) >= len(gb_subrgn_names)
             True
         """
@@ -1109,21 +1121,22 @@ class GeofabrikDownloader(BaseDownloader):
             >>> gfd = GeofabrikDownloader(download_dir="tests/osm_data")
             >>> # Download the PBF data of London (to the default directory)
             >>> subregion_name = 'london'
-            >>> osm_file_format = ".pbf"
+            >>> osm_file_format = ".geopackage"
             >>> gfd.download_data(subregion_name, osm_file_format, verbose=True)
-            Proceed to download data in the format '.osm.pbf' for the following geographic (sub...
+            Proceed to download data in the format '.gpkg.zip' for the following geographic (su...
                 "Greater London"
               to "./tests/osm_data/europe/united-kingdom/england/greater-london/"
             ? [No]|Yes: yes
-            Downloading "greater-london-latest.osm.pbf" 100%|██████████| 123M/123M | 33.1...
-              Saving "greater-london-latest.osm.pbf" to "./tests/osm_data/europe/united-kingdom...
+            Downloading "greater-london-latest-free.gpkg.zip" 100%|██████████| 206M/206M ...
+              Saving "greater-london-latest-free.gpkg.zip" to "./tests/osm_data/europe/united-k...
             >>> # Check whether the PBF data file exists; `ret_file_path` is by default `False`
-            >>> pbf_exists = gfd.file_exists(subregion_name, osm_file_format)
-            >>> pbf_exists  # If the data file exists at the default directory
+            >>> gpkg_exists = gfd.file_exists(subregion_name, osm_file_format)
+            >>> gpkg_exists  # If the data file exists at the default directory
             True
             >>> # Set `ret_file_path=True`
-            >>> path_to_pbf = gfd.file_exists(subregion_name, osm_file_format, ret_file_path=True)
-            >>> os.path.relpath(path_to_pbf)  # If the data file exists at the default directory
+            >>> path_to_gpkg = gfd.file_exists(
+            ...     subregion_name, osm_file_format, ret_file_path=True)
+            >>> os.path.relpath(path_to_gpkg)  # If the data file exists at the default directory
             'tests\\osm_data\\europe\\united-kingdom\\england\\greater-london\\greater-london-l...
             >>> # Remove the download directory:
             >>> delete_dir(gfd.download_dir, verbose=True)
@@ -1219,16 +1232,18 @@ class GeofabrikDownloader(BaseDownloader):
 
             >>> # Download shapefiles of West Midlands (to a given directory "tests/osm_data")
             >>> subregion_name = 'west midlands'  # Case-insensitive
-            >>> osm_file_format = [".shp", "pbf"]
+            >>> osm_file_format = [".shp", ".gpkg", "pbf"]
             >>> download_dir = "tests/osm_data"
             >>> gfd.download_data(subregion_name, osm_file_format, download_dir, verbose=True)
-            Proceed to download data in the formats ('.shp.zip', '.osm.pbf') for the following ...
+            Proceed to download data in the formats ('.shp.zip', '.gpkg.zip', '.osm.pbf') for t...
                 "West Midlands"
-              to "./tests/osm_data/west-midlands/"
             ? [No]|Yes: yes
-            Downloading "west-midlands-latest-free.shp.zip" 100%|██████████| 99.3M/99.3M ...
-              Saving "west-midlands-latest-free.shp.zip" to "./tests/osm_data/west-midlands/" ....
-            Downloading "west-midlands-latest.osm.pbf" 100%|██████████| 58.3M/58.3M | 25....
+            No '.shp.zip' data is available for "West Midlands".
+            Try to download the data of its subregions instead
+            ? [No]|Yes: no
+            Downloading "west-midlands-latest-free.gpkg.zip" 100%|██████████| 103M/103M |...
+              Saving "west-midlands-latest-free.gpkg.zip" to "./tests/osm_data/west-midlands/" ...
+            Downloading "west-midlands-latest.osm.pbf" 100%|██████████| 58.4M/58.4M | 10....
               Saving "west-midlands-latest.osm.pbf" to "./tests/osm_data/west-midlands/" ... Done.
             >>> len(gfd.data_paths)
             4
@@ -1364,7 +1379,7 @@ class GeofabrikDownloader(BaseDownloader):
 
                     else:
                         if not os.path.isfile(file_pathname) or update:
-                            self._download_data(
+                            super().download_data(
                                 url=download_url, path_to_file=file_pathname, verbose=verbose,
                                 verify_download_dir=False, **kwargs)
 

@@ -116,15 +116,16 @@ class TestSHP:
         assert geom1.equals(geom2)
 
     def test_read_layer_shps(self, path_to_shp_zip, tmp_path):
+        # import tempfile; tmp_path = tempfile.mkdtemp()
         rutland_shp_dir = SHP.unzip_shp_zip(
-            path_to_shp_zip, extract_to=tmp_path, ret_extract_dir=True)
+            path_to_shp_zip, extract_to=tmp_path, ret_extract_dir=True, verbose=True)
         rutland_railways_shp_path = os.path.join(rutland_shp_dir, "gis_osm_railways_free_1.shp")
 
         london_railways_shp = SHP.read_layer_shps(shp_pathnames=rutland_railways_shp_path)
         assert isinstance(london_railways_shp, pd.DataFrame)
 
         railways_rail_shp, railways_rail_shp_path = SHP.read_layer_shps(
-            rutland_railways_shp_path, feature_names='rail', save_feat_shp=True,
+            shp_pathnames=rutland_railways_shp_path, feature_names='rail', save_feat_shp=True,
             ret_feat_shp_path=True)
         assert isinstance(railways_rail_shp, pd.DataFrame)
         assert all(os.path.isfile(x) for x in railways_rail_shp_path)

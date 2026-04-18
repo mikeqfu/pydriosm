@@ -3,26 +3,28 @@
 
 ## **[2.4.0](https://github.com/mikeqfu/pydriosm/releases/tag/2.4.0)**
 
-(*15 April 2026*)
+(*16 April 2026*)
 
 ### Notable [changes](https://github.com/mikeqfu/pydriosm/compare/2.3.0...2.4.0) since [2.3.0](https://pypi.org/project/pydriosm/2.3.0/):
 
 - **Critical fixes for BBBike data retrieval:**
   - Resolved *HTTP 404* errors by migrating city list and coordinate retrieval from deprecated sources to direct server-side scraping.
-  - Replaced static CSV coordinate lookups with a *.poly* file parser.
-  - Implemented multi-threaded execution using `ThreadPoolExecutor` for the poly scraping logic, improving performance for bulk data index retrieval.
+  - Replaced static CSV lookups with a *.poly* file parser.
+  - Implemented multi-threading via `ThreadPoolExecutor` for bulk data index retrieval.
+- **Improved ecosystem compatibility & data storage:**
+  - Relaxed pandas dependency constraint to support both *v2.x* and *v3.x* environments.
+  - Implemented version-aware filename suffixing (e.g. `-v2`, `-v3`) for internal data to ensure cross-version compatibility.
+  - Migrated internal assets to XZ compression for optimized package size.
 - **Enhanced OSM import robustness:**
-  - Fixed a `TypeError` in `import_osm_data()` by adding safety checks for empty layers and `NoneType` returns.
-  - Optimized layer name extraction with a refined regex engine to better handle multi-word layers (e.g. `protected_areas`) and complex file extensions.
+  - Fixed a `TypeError` in `import_osm_data()` with safety checks for empty layers.
+  - Optimized layer name extraction using a refined regex engine to handle complex file extensions and multi-word layers.
 - **Dependency & API alignment:**
   - Updated codebase for compatibility with **pyhelpers v2.4.0** and **pyrcs v1.1.0**.
-  - Implemented stricter dependency versioning in `pyproject.toml` using the `~=` operator to ensure stable environment builds.
-  - Bumped minimum **pandas** requirement to **3.0.2**.
-- **API refactoring & naming clarity:**
-  - Renamed coordinate-related functions (e.g. `fetch_bbbike_city_polygons`).
+  - Standardized BBBike naming: renamed `.get_bbbike_city_polygons` to **`.get_bbbike_cities_poly`**.
   - Removed obsolete URL constants from the `BBBikeDownloader` class.
 - **Test suite maintenance:**
-  - Improved test resilience by transitioning Geofabrik/BBBike column validation from strict list comparison to **set-based comparison**, preventing "false positive" failures due to column reordering.
+  - Transitioned column validation to set-based comparison, preventing test failures due to minor upstream schema reordering.
+  - Updated test datasets for `PBF` reading.
   - Synchronized requirements files across the root directory and Sphinx documentation.
 
 **For more information and detailed specifications, check out the [PyDriosm 2.4.0 documentation](https://pydriosm.readthedocs.io/en/2.4.0/).**
