@@ -581,7 +581,7 @@ class BBBikeReader(BaseReader):
         osm_file_format = ".shp.zip"
 
         # Download the files if not available
-        paths_to_shp_zip_files = self.downloader.download_data(
+        paths_to_shp_zip_files = self.downloader.download_data(  # noqa
             subregion_names=subregion_names_, osm_file_formats=osm_file_format,
             download_dir=data_dir, update=update, confirmation_required=False if download else True,
             deep=True, interval=1, verbose=verbose, ret_download_path=True)

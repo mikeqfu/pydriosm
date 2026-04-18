@@ -965,7 +965,7 @@ class BaseIOS(PostgreSQL):
 
             except Exception as e:
                 _print_failure_message(
-                    e, prefix=f"Failed. ", verbose=verbose, raise_error=raise_error)
+                    e, prefix="Failed.", verbose=verbose, raise_error=raise_error)
 
             del osm_layer
             gc.collect()

@@ -847,9 +847,7 @@ class BaseReader:
         feat_names = [feature_names_] if isinstance(feature_names_, str) else feature_names_
         feat_col_name = [x for x in dat.columns if x in {'type', 'fclass'}][0]
 
-        # noinspection PyUnusedLocal
-        feat_names_ = [find_similar_str(x, dat[feat_col_name].unique()) for x in feat_names]
-
+        feat_names_ = [find_similar_str(x, dat[feat_col_name].unique()) for x in feat_names]  # noqa
         dat_ = dat.query(f'{feat_col_name} in @feat_names_')
         if dat_.empty:
             dat_ = None
@@ -863,6 +861,42 @@ class BaseReader:
 
             repl_key_dict = {k: get_layer_name(k) for k in data.keys()}
             return update_dict_keys(data, repl_key_dict)
+
+    def _read_gpkg(self, gpkg_zip_pathname, layer_names, feature_names, verbose=False, **kwargs):
+        layer_names_, feature_names_ = map(self.validate_dtype, [layer_names, feature_names])
+
+        available_layers = gpd.list_layers(gpkg_zip_pathname)
+        layer_name_list = find_matched_layer_names(layer_names_, available_layers['name'].to_list())
+
+        if not layer_name_list:
+            data = load_geopackage(gpkg_zip_pathname, verbose=False, **kwargs)
+
+            if isinstance(data, dict):
+                repl_key_dict = {k: get_layer_name(k) for k in data.keys()}
+                data = merge_dicts_by_values(data_dict=data, mapping_dict=repl_key_dict)
+
+            if len(feature_names_) > 0:
+                if isinstance(data, dict):
+                    for lyr_name, lyr_data in data.items():
+                        data[lyr_name] = self._extract_layer_features(lyr_data, feature_names_)
+                else:
+                    data = self._extract_layer_features(data, feature_names_)
+
+            if verbose:
+                print("Done.")
+            return data
+
+        if len(layer_name_list) > 0:
+            data = {
+                layer: load_geopackage(gpkg_zip_pathname, layer=layer, **kwargs)
+                for layer in layer_name_list
+            }
+            repl_key_dict = {k: get_layer_name(k) for k in layer_name_list}
+            data = merge_dicts_by_values(data_dict=data, mapping_dict=repl_key_dict)
+
+            if verbose:
+                print("Done.")
+            return data
 
     def read_gpkg(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
                   update=False, download=False, verbose=False, raise_error=True, **kwargs):
@@ -908,7 +942,7 @@ class BaseReader:
             >>> reader = GeofabrikReader()
             >>> # Read 'railways' layer for Rutland
             >>> data_dir = "tests/osm_data"
-            >>> wm_railways = reader.read_gpkg(
+            >>> rutland_railways = reader.read_gpkg(
             ...     subregion_name='Rutland',
             ...     layer_names='railways',
             ...     data_dir=data_dir,
@@ -917,9 +951,9 @@ class BaseReader:
             Downloading "rutland-latest-free.gpkg.zip" 100%|██████████| 3.30M/3.30M | 4.5...
               Saving "rutland-latest-free.gpkg.zip" to "./tests/osm_data/rutland/" ... Done.
             Parsing the data ... Done.
-            >>> type(wm_railways)
+            >>> type(rutland_railways)
             dict
-            >>> list(wm_railways.keys())
+            >>> list(rutland_railways.keys())
             ['railways']
             >>> delete_dir(data_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
@@ -957,42 +991,13 @@ class BaseReader:
             print("Parsing the data", end=" ... ")
 
         try:
-            layer_names_, feature_names_ = map(self.validate_dtype, [layer_names, feature_names])
-            available_layers = gpd.list_layers(gpkg_zip_pathname)
-
-            layer_name_list = find_matched_layer_names(
-                layer_names_, available_layers['name'].to_list())
-
-            if not layer_name_list:
-                kwargs['verbose'] = False
-                data = load_geopackage(gpkg_zip_pathname, **kwargs)
-
-                if isinstance(data, dict):
-                    repl_key_dict = {k: get_layer_name(k) for k in data.keys()}
-                    data = merge_dicts_by_values(data_dict=data, mapping_dict=repl_key_dict)
-
-                if len(feature_names_) > 0:
-                    if isinstance(data, dict):
-                        for lyr_name, lyr_data in data.items():
-                            data[lyr_name] = self._extract_layer_features(lyr_data, feature_names_)
-                    else:
-                        data = self._extract_layer_features(data, feature_names_)
-
-                if verbose:
-                    print("Done.")
-                return data
-
-            if len(layer_name_list) > 0:
-                data = {
-                    layer: load_geopackage(gpkg_zip_pathname, layer=layer, **kwargs)
-                    for layer in layer_name_list
-                }
-                repl_key_dict = {k: get_layer_name(k) for k in layer_name_list}
-                data = merge_dicts_by_values(data_dict=data, mapping_dict=repl_key_dict)
-
-                if verbose:
-                    print("Done.")
-                return data
+            return self._read_gpkg(
+                gpkg_zip_pathname=gpkg_zip_pathname,
+                layer_names=layer_names,
+                feature_names=feature_names,
+                verbose=verbose,
+                **kwargs
+            )
 
         except Exception as e:
             _print_failure_message(
