@@ -24,7 +24,7 @@ Dependencies
 
 ``pydriosm`` requires Python 3.12+ and several core geospatial libraries.
 
-.. warning::
+.. note::
 
     **GDAL Installation**
 
