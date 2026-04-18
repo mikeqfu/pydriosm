@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+import shapely.wkb
 from pyhelpers._cache import _check_dependencies
 
 from pydriosm.reader._geofabrik import GeofabrikReader
@@ -46,7 +47,8 @@ class TestGeofabrikReader:
             other_tags = prop.get('other_tags')
 
             if parse_geometry:
-                assert geom.startswith('POINT')
+                assert isinstance(geom, bytes)
+                assert shapely.wkb.loads(geom).wkt.startswith('POINT')
                 if not parse_other_tags:
                     assert other_tags is None or isinstance(other_tags, str)
 

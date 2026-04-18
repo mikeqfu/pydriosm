@@ -24,6 +24,7 @@ class Downloader(BaseDownloader):
     URL: str = 'https://www.openstreetmap.org/'
 
     def __init__(self, data_source='geofabrik', download_dir=None, update=False, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         :param data_source: Name of data source.
         :type data_source: str
@@ -120,7 +121,7 @@ class Downloader(BaseDownloader):
 
     def get_download_index(self, update=False, confirmation_required=True, verbose=False,
                            raise_error=True, **kwargs):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get the official index of downloads for all available geographic (sub)regions.
 
@@ -187,7 +188,7 @@ class Downloader(BaseDownloader):
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
     def get_subregion_table(self, url, verbose=False, raise_error=True):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get download information of all geographic (sub)regions on a web page.
 
@@ -265,6 +266,7 @@ class Downloader(BaseDownloader):
 
     def get_continent_tables(self, update=False, confirmation_required=True, verbose=False,
                              raise_error=True, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Get download catalogues for each continent.
 
@@ -395,6 +397,7 @@ class Downloader(BaseDownloader):
 
     def get_catalogue(self, update=False, confirmation_required=True, verbose=False,
                       raise_error=True):
+        # noinspection PyUnresolvedReferences
         """
         Get a catalogue (index) of all available downloads.
 
@@ -1129,7 +1132,7 @@ class Downloader(BaseDownloader):
 
     def get_subregion_index(self, update=False, confirmation_required=True, verbose=False,
                             raise_error=True):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a catalogue for geographic (sub)regions.
 
@@ -1179,7 +1182,7 @@ class Downloader(BaseDownloader):
 
     def get_sub_catalogue(self, subregion_name, update=False, confirmation_required=True,
                           verbose=False, raise_error=True):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a download catalogue of OSM data available for a given geographic (sub)region.
 
