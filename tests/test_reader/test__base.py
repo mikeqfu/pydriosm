@@ -1,7 +1,3 @@
-"""
-Tests the submodule: :py:mod:`pydriosm.reader._reader`.
-"""
-
 import os
 
 import pytest

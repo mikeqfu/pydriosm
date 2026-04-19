@@ -1,6 +1,40 @@
 # Changelog / Release notes
 
 
+## **[2.4.0](https://github.com/mikeqfu/pydriosm/releases/tag/2.4.0)**
+
+(*18 April 2026*)
+
+### Notable [changes](https://github.com/mikeqfu/pydriosm/compare/2.3.0...2.4.0) since [2.3.0](https://pypi.org/project/pydriosm/2.3.0/):
+
+- **Introduction of GeoPackage (GPKG) support:**
+  - Added `.gpkg.zip` support to `GeofabrikDownloader`.
+  - Implemented `.read_gpkg()` in `BaseReader` and `GeofabrikReader` using `pyogrio` for high-performance parsing.
+  - Added dedicated utilities and unit tests for GeoPackage layer processing.
+- **Critical fixes for BBBike data retrieval:**
+  - Resolved *HTTP 404* errors by migrating city list and coordinate retrieval from deprecated sources to direct server-side scraping.
+  - Replaced static CSV lookups with a *.poly* file parser and implemented `BBBikeReader.merge_shp_layers()`.
+  - Implemented multi-threading via `ThreadPoolExecutor` for bulk data index retrieval.
+- **Improved ecosystem compatibility & data storage:**
+  - Relaxed pandas dependency constraint to support both *v2.x* and *v3.x* environments.
+  - Replaced `pyshp` with `geopandas` as a core dependency and migrated `PostgresOSM` geometry I/O to use **WKB** instead of WKT.
+  - Implemented version-aware filename suffixing (e.g. `-v2`, `-v3`) for internal data to ensure cross-version compatibility.
+  - Migrated internal assets to XZ compression for optimized package size.
+- **Enhanced OSM import robustness:**
+  - Fixed a `TypeError` in `import_osm_data()` with safety checks for empty layers.
+  - Optimized layer name extraction using a refined regex engine to handle complex file extensions and multi-word layers.
+- **Dependency & API alignment:**
+  - Updated codebase for compatibility with **pyhelpers v2.4.0** and **pyrcs v1.1.0**.
+  - Standardized BBBike naming: renamed `.get_bbbike_city_polygons` to **`.get_bbbike_cities_poly`**.
+  - Fully overhauled the **Installation** guide and **Quick Start** tutorial in the documentation.
+- **Test suite maintenance:**
+  - Transitioned column validation to set-based comparison and added tests for GeoPackage reading.
+  - Updated test datasets for `PBF` reading.
+  - Synchronized requirements files across the root directory and Sphinx documentation.
+
+**For more information and detailed specifications, check out the [PyDriosm 2.4.0 documentation](https://pydriosm.readthedocs.io/en/2.4.0/).**
+
+
 ## **[2.3.0](https://github.com/mikeqfu/pydriosm/releases/tag/2.3.0)**
 
 (*5 March 2026*)

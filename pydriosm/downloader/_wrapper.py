@@ -24,6 +24,7 @@ class Downloader(BaseDownloader):
     URL: str = 'https://www.openstreetmap.org/'
 
     def __init__(self, data_source='geofabrik', download_dir=None, update=False, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         :param data_source: Name of data source.
         :type data_source: str
@@ -120,7 +121,7 @@ class Downloader(BaseDownloader):
 
     def get_download_index(self, update=False, confirmation_required=True, verbose=False,
                            raise_error=True, **kwargs):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get the official index of downloads for all available geographic (sub)regions.
 
@@ -187,7 +188,7 @@ class Downloader(BaseDownloader):
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
     def get_subregion_table(self, url, verbose=False, raise_error=True):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get download information of all geographic (sub)regions on a web page.
 
@@ -265,6 +266,7 @@ class Downloader(BaseDownloader):
 
     def get_continent_tables(self, update=False, confirmation_required=True, verbose=False,
                              raise_error=True, **kwargs):
+        # noinspection PyUnresolvedReferences
         """
         Get download catalogues for each continent.
 
@@ -395,6 +397,7 @@ class Downloader(BaseDownloader):
 
     def get_catalogue(self, update=False, confirmation_required=True, verbose=False,
                       raise_error=True):
+        # noinspection PyUnresolvedReferences
         """
         Get a catalogue (index) of all available downloads.
 
@@ -1076,8 +1079,9 @@ class Downloader(BaseDownloader):
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
 
-    def get_coordinates_of_cities(self, update=False, confirmation_required=True, verbose=False,
-                                  raise_error=True):
+    def get_bbbike_cities_poly(self, update=False, confirmation_required=True, verbose=False,
+                               raise_error=True):
+        # noinspection PyUnresolvedReferences
         """
         Get location information of all cities available on the download server.
 
@@ -1099,37 +1103,24 @@ class Downloader(BaseDownloader):
             >>> from pydriosm.downloader import Downloader
             >>> downloader = Downloader(data_source='bbbike')
             >>> # Location information of BBBike cities
-            >>> coords_of_cities = downloader.get_coordinates_of_cities()
-            >>> type(coords_of_cities)
-            pandas.core.frame.DataFrame
-            >>> coords_of_cities.head()
-                      City  ... ur_latitude
-            0       Aachen  ...       50.99
-            1       Aarhus  ...      56.287
-            2     Adelaide  ...     -34.753
-            3  Albuquerque  ...     35.2173
-            4   Alexandria  ...       31.34
-            [5 rows x 13 columns]
-            >>> coords_of_cities.columns.to_list()
-            ['city',
-             'real_name',
-             'pref._language',
-             'local_language',
-             'country',
-             'area_or_continent',
-             'population',
-             'step',
-             'other_cities',
-             'll_longitude',
-             'll_latitude',
-             'ur_longitude',
-             'ur_latitude']
+            >>> bbbike_cities_poly = downloader.get_bbbike_cities_poly()
+            >>> type(bbbike_cities_poly)
+            pandas.DataFrame
+            >>> bbbike_cities_poly.shape
+            (238, 2)
+            >>> bbbike_cities_poly.head()
+                      name                                           geometry
+            0       Aachen  POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5....
+            1       Aarhus  POLYGON ((9.82 55.99, 10.37 55.99, 10.37 56.29...
+            2     Adelaide  POLYGON ((138.46 -35.03, 138.74 -35.03, 138.74...
+            3  Albuquerque  POLYGON ((-106.8 35, -106.47 35, -106.47 35.22...
+            4   Alexandria  POLYGON ((29.7 31.02, 30.21 31.02, 30.21 31.34...
         """
 
-        method_name = self.get_coordinates_of_cities.__name__
+        method_name = self.get_bbbike_cities_poly.__name__
 
         if hasattr(self.downloader, method_name):
-            return self.downloader.get_coordinates_of_cities(
+            return self.downloader.get_bbbike_cities_poly(
                 update=update,
                 confirmation_required=confirmation_required,
                 verbose=verbose,
@@ -1141,7 +1132,7 @@ class Downloader(BaseDownloader):
 
     def get_subregion_index(self, update=False, confirmation_required=True, verbose=False,
                             raise_error=True):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a catalogue for geographic (sub)regions.
 
@@ -1191,7 +1182,7 @@ class Downloader(BaseDownloader):
 
     def get_sub_catalogue(self, subregion_name, update=False, confirmation_required=True,
                           verbose=False, raise_error=True):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a download catalogue of OSM data available for a given geographic (sub)region.
 

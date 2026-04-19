@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 import shapely.geometry
+import shapely.wkb
 
 from pydriosm.reader.formatter import convert_geometry_collection, convert_simplex_geometry, \
     process_geometry_layer, reformat_multipolygon_point, reformat_other_tags, refresh_other_tags
@@ -81,8 +82,9 @@ def test_transform_unitary_geometry():
     g2_data = convert_simplex_geometry(g2_dat, mode=2)
 
     assert isinstance(g2_data, dict)
-    assert list(g2_data.keys()) == ['type', 'geometry', 'properties', 'id']
-    assert g2_data['geometry'] == 'POINT (-0.5134241 52.6555853)'
+    assert set(g2_data.keys()) == {'type', 'geometry', 'properties', 'id'}
+    assert isinstance(g2_data['geometry'], bytes)
+    assert shapely.wkb.loads(g2_data['geometry']).wkt == 'POINT (-0.5134241 52.6555853)'
 
 
 def test_transform_geometry_collection():
@@ -96,9 +98,10 @@ def test_transform_geometry_collection():
     g2_dat = TEST_COLLECTION_2.copy()
     g2_data = convert_geometry_collection(g2_dat, mode=2)
     assert isinstance(g2_data, dict)
-    assert list(g2_data.keys()) == ['type', 'geometry', 'properties', 'id']
-    assert g2_data['geometry'] == \
-           'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))'
+    assert set(g2_data.keys()) == {'type', 'geometry', 'properties', 'id'}
+    assert isinstance(g2_data['geometry'], bytes)
+    assert (shapely.wkb.loads(g2_data['geometry']).wkt ==
+            'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))')
 
 
 def test_transform_geometry():

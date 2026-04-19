@@ -10,7 +10,7 @@ from pyhelpers.ops import confirmed
 
 from pydriosm.downloader._base import BaseDownloader
 from pydriosm.downloader.web_parser import fetch_bbbike_catalogue, fetch_bbbike_cities, \
-    fetch_bbbike_city_coordinates, fetch_bbbike_sub_catalogue, fetch_bbbike_subregion_index, \
+    fetch_bbbike_cities_poly, fetch_bbbike_sub_catalogue, fetch_bbbike_subregion_index, \
     fetch_bbbike_valid_subregion_names
 
 
@@ -23,16 +23,16 @@ class BBBikeDownloader(BaseDownloader):
 
     #: Name of the free downloader server.
     NAME: str = 'BBBike'
+
     #: Full name of the data resource.
     LONG_NAME: str = 'BBBike exports of OpenStreetMap data'
+
     #: URL of the homepage to the free download server.
     URL: str = 'https://download.bbbike.org/osm/bbbike/'
-    #: URL of a list of cities that are available on the free download server.
-    CITIES_URL: str = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'
-    #: URL of coordinates of all the available cities.
-    CITIES_COORDS_URL: str = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.csv'
+
     #: Default download directory.
     DEFAULT_DOWNLOAD_DIR: str = "osm_data/bbbike"
+
     #: Valid file formats.
     FILE_FORMATS: set = {
         '.pbf',
@@ -89,7 +89,7 @@ class BBBikeDownloader(BaseDownloader):
         kwargs.update({'update': update})
 
         self.valid_subregion_names = self.get_bbbike_cities(**kwargs)
-        self.subregion_coordinates = self.get_coordinates_of_cities(**kwargs)
+        self.subregion_coordinates = self.get_bbbike_cities_poly(**kwargs)
         self.subregion_index = self.get_subregion_index(**kwargs)
         self.catalogue = self.get_catalogue(**kwargs)
         # self.valid_file_formats = set(self.catalogue['FileFormat'])
@@ -97,6 +97,7 @@ class BBBikeDownloader(BaseDownloader):
     @classmethod
     def get_bbbike_cities(cls, update=False, confirmation_required=True, verbose=False,
                           raise_error=False):
+        # noinspection PyUnresolvedReferences
         """
         Get the names of all the available cities.
 
@@ -117,22 +118,23 @@ class BBBikeDownloader(BaseDownloader):
 
             >>> from pydriosm.downloader import BBBikeDownloader
             >>> bbd = BBBikeDownloader()
-            >>> bbbike_cities_names = bbd.get_bbbike_cities()
-            >>> type(bbbike_cities_names)
-            list
+            >>> bbbike_cities = bbd.get_bbbike_cities()
+            >>> bbbike_cities[:5]
+            ['Aachen', 'Aarhus', 'Adelaide', 'Albuquerque', 'Alexandria']
         """
 
         data_name = f'{cls.NAME} cities'
 
-        cities_names = cls.get_prepacked_data(
-            fetch_bbbike_cities, url=cls.CITIES_URL, data_name=data_name, update=update,
+        cities = cls.get_prepacked_data(
+            fetch_bbbike_cities, url=cls.URL, data_name=data_name, update=update,
             confirmation_required=confirmation_required, verbose=verbose, raise_error=raise_error)
 
-        return cities_names
+        return cities
 
     @classmethod
-    def get_coordinates_of_cities(cls, update=False, confirmation_required=True, verbose=False,
-                                  raise_error=False):
+    def get_bbbike_cities_poly(cls, update=False, confirmation_required=True, verbose=False,
+                               raise_error=False):
+        # noinspection PyUnresolvedReferences
         """
         Get location information of all cities available on the download server.
 
@@ -153,40 +155,24 @@ class BBBikeDownloader(BaseDownloader):
 
             >>> from pydriosm.downloader import BBBikeDownloader
             >>> bbd = BBBikeDownloader()
-            >>> # Location information of BBBike cities
-            >>> coords_of_cities = bbd.get_coordinates_of_cities()
-            >>> type(coords_of_cities)
-            pandas.core.frame.DataFrame
-            >>> coords_of_cities.shape
-            (240, 13)
-            >>> coords_of_cities.head()
-                      City  ... ur_latitude
-            0       Aachen  ...       50.99
-            1       Aarhus  ...      56.287
-            2     Adelaide  ...     -34.753
-            3  Albuquerque  ...     35.2173
-            4   Alexandria  ...       31.34
-            [5 rows x 13 columns]
-            >>> coords_of_cities.columns.to_list()
-            ['city',
-             'real_name',
-             'pref._language',
-             'local_language',
-             'country',
-             'area_or_continent',
-             'population',
-             'step',
-             'other_cities',
-             'll_longitude',
-             'll_latitude',
-             'ur_longitude',
-             'ur_latitude']
+            >>> bbbike_city_polygons = bbd.get_bbbike_cities_poly()
+            >>> type(bbbike_city_polygons)
+            pandas.DataFrame
+            >>> bbbike_city_polygons.shape
+            (238, 2)
+            >>> bbbike_city_polygons.head()
+                      name                                           geometry
+            0       Aachen  POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5....
+            1       Aarhus  POLYGON ((9.82 55.99, 10.37 55.99, 10.37 56.29...
+            2     Adelaide  POLYGON ((138.46 -35.03, 138.74 -35.03, 138.74...
+            3  Albuquerque  POLYGON ((-106.8 35, -106.47 35, -106.47 35.22...
+            4   Alexandria  POLYGON ((29.7 31.02, 30.21 31.02, 30.21 31.34...
         """
 
-        data_name = f'{cls.NAME} cities coordinates'
+        data_name = f'{cls.NAME} cities poly'
 
         cities_coords = cls.get_prepacked_data(
-            fetch_bbbike_city_coordinates, url=cls.CITIES_COORDS_URL, raise_error=raise_error,
+            fetch_bbbike_cities_poly, url=cls.URL, raise_error=raise_error,
             data_name=data_name, update=update, confirmation_required=confirmation_required,
             verbose=verbose)
 
@@ -195,7 +181,7 @@ class BBBikeDownloader(BaseDownloader):
     @classmethod
     def get_subregion_index(cls, update=False, confirmation_required=True, verbose=False,
                             raise_error=False):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a catalogue for geographic (sub)regions.
 
@@ -302,7 +288,7 @@ class BBBikeDownloader(BaseDownloader):
         :param subregion_name: name of a (sub)region available on BBBike free download server
         :type subregion_name: str
         :param valid_names: names of all (sub)regions available on a free download server
-        :type valid_names: typing.Iterable
+        :type valid_names: typing.Collection | None
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidSubregionName`, defaults to ``True``
         :type raise_error: bool
@@ -329,7 +315,7 @@ class BBBikeDownloader(BaseDownloader):
 
     def get_sub_catalogue(self, subregion_name, update=False, confirmation_required=True,
                           verbose=False, raise_error=False):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,PyUnresolvedReferences
         """
         Get a download catalogue of OSM data available for a given geographic (sub)region.
 
@@ -387,6 +373,7 @@ class BBBikeDownloader(BaseDownloader):
     @classmethod
     def get_catalogue(cls, update=False, confirmation_required=True, verbose=False,
                       raise_error=False):
+        # noinspection PyUnresolvedReferences
         """
         Get a dict-type index of available formats, data types and a download catalogue.
 
@@ -402,7 +389,7 @@ class BBBikeDownloader(BaseDownloader):
         :type raise_error: bool
         :return: a list of available formats, a list of available data types and
             a dictionary of download catalogue
-        :rtype: dict | None
+        :rtype: dict[str, list | dict[str, pandas.DataFrame]]
 
         **Examples**::
 
@@ -452,7 +439,7 @@ class BBBikeDownloader(BaseDownloader):
             available on BBBike free download server
         :type osm_file_format: str
         :param valid_formats: fil extensions of the data available on a free download server
-        :type valid_formats: typing.Iterable
+        :type valid_formats: typing.Collection | None
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidFileFormatError`, defaults to ``True``
         :type raise_error: bool
@@ -532,7 +519,13 @@ class BBBikeDownloader(BaseDownloader):
 
         # Fetch the download URL
         try:
-            sub_dwnld_cat = self.catalogue['Catalogue'][subregion_name_]
+            sub_dwnld_cat_ = self.catalogue.get('Catalogue')
+            if not isinstance(sub_dwnld_cat_, dict):
+                cls_name = self.__class__.__name__
+                raise TypeError(
+                    f"'{cls_name}.catalogue' should be a dict.\n  "
+                    f"Check with '{cls_name}.get_catalogue()' for potential issues.")
+            sub_dwnld_cat = sub_dwnld_cat_[subregion_name_]
 
             filename = subregion_name_ + osm_file_format_
 
@@ -732,17 +725,21 @@ class BBBikeDownloader(BaseDownloader):
             >>> osm_file_format = ['shp', 'pbf']
             >>> download_dir = "tests/osm_data"
             >>> download_paths = bbd.download_data(
-            ...     subregion_names, osm_file_format, download_dir, verbose=2,
+            ...     subregion_names, osm_file_format, download_dir, verbose=True,
             ...     ret_download_path=True)
             Proceed to download data in the formats ('.shp.zip', '.pbf') for the following geog...
                 "Birmingham"
                 "Leeds"
               to "./tests/osm_data/"
-            ? [No]|Yes: yes
-            Downloading "Leeds.osm.shp.zip" to "./tests/osm_data/leeds/" ... Done.
-            Downloading "Leeds.osm.pbf" to "./tests/osm_data/leeds/" ... Done.
-            Downloading "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
-            Downloading "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
+            ? [No]|Yes: >? yes
+            Downloading "Leeds.osm.shp.zip" 100%|██████████| 57.8M/57.8M | 18.3MB/s | ETA...
+              Saving "Leeds.osm.shp.zip" to "./tests/osm_data/leeds/" ... Done.
+            Downloading "Leeds.osm.pbf" 100%|██████████| 38.2M/38.2M | 14.9MB/s | ETA: 00:00
+              Saving "Leeds.osm.pbf" to "./tests/osm_data/leeds/" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 18.0MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
+            Downloading "Birmingham.osm.pbf" 100%|██████████| 56.0M/56.0M | 17.2MB/s | ET...
+              Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
             >>> len(download_paths)
             4
             >>> len(bbd.data_paths)
@@ -784,7 +781,7 @@ class BBBikeDownloader(BaseDownloader):
                     os.makedirs(os.path.dirname(path_to_file), exist_ok=True)
 
                     if not os.path.isfile(path_to_file) or update:
-                        self._download_data(
+                        super().download_data(
                             url=download_url, path_to_file=path_to_file, interval=interval,
                             verify_download_dir=False, verbose=verbose, **kwargs)
 

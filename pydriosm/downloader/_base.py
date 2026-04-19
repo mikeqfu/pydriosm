@@ -14,7 +14,7 @@ import urllib.parse
 
 import requests
 from pyhelpers._cache import _print_failure_message
-from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, validate_dir
+from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, resolve_dir
 from pyhelpers.ops import confirmed, download_file_from_url, is_url
 from pyhelpers.store import _check_saving_path, load_data, save_data
 from pyhelpers.text import cosine_similarity_between_texts, find_similar_str
@@ -42,6 +42,7 @@ class BaseDownloader:
         '.garmin-opentopo.zip',
         '.garmin-osm.zip',
         '.geojson.xz',
+        '.gpkg.zip',
         '.gz',
         '.mapsforge-osm.zip',
         '.osm.bz2',
@@ -80,7 +81,7 @@ class BaseDownloader:
             'tests\\osm_data'
         """
 
-        self.download_dir = self.cdd() if download_dir is None else validate_dir(download_dir)
+        self.download_dir = self.cdd() if download_dir is None else resolve_dir(download_dir)
 
         self.data_paths = []
 
@@ -147,6 +148,7 @@ class BaseDownloader:
     @classmethod
     def print_action_prompt(cls, data_name='<data_name>', verbose=False, confirmation_required=True,
                             note="", end=" ... "):
+        # noinspection PyNoneFunctionAssignment
         """
         Print a short message showing the action as a function runs.
 
@@ -161,6 +163,8 @@ class BaseDownloader:
         :type note: str
         :param end: end string after printing the status message, defaults to ``" ... "``
         :type end: str
+        :return: None.
+        :rtype: None
 
         **Examples**::
 
@@ -181,11 +185,14 @@ class BaseDownloader:
         if verbose:
             action = "Retrieving/compiling"
             suffix = "the data" if confirmation_required else f"data of {data_name}"
-            print(f"{action} {suffix}" + (" " + note if note else ""), end=end)
+            print(f"{action} {suffix}" + (" " + note if note else ""), end=end, flush=True)
+
+        return None
 
     @classmethod
     def print_status(cls, data_name='<data_name>', path_to_file="<file_path>", verbose=False,
                      error_message=None, update=False, raise_error=False):
+        # noinspection PyNoneFunctionAssignment
         """
         Print a short message for an otherwise situation.
 
@@ -203,6 +210,8 @@ class BaseDownloader:
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=False`` (default), the error will be suppressed.
         :type raise_error: bool
+        :return: None.
+        :rtype: None
 
         **Examples**::
 
@@ -229,8 +238,10 @@ class BaseDownloader:
             elif verbose is True or verbose == 1:
                 print("Cancelled.")
 
+        return None
+
     @classmethod
-    def get_prepacked_data(cls, meth, data_name='<data_name>', file_stem=None, ext=".pkl",
+    def get_prepacked_data(cls, meth, data_name='<data_name>', file_stem=None, ext=".pkl.xz",
                            update=False, confirmation_required=True, dump_backup=True,
                            verbose=False, confirmation_prompt_note="", action_prompt_note="",
                            action_prompt_end=" ... ", ending_message="Done.", raise_error=False,
@@ -288,7 +299,7 @@ class BaseDownloader:
 
         data_name = cls.NAME if data_name is None else data_name
 
-        path_to_file = _cdd(file_stem or data_name.replace(" ", "-").lower() + ext)
+        path_to_file = _cdd((file_stem or data_name.replace(" ", "-").lower()) + ext)
 
         if os.path.isfile(path_to_file) and not update:
             return load_data(path_to_file, verbose=(verbose == 3 or False))
@@ -314,8 +325,9 @@ class BaseDownloader:
                     data = meth(**kwargs)
 
                     if verbose:
-                        leading_tabs = len(re.match(r'^\t*', ending_message).group())
-                        end = "\n" + " " * (leading_tabs + 1) if verbose == 2 else "\n"
+                        indent_ = re.match(r'^ *', ending_message)
+                        indent = len(indent_.group()) if indent_ else 0
+                        end = "\n  " + " " * indent if verbose == 2 else "\n"
                         print(ending_message, end=end)
 
                     if dump_backup:
@@ -344,7 +356,7 @@ class BaseDownloader:
         :param subregion_name: name/URL of a (sub)region available on a free download server
         :type subregion_name: str
         :param valid_names: names of all (sub)regions available on a free download server
-        :type valid_names: typing.Iterable
+        :type valid_names: typing.Collection | None
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidSubregionName`, defaults to ``True``
         :type raise_error: bool
@@ -414,6 +426,7 @@ class BaseDownloader:
 
     @classmethod
     def validate_file_format(cls, osm_file_format, valid_formats=None, raise_error=True, **kwargs):
+        # noinspection PyShadowingNames
         """
         Validate an input file format of OSM data.
 
@@ -424,7 +437,7 @@ class BaseDownloader:
             available on a free download server
         :type osm_file_format: str
         :param valid_formats: fil extensions of the data available on a free download server
-        :type valid_formats: typing.Iterable
+        :type valid_formats: typing.Collection | None
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidFileFormatError`, defaults to ``True``
         :type raise_error: bool
@@ -448,13 +461,15 @@ class BaseDownloader:
               `osm_file_format='abc'` -> The input `osm_file_format` is unidentifiable.
                 Valid options include: {'.csv.xz', '.osm.bz2', '.garmin-onroad-latin1.zip', '.s...
 
-            >>> avail_file_fmts = ['.osm.pbf', '.shp.zip', '.osm.bz2']
             >>> file_fmt = 'pbf'
-            >>> BaseDownloader.validate_file_format(file_fmt, avail_file_fmts)
+            >>> BaseDownloader.validate_file_format(file_fmt)
             '.osm.pbf'
             >>> file_fmt = 'shp'
-            >>> BaseDownloader.validate_file_format(file_fmt, avail_file_fmts)
+            >>> BaseDownloader.validate_file_format(file_fmt)
             '.shp.zip'
+            >>> file_fmt = 'geopackage'
+            >>> BaseDownloader.validate_file_format(file_fmt)
+            '.gpkg.zip'
 
         .. seealso::
 
@@ -472,8 +487,12 @@ class BaseDownloader:
             osm_file_format_ = copy.copy(osm_file_format)
 
         else:
-            osm_file_format_ = find_similar_str(
-                osm_file_format, lookup_list=valid_formats, **kwargs)
+            file_fmt = osm_file_format.lower()
+            if file_fmt.endswith('geopackage'):
+                file_fmt = '.gpkg.zip'
+            if file_fmt.endswith('shapefile'):
+                file_fmt = '.shp.zip'
+            osm_file_format_ = find_similar_str(file_fmt, lookup_list=valid_formats, **kwargs)
 
             if osm_file_format_ is None and raise_error:
                 raise InvalidFileFormatError(osm_file_format, set(valid_formats))
@@ -633,7 +652,7 @@ class BaseDownloader:
                     file_pathname = os.path.join(self.download_dir + sub_path, osm_filename)
 
             else:
-                download_dir_ = validate_dir(path_to_dir=download_dir)
+                download_dir_ = resolve_dir(path_to_dir=download_dir)
 
                 file_fmts_ = [y.replace('.', '-') for y in self.FILE_FORMATS]
                 if any(download_dir_.endswith(x) for x in file_fmts_):
@@ -905,31 +924,39 @@ class BaseDownloader:
         """
 
         if download_dir is not None and verify_download_dir:
-            download_dir_ = validate_dir(path_to_dir=download_dir)
+            download_dir_ = resolve_dir(path_to_dir=download_dir)
 
             if download_dir_ != self.download_dir:
                 self.download_dir = download_dir_
 
-    def _download_data(self, url, path_to_file, interval=0.5, verbose=False, raise_error=False,
-                       print_state="Downloading", pbar_color='green', print_wrap_limit=None,
-                       verify_download_dir=True, **kwargs):
+    def download_data(self, url, path_to_file, interval=0.5, verbose=False, raise_error=False,
+                      print_state="Downloading", pbar_color='green', msg_wrap_limit=None,
+                      verify_download_dir=True, **kwargs):
         # noinspection PyShadowingNames
         """
-        Download an OSM data file.
+        Download an OSM data file from a URL.
 
-        :param url: a valid URL of an OSM data file
+        :param url: Valid URL of the OSM data file.
         :type url: str
-        :param path_to_file: path where the downloaded OSM data file is saved
+        :param path_to_file: Destination path for the downloaded file.
         :type path_to_file: str
-        :param verbose: whether to print relevant information in console; defaults to ``False``.
+        :param interval: Sleep interval (seconds) after a successful download. Defaults to ``0.5``.
+        :type interval: float | int
+        :param verbose: Whether to print progress; ``2`` for higher verbosity.
+            Defaults to ``False``.
         :type verbose: bool | int
-        :param pbar_color: Custom colour of the progress bar (e.g. 'green', 'yellow');
-            defaults to ``None``.
-        :type pbar_color: str | None
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=False`` (default), the error will be suppressed.
+        :param raise_error: Whether to raise exceptions on failure. Defaults to ``False``.
         :type raise_error: bool
-        :param kwargs: optional parameters of `pyhelpers.ops.download_file_from_url()`_
+        :param print_state: Prefix text for the status message. Defaults to ``"Downloading"``.
+        :type print_state: str
+        :param pbar_color: Color of the progress bar. Defaults to ``'green'``.
+        :type pbar_color: str
+        :param msg_wrap_limit: Maximum character length for printed messages. Defaults to ``None``.
+        :type msg_wrap_limit: int | None
+        :param verify_download_dir: Whether to update the instance's download directory.
+            Defaults to ``True``.
+        :type verify_download_dir: bool
+        :param kwargs: Optional parameters for `pyhelpers.ops.download_file_from_url`_.
 
         .. _`pyhelpers.ops.download_file_from_url()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/
@@ -948,13 +975,13 @@ class BaseDownloader:
             >>> os.path.exists(path_to_file)
             False
             >>> # Download the PBF data of Rutland
-            >>> bdl._download_data(url, path_to_file, verbose=True)
+            >>> bdl.download_data(url, path_to_file, verbose=True)
             Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 5.64MB/s ...
               Saving "rutland-latest.osm.pbf" to "./tests/osm_data/" ... Done.
             >>> os.path.isfile(path_to_file)
             True
             >>> # Download the data again
-            >>> bdl._download_data(url, path_to_file, verbose=True)
+            >>> bdl.download_data(url, path_to_file, verbose=True)
             Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 4.91MB/s ...
               Updating "rutland-latest.osm.pbf" in "./tests/osm_data/" ... Done.
             >>> os.path.isfile(path_to_file)
@@ -971,18 +998,23 @@ class BaseDownloader:
             Deleting "./tests/osm_data/" ... Done.
         """
 
-        verbose_ = verbose == 2 or False
+        # Normalize verbosity
+        verbose1 = int(verbose) == 1
+        verbose2 = int(verbose) == 2
+
+        # Track if file existed before download to prevent deleting existing data on failure
+        file_existed = os.path.isfile(path_to_file)
 
         _check_saving_path(
-            path_to_file, verbose=verbose_, state_verb=print_state, print_end=" ... ",
-            print_wrap_limit=print_wrap_limit)
+            path=path_to_file, verbose=verbose2, state_verb=print_state, end=" ... ",
+            msg_wrap_limit=msg_wrap_limit)
 
         try:
             f = io.StringIO()
             with contextlib.redirect_stdout(f):
                 download_file_from_url(
-                    url=url, path_to_file=path_to_file, verbose=(int(verbose) == 1 or False),
-                    print_wrap_limit=print_wrap_limit, pbar_color=pbar_color, **kwargs)
+                    url=url, path_to_file=path_to_file, verbose=verbose1,
+                    print_wrap_limit=msg_wrap_limit, pbar_color=pbar_color, **kwargs)
 
             out = f.getvalue()
 
@@ -992,16 +1024,17 @@ class BaseDownloader:
                 else:
                     print(out, end="")
 
-            if verbose_:
+            if verbose2:
                 time.sleep(0 if interval is None else interval)
                 print("Done.")
 
         except Exception as e:
-            if os.path.isfile(path_to_file):
+            # Only remove if we created it during this failed attempt
+            if not file_existed and os.path.isfile(path_to_file):
                 os.remove(path_to_file)
 
             _print_failure_message(
-                e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
+                e, prefix="Failed. Error:", verbose=verbose1, raise_error=raise_error)
 
             if not raise_error:
                 return None

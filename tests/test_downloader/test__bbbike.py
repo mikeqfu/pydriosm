@@ -1,6 +1,4 @@
-"""
-Tests the :py:class:`pydriosm.downloader._bbbike.BBBikeDownloader` class.
-"""
+"""Tests the class: :class:`pydriosm.downloader._bbbike.BBBikeDownloader`."""
 
 import os
 
@@ -31,34 +29,21 @@ class TestBBBikeDownloader:
         assert isinstance(bbd.subregion_index, pd.DataFrame)
         assert isinstance(bbd.catalogue, dict)
 
-    # @pytest.mark.parametrize('update', [True, False])
-    def test_get_names_of_cities(self, bbd, monkeypatch, capfd):
+    @pytest.mark.parametrize('update', [True, False])
+    def test_get_bbbike_cities(self, bbd, update, monkeypatch, capfd):
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        bbbike_cities = bbd.get_bbbike_cities(update=False, verbose=True)
+        bbbike_cities = bbd.get_bbbike_cities(update=update, verbose=True)
         out, _ = capfd.readouterr()
         # if update:
         #     assert "Retrieving/compiling the data" in out and "Done." in out
         assert isinstance(bbbike_cities, list)
 
-    # @pytest.mark.parametrize('update', [True, False])
-    def test_get_coordinates_of_cities(self, bbd, monkeypatch):
+    @pytest.mark.parametrize('update', [True, False])
+    def test_get_bbbike_cities_poly(self, bbd, update, monkeypatch):
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
-        coords_of_cities = bbd.get_coordinates_of_cities(update=False, verbose=True)
-        assert isinstance(coords_of_cities, pd.DataFrame)
-        assert coords_of_cities.columns.to_list() == [
-            'city',
-            'real_name',
-            'pref_language',
-            'local_language',
-            'country',
-            'area_or_continent',
-            'population',
-            'step',
-            'other_cities',
-            'll_longitude',
-            'll_latitude',
-            'ur_longitude',
-            'ur_latitude']
+        bbbike_city_polygons = bbd.get_bbbike_cities_poly(update=update, verbose=True)
+        assert isinstance(bbbike_city_polygons, pd.DataFrame)
+        assert set(bbbike_city_polygons.columns) == {'name', 'geometry'}
 
     @pytest.mark.parametrize('update', [True, False])
     def test_get_subregion_index(self, bbd, update, monkeypatch):
@@ -66,7 +51,7 @@ class TestBBBikeDownloader:
         subregion_index = bbd.get_subregion_index(update=update, verbose=True)
 
         assert isinstance(subregion_index, pd.DataFrame)
-        assert subregion_index.columns.to_list() == ['name', 'last_modified', 'url']
+        assert set(subregion_index.columns) == {'name', 'last_modified', 'url'}
 
     def test_get_valid_subregion_names(self, bbd):
         assert isinstance(bbd.get_valid_subregion_names(), list)
@@ -83,12 +68,13 @@ class TestBBBikeDownloader:
         out, _ = capfd.readouterr()
         assert 'Retrieving/compiling data of a download catalogue for "Birmingham" ... Done.' in out
         assert isinstance(bham_dwnld_cat, pd.DataFrame)
-        assert bham_dwnld_cat.columns.to_list() == [
-            'filename', 'url', 'data_type', 'size', 'last_update']
+        assert set(bham_dwnld_cat.columns) == {
+            'filename', 'url', 'data_type', 'size', 'last_update'}
 
     def test_get_catalogue(self, bbd):
         bbbike_catalogue = bbd.get_catalogue()
-        assert list(bbbike_catalogue.keys()) == ['FileFormat', 'DataType', 'Catalogue']
+        assert isinstance(bbbike_catalogue, dict)
+        assert set(bbbike_catalogue.keys()) == {'FileFormat', 'DataType', 'Catalogue'}
 
         catalogue = bbbike_catalogue['Catalogue']
         assert isinstance(catalogue, dict)

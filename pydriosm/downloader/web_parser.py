@@ -4,7 +4,6 @@
 
 import collections
 import concurrent.futures
-import csv
 import json
 import os
 import re
@@ -25,7 +24,7 @@ from pydriosm.utils import first_unique
 
 
 def get_geofabrik_raw_directory_index(url):
-    # noinspection PyShadowingNames
+    # noinspection PyShadowingNames,PyUnresolvedReferences
     """
     Gets a raw directory index (including download information of older file logs).
 
@@ -225,19 +224,22 @@ def _parse_geofabrik_subregion_table_tr(tr, url):
     return td_data
 
 
-def fetch_geofabrik_subregion_table(url):
+def fetch_geofabrik_subregion_table(url, return_soup=False):
     # noinspection PyShadowingNames
     """
     Fetches download information of all geographic (sub)regions on a web page.
 
     :param url: URL of a subregion's web page
     :type url: str
+    :param return_soup: Whether to return the scraped HTML object. Defaults to ``False``.
+    :type return_soup: bool
     :return: download information of all available subregions on the given ``url``
-    :rtype: pandas.DataFrame | None
+    :rtype: tuple[pandas.DataFrame | None, bs4.BeautifulSoup] | pandas.DataFrame | None
 
     **Examples**::
 
         >>> from pydriosm.downloader.web_parser import fetch_geofabrik_subregion_table
+
         >>> # Download information on the homepage
         >>> url = 'https://download.geofabrik.de/'
         >>> subregion_table = fetch_geofabrik_subregion_table(url)
@@ -251,33 +253,31 @@ def fetch_geofabrik_subregion_table(url):
         5                 Europe  ...     None
         6          North America  ...     None
         7          South America  ...     None
-        [8 rows x 6 columns]
+        [8 rows x 7 columns]
         >>> subregion_table.columns.to_list()
         ['subregion',
          'subregion-url',
          '.osm.pbf',
          '.osm.pbf-size',
+         '.gpkg.zip',
          '.shp.zip',
          '.osm.bz2']
+
         >>> # Download information about 'Great Britain'
         >>> url = 'https://download.geofabrik.de/europe/united-kingdom.html'
         >>> subregion_table = fetch_geofabrik_subregion_table(url)
         >>> subregion_table
-          subregion  ... .osm.bz2
-        0   England  ...     None
-        1  Scotland  ...     None
-        2     Wales  ...     None
-        [3 rows x 6 columns]
+                  subregion  ... .osm.bz2
+        0           Bermuda  ...     None
+        1           England  ...     None
+        2  Falkland Islands  ...     None
+        3          Scotland  ...     None
+        4             Wales  ...     None
+        [5 rows x 7 columns]
+
         >>> # Download information about 'Antarctica'
         >>> url = 'https://download.geofabrik.de/antarctica.html'
         >>> subregion_table = fetch_geofabrik_subregion_table(url)
-        Compiling information about subregions of "Antarctica" ... Failed.
-        >>> subregion_table.empty
-        True
-        >>> # To get more information about the above failure, set `verbose=2`
-        >>> subregion_table = fetch_geofabrik_subregion_table(url)
-        Compiling information about subregions of "Antarctica" ... Failed.
-        No subregion data is available for "Antarctica" on Geofabrik's free download server.
         >>> subregion_table is None
         True
     """
@@ -299,14 +299,39 @@ def fetch_geofabrik_subregion_table(url):
             trs = table.find_all('tr', onmouseover=True)
             tr_data.extend([_parse_geofabrik_subregion_table_tr(tr=tr, url=url) for tr in trs])
 
-    column_names = [  # Specify column names
-        'subregion', 'subregion-url', '.osm.pbf', '.osm.pbf-size', '.shp.zip', '.osm.bz2']
+    if tr_data:
+        ths = tables[-1].find_all('th')
+        column_names = [
+            th.get_text(strip=True) if th.get_text(strip=True) else '.osm.pbf-size' for th in ths]
 
-    tr_data_ = [dat + [None] if len(dat) == 5 else dat for dat in tr_data]
+        i1, i2 = column_names.index('.osm.pbf-size'), column_names.index('.osm.pbf')
+        column_names[i1], column_names[i2] = column_names[i2], column_names[i1]
 
-    if tr_data_:
-        subregion_table = pd.DataFrame(data=tr_data_, columns=column_names)
-        return subregion_table.replace({np.nan: None})
+        column_names += [x for x in ['.shp.zip', '.osm.bz2'] if x not in column_names]
+
+        # column_names = [  # Specify column names
+        #     'subregion',
+        #     'subregion-url',
+        #     '.osm.pbf',
+        #     '.osm.pbf-size',
+        #     '.gpkg.zip',
+        #     '.shp.zip',
+        #     '.osm.bz2'
+        # ]
+
+        tr_data_ = [dat + [None] * (len(column_names) - len(dat)) for dat in tr_data]
+        if tr_data_:
+            subregion_table = pd.DataFrame(data=tr_data_, columns=column_names)
+            subregion_table = subregion_table.rename(
+                columns={'Sub Region': 'subregion', 'Quick Links': 'subregion-url'})
+            subregion_table = subregion_table.replace({np.nan: None}).convert_dtypes()
+            if return_soup:
+                return subregion_table, soup
+            return subregion_table
+
+    if return_soup:
+        return None, soup
+    return None
 
 
 def fetch_geofabrik_continent_tables():
@@ -342,9 +367,9 @@ def fetch_geofabrik_continent_tables():
 
     # Scan the homepage to collect info of regions for each continent
     tds = soup.find_all('td', attrs={'class': 'subregion'})
-    continent_names = [td.a.text for td in tds]
+    continent_names = [td.a.get_text() for td in tds]
 
-    continent_links = [urllib.parse.urljoin(url, url=td.a['href']) for td in tds]
+    continent_links = [urllib.parse.urljoin(url, url=td.a.get('href')) for td in tds]
     continent_links_dat = [fetch_geofabrik_subregion_table(url=url) for url in continent_links]
     continent_tables = dict(zip(continent_names, continent_links_dat))
 
@@ -386,13 +411,15 @@ def compile_geofabrik_region_subregion_tiers(subregion_tables, verbose=2, indent
         :meth:`~pydriosm.downloader.GeofabrikDownloader.get_continent_tables`
     :type subregion_tables: dict
     :param verbose:
-    :type verbose:
+    :type verbose: bool | int
     :param indent_level:
-    :type indent_level: str
+    :type indent_level: str | int
     :param is_root:
     :type is_root: bool
     :param starting_message:
+    :type starting_message: str | None
     :param end_message:
+    :type end_message: str
     :return: a dictionary of region-subregion, and a list of (sub)regions without subregions
     :rtype: tuple[dict, list]
 
@@ -482,22 +509,23 @@ def fetch_geofabrik_catalogue():
     **Examples**::
 
         >>> from pydriosm.downloader.web_parser import fetch_geofabrik_catalogue
-        >>> downloads_catalogue = fetch_geofabrik_catalogue()
-        >>> type(downloads_catalogue)
+        >>> geofabrik_catalogue = fetch_geofabrik_catalogue()
+        >>> type(geofabrik_catalogue)
         pandas.core.frame.DataFrame
-        >>> catalogue.head()
+        >>> geofabrik_catalogue.head()
                        subregion  ... .osm.bz2
         0                 Africa  ...     None
         1             Antarctica  ...     None
         2                   Asia  ...     None
         3  Australia and Oceania  ...     None
         4        Central America  ...     None
-        [5 rows x 6 columns]
-        >>> catalogue.columns.to_list()
+        [5 rows x 7 columns]
+        >>> geofabrik_catalogue.columns.to_list()
         ['subregion',
          'subregion-url',
          '.osm.pbf',
          '.osm.pbf-size',
+         '.gpkg.zip',
          '.shp.zip',
          '.osm.bz2']
 
@@ -509,21 +537,7 @@ def fetch_geofabrik_catalogue():
 
     url = 'https://download.geofabrik.de/'
 
-    with requests.get(url, headers=fake_requests_headers()) as response:
-        response.raise_for_status()
-        soup = bs4.BeautifulSoup(markup=response.content, features='html.parser')
-
-    # Home table
-    home_tr_data = []
-    table_tags = soup.find_all(name='table', attrs={'id': re.compile(r'(special)?subregions')})
-    for table_tag in table_tags:
-        trs = table_tag.find_all(name='tr', onmouseover=True)
-        home_tr_data += [_parse_geofabrik_subregion_table_tr(tr=tr, url=url) for tr in trs]
-
-    column_names = [  # Specify column names
-        'subregion', 'subregion-url', '.osm.pbf', '.osm.pbf-size', '.shp.zip', '.osm.bz2']
-    home_tr_data_ = [entry + [None] if len(entry) == 5 else entry for entry in home_tr_data]
-    home_table = pd.DataFrame(data=home_tr_data_, columns=column_names)
+    home_table, soup = fetch_geofabrik_subregion_table(url=url, return_soup=True)
 
     # Fetch subregion tables concurrently
     subregion_urls = [
@@ -595,76 +609,64 @@ def fetch_valid_geofabrik_subregion_names():
 # == BBBike ========================================================================================
 
 
-def fetch_bbbike_cities(url):
+def fetch_bbbike_cities(url, raise_error=True):
+    # noinspection PyShadowingNames
     """
     Fetches the names of all the available cities.
 
     :return: list of names of cities available on BBBike free download server
     :rtype: list
 
-    url = 'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'
+    .. note::
 
+        - This function is used internally by
+          :meth:`BBBikeDownloader.get_bbbike_cities
+          <pydriosm.downloader.BBBikeDownloader.get_bbbike_cities>`, which uses
+          :attr:`BBBikeDownloader.URL<pydriosm.downloader.BBBikeDownloader.URL>`
+          as the default ``url``.
+        - The ``url`` used to default to
+          ``'https://raw.githubusercontent.com/wosch/bbbike-world/world/etc/cities.txt'``, which
+          has been unavailable.
 
-    .. seealso::
+    **Examples**::
 
-        - Examples for the method
-          :meth:`~pydriosm.downloader.BBBikeDownloader.get_names_of_cities`.
-    """
-
-    names_of_cities_ = pd.read_csv(url, header=None)
-
-    names_of_cities = list(names_of_cities_.values.flatten())
-
-    return names_of_cities
-
-
-def fetch_bbbike_city_coordinates(url, raise_error=True):
-    """
-    Fetches location information of all cities available on the BBBike download server.
-
-    :return: location information of BBBike cities, i.e. geographic (sub)regions
-    :rtype: pandas.DataFrame
+        >>> from pydriosm.downloader.web_parser import fetch_bbbike_cities
+        >>> url = 'https://download.bbbike.org/osm/bbbike/'
+        >>> cities = fetch_bbbike_cities(url)
 
     .. seealso::
 
-        - Examples for the method
-          :meth:`~pydriosm.downloader.BBBikeDownloader.get_coordinates_of_cities`.
+        - Examples for :meth:`~pydriosm.downloader.BBBikeDownloader.get_bbbike_cities`.
     """
 
-    # Fetch data from the URL
-    with requests.get(url, headers=fake_requests_headers()) as response:
+    try:  # url = 'https://download.bbbike.org/osm/bbbike/'
+        response = requests.get(url, headers=fake_requests_headers(), timeout=10)
         if raise_error:
             response.raise_for_status()
-        # Decode content and parse CSV
-        csv_data = response.content.decode('utf-8')
-        csv_reader = list(csv.reader(csv_data.splitlines(), delimiter=':'))
+        elif not response.ok:
+            return []  # Return empty list if we shouldn't raise error
 
-    clean_data = [
-        [cell.strip().strip('\u200e').replace('#', '') for cell in row] for row in csv_reader[5:-1]
-    ]
-    column_names = [col.replace('#', '').strip().capitalize() for col in csv_reader[0]]
-    cities_coords = pd.DataFrame(clean_data, columns=column_names)
+        soup = bs4.BeautifulSoup(response.content, features='html.parser')
+    except Exception as e:
+        if raise_error:
+            raise e
+        return []
 
-    # Extract coordinates and assign proper column names
-    coord_cols = ['ll_longitude', 'll_latitude', 'ur_longitude', 'ur_latitude']
-    cities_coords[coord_cols] = cities_coords['Coord'].str.split(' ', expand=True)
-    cities_coords.drop(columns=['Coord'], inplace=True)
+    # Find the table or the specific links directly
+    links = soup.find_all('a')  # Directory listings are consistently <a> tags inside <tr> or <td>
 
-    # Drop rows with missing coordinate values
-    cities_coords.dropna(subset=coord_cols, inplace=True)
+    if not links and raise_error:
+        raise ValueError(
+            f"Could not find any links at '{url}'. The page structure might have changed.")
 
-    # Process 'Real name' column
-    cities_coords['Real name'] = cities_coords['Real name'].str.split(r'[!,]').map(
-        lambda x: None if not x or x[0] == '' else dict(zip(x[::2], x[1::2]))
-    )
+    cities = []
+    for a in links:
+        text = a.get_text(strip=True)
+        # Filter: Must have text; Not parent dir
+        if text and not text.startswith((".", "Parent")):
+            cities.append(text.rstrip("/"))
 
-    # Rename columns to lowercase with underscores
-    cities_coords.columns = [
-        col.replace(' ', '_').replace('/', '_or_').replace('?', '').replace('.', '').lower()
-        for col in cities_coords.columns
-    ]
-
-    return cities_coords
+    return cities
 
 
 def fetch_bbbike_subregion_index(url, raise_error=True):
@@ -687,6 +689,7 @@ def fetch_bbbike_subregion_index(url, raise_error=True):
           :meth:`~pydriosm.downloader.BBBikeDownloader.get_subregion_index`.
     """
 
+    # url='https://download.bbbike.org/osm/bbbike/'
     with requests.get(url, headers=fake_requests_headers()) as response:
         if raise_error:
             response.raise_for_status()
@@ -708,6 +711,125 @@ def fetch_bbbike_subregion_index(url, raise_error=True):
     data['url'] = [urllib.parse.urljoin(url, x.get('href')) for x in soup.find_all('a')[1:]]
 
     return data
+
+
+def fetch_bbbike_city_poly(poly_url, raise_error=True):
+    # noinspection PyShadowingNames
+    """
+    Fetches and parses a .poly file from BBBike to a shapely Polygon.
+
+    :param poly_url: URL to the .poly file (e.g. from download.bbbike.org)
+    :type poly_url: str
+    :param raise_error: whether to raise an exception if the request fails, defaults to True
+    :type raise_error: bool
+    :return: a polygon representing the city's boundaries
+    :rtype: shapely.Polygon
+
+    **Examples**::
+
+        >>> from pydriosm.downloader.web_parser import get_bbbike_city_poly
+        >>> poly_url = 'https://download.bbbike.org/osm/bbbike/Aachen/Aachen.poly'
+        >>> aachen_poly = get_bbbike_city_poly(poly_url)
+        >>> type(aachen_poly)
+        shapely.geometry.polygon.Polygon
+        >>> print(aachen_poly)
+        POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5.88 50.99, 5.88 50.6))
+    """
+
+    # poly_url = 'https://download.bbbike.org/osm/bbbike/Aachen/Aachen.poly'
+    try:
+        response = requests.get(poly_url, headers=fake_requests_headers(), timeout=10)
+        if raise_error:
+            response.raise_for_status()
+        elif not response.ok:
+            return None
+
+        # Decode content and split into lines correctly
+        lines = response.content.decode('utf-8').splitlines()
+
+    except Exception as e:
+        if raise_error:
+            raise e
+        return None
+
+    # Osmosis polygon format:
+    # Line 0: Name, Line 1: Polygon ID, Line 2 to -2: Coords, Line -1: END
+    coords = []
+    for line in lines:
+        parts = line.strip().split()
+        # Only process lines that have exactly two numbers (Longitude and Latitude)
+        if len(parts) == 2:
+            try:
+                coords.append([float(x) for x in parts])
+            except ValueError:
+                continue  # Skip lines that aren't numeric (like the header or "END")
+
+    return shapely.geometry.Polygon(coords)  # (ll, lr, ur, ul)
+
+
+def fetch_bbbike_cities_poly(url, max_workers=10, raise_error=True):
+    # noinspection PyShadowingNames
+    """
+    Fetches poly information of all cities available on the BBBike download server.
+
+    :param url: The base URL of the BBBike download server.
+    :type url: str
+    :param max_workers: Number of parallel threads to use. Defaults to ``10``.
+    :type max_workers: int
+    :param raise_error: Whether to raise an exception if a request fails. Defaults to ``True``.
+    :type raise_error: bool
+    :return: A DataFrame containing poly information of BBBike cities, i.e. geographic (sub)regions.
+    :rtype: pandas.DataFrame
+
+    **Examples**::
+
+        >>> from pydriosm.downloader.web_parser import fetch_bbbike_cities_poly
+        >>> url = 'https://download.bbbike.org/osm/bbbike/'
+        >>> bbbike_cities_poly = fetch_bbbike_cities_poly(url)
+        >>> bbbike_cities_poly.head()
+                  name                                           geometry
+        0       Aachen  POLYGON ((5.88 50.6, 6.58 50.6, 6.58 50.99, 5....
+        1       Aarhus  POLYGON ((9.82 55.99, 10.37 55.99, 10.37 56.29...
+        2     Adelaide  POLYGON ((138.46 -35.03, 138.74 -35.03, 138.74...
+        3  Albuquerque  POLYGON ((-106.8 35, -106.47 35, -106.47 35.22...
+        4   Alexandria  POLYGON ((29.7 31.02, 30.21 31.02, 30.21 31.34...
+
+    .. seealso::
+
+        - Examples for the method
+          :meth:`~pydriosm.downloader.BBBikeDownloader.get_coordinates_of_cities`.
+    """
+
+    # Fetch the data of BBBike cities
+    subregion_index = fetch_bbbike_subregion_index(url=url, raise_error=raise_error)
+
+    if subregion_index is None:
+        return None
+
+    def _get_poly(row):
+        """Helper to construct URL and fetch the polygon."""
+        city_url = row['url']
+        city_name = city_url.rstrip('/').split('/')[-1]
+        poly_url = urllib.parse.urljoin(city_url, f"{city_name}.poly")
+
+        # Returns (index, polygon) to maintain order during threading
+        return row.name, fetch_bbbike_city_poly(poly_url, raise_error=False)
+
+    # Convert the DataFrame rows to a list of dicts/tuples for the executor
+    rows = [row for _, row in subregion_index.iterrows()]
+
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # map ensures we can process them as they complete
+        results = list(executor.map(_get_poly, rows))
+
+    # Reconstruct DataFrame, sorting it by index to ensure name and geometry match correctly
+    results.sort(key=lambda x: x[0])
+    geometries = [res[1] for res in results]
+
+    cities_poly = pd.DataFrame({'name': subregion_index['name'], 'geometry': geometries})
+
+    return cities_poly
 
 
 def fetch_bbbike_valid_subregion_names(cls_instance):

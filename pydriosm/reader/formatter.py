@@ -16,24 +16,23 @@ from pydriosm.errors import OtherTagsReformatError
 def reformat_multipolygon_point(coords):
     # noinspection PyShadowingNames
     """
-    Make the coordinates of a single 'Point' (in a 'MultiPolygon') be reformatted to
+    Makes the coordinates of a single 'Point' (in a 'MultiPolygon') be reformatted to
     a 'Polygon'-like coordinates.
 
     The list of coordinates of some 'MultiPolygon' features may contain single points.
     In order to reformat such multipart geometry (from dict into `shapely.geometry`_ type),
-    there is a need to ensure each of the constituent parts is a `shapely.geometry.Polygon`_.
+    there is a need to ensure each of the constituent parts is a `shapely.Polygon`_.
 
-    :param coords: original data of coordinates of a
-        `shapely.geometry.MultiPolygon`_ feature
+    :param coords: original data of coordinates of a `shapely.MultiPolygon`_ feature
     :type coords: list
     :return: coordinates that are reformatted as appropriate
     :rtype: list
 
     .. _`shapely.geometry`:
         https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
-    .. _`shapely.geometry.Polygon`:
+    .. _`shapely.Polygon`:
         https://shapely.readthedocs.io/en/stable/manual.html#Polygon
-    .. _`shapely.geometry.MultiPolygon`:
+    .. _`shapely.MultiPolygon`:
         https://shapely.readthedocs.io/en/stable/manual.html#MultiPolygon
 
     **Examples**::
@@ -60,9 +59,10 @@ def reformat_multipolygon_point(coords):
     return coords_
 
 
-def convert_simplex_geometry(geometry, mode=1, to_wkt=False):
+def convert_simplex_geometry(geometry, mode=1, to_wkb=False):
+    # noinspection PyUnresolvedReferences
     """
-    Transform a unitary geometry from dict into a `shapely.geometry`_ object.
+    Transforms a unitary geometry from dict into a `shapely.geometry`_ object.
 
     :param geometry: geometry data for a feature of one of the geometry types including
         ``'Point'``, ``'LineString'``, ``'MultiLineString'`` and ``'MultiPolygon'``
@@ -75,11 +75,11 @@ def convert_simplex_geometry(geometry, mode=1, to_wkt=False):
         - when ``mode=2``, the input ``geometry`` is in the `GeoJSON`_ format
 
     :type mode: int
-    :param to_wkt: whether to represent the geometry in the WKT (well-known text) format,
+    :param to_wkb: whether to represent the geometry in the WKB (Well-Known Binary) format,
         defaults to ``False``
-    :type to_wkt: bool
+    :type to_wkb: bool
     :return: reformatted geometry data
-    :rtype: shapely.geometry.Point | dict | str
+    :rtype: shapely.Point | dict | str
 
     .. _`shapely.geometry`:
         https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
@@ -90,12 +90,14 @@ def convert_simplex_geometry(geometry, mode=1, to_wkt=False):
 
     **Examples**::
 
-        >>> from pydriosm.reader.formatter import reformat_multipolygon_point
+        >>> from pydriosm.reader.formatter import convert_simplex_geometry
 
         >>> g1_dat = {'type': 'Point', 'coordinates': [-0.5134241, 52.6555853]}
         >>> g1_data = convert_simplex_geometry(g1_dat)
         >>> type(g1_data)
         shapely.geometry.point.Point
+        >>> g1_data.wkb
+        b'\x01\x01\x00\x00\x00\xb1M\xcf`\xf8m\xe0\xbf\x82\x9e\x178\xeaSJ@'
         >>> g1_data.wkt
         'POINT (-0.5134241 52.6555853)'
 
@@ -125,7 +127,7 @@ def convert_simplex_geometry(geometry, mode=1, to_wkt=False):
         >>> list(g2_data.keys())
         ['type', 'geometry', 'properties', 'id']
         >>> g2_data['geometry']
-        'POINT (-0.5134241 52.6555853)'
+        b'\x01\x01\x00\x00\x00\xb1M\xcf`\xf8m\xe0\xbf\x82\x9e\x178\xeaSJ@'
     """
 
     if mode == 1:
@@ -134,30 +136,30 @@ def convert_simplex_geometry(geometry, mode=1, to_wkt=False):
 
         if geom_type == 'MultiPolygon':
             geom_data = geom_func(
-                shapely.geometry.Polygon(y) for x in reformat_multipolygon_point(coords) for y in x)
-            # geom_data = geom.wkt if to_wkt else geom.geoms
+                shapely.Polygon(y) for x in reformat_multipolygon_point(coords) for y in x)
 
         else:
             geom_data = geom_func(coords)
             # if to_wkt:
-            #     geom_data = geom_data.wkt
+            #     geom_data = geom_data.wkb
             # elif 'Multi' in geom_type:
             #     geom_data = geom_data.geoms
 
-        if to_wkt:
-            geom_data = geom_data.wkt
+        if to_wkb:
+            geom_data = geom_data.wkb
 
     else:
         geom_data = geometry.copy()
-        dat = convert_simplex_geometry(geometry['geometry'], mode=1, to_wkt=True)
+        dat = convert_simplex_geometry(geometry['geometry'], mode=1, to_wkb=True)
         geom_data.update({'geometry': dat})
 
     return geom_data
 
 
-def convert_geometry_collection(geometry, mode=1, to_wkt=False):
+def convert_geometry_collection(geometry, mode=1, to_wkb=False):
+    # noinspection PyUnresolvedReferences
     """
-    Transform a collection of geometry from dict into a `shapely.geometry`_ object.
+    Transforms a collection of geometry from dict into a `shapely.geometry`_ object.
 
     :param geometry: geometry data for a feature of ``GeometryCollection``
     :type geometry: list | dict
@@ -169,11 +171,11 @@ def convert_geometry_collection(geometry, mode=1, to_wkt=False):
         - when ``mode=2``, the input ``geometry`` is in the `GeoJSON`_ format
 
     :type mode: int
-    :param to_wkt: whether to represent the geometry in the WKT (well-known text) format,
+    :param to_wkb: whether to represent the geometry in the WKB (Well-Known Binary) format,
         defaults to ``False``
-    :type to_wkt: bool
+    :type to_wkb: bool
     :return: reformatted geometry data
-    :rtype: shapely.geometry.base.HeterogeneousGeometrySequence | dict | str
+    :rtype: shapely.GeometryCollection | dict | str
 
     .. _`shapely.geometry`:
         https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects
@@ -184,7 +186,8 @@ def convert_geometry_collection(geometry, mode=1, to_wkt=False):
 
     **Examples**::
 
-        >>> from pydriosm.reader import PBF
+        >>> from pydriosm.reader.formatter import convert_geometry_collection
+        >>> from pydriosm.reader._pbf import PBF
         >>> from shapely.geometry import GeometryCollection
 
         >>> g1_dat_ = {
@@ -222,8 +225,8 @@ def convert_geometry_collection(geometry, mode=1, to_wkt=False):
         dict
         >>> list(g2_data.keys())
         ['type', 'geometry', 'properties', 'id']
-        >>> g2_data['geometry']
-        'GEOMETRYCOLLECTION (POINT (-0.5096176 52.6605168), POINT (-0.5097337 52.6605812))'
+        >>> type(g2_data['geometry'])
+        bytes
     """
 
     if mode == 1:
@@ -237,23 +240,24 @@ def convert_geometry_collection(geometry, mode=1, to_wkt=False):
                 geometry_collection.append(geom_func(pt for pts in coords for pt in pts))
 
         geome_data = shapely.geometry.GeometryCollection(geometry_collection)
-        if to_wkt:
-            geome_data = geome_data.wkt
+        if to_wkb:
+            geome_data = geome_data.wkb
         # else:
-        #     geome_data = shapely.geometry.GeometryCollection(geometry_collection).geoms
+        #     geome_data = shapely.GeometryCollection(geometry_collection).geoms
 
     else:
         geome_data = geometry.copy()
         geometries = geome_data['geometry']['geometries']
         geome_data.update(
-            {'geometry': convert_geometry_collection(geometries, mode=1, to_wkt=True)})
+            {'geometry': convert_geometry_collection(geometries, mode=1, to_wkb=True)})
 
     return geome_data
 
 
 def process_geometry_layer(layer_data, layer_name):
+    # noinspection PyShadowingNames
     """
-    Reformat the field of ``'geometry'`` into
+    Reformats the field of ``'geometry'`` into
     `shapely.geometry <https://shapely.readthedocs.io/en/latest/manual.html#geometric-objects>`_
     object.
 
@@ -267,6 +271,7 @@ def process_geometry_layer(layer_data, layer_name):
     **Examples**::
 
         >>> from pydriosm.reader.formatter import process_geometry_layer
+        >>> import pandas as pd
 
         >>> # An example of points layer data
         >>> lyr_name = 'points'
@@ -323,7 +328,7 @@ def process_geometry_layer(layer_data, layer_name):
 
 def reformat_other_tags(other_tags):
     """
-    Reformat a ``'other_tags'`` from string into dictionary type.
+    Reformats a ``'other_tags'`` from string into dictionary type.
 
     :param other_tags: data of ``'other_tags'`` of a single feature in a PBF data file
     :type other_tags: str | None
@@ -360,7 +365,7 @@ def reformat_other_tags(other_tags):
 
 def refresh_other_tags(prop_or_feat, mode=1):
     """
-    Refresh the original data of ``'other_tags'`` with parsed/reformatted data.
+    Refreshes the original data of ``'other_tags'`` with parsed/reformatted data.
 
     :param prop_or_feat: original data of a feature or a ``'properties'`` field
     :type prop_or_feat: dict

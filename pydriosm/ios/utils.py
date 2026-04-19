@@ -2,6 +2,7 @@
 Utilities for the :mod:`~pydriosm.ios` module.
 """
 
+import geopandas as gpd
 import pandas as pd
 from pyhelpers.text import find_similar_str, remove_punctuation
 
@@ -106,7 +107,7 @@ def validate_table_name(table_name, sub_space=''):
         'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch_W..'
     """
 
-    table_name_ = remove_punctuation(table_name, rm_whitespace=True)
+    table_name_ = remove_punctuation(table_name, normalize_whitespace=True)
 
     if sub_space:
         table_name_ = table_name_.replace(' ', sub_space)
@@ -156,9 +157,9 @@ def make_data_items(osm_data, schema_names):
     return zip(keys_to_return, (osm_data[layer] for layer in validated_layers))
 
 
-def preprocess_pdf_layer(layer_data, layer_name):
+def preprocess_osm_layer(layer_data, layer_name):
     """
-    Preprocess PBF layer data into a pandas DataFrame with WKT geometries.
+    Preprocess layer data into a pandas DataFrame with WKT geometries.
 
     :param layer_data: Layer data as a list of OGR features, a Series, or a DataFrame.
     :type layer_data: list | pandas.Series | pandas.DataFrame
@@ -167,6 +168,9 @@ def preprocess_pdf_layer(layer_data, layer_name):
     :return: Processed DataFrame with serialized geometries.
     :rtype: pandas.DataFrame
     """
+
+    if isinstance(layer_data, gpd.GeoDataFrame):
+        return layer_data
 
     # Handle OGR Feature list
     if isinstance(layer_data, list):
@@ -187,20 +191,21 @@ def preprocess_pdf_layer(layer_data, layer_name):
             valid_coords = lyr_dat['coordinates'].dropna()
             if not valid_coords.empty:
                 first_val = valid_coords.iloc[0]
-                # If it's a shapely object/geometry (has .wkt) but isn't a list
-                if not isinstance(first_val, list) and hasattr(first_val, 'wkt'):
+                # If it's a shapely object/geometry (has .wkb) but isn't a list
+                if not isinstance(first_val, list) and hasattr(first_val, 'wkb'):
                     lyr_dat['coordinates'] = lyr_dat['coordinates'].map(
-                        lambda x: x.wkt if hasattr(x, 'wkt') else x,
+                        lambda x: x.wkb if hasattr(x, 'wkb') else x,
                         na_action='ignore')
 
         # Handle Geometry columns
         geom_cols = [
             col for col in lyr_dat.columns
-            if any(hasattr(val, 'wkt') for val in lyr_dat[col].dropna().head(1))
+            if any(hasattr(val, 'wkb') for val in lyr_dat[col].dropna().head(1))
         ]
+
         for col in geom_cols:
             lyr_dat[col] = lyr_dat[col].map(
-                lambda x: x.wkt if hasattr(x, 'wkt') else x,
+                lambda x: x.wkb if hasattr(x, 'wkb') else x,
                 na_action='ignore')
 
     return lyr_dat

@@ -389,7 +389,7 @@ class PBF:
                 layer=layer, number_of_chunks=number_of_chunks, **func_args)
 
         if isinstance(layer_data, pd.DataFrame):
-            object_cols = layer_data.select_dtypes(include=['object', 'str']).columns
+            object_cols = layer_data.select_dtypes(include=['object', 'string']).columns
             layer_data[object_cols] = layer_data[object_cols].replace({np.nan: None})
 
         data = {layer_name: layer_data}

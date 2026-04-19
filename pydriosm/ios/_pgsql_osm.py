@@ -308,11 +308,11 @@ class PostgresOSM(ImportPBF):
             if self.data_source == 'Geofabrik':
                 subregion_names_ = self.downloader.get_subregions(*subregion_names_)
 
-            subrgn_names_msg = '"\n\t"'.join(subregion_names_)
+            subrgn_names_msg = '"\n  "'.join(subregion_names_)
             confirm_msg = \
                 (f"Proceed to import {osm_file_format} data of the following geographic "
                  f"(sub)region(s):\n"
-                 f"\t\"{subrgn_names_msg}\"\n  into {self.address}\n?")
+                 f"  \"{subrgn_names_msg}\"\n  into {self.address}\n?")
 
         if confirmed(confirm_msg, confirmation_required=confirmation_required):
             err_subregion_names = []
@@ -338,17 +338,15 @@ class PostgresOSM(ImportPBF):
                         'chunk_size_limit': chunk_size_limit,
                         'pickle_pbf_file': pickle_pbf_file,
                         'verbose': verbose,
-                        # 'if_exists': if_exists,
+                        **kwargs,
                     }
-                    import_args.update(read_pbf_args)
+                    final_import_args = read_pbf_args | import_args
 
                     file_size_in_mb = round(os.path.getsize(path_to_osm_pbf) / (1024 ** 2), 1)
                     if file_size_in_mb <= chunk_size_limit:
-                        import_args.update({'if_exists': if_exists})
-                        self._import_pbf(**import_args, **kwargs)
+                        self._import_pbf(if_exists=if_exists, **final_import_args)
                     else:
-                        import_args.update({'if_exists': 'append'})
-                        self._import_pbf_chunk_wisely(**import_args, **kwargs)
+                        self._import_pbf_chunk_wisely(if_exists='append', **final_import_args)
 
                     if rm_pbf_file:
                         remove_osm_file(path_to_file=path_to_osm_pbf, verbose=verbose)
@@ -358,8 +356,8 @@ class PostgresOSM(ImportPBF):
                     err_subregion_names.append(subregion_name_)
 
             if len(err_subregion_names) > 0:
-                print("Errors occurred when parsing data of the following subregion(s):", end="\n\t")
-                print('"' + '"\n\t"'.join(err_subregion_names) + '"')
+                print("Errors occurred when parsing data of the following subregion(s):", end="\n  ")
+                print('"' + '"\n  "'.join(err_subregion_names) + '"')
 
     def decode_pbf_layer(self, layer_dat, decode_geojson=True):
         """
@@ -496,7 +494,7 @@ class PostgresOSM(ImportPBF):
             >>> from pydriosm.ios import PostgresOSM
             >>> from pyhelpers.dirs import delete_dir
 
-            >>> osmdb = PostgresOSM(database_name='osmdb_test')
+            >>> osmdb = PostgresOSM(database_name='osmdb_test', verbose=True)
             Password (postgres@localhost:5432): ***
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
@@ -514,44 +512,49 @@ class PostgresOSM(ImportPBF):
               Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
             Reading "tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             Importing the data into the table "Rutland" ...
-                "points" ... Done. (6420 features)
-                "lines" ... Done. (10958 features)
-                "multilinestrings" ... Done. (71 features)
-                "multipolygons" ... Done. (9194 features)
-                "other_relations" ... Done. (33 features)
+              "points" ... Done. (6473 features)
+              "lines" ... Done. (11057 features)
+              "multilinestrings" ... Done. (71 features)
+              "multipolygons" ... Done. (9423 features)
+              "other_relations" ... Done. (33 features)
 
             >>> # Import shapefile data of Rutland
             >>> rutland_shp = osmdb.reader.read_shp(
             ...     subrgn_name, data_dir=dat_dir, rm_extracts=True, verbose=True)
-            Downloading "rutland-latest-free.shp.zip" 100%|██████████| 2.71M/2.71M | 7.22...
-              Saving "rutland-latest-free.shp.zip" to "./tests/osm_data/rutland/" ... Done.
-            Extracting "./tests/osm_data/rutland/rutland-latest-free.shp.zip"
-                to "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
-            Reading the shapefile(s) at "./tests/osm_data/rutland/rutland-latest-free-shp/" ......
-            Deleting the extracts "./tests/osm_data/rutland/rutland-latest-free-shp/" ... Done.
-            >>> osmdb.import_osm_data(rutland_shp, table_name=subrgn_name, verbose=True)
-            Proceed to import data into the table "Rutland" at postgres:***@localhost:5432/osmdb_test
+            >>> rutland_shp is None
+            True
+
+            >>> # Import geopackage data of Rutland
+            >>> rutland_gpkg = osmdb.reader.read_gpkg(
+            ...     subrgn_name, data_dir=dat_dir, download=True, verbose=True)
+            Downloading "rutland-latest-free.gpkg.zip" 100%|██████████| 3.30M/3.30M | 7.5...
+              Saving "rutland-latest-free.gpkg.zip" to "./tests/osm_data/rutland/" ... Done.
+            Parsing the data ... Done.
+            >>> osmdb.import_osm_data(rutland_gpkg, table_name=subrgn_name, verbose=True)
+            Proceed to import data into the table "Rutland" at postgres:***@localhost:5432/osmd...
             ? [No]|Yes: yes
             Importing the data ...
-                "buildings" ... Done. (5552 features)
-                "landuse" ... Done. (2436 features)
-                "natural" ... Done. (664 features)
-                "places" ... Done. (301 features)
-                "pofw" ... Done. (65 features)
-                "pois" ... Done. (1077 features)
-                "railways" ... Done. (137 features)
-                "roads" ... Done. (7294 features)
-                "traffic" ... Done. (537 features)
-                "transport" ... Done. (65 features)
-                "water" ... Done. (223 features)
-                "waterways" ... Done. (379 features)
+              "traffic" ... Done. (557 features)
+              "places" ... Done. (301 features)
+              "pois" ... Done. (1081 features)
+              "transport" ... Done. (65 features)
+              "pofw" ... Done. (65 features)
+              "natural" ... Done. (665 features)
+              "railways" ... Done. (141 features)
+              "roads" ... Done. (7315 features)
+              "waterways" ... Done. (379 features)
+              "protected_areas" ... Done. (20 features)
+              "water" ... Done. (233 features)
+              "landuse" ... Done. (2461 features)
+              "buildings" ... Done. (5706 features)
+              "adminareas" ... Done. (58 features)
 
             >>> # Retrieve the data of specific layers
             >>> lyr_names = ['points', 'multipolygons']
             >>> rutland_data_ = osmdb.fetch_data(subrgn_name, lyr_names, verbose=True)
             Fetching the data of "Rutland" ...
-                "points" ... Done.
-                "multipolygons" ... Done.
+              "points" ... Done.
+              "multipolygons" ... Done.
             >>> type(rutland_data_)
             dict
             >>> list(rutland_data_.keys())
@@ -570,23 +573,25 @@ class PostgresOSM(ImportPBF):
             >>> # Retrieve the data of all the layers from the database
             >>> rutland_data = osmdb.fetch_data(subrgn_name, layer_names=None, verbose=True)
             Fetching the data of "Rutland" ...
-                "points" ... Done.
-                "lines" ... Done.
-                "multilinestrings" ... Done.
-                "multipolygons" ... Done.
-                "other_relations" ... Done.
-                "buildings" ... Done.
-                "landuse" ... Done.
-                "natural" ... Done.
-                "places" ... Done.
-                "pofw" ... Done.
-                "pois" ... Done.
-                "railways" ... Done.
-                "roads" ... Done.
-                "traffic" ... Done.
-                "transport" ... Done.
-                "water" ... Done.
-                "waterways" ... Done.
+              "points" ... Done.
+              "lines" ... Done.
+              "multilinestrings" ... Done.
+              "multipolygons" ... Done.
+              "other_relations" ... Done.
+              "adminareas" ... Done.
+              "buildings" ... Done.
+              "landuse" ... Done.
+              "natural" ... Done.
+              "places" ... Done.
+              "pofw" ... Done.
+              "pois" ... Done.
+              "protected_areas" ... Done.
+              "railways" ... Done.
+              "roads" ... Done.
+              "traffic" ... Done.
+              "transport" ... Done.
+              "water" ... Done.
+              "waterways" ... Done.
             >>> type(rutland_data)
             dict
             >>> list(rutland_data.keys())
@@ -595,12 +600,14 @@ class PostgresOSM(ImportPBF):
              'multilinestrings',
              'multipolygons',
              'other_relations',
+             'adminareas',
              'buildings',
              'landuse',
              'natural',
              'places',
              'pofw',
              'pois',
+             'protected_areas',
              'railways',
              'roads',
              'traffic',
@@ -611,20 +618,20 @@ class PostgresOSM(ImportPBF):
             >>> # Data of the 'waterways' layer
             >>> rutland_waterways = rutland_data['waterways']
             >>> rutland_waterways.head()
-                osm_id  code  ...                                        coordinates  shape_type
-            0  3701346  8102  ...  [(-0.7536654, 52.6495358), (-0.7536236, 52.649...           3
-            1  3701347  8102  ...  [(-0.7948821, 52.6569468), (-0.7946128, 52.656...           3
-            2  3707149  8103  ...  [(-0.7262381, 52.6790459), (-0.7258244, 52.680...           3
-            3  3707303  8102  ...  [(-0.7213277, 52.6765954), (-0.7206778, 52.676...           3
-            4  4470795  8101  ...  [(-0.4995349, 52.6418825), (-0.4984075, 52.642...           3
-            [5 rows x 7 columns]
+                osm_id  ...                                           geometry
+            0  3701346  ...  LINESTRING (-0.7536654 52.6495358, -0.7536236 ...
+            1  3701347  ...  LINESTRING (-0.7948821 52.6569468, -0.7946128 ...
+            2  3707149  ...  LINESTRING (-0.7262381 52.6790459, -0.7258244 ...
+            3  3707303  ...  LINESTRING (-0.7213277 52.6765954, -0.7206778 ...
+            4  4470795  ...  LINESTRING (-0.4995349 52.6418825, -0.4984075 ...
+            [5 rows x 6 columns]
 
         Delete the test database and downloaded data files::
 
             >>> # Delete the database 'osmdb_test'
             >>> osmdb.drop_database(verbose=True)
-            Proceed to drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
+            Drop the database "osmdb_test" from postgres:***@localhost:5432?
+             [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
 
             >>> # Delete the downloaded data files
@@ -661,7 +668,7 @@ class PostgresOSM(ImportPBF):
                 for schema_name_ in schema_names_:
                     if self.subregion_table_exists(table_name_, schema_name_):
                         if verbose:
-                            print(f'\t"{schema_name_}"', end=" ... ")
+                            print(f'  "{schema_name_}"', end=" ... ")
 
                         try:
                             layer_dat = self._fetch_layer(

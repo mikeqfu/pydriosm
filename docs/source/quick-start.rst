@@ -2,16 +2,13 @@
 Quick start
 ===========
 
-For a demonstration of how `PyDriosm <https://pypi.org/project/pydriosm/>`_ works with `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data, this section of the documentation provides a quick guide with practical examples. It showcases the usage of the package for tasks such as downloading, parsing, and storage I/O of OSM data.
-
-(Also check out `GitHub <https://github.com/mikeqfu/pydriosm>`_ and `Documentation <https://pydriosm.readthedocs.io/en/latest/>`_.)
-
+This guide provides a practical overview of how handles `OpenStreetMap <https://www.openstreetmap.org/>`_ (OSM) data - specifically downloading, parsing, and performing storage I/O.
 
 .. note::
 
-    - All the data used in this quick-start tutorial will be downloaded and saved to a directory named **"tests/osm_data/"** (which will be created if it does not exist) at the current working directory.
+    - **Work directory:** All tutorial data is saved to ``tests/osm_data/`` in your current working directory. This folder will be created automatically.
 
-    - At the end of the tutorial, you will be asked to confirm whether you would like to retain or remove the directory (i.e. **"tests/osm_data/"**). If ***yes***, all the downloaded data and those generated during the tutorial will be deleted permanently.
+    - **Cleanup:** At the end of the tutorial, you will be prompted to either **retain** or **remove** this directory. Please follow the prompt carefully to avoid accidentally deleting your data.
 
 
 .. _quickstart-downloader-examples:
@@ -19,55 +16,62 @@ For a demonstration of how `PyDriosm <https://pypi.org/project/pydriosm/>`_ work
 Download data
 =============
 
-The current release of the package works for the (sub)region-based OSM data extracts, which are available from the free download servers: `Geofabrik <https://download.geofabrik.de/>`_ and `BBBike <https://extract.bbbike.org/>`_. To start with, let's use the class :class:`~pydriosm.downloader.GeofabrikDownloader` from the module :mod:`~pydriosm.downloader` to download a data file from the `Geofabrik free download server <https://download.geofabrik.de/>`_.
+The current release of ``pydriosm`` supports subregion-based OSM data extracts from free download servers, including `Geofabrik <https://download.geofabrik.de/>`_ and `BBBike <https://extract.bbbike.org/>`_.
+
+To begin, we use the :class:`~pydriosm.downloader.GeofabrikDownloader` class to interface with the `Geofabrik free download server <https://download.geofabrik.de/>`_.
 
 
 .. code-block:: python
 
     >>> from pydriosm.downloader import GeofabrikDownloader
-    >>> # from pydriosm import GeofabrikDownloader
 
-    >>> # Create an instance for downloading the Geofabrik free data extracts
+    >>> # Initialize the downloader
     >>> gfd = GeofabrikDownloader()
 
     >>> gfd.LONG_NAME  # Name of the data
     'Geofabrik OpenStreetMap data extracts'
 
-    >>> gfd.FILE_FORMATS  # Available file formats
-    {'.osm.bz2', '.osm.pbf', '.shp.zip'}
+    >>> # View supported file formats
+    >>> gfd.FILE_FORMATS
+    {'.gpkg.zip', '.osm.bz2', '.osm.pbf', '.shp.zip'}
 
 
-To explore what data is available for download, you may check a download catalogue by using the method :meth:`GeofabrikDownloader.get_catalogue()<pydriosm.downloader.GeofabrikDownloader.get_catalogue>`:
+Exploring the catalogue
+-----------------------
+
+To see which regions are available for download, use the :meth:`GeofabrikDownloader.get_catalogue()<pydriosm.downloader.GeofabrikDownloader.get_catalogue>` method:
 
 
 .. code-block:: python
 
-    >>> # A download catalogue for all subregions
+    >>> # The download catalogue for all available subregions
     >>> geofabrik_download_catalogue = gfd.get_catalogue()
     >>> geofabrik_download_catalogue.head()
-                   subregion  ...                                           .osm.bz2
-    0                 Africa  ...  https://download.geofabrik.de/africa-latest.os...
-    1             Antarctica  ...  https://download.geofabrik.de/antarctica-lates...
-    2                   Asia  ...  https://download.geofabrik.de/asia-latest.osm.bz2
-    3  Australia and Oceania  ...  https://download.geofabrik.de/australia-oceani...
-    4        Central America  ...  https://download.geofabrik.de/central-america-...
+                   subregion  ... .osm.bz2
+    0                 Africa  ...     None
+    1             Antarctica  ...     None
+    2                   Asia  ...     None
+    3  Australia and Oceania  ...     None
+    4        Central America  ...     None
+    [5 rows x 7 columns]
 
-    [5 rows x 6 columns]
 
+Downloading a specific (sub)region
+----------------------------------
 
-If we would like to download a `protocolbuffer binary format <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ (PBF) data file of a specific geographic region, we need to specify the name of the (sub)region and the file format (i.e. ``".pbf"`` or ``".osm.pbf"``). For example, let's try to download the PBF data of ``'London'`` and save it to a directory ``"tests/osm_data"``:
+To download a `Protocolbuffer Binary Format <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ (PBF) file, specify the subregion name and the format (e.g. ``".pbf"`` or ``".osm.pbf"``). Let's download the data for **London** and save it to our local directory:
 
 
 .. code-block:: python
 
-    >>> subrgn_name = 'London'  # Name of a (sub)region; case-insensitive
-    >>> file_format = ".pbf"  # OSM data file format
-    >>> dwnld_dir = "tests/osm_data"  # Name of or path to a directory where the data is saved
+    >>> subregion_name = 'London'  # Name of a (sub)region; case-insensitive
+    >>> osm_file_format = ".pbf"  # OSM data file format
+    >>> download_dir = "tests/osm_data"  # Directory where the data is saved
 
-    >>> # Download the OSM PBF data of London from Geofabrik download server
-    >>> gfd.download_data(
-    ...     subregion_names=subrgn_name, osm_file_formats=file_format, download_dir=dwnld_dir,
-    ...     verbose=True)
+    >>> # This will prompt for confirmation before starting
+    >>> path_to_london_pbf = gfd.download_data(
+    ...     subregion_names=subregion_name, osm_file_formats=osm_file_format,
+    ...     download_dir=download_dir, ret_download_path=True, verbose=True)
     Proceed to download data in the format '.osm.pbf' for the following geographic (sub)reg...
         "Greater London"
       to "./tests/osm_data/greater-london/"
@@ -76,48 +80,17 @@ If we would like to download a `protocolbuffer binary format <https://wiki.opens
       Saving "greater-london-latest.osm.pbf" to "./tests/osm_data/greater-london/" ... Done.
 
 
-Since the data has been successfully downloaded, it will not be downloaded again if you run the method given the same arguments:
-
-
-.. code-block:: python
-
-    >>> gfd.download_data(
-    ...     subregion_names=subrgn_name, osm_file_formats=file_format, download_dir=dwnld_dir,
-    ...     verbose=True)
-    "greater-london-latest.osm.pbf" already exists in "./tests/osm_data/greater-london/".
-
+After the downloading process completes, we can find the downloaded data file at ``tests/osm_data/`` and the (default) filename is ``greater-london-latest.osm.pbf``.
 
 .. note::
 
-    - If the data file does not exist at the specified directory, we would need to confirm whether to proceed to download it as, by default, ``confirmation_required=True``. To skip the confirmation requirement, we could set ``confirmation_required=False``.
-
-    - The parameter ``download_dir`` is by default ``None``, in which case the downloaded data file is saved to the default data directory. For example, the default directory for in the case above should be **"geofabrik/europe/united-kingdom/england/greater-london/"**.
-
-    - After the downloading process completes, we can find the downloaded data file at **"tests/osm_data/"** and the (default) filename is **greater-london-latest.osm.pbf**.
-
-    - The parameter ``update`` is by default ``False``. When the data file already exists at the specified or default download directory and we set ``update=True``, the method would replace the existing file with a freshly downloaded one.
+    - **Confirmation:** By default, ``confirmation_required=True``. Set it to ``False`` to skip the manual "yes/no" step.
+    - **Default paths:** If ``download_dir=None``, the file is saved to a structured default path, e.g. ``geofabrik/europe/united-kingdom/england/greater-london/``.
+    - **Downloaded files:** Set ``ret_download_path=True`` to return a list of absolute paths of the downloaded files.
+    - **Updates:** If a file already exists, it won't be re-downloaded unless you set ``update=True``.
 
 
-If we would also like to have the path to the downloaded file, we could set ``ret_download_path=True``. See the example below:
-
-
-.. code-block:: python
-
-    >>> path_to_london_pbf = gfd.download_data(
-    ...     subregion_names=subrgn_name, osm_file_formats=file_format, download_dir=dwnld_dir,
-    ...     update=True, verbose=2, ret_download_path=True)
-    "greater-london-latest.osm.pbf" already exists in "./tests/osm_data/greater-london/".
-    Proceed to update the data in the format '.osm.pbf' for the following geographic (sub)r...
-        "Greater London"
-      in "./tests/osm_data/greater-london/"
-    ? [No]|Yes: yes
-    Downloading "greater-london-latest.osm.pbf" 100%|██████████| 123M/123M | 32.4MB/s...
-      Updating "greater-london-latest.osm.pbf" in "./tests/osm_data/greater-london/" ... Done.
-
-
-In the example above, ``update=True`` allowed us to download the PBF data file again and replace the existing one.
-
-Now let's check the file path and the filename of the downloaded data:
+Check the file path and the filename of the downloaded data:
 
 
 .. code-block:: python
@@ -136,15 +109,14 @@ Now let's check the file path and the filename of the downloaded data:
     Default filename: "greater-london-latest.osm.pbf"
 
 
-Alternatively, you could also make use of the method :meth:`.get_default_pathname()<pydriosm.downloader.GeofabrikDownloader.get_default_pathname>` to get the default path to the data file (even when it does not exist):
-
-We could also make use of the method :meth:`~pydriosm.downloader.GeofabrikDownloader.get_default_pathname` to directly get the information (even if the file does not exist):
+We could use the :meth:`~pydriosm.downloader.GeofabrikDownloader.get_default_pathname` method to get the information (even if the file does not exist):
 
 
 .. code-block:: python
 
     >>> download_info = gfd.get_valid_download_info(subrgn_name, file_format, dwnld_dir)
     >>> subrgn_name_, london_pbf_filename, london_pbf_url, london_pbf_pathname = download_info
+
     >>> print(f'Current (relative) path: "{os.path.relpath(london_pbf_pathname)}"')
     Current (relative) path: "tests\osm_data\greater-london\greater-london-latest.osm.pbf"
 
@@ -152,23 +124,23 @@ We could also make use of the method :meth:`~pydriosm.downloader.GeofabrikDownlo
     Default filename: "greater-london-latest.osm.pbf"
 
 
-In addition, we can also download the data of multiple (sub)regions at one go. For example, let's now download the PBF data of both ``'West Yorkshire'`` and ``'West Midlands'``, and return their file paths:
+In addition, we can also download the data of multiple (sub)regions at one go. For example, download the PBF data of both ``'West Yorkshire'`` and ``'West Midlands'``, and return the file paths:
 
 
 .. code-block:: python
 
-    >>> subrgn_names = ['West Yorkshire', 'West Midlands']
+    >>> subregion_names = ['West Yorkshire', 'West Midlands']
     >>> paths_to_pbf = gfd.download_data(
-    ...     subregion_names=subrgn_names, osm_file_formats=file_format,
-    ...     download_dir=dwnld_dir, verbose=True, ret_download_path=True)
+    ...     subregion_names=subregion_names, osm_file_formats=osm_file_format,
+    ...     download_dir=download_dir, ret_download_path=True, verbose=True)
     Proceed to download data in the format '.osm.pbf' for the following geographic (sub)reg...
         "West Midlands"
         "West Yorkshire"
       to "./tests/osm_data/"
     ? [No]|Yes: yes
-    Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 50.6M/50.6M | 31.5MB/s...
+    Downloading "west-yorkshire-latest.osm.pbf" 100%|██████████| 51.0M/51.0M | 31.5MB/s...
       Saving "west-yorkshire-latest.osm.pbf" to "./tests/osm_data/west-yorkshire/" ... Done.
-    Downloading "west-midlands-latest.osm.pbf" 100%|██████████| 58.3M/58.3M | 31.1MB/s ...
+    Downloading "west-midlands-latest.osm.pbf" 100%|██████████| 58.4M/58.4M | 31.1MB/s ...
       Saving "west-midlands-latest.osm.pbf" to "./tests/osm_data/west-midlands/" ... Done.
 
 
@@ -185,32 +157,33 @@ Check the pathnames of the data files:
 
 .. _quickstart-reader-examples:
 
-Read/parse data
-===============
+Read and parse data
+===================
 
-To read/parse any of the downloaded data files above, we can use the class :class:`~pydriosm.reader.PBF` or :class:`~pydriosm.reader.GeofabrikReader`, which requires the python package `GDAL <https://pypi.org/project/GDAL/>`_.
-
+Once downloaded, we can parse OSM data into Python objects using :class:`~pydriosm.reader.GeofabrikReader`. This class utilizes `GDAL <https://pypi.org/project/GDAL/>`_ for parsing.
 
 .. _quickstart-reader-parse-pbf-data:
 
-PBF data (.pbf / .osm.pbf)
---------------------------
+Parsing PBF data
+----------------
 
-Now, let's try to use the method :meth:`GeofabrikReader.read_pbf()<pydriosm.reader.GeofabrikReader.read_pbf>` to read the PBF data of the subregion ``'Rutland'``:
+Let's read the Rutland subregion. If the file isn't found locally, the :meth:`~pydriosm.reader.GeofabrikReader.read_pbf` method can automatically download it for you:
+
 
 .. code-block:: python
 
-    >>> from pydriosm.reader import GeofabrikReader  # from pydriosm import GeofabrikReader
+    >>> from pydriosm.reader import GeofabrikReader
 
-    >>> # Create an instance for reading the downloaded Geofabrik data extracts
+    >>> # Initialize the reader
     >>> gfr = GeofabrikReader()
 
-    >>> subrgn_name = 'Rutland'
-    >>> dat_dir = dwnld_dir  # i.e. "tests/osm_data"
+    >>> subregion_name = 'Rutland'
+    >>> data_dir = download_dir  # i.e. "tests/osm_data"
 
+    >>> # Read raw features (as GDAL Feature objects)
     >>> rutland_pbf_raw = gfr.read_pbf(
-    ...     subregion_name=subrgn_name, data_dir=dat_dir, verbose=True)
-    Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 1.76MB/s | ETA: 00:00
+    ...     subregion_name=subregion_name, data_dir=data_dir, verbose=True)
+    Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.89M/1.89M | 1.76MB/s | ...
       Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
     Reading "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
 
@@ -241,23 +214,25 @@ Check the data types:
       <class 'osgeo.ogr.Feature'>
 
 
-As we see from the above, the variable ``rutland_pbf_raw`` is in `dict <https://docs.python.org/3/library/stdtypes.html#dict>`_ type. It has five keys: ``'points'``, ``'lines'``, ``'multilinestrings'``, ``'multipolygons'`` and ``'other_relations'``, each of which corresponds to the name of a layer of the PBF data.
-
-However, the raw data is not human-readable. We can set ``readable=True`` to parse the individual features using `GDAL <https://pypi.org/project/GDAL/>`_.
-
+The resulting dictionary contains five layers: ``'points'``, ``'lines'``, ``'multilinestrings'``, ``'multipolygons'``, and ``'other_relations'``.
 
 .. note::
 
-    - The method :meth:`GeofabrikReader.read_pbf()<pydriosm.reader.GeofabrikReader.read_pbf>`, which relies on `GDAL <https://pypi.org/project/GDAL/>`_, may take tens of minutes (or even much longer) to parse a PBF data file, depending on the size of the data file.
+    - **Performance:** The :meth:`~pydriosm.reader.GeofabrikReader.read_pbf` method may take tens of minutes (or even much longer) to parse a PBF data file, depending on the size of the data file.
+    - **Large data:** If the size of a PBF data file is greater than the specified ``chunk_size_limit`` (default: ``50`` MB), the data will be parsed in a chunk-wise manner.
 
-    - If the size of a data file is greater than the specified ``chunk_size_limit`` (which defaults to ``50`` MB), the data will be parsed in a chunk-wise manner.
+
+Make raw PBF readable
+---------------------
+
+Raw GDAL features are not easily manipulated in Python. Set ``readable=True`` to parse them into standard Python dictionaries (GeoJSON-like) or ``expand=True`` to convert them into a **Pandas DataFrame**.
 
 
 .. code-block:: python
 
-    >>> # Set `readable=True`
+    >>> # Parse into a DataFrame with geometry objects
     >>> rutland_pbf_parsed_0 = gfr.read_pbf(
-    ...     subregion_name=subrgn_name, data_dir=dat_dir, readable=True, verbose=True)
+    ...     subregion_name=subregion_name, data_dir=data_dir, readable=True, verbose=True)
     Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
 
 
@@ -282,7 +257,7 @@ Check the data types:
       <class 'pandas.Series'>
 
 
-Let's further check out the ``'points'`` layer as an example:
+Let's take a look at the ``'points'`` layer as an example:
 
 
 .. code-block:: python
@@ -313,7 +288,7 @@ Let's further check out the ``'points'`` layer as an example:
      'id': 14558402}
 
 
-Each row (i.e. feature) of ``rutland_pbf_points_0`` is `GeoJSON <https://geojson.org/>`_ data, which is a nested dictionary.
+Each row (or, a feature) of ``rutland_pbf_points_0`` is `GeoJSON <https://geojson.org/>`_ data, which is a nested dictionary.
 
 The charts (:numref:`points` - :numref:`other_relations`) below illustrate the different geometry types and structures (i.e. all keys within the corresponding `GeoJSON <https://geojson.org/>`_ data) for each layer:
 
@@ -366,7 +341,7 @@ If we set ``expand=True``, we can transform the `GeoJSON <https://geojson.org/>`
 .. code-block:: python
 
     >>> rutland_pbf_parsed_1 = gfr.read_pbf(
-    ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True, verbose=True)
+    ...     subregion_name=subregion_name, data_dir=data_dir, expand=True, verbose=True)
     Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
 
 
@@ -402,7 +377,8 @@ For example, let's now try ``expand=True`` and ``parse_geometry=True``:
 .. code-block:: python
 
     >>> rutland_pbf_parsed_2 = gfr.read_pbf(
-    ...     subrgn_name, data_dir=dat_dir, expand=True, parse_geometry=True, verbose=True)
+    ...     subregion_name=subregion_name, data_dir=data_dir, expand=True,
+    ...     parse_geometry=True, verbose=True)
     Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
 
     >>> rutland_pbf_points_2 = rutland_pbf_parsed_2['points']
@@ -429,51 +405,54 @@ We can see the difference in ``'geometry'`` column between ``rutland_pbf_points_
 
 .. note::
 
-    - If only the name of a geographic (sub)region is provided, e.g. ``rutland_pbf = gfr.read_pbf(subregion_name='Rutland')``, the method will go to look for the data file at the default file path. Otherwise, you need to specify ``data_dir`` where the data file is.
-
+    - If only the name of a (sub)region is provided, e.g. ``rutland_pbf = gfr.read_pbf(subregion_name='Rutland')``, the method will go to look for the data file at the default file path. Otherwise, you need to specify ``data_dir`` where the data file is.
     - If the data file does not exist at the default or specified directory, the method will by default try to download it first. To give up downloading the data, setting ``download=False``.
-
     - When ``pickle_it=True``, the parsed data will be saved as a `Pickle <https://docs.python.org/3/library/pickle.html#module-pickle>`_ file. When you run the method next time, it will try to load the `Pickle <https://docs.python.org/3/library/pickle.html#module-pickle>`_ file first, provided that ``update=False`` (default); if ``update=True``, the method will try to download and parse the latest version of the data file. Note that ``pickle_it=True`` works only when ``readable=True`` and/or ``expand=True``.
 
 
 .. _quickstart-reader-parse-shp-data:
 
-Shapefiles (.shp.zip / .shp)
-----------------------------
+Parsing Shapefiles
+------------------
 
-To read shapefile data, we can use the method :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` or :meth:`SHP.read_shp()<pydriosm.reader._shp.SHP.read_shp>`, which relies on `PyShp <https://pypi.org/project/pyshp/>`_ (or optionally, `GeoPandas <http://geopandas.org/>`_.
-
+To demonstrate reading OSM Shapefile data, we switch to the `BBBike <https://extract.bbbike.org/>`_ server. We use the :meth:`~pydriosm.reader.BBBikeReader.read_shp` method, which utilizes `GeoPandas <http://geopandas.org/>`_ to return data as a GeoDataFrame.
 
 .. note::
 
-    - `GeoPandas <http://geopandas.org/>`_ is not required for the `installation of pydriosm <https://pydriosm.readthedocs.io/en/latest/installation.html>`_.
+    - `PyShp <https://pypi.org/project/pyshp/>`_ is not required for the `installation of pydriosm <https://pydriosm.readthedocs.io/en/latest/installation.html>`_.
 
-
-For example, let's now try to read the ``'railways'`` layer of the shapefile of ``'London'`` by using :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>`:
+For example, let's now try to read the ``'railways'`` layer of the shapefile of ``'London'`` by using :meth:`BBBikeReader.read_shp()<pydriosm.reader.BBBikeReader.read_shp>`:
 
 
 .. code-block:: python
 
-    >>> subrgn_name = 'London'
-    >>> lyr_name = 'railways'
+    >>> from pydriosm.reader import BBBikeReader
 
-    >>> london_shp = gfr.read_shp(
-    ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir, verbose=True)
+    >>> bbr = BBBikeReader()
+
+    >>> subregion_name = 'London'
+    >>> layer_name = 'railways'
+
+    >>> # Attempt to read
+    >>> london_shp = bbr.read_shp(
+    ...     subregion_name=subregion_name, layer_names=layer_name, data_dir=data_dir,
+    ...     verbose=True)
     Traceback (most recent call last):
       ...
-    FileNotFoundError: The shapefile "greater-london-latest-free.shp.zip" is not available.
+    FileNotFoundError: The shapefile "London.osm.shp.zip" is not available.
       Set `download=True` to download it.
 
-    >>> london_shp = gfr.read_shp(
-    ...     subregion_name=subrgn_name, layer_names=lyr_name, data_dir=dat_dir,
+    >>> # If the file is missing, set download=True
+    >>> london_shp = bbr.read_shp(
+    ...     subregion_name=subregion_name, layer_names=layer_name, data_dir=data_dir,
     ...     download=True, verbose=True)
-    Downloading "greater-london-latest-free.shp.zip" 100%|██████████| 196M/196M | 32.8MB/s
-      Saving "greater-london-latest-free.shp.zip" to "./tests/osm_data/greater-london/" ......
+    Downloading "London.osm.shp.zip" 100%|██████████| 248M/248M | 32.8MB/s
+      Saving "London.osm.shp.zip" to "./tests/osm_data/london/" ......
     Extracting the following layer(s):
         'railways'
-      from: "./tests/osm_data/greater-london/greater-london-latest-free.shp.zip" ...
-        to: "./tests/osm_data/greater-london/greater-london-latest-free-shp/" ... Done.
-    Reading "./tests/osm_data/greater-london/greater-london-latest-free-shp/gis_osm_railway...
+      from: "./tests/osm_data/london/London.osm.shp.zip" ...
+        to: "./tests/osm_data/london/" ... Done.
+    Reading "./tests/osm_data/london/London-shp/shape/railways.shp" ... Done.
 
 
 Check the data:
@@ -494,90 +473,88 @@ Check the data:
     >>> layer_type = type(london_shp[lyr_name])
     >>> print(f"Data type of the '{lyr_name}' layer:\n  {layer_type}")
     Data type of the 'railways' layer:
-      <class 'pandas.DataFrame'>
+      <class 'geopandas.geodataframe.GeoDataFrame'>
 
 
-Similar to the parsed PBF data, ``london_shp`` is also in `dict <https://docs.python.org/3/library/stdtypes.html#dict>`_ type, with the ``layer_name`` being its key by default.
+Similar to the parsed PBF data, ``london_shp`` is also a dictionary with the ``layer_name`` being its key by default.
 
 
 .. code-block:: python
 
-    >>> london_railways_shp = london_shp[lyr_name]  # london_shp['railways']
+    >>> london_railways_shp = london_shp[layer_name]  # london_shp['railways']
     >>> london_railways_shp.head()
-       osm_id  code  ...                                        coordinates shape_type
-    0   30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
-    1  101298  6103  ...  [(-0.2249929, 51.4937016), (-0.2251555, 51.494...          3
-    2  101486  6103  ...  [(-0.2055497, 51.5195429), (-0.2051377, 51.519...          3
-    3  101511  6101  ...  [(-0.2119027, 51.5241906), (-0.2108059, 51.523...          3
-    4  282898  6103  ...  [(-0.1861961, 51.6159196), (-0.1868707, 51.613...          3
-    [5 rows x 9 columns]
+       osm_id  ...                                           geometry
+    0   30804  ...     LINESTRING (0.00486 51.62793, 0.0062 51.62927)
+    1  101298  ...  LINESTRING (-0.22499 51.4937, -0.22516 51.4945...
+    2  101486  ...  LINESTRING (-0.20555 51.51954, -0.20514 51.519...
+    3  101511  ...  LINESTRING (-0.2119 51.52419, -0.21081 51.5239...
+    4  282898  ...   LINESTRING (-0.1862 51.61592, -0.18687 51.61386)
+    [5 rows x 4 columns]
 
 
 .. note::
 
-    - When ``layer_name=None`` (default), all layers will be included.
-
-    - The parameter ``feature_names`` is related to ``'fclass'`` in ``london_railways_shp``. You can specify one feature name (or multiple feature names) to get a subset of ``london_railways_shp``.
-
-    - If the method :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` could not find the target *.shp* file at the default or specified directory (i.e. ``dat_dir``), it will try to extract the *.shp* file from the *.shp.zip* file.
-
-    - If the *.shp.zip* file is not available either, the method :meth:`GeofabrikReader.read_shp()<pydriosm.reader.GeofabrikReader.read_shp>` will try download the data first, provided that ``download=True``; otherwise, setting ``update=True`` would allow the method to download the latest version of the data despite the availability of the *.shp.zip* file.
-
-    - If you'd like to delete the *.shp* files and/or the downloaded *.shp.zip* file, set the parameters ``rm_extracts=True`` and/or ``rm_shp_zip=True``.
+    - **Layer selection:** If ``layer_names=None`` (default), all available layers in the shapefile will be read.
+    - **Automatic workflow:** The reader is "smart" - it will try to find the ``.shp`` file first, then look for a ``.shp.zip`` to extract from, and finally download from the server if ``download=True``.
+    - **Cleanup:** You can automatically delete intermediate files after reading by setting ``rm_extracts=True`` and/or ``rm_shp_zip=True``.
 
 
 .. _quickstart-reader-merge-subregion-layer-shp:
 
-If we would like to combine multiple (sub)regions over a certain layer, we can use the method :meth:`GeofabrikReader.merge_shp_layers()<pydriosm.reader.GeofabrikReader.merge_shp_layers>` to concatenate the *.shp* files of the specific layer.
+Merging subregion shapefiles
+----------------------------
 
-For example, let's now merge the ``'railways'`` layers of ``'London'`` and ``'Kent'``:
+If you need to analyze multiple regions together, you can merge layers from different subregions into a single Shapefile using :meth:`~pydriosm.reader.BBBikeReader.merge_shp_layers`.
+
+For example, let's merge the railways of **London** and **Birmingham**:
 
 
 .. code-block:: python
 
-    >>> subrgn_names = ['London', 'Kent']
-    >>> lyr_name = 'railways'
+    >>> subregion_names = ['London', 'Birmingham']
+    >>> layer_name = 'railways'
 
-    >>> path_to_merged_shp = gfr.merge_shp_layers(
-    ...     subregion_names=subrgn_names, layer_name=lyr_name, data_dir=dat_dir, verbose=True,
-    ...     ret_merged_shp_path=True)
-    "greater-london-latest-free.shp.zip" already exists in "./tests/osm_data/greater-london/".
+    >>> path_to_merged_shp = bbr.merge_shp_layers(
+    ...     subregion_names=subregion_names, layer_name=layer_name, data_dir=data_dir,
+    ...     ret_merged_shp_path=True, verbose=True)
+    "London.osm.shp.zip" already exists in "./tests/osm_data/london/".
     Proceed to download data in the format '.shp.zip' for the following geographic (sub)reg...
-        "Kent"
+        "Birmingham"
       to "./tests/osm_data/"
     ? [No]|Yes: yes
-    Downloading "kent-latest-free.shp.zip" 100%|██████████| 89.1M/89.1M | 1.18MB/s | ETA...
-      Saving "kent-latest-free.shp.zip" to "./tests/osm_data/kent/" ... Done.
+    Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 18.1MB/s | ETA...
+      Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
     Merging the following shapefiles:
-        "greater-london_gis_osm_railways_free_1.shp"
-        "kent_gis_osm_railways_free_1.shp"
+      "london_railways.shp"
+      "birmingham_railways.shp"
       In progress ... Done.
-        Find the merged shapefile in "./tests/osm_data/gre_lon-ken-railways/".
+        Find the merged shapefile in "./tests/osm_data/lon-bir-railways/".
 
     >>> # Relative path of the merged shapefile
     >>> print(f"\"{os.path.relpath(path_to_merged_shp[0])}\"")
-    "tests\osm_data\gre_lon-ken-railways\linestring.shp"
+    "tests\osm_data\lon-bir-railways\lon-bir-railways.shp"
 
 
-We can read the merged shapefile data by using the method :meth:`SHP.read_layer_shps()<pydriosm.reader._shp.SHP.read_layer_shps>`:
+We can then read this merged data back into Python using :meth:`SHP.read_shp()<pydriosm.reader._shp.SHP.read_shp>` or :meth:`SHP.read_layer_shps()<pydriosm.reader._shp.SHP.read_layer_shps>`, or use the internal ``SHP`` utility:
 
 
 .. code-block:: python
 
-    >>> from pydriosm.reader import SHP  # from pydriosm import SHP
+    >>> # Optional
+    >>> # from pydriosm.reader import SHP
 
-    >>> london_kent_railways = SHP.read_layer_shps(path_to_merged_shp)
-    >>> london_kent_railways.head()
-       osm_id  code  ...                                        coordinates shape_type
-    0   30804  6101  ...  [(0.0048644, 51.6279262), (0.0061979, 51.62926...          3
-    1  101298  6103  ...  [(-0.2249929, 51.4937016), (-0.2251555, 51.494...          3
-    2  101486  6103  ...  [(-0.2055497, 51.5195429), (-0.2051377, 51.519...          3
-    3  101511  6101  ...  [(-0.2119027, 51.5241906), (-0.2108059, 51.523...          3
-    4  282898  6103  ...  [(-0.1861961, 51.6159196), (-0.1868707, 51.613...          3
-    [5 rows x 9 columns]
+    >>> lon_bir_railways = bbr.SHP.read_layer_shps(path_to_merged_shp)
+    >>> lon_bir_railways.head()
+       osm_id  ...                                           geometry
+    0   30804  ...     LINESTRING (0.00486 51.62793, 0.0062 51.62927)
+    1  101298  ...  LINESTRING (-0.22499 51.4937, -0.22516 51.4945...
+    2  101486  ...  LINESTRING (-0.20555 51.51954, -0.20514 51.519...
+    3  101511  ...  LINESTRING (-0.2119 51.52419, -0.21081 51.5239...
+    4  282898  ...   LINESTRING (-0.1862 51.61592, -0.18687 51.61386)
+    [5 rows x 4 columns]
 
 
-For more details, also check out the methods :meth:`SHP.merge_shps()<pydriosm.reader._shp.SHP.merge_shps>` and :meth:`SHP.merge_layers()<pydriosm.reader._shp.SHP.merge_layers>`.
+For more details, also check out :meth:`SHP.merge_shps()<pydriosm.reader._shp.SHP.merge_shps>` and :meth:`SHP.merge_layers()<pydriosm.reader._shp.SHP.merge_layers>`.
 
 
 .. _quickstart-ios-examples:
@@ -630,11 +607,8 @@ The example is illustrated in :numref:`pbf_db_example`:
 .. note::
 
     - The parameter ``password`` is by default ``None``. If we don't specify a password for creating an instance, we'll need to manually type in the password to the PostgreSQL server.
-
     - The class :class:`~pydriosm.ios.PostgresOSM` incorporates the classes for downloading and reading OSM data from the modules :mod:`~pydriosm.downloader` and :mod:`~pydriosm.reader` as properties. In the case of the above instance, ``osmdb.downloader`` is equivalent to the class :class:`~pydriosm.downloader.GeofabrikDownloader`, as the parameter ``data_source='Geofabrik'`` by default.
-
     - To relate the instance ``osmdb_test`` to `BBBike <https://extract.bbbike.org/>`_ data, we could just run ``osmdb.data_source = 'BBBike'``.
-
     - See also the example of :ref:`reading Birmingham shapefile data<quickstart-ios-specific-shp-layer-birmingham>`.
 
 
@@ -650,25 +624,26 @@ For example, let's now try to import ``rutland_pbf_parsed_1`` (*see also* :ref:`
 
 .. code-block:: python
 
-    >>> subrgn_name = 'Rutland'
+    >>> subregion_name = 'Rutland'
 
     >>> osmdb.import_osm_data(
-    ...     rutland_pbf_parsed_1, table_name=subrgn_name, schema_names=None, verbose=True)
+    ...     osm_data=rutland_pbf_parsed_1, table_name=subregion_name, schema_names=None,
+    ...     verbose=True)
     Proceed to import data into the table "Rutland" at postgres:***@localhost:5432/osmdb_test
     ? [No]|Yes: yes
     Importing the data ...
-        "points" ... Done: <total of rows> features.
-        "lines" ... Done: <total of rows> features.
-        "multilinestrings" ... Done: <total of rows> features.
-        "multipolygons" ... Done: <total of rows> features.
-        "other_relations" ... Done: <total of rows> features.
+      "points" ... Done: <total of rows> features.
+      "lines" ... Done: <total of rows> features.
+      "multilinestrings" ... Done: <total of rows> features.
+      "multipolygons" ... Done: <total of rows> features.
+      "other_relations" ... Done: <total of rows> features.
 
 
 .. note::
 
-    - The parameter ``schema_names`` is by default ``None``, meaning that we import all the five layers of the PBF data into the database.
+    - The parameter ``schema_names`` is by default ``None``, meaning that we import all the available layers of the PBF data into the database.
 
-In the example above, five schemas are *'points'*, *'lines'*, *'multilinestrings'*, *'multipolygons'* and *'other_relations'*. If they do not exist, they will be created in the database *'osmdb_test'* when running the method :meth:`~pydriosm.ios.PostgresOSM.import_osm_data`. Each of the schemas corresponds to a key (i.e. name of a layer) of ``rutland_pbf_parsed_1`` (as illustrated in :numref:`pbf_schemas_example`); the data of each layer is imported into a table named as "Rutland" under the corresponding schema (as illustrated in :numref:`pbf_table_example`).
+In the example above, the schemas are *'points'*, *'lines'*, *'multilinestrings'*, *'multipolygons'* and *'other_relations'*. If they do not exist, they are created in the database *'osmdb_test'* when running the method :meth:`~pydriosm.ios.PostgresOSM.import_osm_data`. Each of the schemas corresponds to a key (i.e. name of a layer) of ``rutland_pbf_parsed_1`` (as illustrated in :numref:`pbf_schemas_example`); the data of each layer is imported into a table named as "Rutland" under the corresponding schema (as illustrated in :numref:`pbf_table_example`).
 
 
 .. figure:: _images/pbf_schemas_example.*
@@ -692,19 +667,19 @@ In the example above, five schemas are *'points'*, *'lines'*, *'multilinestrings
 Fetch data from the database
 ----------------------------
 
-To fetch all or specific layers of the imported data, we can use the method :meth:`~pydriosm.ios.PostgresOSM.fetch_data`. For example, let's retrieve all the PBF data of Rutland with ``layer_names=None`` (by default):
+To retrieve all or specific layers of the imported data, we can use the :meth:`~pydriosm.ios.PostgresOSM.fetch_data` method:
 
 
 .. code-block:: python
 
-    >>> # Retrieve the data from the database
-    >>> rutland_pbf_parsed_1_ = osmdb.fetch_data(subrgn_name, verbose=True)
+    >>> # Retrieve all the PBF data being just imported
+    >>> rutland_pbf_parsed_1_ = osmdb.fetch_data(subregion_name, verbose=True)
     Fetching the data of "Rutland" ...
-        "points" ... Done.
-        "lines" ... Done.
-        "multilinestrings" ... Done.
-        "multipolygons" ... Done.
-        "other_relations" ... Done.
+      "points" ... Done.
+      "lines" ... Done.
+      "multilinestrings" ... Done.
+      "multipolygons" ... Done.
+      "other_relations" ... Done.
 
 
 Check the data ``rutland_pbf_parsed_1_`` we just retrieved:
@@ -746,26 +721,24 @@ Take a quick look at the data of the *'points'*:
 
 .. _quickstart-ios-rutland_pbf_parsed_1_:
 
-Check whether ``rutland_pbf_parsed_1_`` is equal to ``rutland_pbf_parsed_1`` (see :ref:`the parsed data<quickstart-reader-rutland_pbf_parsed_1>`):
+Check whether ``rutland_pbf_parsed_1_`` is equal to ``rutland_pbf_parsed_1`` (see also :ref:`the parsed data<quickstart-reader-rutland_pbf_parsed_1>`):
 
 
 .. code-block:: python
 
-    >>> # 'points', 'lines', 'multilinestrings', 'multipolygons' or 'other_relations'
-    >>> lyr_name = 'points'
-
+    >>> # Check each of the layers:
+    >>> #   'points', 'lines', 'multilinestrings', 'multipolygons' or 'other_relations'
     >>> check_equivalence = all(
     ...     rutland_pbf_parsed_1[lyr_name].equals(rutland_pbf_parsed_1_[lyr_name])
     ...     for lyr_name in rutland_pbf_parsed_1.keys())
-    >>> print(f"`rutland_pbf_parsed_` is equivalent to `rutland_pbf_parsed`: "
+    >>> print(f"`rutland_pbf_parsed_1_` is equivalent to `rutland_pbf_parsed_1`: "
     ...       f"{check_equivalence}")
-    `rutland_pbf_parsed_` is equivalent to `rutland_pbf_parsed`: True
+    `rutland_pbf_parsed_1_` is equivalent to `rutland_pbf_parsed_1`: True
 
 
 .. note::
 
     - The parameter ``layer_names`` is ``None`` by default, meaning that we fetch data of all layers available from the database.
-
     - The data stored in the database was parsed by the method :meth:`GeofabrikReader.read_pbf()<pydriosm.reader.GeofabrikReader.read_pbf>` given ``expand=True`` (see :ref:`the parsed data<quickstart-reader-rutland_pbf_parsed_1>`). When it is being imported in the PostgreSQL server, the data type of the column ``'coordinates'`` is converted from `list <https://docs.python.org/3/library/stdtypes.html#list>`_ to `str <https://docs.python.org/3/library/stdtypes.html#str>`_. Therefore, to retrieve the same data in the above example for the method :meth:`~pydriosm.ios.PostgresOSM.fetch_data`, the parameter ``decode_geojson`` is by default ``True``.
 
 
@@ -776,47 +749,56 @@ Specific layers of shapefile
 
 .. _quickstart-ios-specific-shp-layer-birmingham:
 
-Below is another example of importing/fetching data of multiple layers in a customised order. Let's firstly import the transport-related layers of Birmingham shapefile data.
+Below is another example of importing/fetching data of multiple layers in a customised order. Let's firstly import the transport-related layers of Leeds shapefile data.
 
 
 .. note::
 
-    - ``'Birmingham'`` is not listed on the free download catalogue of `Geofabrik <https://download.geofabrik.de/>`_ but that of `BBBike <https://extract.bbbike.org/>`_. We need to change the data source to ``'BBBike'`` for the instance ``osmdb`` (see also the :ref:`note above<quickstart-ios-note-1>`).
+    - ``'Leeds'`` is not listed on the free download catalogue of `Geofabrik <https://download.geofabrik.de/>`_ but that of `BBBike <https://extract.bbbike.org/>`_. We need to change the data source to ``'BBBike'`` for the instance ``osmdb`` (see also the :ref:`note above<quickstart-ios-note-1>`).
 
 
 .. code-block:: python
 
     >>> osmdb.data_source = 'BBBike'  # Change to 'BBBike'
 
-    >>> subrgn_name = 'Birmingham'
+    >>> subregion_name = 'Leeds'
 
-    >>> bham_shp = osmdb.reader.read_shp(subrgn_name, data_dir=dat_dir, verbose=True)
-    Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.0M/79.0M | 30.6MB/s | ETA: 00:00
-      Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
-    Extracting "./tests/osm_data/birmingham/Birmingham.osm.shp.zip"
-      to "./tests/osm_data/birmingham/" ... Done.
-    Reading the shapefile(s) at "./tests/osm_data/birmingham/Birmingham-shp/shape/" ... Done.
+    >>> leeds_shp = osmdb.reader.read_shp(
+    ...     subregion_name=subregion_name, data_dir=data_dir, download=True, verbose=True)
+    Downloading "Leeds.osm.shp.zip" 100%|██████████| 57.8M/57.8M | 18.0MB/s | ETA: 00:00
+      Saving "Leeds.osm.shp.zip" to "./tests/osm_data/leeds/" ... Done.
+    Extracting "./tests/osm_data/leeds/Leeds.osm.shp.zip"
+      to "./tests/osm_data/leeds/" ... Done.
+    Reading the shapefile(s) at "./tests/osm_data/leeds/Leeds-shp/shape/" ... Done.
 
 
-Check the data `bham_shp`:
+Check the data `leeds_shp`:
 
 
 .. code-block:: python
 
-    >>> retr_data_type = type(bham_shp)
-    >>> print(f'Data type of `bham_shp`:\n  {retr_data_type}')
-    Data type of `bham_shp`:
+    >>> retr_data_type = type(leeds_shp)
+    >>> print(f'Data type of `leeds_shp`:\n  {retr_data_type}')
+    Data type of `leeds_shp`:
       <class 'dict'>
 
-    >>> retr_data_keys = list(bham_shp.keys())
-    >>> print(f'The "keys" of `bham_shp`:\n  {retr_data_keys[:5]}')
-    The "keys" of `bham_shp`:
-      ['buildings', 'landuse', 'natural', 'places', 'points']
+    >>> retr_data_keys = list(leeds_shp.keys())
+    >>> print(f'The "keys" of `leeds_shp`:\n  {'\n  '.join(retr_data_keys)}')
+    The "keys" of `leeds_shp`:
+      buildings
+      landuse
+      natural
+      places
+      points
+      railways
+      roads
+      waterways
 
-    >>> retr_layer_type = type(bham_shp[lyr_name])
-    >>> print(f'Data type of the corresponding layer:\n  {retr_layer_type}')
-    Data type of the corresponding layer:
-      <class 'pandas.core.frame.DataFrame'>
+    >>> leeds_shp_railways = leeds_shp['railways']
+    >>> retr_layer_type = type(leeds_shp_railways)
+    >>> print(f'Data type of the \'railways\' layer:\n  {retr_layer_type}')
+    Data type of the 'railways' layer:
+      <class 'geopandas.geodataframe.GeoDataFrame'>
 
 
 We could import the data of a list of selected layers. For example, let's import the data of ``'railways'``, ``'roads'`` and ``'waterways'``:
@@ -824,19 +806,19 @@ We could import the data of a list of selected layers. For example, let's import
 
 .. code-block:: python
 
-    >>> lyr_names = ['railways', 'roads', 'waterways']
+    >>> layer_names = ['railways', 'roads', 'waterways']
 
     >>> osmdb.import_osm_data(
-    ...     bham_shp, table_name=subrgn_name, schema_names=lyr_names, verbose=True)
-    Proceed to import data into the table "Birmingham" at postgres:***@localhost:5432/osmdb...
+    ...     leeds_shp, table_name=subregion_name, schema_names=layer_names, verbose=True)
+    Proceed to import data into the table "Leeds" at postgres:***@localhost:5432/osmdb_test
     ? [No]|Yes: yes
     Importing the data ...
-        "railways" ... Done: <total of rows> features.
-        "roads" ... Done: <total of rows> features.
-        "waterways" ... Done: <total of rows> features.
+      "railways" ... Done: <total of rows> features.
+      "roads" ... Done: <total of rows> features.
+      "waterways" ... Done: <total of rows> features.
 
 
-As illustrated in :numref:`pbf_schemas_example_2`, three schemas: *'railways'*, *'roads'* and *'waterways'* are created in the *'osmdb_test'* database for storing the data of the three shapefile layers of Birmingham.
+As illustrated in :numref:`pbf_schemas_example_2`, three schemas: *'railways'*, *'roads'* and *'waterways'* are created in the *'osmdb_test'* database for storing the data of the three shapefile layers of Leeds.
 
 
 .. figure:: _images/pbf_schemas_example_2.*
@@ -844,85 +826,74 @@ As illustrated in :numref:`pbf_schemas_example_2`, three schemas: *'railways'*, 
     :align: center
     :width: 60%
 
-    An illustration of the newly created schemas for the selected layers of Birmingham shapefile data.
+    An illustration of the newly created schemas for the selected layers of Leeds shapefile data.
 
 
-Now let's fetch only the *'railways'* data of Birmingham from the *'osmdb_test'* database:
+Now let's fetch only the *'railways'* data of Leeds from the *'osmdb_test'* database:
 
 
 .. code-block:: python
 
-    >>> lyr_name = 'railways'
+    >>> layer_name = 'railways'
 
-    >>> bham_shp_ = osmdb.fetch_data(
-    ...     subrgn_name, layer_names=lyr_name, sort_by='osm_id', verbose=True)
-    Fetching the data of "Birmingham" ...
+    >>> leeds_shp_ = osmdb.fetch_data(
+    ...     subregion_name, layer_names=layer_name, sort_by='osm_id', verbose=True)
+    Fetching the data of "Leeds" ...
         "railways" ... Done.
 
 
-Check the data `bham_shp_`:
+Check the data `leeds_shp_`:
 
 
 .. code-block:: python
 
-    >>> retr_data_type = type(bham_shp_)
-    >>> print(f'Data type of `bham_shp_`:\n  {retr_data_type}')
-    Data type of `bham_shp_`:
+    >>> retr_data_type = type(leeds_shp_)
+    >>> print(f'Data type of `leeds_shp_`:\n  {retr_data_type}')
+    Data type of `leeds_shp_`:
       <class 'dict'>
 
-    >>> retr_data_keys = list(bham_shp_.keys())
-    >>> print(f'The "keys" of `bham_shp_`:\n  {retr_data_keys}')
-    The "keys" of `bham_shp_`:
+    >>> retr_data_keys = list(leeds_shp_.keys())
+    >>> print(f'The "keys" of `leeds_shp_`:\n  {retr_data_keys}')
+    The "keys" of `leeds_shp_`:
       ['railways']
 
     >>> # Data frame of the 'railways' layer
-    >>> bham_shp_railways_ = bham_shp_[lyr_name]
-    >>> bham_shp_railways_.head()
-        osm_id  ... shape_type
-    0      740  ...          3
-    1     2148  ...          3
-    2  2950000  ...          3
-    3  3491845  ...          3
-    4  3981454  ...          3
-    [5 rows x 5 columns]
+    >>> leeds_shp_railways_ = leeds_shp_[layer_name]
+    >>> leeds_shp_railways_.head()
+        osm_id  ...                                           geometry
+    0  3666100  ...  LINESTRING (-1.4935085 53.6772284, -1.4941684 ...
+    1  3688274  ...  LINESTRING (-1.5321838 53.6588828, -1.5316487 ...
+    2  3688277  ...  LINESTRING (-1.4361755 53.6908246, -1.4365117 ...
+    3  3688278  ...  LINESTRING (-1.4265919 53.6975115, -1.4268996 ...
+    4  3688279  ...  LINESTRING (-1.3564814 53.7237694, -1.3569774 ...
+    [5 rows x 4 columns]
 
 
 .. note::
 
-    - ``bham_shp_railways`` and ``bham_shp_railways_`` both in `pandas.DataFrame <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html>`_ type.
-
-    - It must be noted that empty strings, ``''``, may be automatically saved as ``None`` when importing ``bham_shp`` into the PostgreSQL database.
-
-    - The data retrieved from a PostgreSQL database may not be in the same order as it is in the database; the retrieved ``bham_shp_railways_`` may not be exactly equal to `bham_shp_railways`. However, they contain exactly the same information. We could sort the data by ``'id'`` (or ``'osm_id'``) to make a comparison (see the test code below).
+    - The original ``leeds_shp_railways`` is a `GeoDataFrame <https://geopandas.org/en/stable/docs/reference/geodataframe.html>`_, however the retrieved ``leeds_shp_railways_`` is a standard Pandas `DataFrame <https://pandas.pydata.org/docs/reference/frame.html>`_.
+    - It must be noted that empty strings, ``''``, may be automatically saved as ``None`` when importing ``leeds_shp`` into the PostgreSQL database.
+    - The data retrieved from a PostgreSQL database may not be in the same order as it is in the database; the retrieved ``leeds_shp_railways_`` may not be exactly equal to `leeds_shp_railways`. However, they contain the same information. We can sort the data by ``'osm_id'`` or ``'id'`` and convert geometry to WKT/WKB (or vice versa) to make a comparison (see the test code below).
 
 
-Check whether ``bham_shp_railways_`` is equivalent to ``bham_shp_railways``:
+Check whether ``leeds_shp_railways_`` is equivalent to ``leeds_shp_railways``:
 
 
 .. code-block:: python
 
-    >>> bham_shp_railways = bham_shp[lyr_name]
+    >>> import shapely.wkt
+    >>> import geopandas as gpd
 
-    >>> check_eq = bham_shp_railways_.equals(bham_shp_railways)
-    >>> print(f"`bham_shp_railways_` is equivalent to `bham_shp_railways`: {check_eq}")
-    `bham_shp_railways_` is equivalent to `bham_shp_railways`: False
+    >>> # Convert `leeds_shp_railways_` to a GeoDataFrame
+    >>> leeds_shp_railways_geo = leeds_shp_railways_.copy()
+    >>> leeds_shp_railways_geo['geometry'] = leeds_shp_railways_geo['geometry'].map(
+    ...     shapely.wkt.loads)
+    >>> leeds_shp_railways_geo = gpd.GeoDataFrame(
+    ...     leeds_shp_railways_geo, crs=osmdb.reader.SHP.EPSG4326_WGS84_PROJ4)
 
-
-`bham_shp_railways_` and `bham_shp_railways` may not be exactly equivalent because pandas may infer text columns as `object` dtype in one dataframe and `string` dtype in the other. Additionally, the retrieved `bham_shp_railways_` may treats ``''`` as ``None``.
-
-Let's normalise the column dtypes and then check equivalence again:
-
-
-.. code-block:: python
-
-    >>> # Normalise the column dtypes
-    >>> bham_shp_railways = bham_shp_railways.convert_dtypes()
-    >>> bham_shp_railways_ = bham_shp_railways_.fillna('').convert_dtypes()
-
-    >>> # Check again whether `birmingham_shp_railways_` is equal to `birmingham_shp_railways`
-    >>> check_eq = bham_shp_railways_.equals(bham_shp_railways)
-    >>> print(f"`bham_shp_railways_` is equivalent to `bham_shp_railways`: {check_eq}")
-    `bham_shp_railways_` is equivalent to `bham_shp_railways`: True
+    >>> check_eq = leeds_shp_railways_geo.equals(leeds_shp_railways)
+    >>> print(f"`leeds_shp_railways_geo` is equivalent to `leeds_shp_railways`: {check_eq}")
+    `leeds_shp_railways_geo` is equivalent to `leeds_shp_railways`: True
 
 
 .. _quickstart-ios-drop-data:
@@ -932,40 +903,40 @@ Drop data
 
 To drop the data of all or selected layers that have been imported for one or multiple geographic regions, we can use the method :meth:`~pydriosm.ios.PostgresOSM.drop_subregion_tables`.
 
-For example, let's now drop the *'railways'* schema for Birmingham:
+For example, let's now drop the *'railways'* schema for Leeds:
 
 
 .. code-block:: python
 
-    >>> # Recall that: subrgn_name == 'Birmingham'; lyr_name == 'railways'
-    >>> osmdb.drop_subregion_tables(subrgn_name, schema_names=lyr_name, verbose=True)
-    Proceed to drop table "railways"."Birmingham"
+    >>> # Recall that: subrgn_name == 'Leeds'; lyr_name == 'railways'
+    >>> osmdb.drop_subregion_tables(subregion_name, schema_names=layer_name, verbose=True)
+    Proceed to drop table "railways"."Leeds"
       from postgres:***@localhost:5432/osmdb_test
     ? [No]|Yes: yes
     Dropping the table ...
-      "railways"."Birmingham" ... Done.
+      "railways"."Leeds" ... Done.
 
 
-Then drop the *'waterways'* schema for Birmingham, and both the *'lines'* and *'multilinestrings'* schemas for Rutland:
+Then drop the *'waterways'* schema for Leeds, and both the *'lines'* and *'multilinestrings'* schemas for Rutland:
 
 
 .. code-block:: python
 
-    >>> subrgn_names = ['Birmingham', 'Rutland']
-    >>> lyr_names = ['waterways', 'lines', 'multilinestrings']
-    >>> osmdb.drop_subregion_tables(subrgn_names, schema_names=lyr_names, verbose=True)
+    >>> subregion_names = ['Leeds', 'Rutland']
+    >>> layer_names = ['waterways', 'lines', 'multilinestrings']
+    >>> osmdb.drop_subregion_tables(subregion_names, schema_names=layer_names, verbose=True)
     Proceed to drop tables from postgres:***@localhost:5432/osmdb_test:
-        "Birmingham"
+        "Leeds"
         "Rutland"
       under the schemas:
+        "multilinestrings"
         "waterways"
         "lines"
-        "multilinestrings"
     ? [No]|Yes: yes
     Dropping the tables ...
-      "waterways"."Birmingham" ... Done.
-      "lines"."Rutland" ... Done.
       "multilinestrings"."Rutland" ... Done.
+      "waterways"."Leeds" ... Done.
+      "lines"."Rutland" ... Done.
 
 
 We could also easily drop the whole database *'osmdb_test'* if we don't need it anymore:
@@ -974,8 +945,8 @@ We could also easily drop the whole database *'osmdb_test'* if we don't need it 
 .. code-block:: python
 
     >>> osmdb.drop_database(verbose=True)
-    To drop the database "osmdb_test" from postgres:***@localhost:5432
-    ? [No]|Yes: yes
+    Drop the database "osmdb_test" from postgres:***@localhost:5432?
+     [No]|Yes: yes
     Dropping "osmdb_test" ... Done.
 
 
@@ -989,11 +960,12 @@ Now we are approaching the end of this tutorial. The final task we may want to d
 
 .. code-block:: python
 
-    >>> os.listdir(dat_dir)  # Recall that dat_dir == "tests/osm_data"
+    >>> os.listdir(data_dir)  # Recall that dat_dir == "tests/osm_data"
     ['birmingham',
      'greater-london',
-     'gre_lon-ken-railways',
-     'kent',
+     'leeds',
+     'lon-bir-railways',
+     'london',
      'rutland',
      'west-midlands',
      'west-yorkshire']
@@ -1006,12 +978,12 @@ Let's delete the directory **"tests/osm_data/"**:
 
     >>> from pyhelpers.dirs import delete_dir
 
-    >>> delete_dir(dat_dir, verbose=True)
+    >>> delete_dir(data_dir, verbose=True)
     To delete the directory "./tests/osm_data/" (Not empty)
     ? [No]|Yes: yes
     Deleting "./tests/osm_data/" ... Done.
 
-    >>> os.path.exists(dat_dir)  # Check if the directory still exists
+    >>> os.path.isdir(data_dir)  # Check if the directory still exists
     False
 
 
