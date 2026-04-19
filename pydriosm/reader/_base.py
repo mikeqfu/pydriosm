@@ -18,6 +18,7 @@ from pyhelpers.store import load_geopackage, load_pickle, save_pickle
 from pyhelpers.text import find_similar_str
 
 from pydriosm.downloader import Downloader
+from pydriosm.downloader._base import BaseDownloader
 from pydriosm.reader._pbf import PBF
 from pydriosm.reader._shp import SHP
 from pydriosm.reader._var import VAR
@@ -76,7 +77,10 @@ class BaseReader:
             pydriosm.reader.SHP
         """
 
-        self.downloader = Downloader(data_source=data_source, download_dir=data_dir, **kwargs)
+        if data_source is None:
+            self.downloader = BaseDownloader(download_dir=data_dir)
+        else:
+            self.downloader = Downloader(data_source=data_source, download_dir=data_dir, **kwargs)
 
         self.max_tmpfile_size = max_tmpfile_size
 

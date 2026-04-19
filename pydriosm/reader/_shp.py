@@ -515,13 +515,13 @@ class SHP:
             >>> import glob
 
             >>> # Download the shapefile data of London as an example
-            >>> subrgn_name = 'birmingham'
-            >>> file_format = ".shp"
-            >>> dwnld_dir = "tests/osm_data"
+            >>> subregion_name = 'birmingham'
+            >>> osm_file_format = ".shp"
+            >>> download_dir = "tests/osm_data"
 
             >>> bbd = BBBikeDownloader()
 
-            >>> bbd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
+            >>> bbd.download_data(subregion_name, osm_file_format, download_dir, verbose=True)
             Proceed to download data in the format '.shp.zip' for the following geographic (sub...
                 "Birmingham"
               to "./tests/osm_data/birmingham/"
@@ -570,7 +570,7 @@ class SHP:
             >>> list(map(type, railways_data))
             [geopandas.geodataframe.GeoDataFrame, pandas.DataFrame]
             >>> # Check the geometry data of `london_railways` and `london_railways_`
-            >>> geom1, geom2 = map(lambda x: x['geometry'].map(lambda y: y.wkt), railways_data)
+            >>> geom1, geom2 = map(lambda x: x['geometry'].map(lambda y: y.wkb), railways_data)
             >>> geom1.equals(geom2)
             True
 
