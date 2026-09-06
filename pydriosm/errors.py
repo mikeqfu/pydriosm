@@ -70,20 +70,23 @@ class InvalidSubregionNameError(Exception):
 
 class InvalidFileFormatError(Exception):
     """
-    Exception raised when an input `osm_file_format` is not recognizable.
+    Exception raised when an invalid OpenStreetMap file format is specified.
+
+    This exception is raised during file validation when an input file format or
+    extension is not recognized by the downloader or reader modules.
     """
 
     def __init__(self, osm_file_format, valid_file_formats=None):
         """
-        :param osm_file_format: file format/extension of the OSM data on the free download server
+        :param osm_file_format: File format or extension of the OSM data.
         :type osm_file_format: str
-        :param valid_file_formats: filename extensions of the data files available on
-            the free download server, defaults to ``None``
-        :type valid_file_formats: typing.Iterable | None
+        :param valid_file_formats: Supported file formats or extensions, defaults to ``None``.
+        :type valid_file_formats: collections.abc.Iterable | None
 
-        :ivar: str osm_file_format: file format/extension of the OSM data
-            available on the free download server
-        :ivar: int | None message: error message
+        :ivar str osm_file_format: Provided file format or extension.
+        :ivar collections.abc.Iterable | None valid_file_formats:
+            Supported file formats or extensions.
+        :ivar str message: Formatted exception message.
 
         **Examples**::
 
@@ -101,22 +104,27 @@ class InvalidFileFormatError(Exception):
               ...
             pydriosm.errors.InvalidFileFormatError:
               `osm_file_format='abc'` -> The input `osm_file_format` is unidentifiable.
-                Valid options include: {'.shp.zip', '.osm.pbf', '.osm.bz2'}.
+                Valid options include: {'.osm.bz2', '.osm.pbf', '.gpkg.zip', '.shp.zip'}.
 
-            >>> bbd = BBBikeDownloader()
-            >>> bbd.validate_file_format(osm_file_format='abc')
+            >>> valid_formats = {'.shp.zip', '.osm.pbf', '.osm.bz2', '.gpkg.zip'}
+            >>> raise InvalidFileFormatError(
+            ...     osm_file_format='abc', valid_file_formats=valid_formats
+            ... )
             Traceback (most recent call last):
               ...
             pydriosm.errors.InvalidFileFormatError:
               `osm_file_format='abc'` -> The input `osm_file_format` is unidentifiable.
-                Valid options include: {'.shp.zip', '.geojson.xz', '.mapsforge-osm.zip', '.pbf', ...
+                Valid options include: {'.osm.bz2', '.osm.pbf', '.gpkg.zip', '.shp.zip'}.
         """
 
         self.osm_file_format = osm_file_format
 
+        self.valid_file_formats = valid_file_formats
+
         self.message = "The input `osm_file_format` is unidentifiable."
-        if valid_file_formats:
-            self.message += f"\n\tValid options include: {valid_file_formats}."
+        if self.valid_file_formats is not None:
+            options_set = set(self.valid_file_formats)
+            self.message += f"\n\tValid options include: {options_set}."
 
         super().__init__(self.message)
 
@@ -167,7 +175,7 @@ class MethodNotAvailableError(Exception):
 
     def __init__(self, method_name, instance):
         """
-        Initialise the exception.
+        Initialize the exception.
 
         :param method_name: The name of the method that was attempted to be called.
         :type method_name: str
