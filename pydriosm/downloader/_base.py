@@ -11,7 +11,7 @@ import re
 import string
 import time
 import urllib.parse
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import requests
 from pyhelpers._cache import _print_failure_message
@@ -546,15 +546,50 @@ class BaseDownloader:
         return osm_file_format_
 
     @classmethod
+    def make_subregion_dirname(cls, subregion_name_):
+        """
+        Generate a normalized directory name for a geographic subregion.
+
+        Strips punctuation marks and replaces whitespace separators with hyphens to produce
+        a clean, lowercase directory name suitable for filesystem storage.
+
+        :param subregion_name_: Validated name of a subregion available on a download server.
+        :type subregion_name_: str
+        :return: Normalized directory name for the subregion.
+        :rtype: str
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import BaseDownloader
+
+            >>> BaseDownloader.make_subregion_dirname('England')
+            'england'
+
+            >>> BaseDownloader.make_subregion_dirname('Greater London')
+            'greater-london'
+        """
+
+        words = [
+            cleaned
+            for x in subregion_name_.split()
+            if (cleaned := x.strip(string.punctuation))
+        ]
+
+        return '-'.join(words).lower()
+
+    @classmethod
     def get_default_sub_path(cls, subregion_name_, download_url):
         """
-        Get default sub path for saving OSM data file of a geographic (sub)region.
+        Get the default subpath for saving an OSM data file of a geographic subregion.
 
-        :param subregion_name_: validated name of a (sub)region available on a free download server
+        Resolves relative subdirectory paths based on the download server type and subregion
+        name, returning a clean ``pathlib.Path`` object for directory organization.
+
+        :param subregion_name_: Validated name of a subregion available on a download server.
         :type subregion_name_: str
-        :param download_url: download URL of a geographic (sub)region
+        :param download_url: Download URL of a geographic subregion.
         :type download_url: str
-        :return: default sub path
+        :return: Default relative subpath for storing downloaded data.
         :rtype: pathlib.Path
 
         **Examples**::
@@ -563,54 +598,19 @@ class BaseDownloader:
 
             >>> subrgn_name_ = 'London'
             >>> dwnld_url = 'https://download.bbbike.org/osm/bbbike/London/London.osm.pbf'
-            >>> BaseDownloader.get_default_sub_path(subrgn_name_, dwnld_url)
-            '\\london'
+            >>> BaseDownloader.get_default_sub_path(subrgn_name_, dwnld_url).name
+            'london'
         """
 
-        sub_pathname, folder_name = "", "\\" + subregion_name_.lower().replace(" ", "-")
+        folder_name = cls.make_subregion_dirname(subregion_name_)
 
         if cls.NAME == 'Geofabrik':
-            sub_pathname = os.path.dirname(
-                urllib.parse.urlparse(download_url).path.replace("/", "\\"))
+            url_path = urllib.parse.urlparse(download_url).path
+            parent_path = PurePosixPath(url_path).parent
+            rel_parent = Path(*parent_path.parts[1:]) if parent_path.is_absolute() else Path(parent_path)
+            return rel_parent / folder_name
 
-        sub_pathname += folder_name
-
-        return sub_pathname
-
-    @classmethod
-    def make_subregion_dirname(cls, subregion_name_):
-        """
-        Make the name of the directory one level up
-        from an OSM data file of a geographic (sub)region.
-
-        :param subregion_name_: validated name of a (sub)region available on a free download server
-        :type subregion_name_: str
-        :return: name of the directory one level up from a downloaded OSM data file
-        :rtype: str
-
-        **Examples**::
-
-            >>> from pydriosm.downloader import BaseDownloader
-            >>> subrgn_name_ = 'England'
-            >>> BaseDownloader.make_subregion_dirname(subrgn_name_)
-            'england'
-            >>> subrgn_name_ = 'Greater London'
-            >>> BaseDownloader.make_subregion_dirname(subrgn_name_)
-            'greater-london'
-        """
-
-        # # Method 1:
-        # sub_dirname = '-'.join(
-        #     re.findall('[A-Z][^A-Z]*', subregion_name_.replace(' ', ''))).lower()
-
-        # # Method 2:
-        # sub_dirname = '-'.join(subregion_name_.split()).lower()
-
-        # Method 3:
-        sub_dirname = '-'.join(
-            [x.strip(string.punctuation) for x in subregion_name_.split()]).lower()
-
-        return sub_dirname
+        return Path(folder_name)
 
     @classmethod
     def get_subregion_download_url(cls, subregion_name, osm_file_format, update=False,
