@@ -616,41 +616,53 @@ class BaseDownloader:
     def get_subregion_download_url(cls, subregion_name, osm_file_format, update=False,
                                    verbose=False, raise_error=True):
         """
-        Get a download URL of a geographic (sub)region.
+        Get the download URL for a geographic subregion.
 
-        See examples for the methods
-        :meth:`GeofabrikDownloader.get_subregion_download_url()
-        <pydriosm.downloader.GeofabrikDownloader.get_subregion_download_url>` and
-        :meth:`BBBikeDownloader.get_subregion_download_url()
-        <pydriosm.downloader.BBBikeDownloader.get_subregion_download_url>`.
+        Retrieves or constructs the download URL and validated subregion name for a specified
+        OSM file format on the download server.
+
+        :param subregion_name: Name of a subregion available on the download server.
+        :type subregion_name: str
+        :param osm_file_format: File format or extension of the OSM data.
+        :type osm_file_format: str
+        :param update: Whether to force an update check. Defaults to ``False``.
+        :type update: bool
+        :param verbose: Verbosity level for console output. Defaults to ``False``.
+        :type verbose: bool | int
+        :param raise_error: Whether to raise an exception on error. Defaults to ``True``.
+        :type raise_error: bool
+        :return: Tuple containing the validated subregion name and download URL.
+        :rtype: tuple
+
+        .. seealso::
+
+            - Examples for the methods
+              :meth:`GeofabrikDownloader.get_subregion_download_url()
+              <pydriosm.downloader.GeofabrikDownloader.get_subregion_download_url>` and
+              :meth:`BBBikeDownloader.get_subregion_download_url()
+              <pydriosm.downloader.BBBikeDownloader.get_subregion_download_url>`.
         """
 
-        if not subregion_name and not osm_file_format or (update and verbose and raise_error):
-            subregion_name_, download_url = None, None
-        else:
-            subregion_name_, download_url = '<subregion_name_>', '<download_url>'
+        if not subregion_name or not osm_file_format or (update and verbose and raise_error):
+            return None, None
 
-        return subregion_name_, download_url
+        return "<subregion_name_>", "<download_url>"
 
     def get_valid_download_info(self, subregion_name, osm_file_format, download_dir=None, **kwargs):
         """
-        Get information of downloading (or downloaded) data file.
+        Get information for downloading or reading a subregion data file.
 
-        The information includes a valid subregion name, a default filename, a URL and
-        an absolute path where the data file is (to be) saved locally.
+        Resolves the validated subregion name, default filename, download URL and local file path.
 
-        :param subregion_name: name of a (sub)region available on a free download server
+        :param subregion_name: Name of a subregion available on the download server.
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data
-            available on the download server
+        :param osm_file_format: File format or extension of the OSM data.
         :type osm_file_format: str
-        :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader.BBBike.cdd`
-        :type download_dir: str | None
-        :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_,
-            including ``mkdir``(default: ``False``)
-        :return: valid subregion name, filename, download url and absolute file path
+        :param download_dir: Directory for saving downloaded files. Defaults to ``None``.
+        :type download_dir: str | pathlib.Path | None
+        :param kwargs: Optional keyword arguments passed to ``get_subregion_download_url``.
+        :type kwargs: dict
+        :return: Validated subregion name, filename, download URL and absolute file path.
         :rtype: tuple
 
         .. _`pyhelpers.dirs.cd()`:
@@ -659,20 +671,25 @@ class BaseDownloader:
         **Examples**::
 
             >>> from pydriosm.downloader import BaseDownloader
-            >>> import os
+            >>> from pyhelpers.dirs import get_relative_path
 
             >>> bdl = BaseDownloader()
 
             >>> valid_dwnld_info = bdl.get_valid_download_info(
-            ...     subregion_name='subregion_name', osm_file_format='osm_file_format')
+            ...     subregion_name='subregion_name', osm_file_format='osm_file_format'
+            ... )
+
             >>> valid_dwnld_info[0]
             '<subregion_name_>'
+
             >>> valid_dwnld_info[1]
             '<download_url>'
+
             >>> valid_dwnld_info[2]
             '<download_url>'
-            >>> os.path.relpath(valid_dwnld_info[3])
-            'osm_data\\<subregion_name_>\\<download_url>'
+
+            >>> get_relative_path(valid_dwnld_info[3], as_str=True)
+            'osm_data/subregion_name/<download_url>'
 
         .. seealso::
 
@@ -684,67 +701,68 @@ class BaseDownloader:
         """
 
         subregion_name_, download_url = self.get_subregion_download_url(
-            subregion_name=subregion_name, osm_file_format=osm_file_format, **kwargs)
+            subregion_name=subregion_name, osm_file_format=osm_file_format, **kwargs
+        )
 
-        if download_url:
-            osm_filename = os.path.basename(download_url)
+        if not download_url:
+            return subregion_name_, None, None, None
 
-            if download_dir is None:  # Specify a default directory
-                sub_path = self.get_default_sub_path(subregion_name_, download_url=download_url)
+        osm_filename = Path(download_url).name
 
-                if sub_path in self.download_dir:
-                    file_pathname = os.path.join(self.download_dir, osm_filename)
-                else:
-                    file_pathname = os.path.join(self.download_dir + sub_path, osm_filename)
+        if download_dir is None:  # Specify a default directory
+            sub_path = self.get_default_sub_path(subregion_name_, download_url=download_url)
+            base_dir = Path(self.download_dir)
 
+            if str(sub_path) in str(base_dir):
+                file_path = base_dir / osm_filename
             else:
-                download_dir_ = resolve_dir_path(download_dir)
-
-                file_fmts_ = [y.replace('.', '-') for y in self.FILE_FORMATS]
-                if any(download_dir_.endswith(x) for x in file_fmts_):
-                    file_pathname = os.path.join(download_dir_, osm_filename)
-                else:
-                    subrgn_dirname = self.make_subregion_dirname(subregion_name_)
-                    file_pathname = os.path.join(download_dir_, subrgn_dirname, osm_filename)
-
-            file_pathname = os.path.normpath(file_pathname)
+                file_path = base_dir / sub_path / osm_filename
 
         else:
-            osm_filename, file_pathname = None, None
+            download_dir_ = resolve_dir_path(download_dir)
+            download_path = Path(download_dir_)
 
-        return subregion_name_, osm_filename, download_url, file_pathname
+            file_fmts_ = [y.replace('.', '-') for y in self.FILE_FORMATS]
+            if any(str(download_path).endswith(x) for x in file_fmts_):
+                file_path = download_path / osm_filename
+            else:
+                subrgn_dirname = self.make_subregion_dirname(subregion_name_)
+                file_path = download_path / subrgn_dirname / osm_filename
+
+        return subregion_name_, osm_filename, download_url, file_path
 
     def file_exists(self, subregion_name, osm_file_format, data_dir=None, update=False,
                     verbose=True, ret_file_path=False):
         """
-        Check if the data file of a queried geographic (sub)region already exists locally,
-        given its default filename.
+        Check whether a data file for a geographic subregion exists locally.
 
-        :param subregion_name: name of a (sub)region available on a free download server
+        Verifies local file existence based on the default filename and storage directory.
+
+        :param subregion_name: Name of a subregion available on the download server.
         :type subregion_name: str
-        :param osm_file_format: file format of the OSM data available on a free download server
+        :param osm_file_format: File format of the OSM data available on the server.
         :type osm_file_format: str
-        :param data_dir: directory where the data file (or files) is (or are) stored,
-            defaults to ``None``; when ``data_dir=None``, it refers to the method
-            :meth:`~pydriosm.downloader._Downloader.cdd`
-        :type data_dir: str | None
-        :param update: whether to (check and) update the data, defaults to ``False``
+        :param data_dir: Directory where data files are stored. Defaults to ``None``.
+        :type data_dir: str | pathlib.Path | None
+        :param update: Whether to check for updates. Defaults to ``False``.
         :type update: bool
-        :param verbose: whether to print relevant information in console, defaults to ``True``
+        :param verbose: Verbosity level for console output. Defaults to ``True``.
         :type verbose: bool | int
-        :param ret_file_path: whether to return the pathname of the data file (if it exists),
-            defaults to ``False``
+        :param ret_file_path: Whether to return the file path if it exists. Defaults to ``False``.
         :type ret_file_path: bool
-        :return: whether the requested data file exists; or the path to the data file
+        :return: ``True`` if the file exists, the file path if ``ret_file_path=True``, or ``False``.
         :rtype: bool | str
 
         **Examples**::
 
             >>> from pydriosm.downloader import BaseDownloader
+
             >>> bdl = BaseDownloader()
+
             >>> bdl.file_exists('<subregion_name>', osm_file_format='shp')
             False
-            >>> bdl.file_exists('rutland', osm_file_format='shp', data_dir="tests\\data")
+
+            >>> bdl.file_exists('rutland', osm_file_format='shp', data_dir="tests/data")
             False
 
         .. seealso::
@@ -758,29 +776,23 @@ class BaseDownloader:
         subregion_name_, default_fn, _, path_to_file = self.get_valid_download_info(
             subregion_name=subregion_name, osm_file_format=osm_file_format, download_dir=data_dir)
 
-        if default_fn is None:
+        if default_fn is None or path_to_file is None:
             if verbose == 2:
                 osm_file_format_ = self.validate_file_format(
                     osm_file_format=osm_file_format, raise_error=False)
                 print(f"{osm_file_format_} data for \"{subregion_name_}\" is not available "
                       f"on {self.NAME} free download server.")
-            file_exists = False
+            return False
 
-        else:
-            if os.path.isfile(path_to_file):
-                if verbose == 2 and not update:
-                    rel_p = get_relative_path(os.path.dirname(path_to_file))
-                    print(f"\"{default_fn}\" of {subregion_name_} is available at \"{rel_p}\".")
+        file_path = Path(path_to_file)
+        if file_path.is_file():
+            if verbose == 2 and not update:
+                rel_file_path_str = get_relative_path(file_path.parent, as_str=True, quoted=True)
+                print(f"\"{default_fn}\" of {subregion_name_} is available at {rel_file_path_str}.")
 
-                if ret_file_path:
-                    file_exists = path_to_file
-                else:
-                    file_exists = True
+            return str(file_path) if ret_file_path else True
 
-            else:
-                file_exists = False
-
-        return file_exists
+        return False
 
     def _prep_subregion_names(self, subregion_names, deep):
         if isinstance(subregion_names, str):
