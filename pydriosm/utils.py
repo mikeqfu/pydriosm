@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
-from pyhelpers._cache import _check_dependencies, _check_relative_pathname, _print_failure_message
+from pyhelpers._cache import _check_dependencies, _get_relative_path, _print_failure_message
 from pyhelpers.dirs import cd
 from pyhelpers.text import find_similar_str
 
@@ -63,9 +63,12 @@ def check_json_engine(engine=None):
 
         >>> from pydriosm.utils import check_json_engine
         >>> import types
+
         >>> result = check_json_engine()
+
         >>> isinstance(result, types.ModuleType)
         True
+
         >>> result.__name__ == 'json'
         True
     """
@@ -83,58 +86,69 @@ def check_json_engine(engine=None):
 
 
 def remove_osm_file(path_to_file, verbose=True):
+    # noinspection unresolved-references
     """
-    Remove a downloaded OSM data file.
+    Remove a downloaded OpenStreetMap (OSM) data file or directory.
 
-    :param path_to_file: absolute path to a downloaded OSM data file
-    :type path_to_file: str
-    :param verbose: defaults to ``True``
-    :type verbose: bool
+    This function deletes a specified file or directory if it exists on disk.
+    When verbosity is enabled, progress and completion status are printed.
+
+    :param path_to_file: Absolute or relative path to an OSM data file or directory.
+    :type path_to_file: str | pathlib.Path
+    :param verbose: Whether to print progress messages. Defaults to ``True``.
+    :type verbose: bool | int
+    :return: ``None``
+    :rtype: None
 
     **Examples**::
 
         >>> from pydriosm.utils import remove_osm_file
         >>> from pyhelpers.dirs import cd
-        >>> import os
 
-        >>> path_to_pseudo_pbf_file = cd('tests/pseudo.osm.pbf')
+        >>> pseudo_pbf_file_path = cd('tests', 'pseudo.osm.pbf')
+
         >>> try:
-        ...     open(path_to_pseudo_pbf_file, 'a').close()
+        ...     pseudo_pbf_file_path.touch(exist_ok=True)
         ... except OSError:
         ...     print('Failed to create the file.')
         ... else:
         ...     print('File created successfully.')
         File created successfully.
 
-        >>> os.path.exists(path_to_pseudo_pbf_file)
+        >>> pseudo_pbf_file_path.is_file()
         True
-        >>> remove_osm_file(path_to_pseudo_pbf_file, verbose=True)
-        Deleting "tests\\pseudo.osm.pbf" ... Done.
-        >>> os.path.exists(path_to_pseudo_pbf_file)
+
+        >>> remove_osm_file(pseudo_pbf_file_path, verbose=True)
+        Deleting "tests/pseudo.osm.pbf" ... Done.
+
+        >>> pseudo_pbf_file_path.is_file()
         False
     """
 
-    if not os.path.exists(path_to_file):
+    path = Path(path_to_file) if not isinstance(path_to_file, Path) else path_to_file
+
+    if not path.exists():
         if verbose:
-            print('The file "{}" is not found at {}.'.format(*os.path.split(path_to_file)[::-1]))
+            print(f'The file "{path.name}" was not found at "{path.parent}".')
+        return
 
-    else:
-        if verbose:
-            print(f'Deleting "{_check_relative_pathname(path_to_file)}"', end=" ... ")
+    if verbose:
+        rel_file_path_str = _get_relative_path(path, as_str=True, quoted=True)
+        print(f"Deleting {rel_file_path_str}", end=" ... ")
 
-        try:
-            if os.path.isfile(path_to_file):
-                os.remove(path_to_file)
-                if verbose:
-                    print("Done.")
+    try:
+        if path.is_file() or path.is_symlink():
+            path.unlink()
+            if verbose:
+                print("Done.")
 
-            elif os.path.isdir(path_to_file):
-                shutil.rmtree(path_to_file)
-                if verbose:
-                    print("Done.")
+        elif path.is_dir():
+            shutil.rmtree(path)
+            if verbose:
+                print("Done.")
 
-        except Exception as e:
-            _print_failure_message(e, prefix="Failed. Error:")
+    except Exception as e:
+        _print_failure_message(e, prefix="Failed. Error:")
 
 
 # ==================================================================================================
@@ -280,14 +294,19 @@ def get_layer_name(stem):
     **Examples**::
 
         >>> from pydriosm.utils import get_layer_name
+
         >>> get_layer_name("") is None
         True
+
         >>> get_layer_name("gis_osm_railways_free_1.shp")
         'railways'
+
         >>> get_layer_name("gis_osm_transport_a_free_1")
         'transport'
+
         >>> get_layer_name("gis_osm_protected_areas_a_free")
         'protected_areas'
+
         >>> get_layer_name("gis_osm_water_a_free")
         'water'
     """
@@ -328,9 +347,12 @@ def find_matched_layer_names(layer_names, available_layer_names, cutoff=0.4):
     **Examples**::
 
         >>> from pydriosm.utils import find_matched_layer_names
+
         >>> layers = ['gis_osm_water_a_free_1', 'gis_osm_roads_free_1', 'pois']
+
         >>> find_matched_layer_names('water', layers)
         ['gis_osm_water_a_free_1']
+
         >>> find_matched_layer_names(['road', 'water'], layers)
         ['gis_osm_roads_free_1', 'gis_osm_water_a_free_1']
     """
@@ -343,7 +365,7 @@ def find_matched_layer_names(layer_names, available_layer_names, cutoff=0.4):
 
     # Regex to extract the core name (e.g., 'gis_osm_waterways_free_1' -> 'waterways')
     # This also helps strip 'gis_osm_' and '_free' from available layers for better comparison
-    core_pattern = re.compile(r"(?:gis_osm_)?([\w]+?)(?:_[asn])?(?:_free.*)?$", re.I)
+    core_pattern = re.compile(r"(?:gis_osm_)?(\w+?)(?:_[asn])?(?:_free.*)?$", re.I)
 
     def get_root(s):
         match = core_pattern.search(s)
@@ -373,7 +395,7 @@ def find_matched_layer_names(layer_names, available_layer_names, cutoff=0.4):
 
 
 def merge_dicts_by_values(data_dict, mapping_dict):
-    # noinspection PyShadowingNames
+    # noinspection PyShadowingNames,stub-packages-advertiser
     """
     Group and concatenate DataFrames from a dictionary based on a mapping.
 
@@ -394,9 +416,12 @@ def merge_dicts_by_values(data_dict, mapping_dict):
 
         >>> from pydriosm.utils import merge_dicts_by_values
         >>> import pandas as pd
+
         >>> d1 = {'a': pd.DataFrame([1]), 'b': pd.DataFrame([2]), 'c': pd.DataFrame([3])}
         >>> m1 = {'a': 'group_1', 'b': 'group_1', 'c': 'group_2'}
+
         >>> merged = merge_dicts_by_values(d1, m1)
+
         >>> merged['group_1']
            0
         0  1
