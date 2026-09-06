@@ -218,18 +218,22 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
 
 def cdd_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
     """
-    Change directory to ``osm_geofabrik\\`` and its subdirectories within a package.
+    Construct a path to the Geofabrik data directory or its subdirectories.
 
-    :param sub_dir: name of directory; names of directories (and/or a filename)
-    :type sub_dir: str | os.PathLike
-    :param mkdir: whether to create a directory, defaults to ``False``
+    This function resolves directory and file paths within the designated Geofabrik
+    data storage location, creating directories on disk when requested.
+
+    :param sub_dir: Subdirectory names or filename relative to ``default_dir``.
+    :type sub_dir: str | pathlib.Path | os.PathLike
+    :param mkdir: Whether to create the target directory on disk. Defaults to ``False``.
     :type mkdir: bool
-    :param default_dir: default folder name of the root directory for downloading data from Geofabrik,
-        defaults to ``"osm_geofabrik"``
-    :type default_dir: str
-    :param kwargs: [optional] parameters of `pyhelpers.dir.cd()`_
-    :return: an absolute path to a directory (or a file) under ``data_dir``
-    :rtype: str | os.PathLike
+    :param default_dir: Name of the root directory for Geofabrik downloads.
+        Defaults to ``"osm_geofabrik"``.
+    :type default_dir: str | pathlib.Path | os.PathLike
+    :param kwargs: Optional keyword arguments passed to ``pyhelpers.dir.cd()``.
+    :type kwargs: Any
+    :return: Absolute path to the directory or file under ``default_dir``.
+    :rtype: pathlib.Path
 
     .. _`pyhelpers.dir.cd()`:
         https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dir.cd.html
@@ -237,31 +241,33 @@ def cdd_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
     **Examples**::
 
         >>> from pydriosm.utils import cdd_geofabrik
-        >>> import os
 
-        >>> os.path.relpath(cdd_geofabrik())
+        >>> path = cdd_geofabrik()
+        >>> path.name
         'osm_geofabrik'
     """
 
-    pathname = cd(default_dir, *sub_dir, mkdir=mkdir, **kwargs)
-
-    return pathname
+    return cd(default_dir, *sub_dir, mkdir=mkdir, **kwargs)
 
 
 def cdd_bbbike(*sub_dir, mkdir=False, default_dir="osm_bbbike", **kwargs):
     """
-    Change directory to ``osm_bbbike\\`` and its subdirectories.
+    Construct a path to the BBBike data directory or its subdirectories.
 
-    :param sub_dir: name of directory; names of directories (and/or a filename)
-    :type sub_dir: str
-    :param mkdir: whether to create a directory, defaults to ``False``
+    This function resolves directory and file paths within the designated BBBike
+    data storage location, creating directories on disk when requested.
+
+    :param sub_dir: Subdirectory names or filename relative to ``default_dir``.
+    :type sub_dir: str | pathlib.Path | os.PathLike
+    :param mkdir: Whether to create the target directory on disk. Defaults to ``False``.
     :type mkdir: bool
-    :param default_dir: default folder name of the root directory for downloading data from BBBike,
-        defaults to ``"osm_bbbike"``
-    :type default_dir: str
-    :param kwargs: [optional] parameters of `pyhelpers.dir.cd()`_
-    :return: an absolute path to a directory (or a file) under ``data_dir``
-    :rtype: str
+    :param default_dir: Name of the root directory for BBBike downloads.
+        Defaults to ``"osm_bbbike"``.
+    :type default_dir: str | pathlib.Path | os.PathLike
+    :param kwargs: Optional keyword arguments passed to ``pyhelpers.dir.cd()``.
+    :type kwargs: Any
+    :return: Absolute path to the directory or file under ``default_dir``.
+    :rtype: pathlib.Path
 
     .. _`pyhelpers.dir.cd()`:
         https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dir.cd.html
@@ -269,15 +275,13 @@ def cdd_bbbike(*sub_dir, mkdir=False, default_dir="osm_bbbike", **kwargs):
     **Examples**::
 
         >>> from pydriosm.utils import cdd_bbbike
-        >>> import os
 
-        >>> os.path.relpath(cdd_bbbike())
+        >>> path = cdd_bbbike()
+        >>> path.name
         'osm_bbbike'
     """
 
-    pathname = cd(default_dir, *sub_dir, mkdir=mkdir, **kwargs)
-
-    return pathname
+    return cd(default_dir, *sub_dir, mkdir=mkdir, **kwargs)
 
 
 # ==================================================================================================
