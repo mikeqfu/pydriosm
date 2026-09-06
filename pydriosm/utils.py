@@ -6,6 +6,7 @@ import importlib.resources
 import os
 import re
 import shutil
+import typing
 from pathlib import Path
 
 import pandas as pd
@@ -157,34 +158,38 @@ def remove_osm_file(path_to_file, verbose=True):
 
 def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
     """
-    Specifies a directory or file path within the package's data directory.
+    Construct a path to a directory or file within the package data directory.
 
-    This function automatically suffixes filenames based on the installed Pandas major version.
+    This function automatically suffixes pickle file names based on the installed
+    Pandas major version to prevent binary incompatibility across major releases.
 
-    :param sub_dir: [optional] name of a directory; names of directories (and/or a filename)
-    :type sub_dir: str | os.PathLike[str]
-    :param data_dir: name of a directory to store data, defaults to ``"data"``
-    :type data_dir: str | os.PathLike[str]
-    :param mkdir: whether to create a directory, defaults to ``False``
+    :param sub_dir: Directory or file path components relative to ``data_dir``.
+    :type sub_dir: str | pathlib.Path | os.PathLike
+    :param data_dir: Name of the root data directory. Defaults to ``"data"``.
+    :type data_dir: str | pathlib.Path | os.PathLike
+    :param mkdir: Whether to create the target directory on disk. Defaults to ``False``.
     :type mkdir: bool
-    :param kwargs: [optional] parameters (e.g. ``mode=0o777``) of `os.makedirs`_
-    :return: a full pathname of a directory or a file under the specified data directory ``data_dir``
-    :rtype: str
+    :param kwargs: Optional keyword arguments passed to ``pathlib.Path.mkdir``.
+    :type kwargs: Any
+    :return: Absolute path to the specified directory or file under ``data_dir``.
+    :rtype: pathlib.Path
 
-    .. _`os.makedirs`: https://docs.python.org/3/library/os.html#os.makedirs
+    .. _`pathlib.Path.mkdir`: https://docs.python.org/3/library/pathlib.html#pathlib.Path.mkdir
 
     **Example**::
 
         >>> from pydriosm.utils import _cdd
-        >>> import os
+        >>> from pyhelpers.dirs import get_relative_path
 
-        >>> path_to_dat_dir = _cdd(data_dir="data")
-        >>> os.path.relpath(path_to_dat_dir)
-        'pydriosm\\data'
+        >>> dat_dir_path = _cdd(data_dir="data")
+        >>> get_relative_path(dat_dir_path, as_str=True)
+        'pydriosm/data'
     """
 
     # Initialize base path
-    base_path = Path(str(importlib.resources.files(__package__).joinpath(data_dir)))
+    top_package = __package__.split('.')[0] if __package__ else 'pydriosm'
+    traversable_pkg = importlib.resources.files(top_package)
+    base_path = Path(traversable_pkg).joinpath(data_dir)
 
     # Build the full path
     full_path = base_path.joinpath(*sub_dir)
@@ -192,7 +197,7 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
     # Add Pandas version suffix to the filename if it is a file
     if full_path.suffix:
         ext = "".join(full_path.suffixes)
-        file_stem = full_path.name.replace(ext, '')
+        file_stem = full_path.name.removesuffix(ext)
 
         if ext.startswith((".pkl", ".pickle")):
             pandas_major = pd.__version__.split(".")[0]
@@ -208,7 +213,7 @@ def _cdd(*sub_dir, data_dir="data", mkdir=False, **kwargs):
         target_dir = full_path.parent if full_path.suffix else full_path
         target_dir.mkdir(parents=True, exist_ok=True, **kwargs)
 
-    return str(full_path)
+    return full_path
 
 
 def cdd_geofabrik(*sub_dir, mkdir=False, default_dir="osm_geofabrik", **kwargs):
