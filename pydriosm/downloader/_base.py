@@ -11,172 +11,203 @@ import re
 import string
 import time
 import urllib.parse
+from pathlib import Path
 
 import requests
 from pyhelpers._cache import _print_failure_message
-from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, resolve_dir
+from pyhelpers.dirs import cd, get_relative_path, resolve_dir_path
 from pyhelpers.ops import confirmed, download_file_from_url, is_url
 from pyhelpers.store import _check_saving_path, load_data, save_data
 from pyhelpers.text import cosine_similarity_between_texts, find_similar_str
 
-from pydriosm.errors import InvalidFileFormatError, InvalidSubregionNameError
-from pydriosm.utils import _cdd
+from ..errors import InvalidFileFormatError, InvalidSubregionNameError
+from ..utils import _cdd
 
 
 class BaseDownloader:
     """
-    Base class of downloaders.
+    Base class for OpenStreetMap data downloaders.
+
+    Provides core directory resolution, file format definitions, and user interaction
+    prompt formatting across downloader implementations.
     """
 
     #: Name of the free download server.
-    NAME: str = 'OSM downloader'
+    NAME: str = "OSM downloader"
+
     #: Full name of the data resource.
-    LONG_NAME: str = 'OpenStreetMap data downloader'
-    #: Default download directory.
-    DEFAULT_DOWNLOAD_DIR: str = cd("osm_data")
-    #: Valid file formats.
+    LONG_NAME: str = "OpenStreetMap data downloader"
+
+    #: Default download directory name.
+    DEFAULT_DOWNLOAD_DIR: str = "osm_data"
+
+    #: Valid data file formats and extensions.
     FILE_FORMATS: set = {
-        '.csv.xz',
-        '.garmin-onroad-latin1.zip',
-        '.garmin-onroad.zip',
-        '.garmin-opentopo.zip',
-        '.garmin-osm.zip',
-        '.geojson.xz',
-        '.gpkg.zip',
-        '.gz',
-        '.mapsforge-osm.zip',
-        '.osm.bz2',
-        '.osm.pbf',
-        '.osm.pbf',
-        '.shp.zip',
-        '.svg-osm.zip',
+        ".csv.xz",
+        ".garmin-onroad-latin1.zip",
+        ".garmin-onroad.zip",
+        ".garmin-opentopo.zip",
+        ".garmin-osm.zip",
+        ".geojson.xz",
+        ".gpkg.zip",
+        ".gz",
+        ".mapsforge-osm.zip",
+        ".osm.bz2",
+        ".osm.pbf",
+        ".shp.zip",
+        ".svg-osm.zip",
     }
 
     def __init__(self, download_dir=None):
         """
-        :param download_dir: name or pathname of a directory for saving downloaded data files,
-            defaults to ``None``; when ``download_dir=None``, downloaded data files are saved to a
-            folder named 'osm_data' under the current working directory
-        :type download_dir: str | os.PathLike[str] | None
+        Initialize a new base downloader instance.
 
-        :ivar str | None download_dir: name or pathname of a directory
-            for saving downloaded data files
-        :ivar list data_paths: pathnames of all downloaded data files
+        Sets up the default target directory for data downloads and initializes an empty
+        tracked list of downloaded file paths.
+
+        :param download_dir: Name or path of the directory for saving downloaded data files.
+            Defaults to ``None``. When ``download_dir=None``, files are saved under a folder
+            named "osm_data" in the current working directory.
+        :type download_dir: str | pathlib.Path | os.PathLike | None
+
+        :ivar pathlib.Path download_dir: Resolved target directory path for downloads.
+        :ivar list[pathlib.Path] data_paths: Collection of paths to downloaded data files.
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
-            >>> import os
+            >>> from pydriosm.downloader import BaseDownloader
+            >>> from pyhelpers.dirs import get_relative_path
+
             >>> bdl = BaseDownloader()
+
             >>> bdl.NAME
             'OSM downloader'
-            >>> os.path.relpath(bdl.download_dir)
+
+            >>> bdl.download_dir.name
             'osm_data'
-            >>> os.path.relpath(bdl.cdd())
+
+            >>> bdl.cdd().name
             'osm_data'
+
             >>> bdl.download_dir == bdl.cdd()
             True
+
             >>> bdl = BaseDownloader(download_dir="tests/osm_data")
-            >>> os.path.relpath(bdl.download_dir)  # on Windows
-            'tests\\osm_data'
+            >>> get_relative_path(bdl.download_dir, as_str=True)
+            'tests/osm_data'
         """
 
-        self.download_dir = self.cdd() if download_dir is None else resolve_dir(download_dir)
+        self.download_dir = self.cdd() if download_dir is None else resolve_dir_path(download_dir)
 
         self.data_paths = []
 
     @classmethod
     def cdd(cls, *sub_dir, mkdir=False, **kwargs):
         """
-        Change directory to default download directory and its subdirectories or a specific file.
+        Construct a path to the download directory or its subdirectories.
 
-        :param sub_dir: name of directory; names of directories (and/or a filename)
-        :type sub_dir: str | os.PathLike[str]
-        :param mkdir: whether to create a directory, defaults to ``False``
+        Resolves directory and file paths within the designated download folder, creating
+        directories on disk when requested.
+
+        :param sub_dir: Subdirectory names or a filename relative to the download directory.
+        :type sub_dir: str | pathlib.Path | os.PathLike
+        :param mkdir: Whether to create the directory on disk. Defaults to ``False``.
         :type mkdir: bool
-        :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_
-        :return: an absolute pathname to a directory (or a file)
-        :rtype: str | os.PathLike[str]
+        :param kwargs: Optional keyword arguments passed to ``pyhelpers.dirs.cd()``.
+        :type kwargs: Any
+        :return: Absolute path to the resolved directory or file.
+        :rtype: pathlib.Path
 
         .. _`pyhelpers.dirs.cd()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dirs.cd.html
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
-            >>> import os
-            >>> os.path.relpath(BaseDownloader.cdd())
+            >>> from pydriosm.downloader import BaseDownloader
+
+            >>> path = BaseDownloader.cdd()
+            >>> path.name
             'osm_data'
         """
 
-        pathname = cd(cls.DEFAULT_DOWNLOAD_DIR, *sub_dir, mkdir=mkdir, **kwargs)
-
-        return pathname
+        return cd(cls.DEFAULT_DOWNLOAD_DIR, *sub_dir, mkdir=mkdir, **kwargs)
 
     @classmethod
-    def format_confirmation_prompt(cls, data_name='<data_name>', file_path="<file_path>",
+    def format_confirmation_prompt(cls, data_name="<data_name>", file_path="<file_path>",
                                    update=False, note=""):
         """
-        Compose a short message to be printed for confirmation.
+        Format a user confirmation prompt for downloading or updating data.
 
-        :param data_name: name of the prepacked data. Defaults to ``'<data_name>'``.
+        Generates a standardized user output string indicating whether target data will
+        be compiled or updated.
+
+        :param data_name: Name of the target dataset. Defaults to ``"<data_name>"``.
         :type data_name: str
-        :param file_path: pathname of the prepacked data file. Defaults to ``"<file_path>"``.
-        :type file_path: str | os.PathLike
-        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``.
+        :param file_path: File path of the target dataset. Defaults to ``"<file_path>"``.
+        :type file_path: str | pathlib.Path | os.PathLike
+        :param update: Whether to force an update prompt. Defaults to ``False``.
         :type update: bool
-        :param note: additional message. Defaults to ``""``.
+        :param note: Additional message text to append to the prompt. Defaults to ``""``.
         :type note: str
-        :return: a short message to be printed for confirmation.
+        :return: Formatted confirmation prompt ending with a newline.
         :rtype: str
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
+
             >>> BaseDownloader.format_confirmation_prompt()
-            'Proceed to retrieve/compile data of <data_name>\\n?'
+            'Proceed with retrieving/compiling data of <data_name>?\\n'
+
             >>> BaseDownloader.format_confirmation_prompt(update=True)
-            'Proceed to update the data of <data_name>\\n?'
+            'Proceed with updating the data of <data_name>?\\n'
         """
 
-        action = "update the" if (os.path.exists(file_path) or update) else "retrieve/compile"
+        path = Path(file_path) if not isinstance(file_path, Path) else file_path
+        action = "updating the" if (update or path.exists()) else "retrieving/compiling"
+        note_text = f" {note}" if note else ""
 
-        prompt = f"Proceed to {action} data of {data_name}" + (" " + note if note else "") + "\n?"
-
-        return prompt
+        return f"Proceed with {action} data of {data_name}{note_text}?\n"
 
     @classmethod
     def print_action_prompt(cls, data_name='<data_name>', verbose=False, confirmation_required=True,
                             note="", end=" ... "):
         # noinspection PyNoneFunctionAssignment
         """
-        Print a short message showing the action as a function runs.
+        Print an action status message before executing a data operation.
 
-        :param data_name: name of the prepacked data, defaults to ``'<data_name>'``
+        Displays progress feedback when verbosity is enabled. The message adapts
+        based on whether user confirmation was required prior to execution.
+
+        :param data_name: Name of the prepacked data. Defaults to ``"<data_name>"``.
         :type data_name: str
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param verbose: Verbosity level for console output. Defaults to ``False``.
         :type verbose: bool | int
-        :param confirmation_required: whether asking for confirmation to proceed,
-            defaults to ``True``
+        :param confirmation_required: Whether user confirmation was required to proceed.
+            Defaults to ``True``.
         :type confirmation_required: bool
-        :param note: additional message, defaults to ``""``
+        :param note: Additional message text to append. Defaults to ``""``.
         :type note: str
-        :param end: end string after printing the status message, defaults to ``" ... "``
+        :param end: Trailing string appended after the status message. Defaults to ``" ... "``.
         :type end: str
-        :return: None.
+        :return: ``None``.
         :rtype: None
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
-            >>> BaseDownloader.print_action_prompt(verbose=False) is None  # Nothing is printed.
+            >>> from pydriosm.downloader import BaseDownloader
+
+            >>> BaseDownloader.print_action_prompt(verbose=False) is None
             True
+
             >>> BaseDownloader.print_action_prompt(verbose=True)
             ... print("Done.")
             Retrieving/compiling the data ... Done.
+
             >>> BaseDownloader.print_action_prompt(verbose=True, note="(Some notes)")
             ... print("Done.")
             Retrieving/compiling the data (Some notes) ... Done.
+
             >>> BaseDownloader.print_action_prompt(verbose=True, confirmation_required=False)
             ... print("Done.")
             Retrieving/compiling data of <data_name> ... Done.
@@ -185,44 +216,51 @@ class BaseDownloader:
         if verbose:
             action = "Retrieving/compiling"
             suffix = "the data" if confirmation_required else f"data of {data_name}"
-            print(f"{action} {suffix}" + (" " + note if note else ""), end=end, flush=True)
-
-        return None
+            note_str = f" {note}" if note else ""
+            print(f"{action} {suffix}{note_str}", end=end, flush=True)
 
     @classmethod
-    def print_status(cls, data_name='<data_name>', path_to_file="<file_path>", verbose=False,
+    def print_status(cls, data_name="<data_name>", path_to_file="<file_path>", verbose=False,
                      error_message=None, update=False, raise_error=False):
         # noinspection PyNoneFunctionAssignment
         """
-        Print a short message for an otherwise situation.
+        Print a cancellation or failure status message.
 
-        :param data_name: name of the prepacked data, defaults to ``'<name_of_data>'``
+        Outputs relevant feedback when an operation is canceled or encounters an error.
+        If an error message is provided, it delegates printing to failure handling utilities.
+
+        :param data_name: Name of the prepacked data. Defaults to ``"<data_name>"``.
         :type data_name: str
-        :param path_to_file: pathname of the prepacked data file, defaults to ``"<file_path>"``
-        :type path_to_file: str | os.PathLike[str]
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param path_to_file: File path of the prepacked data. Defaults to ``"<file_path>"``.
+        :type path_to_file: str | pathlib.Path | os.PathLike
+        :param verbose: Verbosity level for console output. Defaults to ``False``.
         :type verbose: bool | int
-        :param error_message: message of an error detected during execution of a function,
-            defaults to ``None``
+        :param error_message: Error message or exception detected during execution.
+            Defaults to ``None``.
         :type error_message: Exception | str | None
-        :param update: whether to (check on and) update the prepacked data, defaults to ``False``
+        :param update: Whether data was being updated rather than collected.
+            Defaults to ``False``.
         :type update: bool
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=False`` (default), the error will be suppressed.
+        :param raise_error: Whether to raise the provided exception after printing.
+            Defaults to ``False``.
         :type raise_error: bool
-        :return: None.
+        :return: ``None``.
         :rtype: None
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
+
             >>> BaseDownloader.print_status() is None  # Nothing will be printed.
             True
+
             >>> BaseDownloader.print_status(verbose=True)
-            Cancelled.
+            Canceled.
+
             >>> BaseDownloader.print_status(verbose=2)
-            The collecting of <data_name> is cancelled, or no data is available.
-            >>> BaseDownloader.print_status(verbose=True, error_message="Errors.")
+            The collecting of <data_name> is canceled, or no data is available.
+
+            >>> BaseDownloader.print_status(verbose=True, error_message="Errors")
             Failed. Errors.
         """
 
@@ -232,11 +270,12 @@ class BaseDownloader:
 
         else:
             if verbose == 2:
-                action = "updating" if update or os.path.exists(path_to_file) else "collecting"
-                print(f"The {action} of {data_name} is cancelled, or no data is available.")
+                path = Path(path_to_file) if not isinstance(path_to_file, Path) else path_to_file
+                action = "updating" if (update or path.exists()) else "collecting"
+                print(f"The {action} of {data_name} is canceled, or no data is available.")
 
-            elif verbose is True or verbose == 1:
-                print("Cancelled.")
+            elif verbose in {True, 1}:
+                print("Canceled.")
 
         return None
 
@@ -287,12 +326,14 @@ class BaseDownloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
+
             >>> data = BaseDownloader.get_prepacked_data(print, verbose=True, raise_error=True)
-            Proceed to retrieve/compile data of <data_name>
-            ? [No]|Yes: yes
+            Proceed with retrieving/compiling data of <data_name>?
+             [No]|Yes: yes
             Retrieving/compiling the data ...
             Done.
+
             >>> data is None
             True
         """
@@ -344,6 +385,7 @@ class BaseDownloader:
                 cls.print_status(
                     data_name=data_name, path_to_file=path_to_file, verbose=verbose,
                     update=update)
+                return None
 
     @classmethod
     def validate_subregion_name(cls, subregion_name, valid_names=None, raise_error=True, **kwargs):
@@ -370,7 +412,7 @@ class BaseDownloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
 
             >>> subrgn_name = 'abc'
             >>> BaseDownloader.validate_subregion_name(subrgn_name)
@@ -380,10 +422,12 @@ class BaseDownloader:
               `subregion_name='abc'`
                 1) `subregion_name` fails to match any in `<downloader>.valid_subregion_names`; or
                 2) The queried (sub)region is not available on the free download server.
+
             >>> avail_subrgn_names = ['Greater London', 'Great Britain', 'Birmingham', 'Leeds']
             >>> subrgn_name = 'Britain'
             >>> BaseDownloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
             'Great Britain'
+
             >>> subrgn_name = 'london'
             >>> BaseDownloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
             'Greater London'
@@ -451,7 +495,7 @@ class BaseDownloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
 
             >>> file_fmt = 'abc'
             >>> BaseDownloader.validate_file_format(file_fmt)  # Raise an error
@@ -464,9 +508,11 @@ class BaseDownloader:
             >>> file_fmt = 'pbf'
             >>> BaseDownloader.validate_file_format(file_fmt)
             '.osm.pbf'
+
             >>> file_fmt = 'shp'
             >>> BaseDownloader.validate_file_format(file_fmt)
             '.shp.zip'
+
             >>> file_fmt = 'geopackage'
             >>> BaseDownloader.validate_file_format(file_fmt)
             '.gpkg.zip'
@@ -509,11 +555,11 @@ class BaseDownloader:
         :param download_url: download URL of a geographic (sub)region
         :type download_url: str
         :return: default sub path
-        :rtype: str | os.PathLike[str]
+        :rtype: pathlib.Path
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
 
             >>> subrgn_name_ = 'London'
             >>> dwnld_url = 'https://download.bbbike.org/osm/bbbike/London/London.osm.pbf'
@@ -544,7 +590,7 @@ class BaseDownloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
             >>> subrgn_name_ = 'England'
             >>> BaseDownloader.make_subregion_dirname(subrgn_name_)
             'england'
@@ -612,7 +658,7 @@ class BaseDownloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
             >>> import os
 
             >>> bdl = BaseDownloader()
@@ -652,7 +698,7 @@ class BaseDownloader:
                     file_pathname = os.path.join(self.download_dir + sub_path, osm_filename)
 
             else:
-                download_dir_ = resolve_dir(path_to_dir=download_dir)
+                download_dir_ = resolve_dir_path(download_dir)
 
                 file_fmts_ = [y.replace('.', '-') for y in self.FILE_FORMATS]
                 if any(download_dir_.endswith(x) for x in file_fmts_):
@@ -694,7 +740,7 @@ class BaseDownloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
             >>> bdl = BaseDownloader()
             >>> bdl.file_exists('<subregion_name>', osm_file_format='shp')
             False
@@ -723,7 +769,7 @@ class BaseDownloader:
         else:
             if os.path.isfile(path_to_file):
                 if verbose == 2 and not update:
-                    rel_p = check_relative_pathname(os.path.dirname(path_to_file))
+                    rel_p = get_relative_path(os.path.dirname(path_to_file))
                     print(f"\"{default_fn}\" of {subregion_name_} is available at \"{rel_p}\".")
 
                 if ret_file_path:
@@ -785,8 +831,9 @@ class BaseDownloader:
 
                     if verbose:
                         osm_filename = os.path.basename(path_to_file)
-                        rel_path = check_relative_pathname(os.path.dirname(path_to_file))
-                        print(f'"{osm_filename}" already exists in {add_slashes(rel_path)}.')
+                        rel_path_str = get_relative_path(
+                            os.path.dirname(path_to_file), as_str=True, quoted=True)
+                        print(f'"{osm_filename}" already exists in {rel_path_str}.')
 
                 else:
                     _, _, _, path_to_file = self.get_valid_download_info(
@@ -894,7 +941,8 @@ class BaseDownloader:
                 download_dir_ = os.path.dirname(file_paths[0])
             else:
                 download_dir_ = os.path.commonpath(file_paths)
-            download_dir_ = f"\n  {prep} {add_slashes(check_relative_pathname(download_dir_))}"
+            rel_download_dir_str = get_relative_path(download_dir_, as_str=True, quoted=True)
+            download_dir_ = f"\n  {prep} {rel_download_dir_str}"
 
         confirmation_prompt = \
             f"Proceed to {action_} {file_fmt_msg} for the following geographic (sub)region(s): " \
@@ -913,7 +961,7 @@ class BaseDownloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
             >>> import os
             >>> bdl = BaseDownloader()
             >>> os.path.relpath(bdl.download_dir)
@@ -924,7 +972,7 @@ class BaseDownloader:
         """
 
         if download_dir is not None and verify_download_dir:
-            download_dir_ = resolve_dir(path_to_dir=download_dir)
+            download_dir_ = resolve_dir_path(download_dir)
 
             if download_dir_ != self.download_dir:
                 self.download_dir = download_dir_
@@ -964,7 +1012,7 @@ class BaseDownloader:
 
         **Examples**::
 
-            >>> from pydriosm.downloader._base import BaseDownloader
+            >>> from pydriosm.downloader import BaseDownloader
             >>> from pyhelpers.dirs import cd, delete_dir
             >>> import os
             >>> bdl = BaseDownloader()
@@ -1044,3 +1092,4 @@ class BaseDownloader:
 
         if verify_download_dir:
             self.download_dir = os.path.dirname(path_to_file)
+        return None
