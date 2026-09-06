@@ -794,66 +794,152 @@ class BaseDownloader:
 
         return False
 
-    def _prep_subregion_names(self, subregion_names, deep):
+    def _prepare_subregion_names(self, subregion_names, deep):
+        """
+        Prepare and validate a sequence of subregion names.
+
+        Normalizes input subregion names into a list of validated names, optionally
+        fetching nested subregion names when deep traversal is enabled.
+
+        :param subregion_names: Single subregion name or sequence of subregion names.
+        :type subregion_names: str | typing.Iterable[str]
+        :param deep: Whether to recursively retrieve nested subregions.
+        :type deep: bool
+        :return: List of validated subregion names.
+        :rtype: list[str]
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import BaseDownloader
+
+            >>> bdl = BaseDownloader()
+
+            >>> bdl._prepare_subregion_names('London', deep=False)
+            ['London']
+        """
+
         if isinstance(subregion_names, str):
-            subregion_names_ = [subregion_names]
+            names = [subregion_names]
         else:
-            subregion_names_ = list(subregion_names)
-        subregion_names_ = [self.validate_subregion_name(x) for x in subregion_names_]
+            names = list(subregion_names)
 
-        if deep:
-            try:
-                # noinspection PyUnresolvedReferences
-                subregion_names_ = self.get_subregions(*subregion_names_, deep=deep)
-            except AttributeError:
-                pass
+        validated_names = [self.validate_subregion_name(x) for x in names]
 
-        return subregion_names_
+        if deep and hasattr(self, 'get_subregions'):
+            validated_names = self.get_subregions(*validated_names, deep=deep)
 
-    def _prep_osm_file_formats(self, osm_file_formats):
+        return validated_names
+
+    def _prepare_osm_file_formats(self, osm_file_formats):
+        # noinspection shadowing-names
+        """
+        Prepare and validate OSM file formats alongside a status message.
+
+        Normalizes file formats into a list of validated format strings and constructs
+        a user-friendly description of the requested formats.
+
+        :param osm_file_formats: Single file format, sequence of formats, or ``None``
+            for all formats.
+        :type osm_file_formats: str | typing.Iterable[str] | None
+        :return: Tuple containing validated file formats and a descriptive message.
+        :rtype: tuple[list[str], str]
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import BaseDownloader
+
+            >>> bdl = BaseDownloader()
+
+            >>> formats, msg = bdl._prepare_osm_file_formats('pbf')
+            >>> formats
+            ['.osm.pbf']
+
+            >>> msg
+            'data in the format ".osm.pbf"'
+        """
+
         if osm_file_formats is None:
-            file_formats_ = tuple(self.FILE_FORMATS)
+            validated_formats = list(self.FILE_FORMATS)
             file_fmt_msg = "data in all available formats"
         else:
             if isinstance(osm_file_formats, str):
-                file_formats_ = [osm_file_formats]
+                formats = [osm_file_formats]
             else:
-                file_formats_ = list(osm_file_formats)
-            file_formats_ = [self.validate_file_format(x) for x in file_formats_]
+                formats = list(osm_file_formats)
 
-            fmt_msg_ = f"format '{file_formats_[0]}'" if len(file_formats_) == 1 \
-                else f"formats {tuple(file_formats_)}"
-            file_fmt_msg = f"data in the {fmt_msg_}"
+            validated_formats = [self.validate_file_format(x) for x in formats]
 
-        return file_formats_, file_fmt_msg
+            if len(validated_formats) == 1:
+                fmt_msg = f"format \"{validated_formats[0]}\""
+            else:
+                fmt_msg = f"formats {tuple(validated_formats)}"
 
-    def _prep_file_paths(self, subregion_names_, file_formats_, data_dir, update, verbose):
+            file_fmt_msg = f"data in the {fmt_msg}"
+
+        return validated_formats, file_fmt_msg
+
+    def _prepare_file_paths(self, subregion_names_, file_formats_, data_dir, update, verbose):
+        """
+        Prepare target file paths and identify files requiring download.
+
+        Checks local storage for existing files across specified subregions and formats,
+        compiling lists of target paths, existing paths and subregions needing download.
+
+        :param subregion_names_: Sequence of validated subregion names.
+        :type subregion_names_: typing.Iterable[str]
+        :param file_formats_: Sequence of validated OSM file formats.
+        :type file_formats_: typing.Iterable[str]
+        :param data_dir: Directory where data files are stored.
+        :type data_dir: str | pathlib.Path | None
+        :param update: Whether to check and force data updates.
+        :type update: bool
+        :param verbose: Verbosity level for console output.
+        :type verbose: bool | int
+        :return: Tuple containing target paths, existing paths, and subregions to download.
+        :rtype: tuple[list[pathlib.Path], list[pathlib.Path], list[str]]
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import BaseDownloader
+
+            >>> bdl = BaseDownloader()
+
+            >>> paths, existing, to_download = bdl._prepare_file_paths(
+            ...     ['London'], ['.pbf'], data_dir="tests/data", update=False, verbose=False
+            ... )
+        """
+
         file_paths = []
         existing_file_paths = []  # Paths of existing files
-        download_list = [x for x in subregion_names_ for _ in range(len(file_formats_))]
+        to_download_set = set()
+
         for subrgn_name_ in subregion_names_:
             for file_fmt in file_formats_:
-                path_to_file = self.file_exists(
-                    subregion_name=subrgn_name_, osm_file_format=file_fmt, data_dir=data_dir,
-                    update=update, ret_file_path=True)
+                file_path_info = self.file_exists(
+                    subregion_name=subrgn_name_,
+                    osm_file_format=file_fmt,
+                    data_dir=data_dir,
+                    update=update,
+                    ret_file_path=True,
+                )
 
-                if isinstance(path_to_file, str):
-                    existing_file_paths.append(path_to_file)
-                    download_list.remove(subrgn_name_)
+                if isinstance(file_path_info, (str, Path)):
+                    path_obj = Path(file_path_info)
+                    existing_file_paths.append(path_obj)
+                    file_paths.append(path_obj)
 
                     if verbose:
-                        osm_filename = os.path.basename(path_to_file)
-                        rel_path_str = get_relative_path(
-                            os.path.dirname(path_to_file), as_str=True, quoted=True)
-                        print(f'"{osm_filename}" already exists in {rel_path_str}.')
-
+                        osm_filename = path_obj.name
+                        rel_path_str = get_relative_path(path_obj.parent, as_str=True, quoted=True)
+                        print(f"\"{osm_filename}\" already exists in {rel_path_str}.")
                 else:
-                    _, _, _, path_to_file = self.get_valid_download_info(
-                        subrgn_name_, osm_file_format=file_fmt, download_dir=data_dir)
+                    to_download_set.add(subrgn_name_)
+                    _, _, _, target_path = self.get_valid_download_info(
+                        subrgn_name_, osm_file_format=file_fmt, download_dir=data_dir
+                    )
+                    file_paths.append(Path(target_path) if target_path else None)
 
-                file_paths.append(path_to_file)
-
-        download_list = list(set(download_list))
+        download_list = [x for x in subregion_names_ if x in to_download_set]
 
         return file_paths, existing_file_paths, download_list
 
@@ -921,11 +1007,11 @@ class BaseDownloader:
              [])
         """
 
-        subregion_names_ = self._prep_subregion_names(subregion_names=subregion_names, deep=deep)
+        subregion_names_ = self._prepare_subregion_names(subregion_names=subregion_names, deep=deep)
 
-        file_formats_, file_fmt_msg = self._prep_osm_file_formats(osm_file_formats=osm_file_formats)
+        file_formats_, file_fmt_msg = self._prepare_osm_file_formats(osm_file_formats=osm_file_formats)
 
-        file_paths, existing_file_paths, download_list = self._prep_file_paths(
+        file_paths, existing_file_paths, download_list = self._prepare_file_paths(
             subregion_names_=subregion_names_, file_formats_=file_formats_, data_dir=data_dir,
             update=update, verbose=verbose)
 
