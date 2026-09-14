@@ -1103,21 +1103,84 @@ class BaseDownloader:
             if resolved_dir != self.download_dir:
                 self.download_dir = resolved_dir
 
-    def download_data(self, url=None, file_path=None, interval=0.5, verbose=False,
-                      raise_error=False, print_state="Downloading", pbar_color='green',
-                      msg_wrap_limit=None, verify_download_dir=True, **kwargs):
+    @classmethod
+    def _execute_file_download(cls, url, target_path, verbose_level, pbar_color, msg_wrap_limit,
+                               raise_error, **kwargs):
+        """
+        Execute URL file retrieval while redirecting output and validating result.
+
+        :param url: Web address of remote dataset.
+        :type url: str
+        :param target_path: Storage destination on local file system.
+        :type target_path: pathlib.Path
+        :param verbose_level: Integer verbosity flag.
+        :type verbose_level: int
+        :param pbar_color: Progress bar display color.
+        :type pbar_color: str
+        :param msg_wrap_limit: Maximum line length for message wrapping.
+        :type msg_wrap_limit: int | None
+        :param raise_error: Whether to raise an exception on download failure.
+        :type raise_error: bool
+        :param kwargs: Additional arguments passed to ``download_file_from_url``.
+        :type kwargs: dict[str, Any]
+        :raises requests.HTTPError: If HTTP transfer fails and ``raise_error=True``.
+        """
+
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            download_file_from_url(
+                url,
+                target_path,
+                verbose=verbose_level == 1,
+                print_wrap_limit=msg_wrap_limit,
+                pbar_color=pbar_color,
+                **kwargs,
+            )
+
+        output = buffer.getvalue()
+        if output:
+            if "Failed" in output and raise_error:
+                raise requests.HTTPError(output)
+            print(output, end="")
+
+    def _record_download_state(self, target_path, verify_download_dir= True):
+        """
+        Register downloaded file path and update target directory configuration.
+
+        :param target_path: Destination file path of completed download.
+        :type target_path: pathlib.Path
+        :param verify_download_dir: Whether to update class directory reference. Defaults to ``True``.
+        :type verify_download_dir: bool
+
+        **Examples**::
+
+            >>> self._record_download_state(Path('data/file.pbf'))
+        """
+
+        if target_path not in self.data_paths:
+            self.data_paths.append(target_path)
+
+        if verify_download_dir:
+            if hasattr(self, "update_download_dir"):
+                self.update_download_dir(download_dir=target_path.parent, verify_download_dir=True)
+            else:
+                self.download_dir = target_path.parent
+
+    def _download_data(self, url=None, file_path=None, interval=0.5, verbose=False,
+                       raise_error=False, print_state="Downloading", pbar_color='green',
+                       msg_wrap_limit=None, verify_download_dir=True, **kwargs):
         # noinspection PyShadowingNames,unresolved-references
         """
         Download an OSM data file from a specified URL.
 
-        Saves the remote file to the designated target path, updates tracking attributes,
-        and handles progress output and cleanup upon error.
+        Saves remote file to designated target path, updates tracking attributes and handles
+        progress output and cleanup upon error.
 
-        :param url: Valid URL of the OSM data file.
+        :param url: Valid URL of OSM data file. Defaults to ``None``.
         :type url: str | None
-        :param file_path: Storage destination path for the downloaded file.
-        :type file_path: str | pathlib.Path | os.PathLike | None
-        :param interval: Delay in seconds following a successful download. Defaults to ``0.5``.
+        :param file_path: Storage destination path for downloaded file. Defaults to ``None``.
+        :type file_path: pathlib.Path | str | None
+        :param interval: Delay in seconds following successful download. Defaults to ``0.5``.
         :type interval: float | int
         :param verbose: Verbosity level for console output. Defaults to ``False``.
         :type verbose: bool | int
@@ -1131,14 +1194,14 @@ class BaseDownloader:
         :param msg_wrap_limit: Maximum character length for output line wrapping.
             Defaults to ``None``.
         :type msg_wrap_limit: int | None
-        :param verify_download_dir: Whether to update the download directory attribute.
+        :param verify_download_dir: Whether to update download directory attribute.
             Defaults to ``True``.
         :type verify_download_dir: bool
         :param kwargs: Optional parameters for ``pyhelpers.ops.download_file_from_url``.
-        :type kwargs: dict
+        :type kwargs: dict[str, Any]
         :return: ``None``.
         :rtype: None
-        :raises requests.HTTPError: If the download fails and ``raise_error=True``.
+        :raises requests.HTTPError: If download fails and ``raise_error=True``.
 
         .. _`pyhelpers.ops.download_file_from_url()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/
@@ -1190,7 +1253,10 @@ class BaseDownloader:
             Deleting "tests/osm_data/" ... Done.
         """
 
-        target_path = Path(file_path) if not isinstance(file_path, Path) else file_path
+        if url is None or file_path is None:
+            return None
+
+        target_path = Path(file_path)
 
         # Normalize verbosity
         verbose_level = int(verbose) if isinstance(verbose, (bool, int)) else 0
@@ -1209,26 +1275,19 @@ class BaseDownloader:
         )
 
         try:
-            buffer = io.StringIO()
-            with contextlib.redirect_stdout(buffer):
-                download_file_from_url(
-                    url,
-                    target_path,
-                    verbose=verbose1,
-                    print_wrap_limit=msg_wrap_limit,
-                    pbar_color=pbar_color,
-                    **kwargs
-                )
+            self._execute_file_download(
+                url=url,
+                target_path=target_path,
+                verbose_level=verbose_level,
+                pbar_color=pbar_color,
+                msg_wrap_limit=msg_wrap_limit,
+                raise_error=raise_error,
+                **kwargs,
+            )
 
-            output = buffer.getvalue()
-
-            if output:
-                if "Failed" in output and raise_error:
-                    raise requests.HTTPError(output)
-                print(output, end="")
-
-            if verbose2:
-                time.sleep(0 if interval is None else interval)
+            if verbose_level == 2:
+                if isinstance(interval, (int, float)) and interval > 0:
+                    time.sleep(interval)
                 print("Done.")
 
         except Exception as e:
@@ -1236,21 +1295,146 @@ class BaseDownloader:
             if not file_existed and target_path.is_file():
                 target_path.unlink(missing_ok=True)
 
-            _print_failure_message(
-                e, prefix="Failed. Error:", verbose=verbose1, raise_error=raise_error
+            _print_failure_message(e, "Failed. Error:", verbose=verbose1, raise_error=raise_error)
+
+            if raise_error:
+                raise
+            return None
+
+        self._record_download_state(target_path, verify_download_dir=verify_download_dir)
+        return None
+
+    def _fetch_file_if_needed(self, url, file_path, update=False, interval=None, verbose=False,
+                              **kwargs):
+        """
+        Download a file if it does not exist locally or if an update is requested.
+
+        This method explicitly invokes ``BaseDownloader.download_data`` to avoid
+        unintended dynamic dispatch to subclass overrides.
+
+        :param url: Web address of the remote dataset.
+        :type url: str
+        :param file_path: Local target storage path.
+        :type file_path: pathlib.Path
+        :param update: Whether to re-download existing files. Defaults to ``False``.
+        :type update: bool
+        :param interval: Pause duration in seconds after download. Defaults to ``None``.
+        :type interval: int | float | None
+        :param verbose: Verbosity level for log output. Defaults to ``False``.
+        :type verbose: bool | int
+        :param kwargs: Additional options passed to ``BaseDownloader.download_data``.
+        :type kwargs: dict[str, Any]
+        :return: Destination path if the file exists on disk; otherwise ``None``.
+        :rtype: pathlib.Path | None
+
+        **Examples**::
+
+            >>> path = self._fetch_file_if_needed('https://example.com/data.pbf', Path('data.pbf'))
+        """
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not file_path.is_file() or update:
+            BaseDownloader._download_data(
+                self,
+                url=url,
+                file_path=file_path,
+                verbose=verbose,
+                verify_download_dir=False,
+                **kwargs,
             )
 
-            if not raise_error:
-                return None
-            raise
+        if isinstance(interval, (int, float)) and interval > 0:
+            time.sleep(interval)
 
-        if target_path not in self.data_paths:
-            self.data_paths.append(target_path)
+        return file_path if file_path.is_file() else None
 
-        if verify_download_dir:
-            if hasattr(self, 'update_download_dir'):
-                self.update_download_dir(download_dir=target_path.parent, verify_download_dir=True)
-            else:
-                self.download_dir = target_path.parent
+    def _run_download_workflow(self, subregion_names, osm_file_formats, download_dir, update,
+                               confirmation_required, interval, verify_download_dir, verbose,
+                               ret_download_path, url, file_path, download_item_func,
+                               extra_check_kwargs=None, **kwargs):
+        """
+        Execute standard validation, user confirmation and download result aggregation.
 
-        return None
+        :param subregion_names: Name or names of geographic subregions.
+        :type subregion_names: str | list[str] | None
+        :param osm_file_formats: File format or extension of OSM data.
+        :type osm_file_formats: str | list[str] | None
+        :param download_dir: Save directory path. Defaults to ``None``.
+        :type download_dir: str | None
+        :param update: Whether to overwrite existing files. Defaults to ``False``.
+        :type update: bool
+        :param confirmation_required: Prompt before downloading. Defaults to ``True``.
+        :type confirmation_required: bool
+        :param interval: Pause duration in seconds between downloads. Defaults to ``None``.
+        :type interval: int | float | None
+        :param verify_download_dir: Whether to verify output directory path. Defaults to ``True``.
+        :type verify_download_dir: bool
+        :param verbose: Verbosity level for standard logs. Defaults to ``False``.
+        :type verbose: bool | int
+        :param ret_download_path: Whether to return downloaded file paths. Defaults to ``False``.
+        :type ret_download_path: bool
+        :param url: Direct URL override. Defaults to ``None``.
+        :type url: str | None
+        :param file_path: Storage destination override. Defaults to ``None``.
+        :type file_path: Any | None
+        :param download_item_func: Downloader-specific loop strategy.
+        :type download_item_func: Callable[[list[str], list[str]], list[pathlib.Path]]
+        :param extra_check_kwargs: Extra keyword arguments passed to status checker.
+            Defaults to ``None``.
+        :type extra_check_kwargs: dict[str, Any] | None
+        :return: List of file paths if ``ret_download_path=True``; otherwise ``None``.
+        :rtype: list[pathlib.Path] | None
+        :raises ValueError: If neither direct URL/path nor subregion/format parameters are provided.
+        """
+
+        if url is not None and file_path is not None:
+            BaseDownloader._download_data(
+                self,
+                url=url,
+                file_path=file_path,
+                interval=interval,
+                verify_download_dir=verify_download_dir,
+                verbose=verbose,
+                **kwargs,
+            )
+            return [file_path] if ret_download_path else None
+
+        if subregion_names is None or osm_file_formats is None:
+            raise ValueError(
+                "You must provide either 'subregion_names' and 'osm_file_formats', "
+                "or 'url' and 'file_path'."
+            )
+
+        check_kwargs = {
+            "subregion_names": subregion_names,
+            "osm_file_formats": osm_file_formats,
+            "data_dir": download_dir,
+            "update": update,
+            "confirmation_required": confirmation_required,
+            "verbose": verbose,
+        }
+        if extra_check_kwargs:
+            check_kwargs.update(extra_check_kwargs)
+
+        (
+            subregion_names_,
+            osm_file_formats_,
+            confirmation_required_,
+            confirmation_prompt,
+            existing_file_paths,
+        ) = self.check_download_status(**check_kwargs)
+
+        is_confirmed = confirmation_required_ and confirmation_required
+        if not confirmed(confirmation_prompt, confirmation_required=is_confirmed):
+            print("Canceled.")
+            self.data_paths = list(dict.fromkeys(self.data_paths + existing_file_paths))
+            return existing_file_paths if ret_download_path else None
+
+        download_paths = download_item_func(subregion_names_, osm_file_formats_)
+        self.update_download_dir(
+            download_dir=download_dir, verify_download_dir=verify_download_dir
+        )
+        self.data_paths = list(dict.fromkeys(self.data_paths + download_paths))
+
+        return download_paths if ret_download_path else None
