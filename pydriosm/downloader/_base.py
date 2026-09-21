@@ -217,7 +217,10 @@ class BaseDownloader:
             action = "Retrieving/compiling"
             suffix = "the data" if confirmation_required else f"data of {data_name}"
             note_str = f" {note}" if note else ""
+
             print(f"{action} {suffix}{note_str}", end=end, flush=True)
+
+        return None
 
     @classmethod
     def print_status(cls, data_name="<data_name>", file_path="<file_path>", verbose=False,
