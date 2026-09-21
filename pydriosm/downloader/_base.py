@@ -38,6 +38,9 @@ class BaseDownloader:
     #: Full name of the data resource.
     LONG_NAME: str = "OpenStreetMap data downloader"
 
+    #: Homepage URL.
+    URL: str = 'https://www.openstreetmap.org/'
+
     #: Default download directory name.
     DEFAULT_DOWNLOAD_DIR: str = "osm_data"
 
