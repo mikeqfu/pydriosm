@@ -20,9 +20,6 @@ class Downloader(BaseDownloader):
         "bbbike": BBBikeDownloader,
     }
 
-    #: Homepage URL.
-    URL: str = 'https://www.openstreetmap.org/'
-
     def __init__(self, data_source='geofabrik', download_dir=None, update=False, **kwargs):
         # noinspection PyUnresolvedReferences
         """
@@ -102,42 +99,97 @@ class Downloader(BaseDownloader):
             raise ValueError(f'Unsupported source: "{data_source}".')
 
     def _raise_unavailable_method_error(self, method_name, raise_error=True):
+        """
+        Raise an error when a requested method is missing from the active downloader.
+
+        :param method_name: Name of the requested method.
+        :type method_name: str
+        :param raise_error: Whether to raise an exception if the method is unavailable.
+            Defaults to ``True``.
+        :type raise_error: bool
+        :raises MethodNotAvailableError: If ``raise_error=True`` and the method is unavailable.
+        """
+
         if raise_error:
             raise MethodNotAvailableError(method_name, self.downloader)
 
     def get_raw_directory_index(self, url, save_path=None, verbose=False, raise_error=True):
+        # noinspection shadowing-names
+        """
+        Retrieve the raw directory index from the download server.
+
+        Delegates execution to the underlying downloader instance if supported.
+
+        :param url: Web address of the target directory index.
+        :type url: str
+        :param save_path: Path for saving the directory index file. Defaults to ``None``.
+        :type save_path: str | os.PathLike | None
+        :param verbose: Verbosity level for log output during retrieval. Defaults to ``False``.
+        :type verbose: bool | int
+        :param raise_error: Whether to raise an exception if the underlying downloader
+            does not support this method. Defaults to ``True``.
+        :type raise_error: bool
+        :return: Raw directory index data, or ``None`` if the method is unavailable and
+            ``raise_error=False``.
+        :rtype: pandas.DataFrame | str | dict | None
+        :raises MethodNotAvailableError: If the active downloader lacks support for this method
+            and ``raise_error=True``.
+
+        **Examples**::
+
+            >>> from pydriosm.downloader import Downloader
+
+            >>> dnl = Downloader("geofabrik")
+            >>> url = "https://download.geofabrik.de/europe/united-kingdom.html"
+            >>> res = dnl.get_raw_directory_index(url)
+
+            >>> dnl = Downloader('bbbike')
+            >>> url = "https://download.bbbike.org/osm/bbbike/Birmingham/"
+            >>> res = dnl.get_raw_directory_index(url)
+            Traceback (most recent call last):
+              ...
+            pydriosm.errors.MethodNotAvailableError:
+              The '.get_raw_directory_index()' method is not available for 'BBBikeDownloader' (...
+        """
+
         method_name = self.get_raw_directory_index.__name__
 
-        if hasattr(self.downloader, method_name):
-            return self.downloader.get_raw_directory_index(
+        try:
+            downloader_method = getattr(self.downloader, method_name)
+            return downloader_method(
                 url=url,
                 save_path=save_path,
                 verbose=verbose,
                 raise_error=raise_error
             )
-
-        else:
+        except AttributeError:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_download_index(self, update=False, confirmation_required=True, verbose=False,
                            raise_error=True, **kwargs):
         # noinspection PyShadowingNames,PyUnresolvedReferences
         """
-        Get the official index of downloads for all available geographic (sub)regions.
+        Retrieve the official download index for all available geographic regions and subregions.
 
-        Similar to the method :meth:`~pydriosm.downloader.GeofabrikDownloader.get_catalogue`.
+        This method acts similarly to :meth:`~pydriosm.downloader.GeofabrikDownloader.get_catalogue`.
+        It delegates execution to the underlying downloader instance if the method is supported.
 
-        :param update: whether to (check on and) update the prepacked data, defaults to ``False``
+        :param update: Whether to check for and update the prepacked data. Defaults to ``False``.
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed,
-            defaults to ``True``
+        :param confirmation_required: Whether to ask for user confirmation before proceeding.
+            Defaults to ``True``.
         :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param verbose: Verbosity level for printing information to the console.
+            Defaults to ``False``.
         :type verbose: bool | int
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=False`` (default), the error will be suppressed.
+        :param raise_error: Whether to raise an exception if the method is unavailable.
+            Defaults to ``True``.
         :type raise_error: bool
-        :return: the official index of all downloads
+        :param kwargs: Optional keyword arguments passed to the underlying downloader method.
+        :type kwargs: dict
+        :return: The official index of all downloads, or ``None`` if the method is unavailable
+            and ``raise_error=False``.
         :rtype: pandas.DataFrame | None
 
         **Examples**::
@@ -146,26 +198,25 @@ class Downloader(BaseDownloader):
             >>> downloader = Downloader()
             >>> download_index = downloader.get_download_index()
             >>> type(download_index)
-            pandas.core.frame.DataFrame
+            pandas.DataFrame
             >>> download_index.shape
-            (512, 12)
+            (555, 12)
             >>> download_index.head()
                         id  ...                                            updates
-            0  afghanistan  ...  https://download.geofabrik.de/asia/afghanistan...
-            1       africa  ...       https://download.geofabrik.de/africa-updates
-            2      albania  ...  https://download.geofabrik.de/europe/albania-u...
-            3      alberta  ...  https://download.geofabrik.de/north-america/ca...
-            4      algeria  ...  https://download.geofabrik.de/africa/algeria-u...
-            [5 rows x 13 columns]
+            0          act  ...  https://download.geofabrik.de/australia-oceani...
+            1  afghanistan  ...  https://download.geofabrik.de/asia/afghanistan...
+            2       africa  ...       https://download.geofabrik.de/africa-updates
+            3      albania  ...  https://download.geofabrik.de/europe/albania-u...
+            4      alberta  ...  https://download.geofabrik.de/north-america/ca...
+            [5 rows x 12 columns]
             >>> download_index.columns.to_list()
             ['id',
              'parent',
-             'iso3166-1:alpha2',
              'name',
+             'iso3166-1:alpha2',
              'iso3166-2',
              'geometry',
              '.osm.pbf',
-             '.osm.bz2',
              '.shp.zip',
              'pbf-internal',
              'history',
@@ -175,31 +226,36 @@ class Downloader(BaseDownloader):
 
         method_name = self.get_download_index.__name__
 
-        if hasattr(self.downloader, method_name):
-            return self.downloader.get_download_index(
+        try:
+            downloader_method = getattr(self.downloader, method_name)
+            return downloader_method(
                 update=update,
                 confirmation_required=confirmation_required,
                 verbose=verbose,
                 raise_error=raise_error,
                 **kwargs
             )
-
-        else:
+        except AttributeError:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_subregion_table(self, url, verbose=False, raise_error=True):
         # noinspection PyShadowingNames,PyUnresolvedReferences
         """
-        Get download information of all geographic (sub)regions on a web page.
+        Retrieve download information for all geographic subregions listed on a specific web page.
 
-        :param url: URL of a subregion's web page
+        Delegates execution to the underlying downloader instance if supported.
+
+        :param url: The URL of a subregion's web page.
         :type url: str
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param verbose: Verbosity level for printing information to the console.
+            Defaults to ``False``.
         :type verbose: bool | int
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=False`` (default), the error will be suppressed.
+        :param raise_error: Whether to raise an exception if the method is unavailable.
+            Defaults to ``True``.
         :type raise_error: bool
-        :return: download information of all available subregions on the given ``url``
+        :return: Download information of all available subregions on the given ``url``,
+            or ``None`` if the method is unavailable and ``raise_error=False``.
         :rtype: pandas.DataFrame | None
 
         **Examples**::
@@ -252,17 +308,19 @@ class Downloader(BaseDownloader):
             >>> subregion_table is None
             True
         """
+
         method_name = self.get_subregion_table.__name__
 
-        if hasattr(self.downloader, method_name):
-            return self.downloader.get_subregion_table(
+        try:
+            downloader_method = getattr(self.downloader, method_name)
+            return downloader_method(
                 url=url,
                 verbose=verbose,
                 raise_error=raise_error
             )
-
-        else:
+        except AttributeError:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_continent_tables(self, update=False, confirmation_required=True, verbose=False,
                              raise_error=True, **kwargs):
@@ -332,8 +390,8 @@ class Downloader(BaseDownloader):
                 **kwargs
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def get_region_subregion_tiers(self, update=False, confirmation_required=True, verbose=False,
                                    raise_error=True):
@@ -392,8 +450,8 @@ class Downloader(BaseDownloader):
                 raise_error=raise_error
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def get_catalogue(self, update=False, confirmation_required=True, verbose=False,
                       raise_error=True):
@@ -449,8 +507,8 @@ class Downloader(BaseDownloader):
                 raise_error=raise_error
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def get_valid_subregion_names(self, update=False, confirmation_required=True, verbose=False,
                                   raise_error=True):
@@ -489,12 +547,12 @@ class Downloader(BaseDownloader):
                 verbose=verbose
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def validate_subregion_name(self, subregion_name, valid_names=None, raise_error=True,
                                 **kwargs):
-        # noinspection PyShadowingNames
+        # noinspection shadowing-names
         """
         Validate an input name of a geographic (sub)region.
 
@@ -504,7 +562,7 @@ class Downloader(BaseDownloader):
         :param subregion_name: name/URL of a (sub)region available on Geofabrik free download server
         :type subregion_name: str
         :param valid_names: names of all (sub)regions available on a free download server
-        :type valid_names: typing.Iterable
+        :type valid_names: typing.Collection | None
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidSubregionName`, defaults to ``True``
         :type raise_error: bool
@@ -519,10 +577,13 @@ class Downloader(BaseDownloader):
         **Examples**::
 
             >>> from pydriosm.downloader import Downloader
+
             >>> downloader = Downloader()
+
             >>> subregion_name = 'london'
             >>> downloader.validate_subregion_name(subregion_name)
             'Greater London'
+
             >>> subregion_name = 'https://download.geofabrik.de/europe/united-kingdom.html'
             >>> downloader.validate_subregion_name(subregion_name)
             'United Kingdom'
@@ -538,8 +599,8 @@ class Downloader(BaseDownloader):
                 **kwargs
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def validate_file_format(self, osm_file_format, valid_formats=None, raise_error=True, **kwargs):
         # noinspection PyShadowingNames
@@ -552,7 +613,7 @@ class Downloader(BaseDownloader):
         :param osm_file_format: file format/extension of the OSM data on the free download server
         :type osm_file_format: str
         :param valid_formats: fil extensions of the data available on a free download server
-        :type valid_formats: typing.Iterable
+        :type valid_formats: typing.Collection | None
         :param raise_error: (if the input fails to match a valid name) whether to raise the error
             :py:class:`pydriosm.downloader.InvalidFileFormatError`, defaults to ``True``
         :type raise_error: bool
@@ -586,8 +647,8 @@ class Downloader(BaseDownloader):
                 **kwargs
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def get_subregion_download_url(self, subregion_name, osm_file_format, update=False,
                                    verbose=False, raise_error=True):
@@ -646,12 +707,13 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_default_filename(self, subregion_name, osm_file_format, update=False,
                              raise_error=True):
         # noinspection PyShadowingNames
         """
-        get a default filename for a geograpic (sub)region.
+        get a default filename for a geographic (sub)region.
 
         The default filename is derived from the download URL of the requested data file.
 
@@ -691,6 +753,7 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_default_pathname(self, subregion_name, osm_file_format, mkdir=False, update=False,
                              verbose=False, raise_error=True):
@@ -744,6 +807,7 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_subregions(self, *subregion_name, deep=False, raise_error=True):
         """
@@ -799,6 +863,7 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def specify_sub_download_dir(self, subregion_name, osm_file_format, download_dir=None,
                                  raise_error=True, **kwargs):
@@ -873,9 +938,9 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
-    def get_valid_download_info(self, subregion_name, osm_file_format, download_dir=None,
-                                raise_error=True, **kwargs):
+    def get_valid_download_info(self, subregion_name, osm_file_format, download_dir=None, **kwargs):
         # noinspection PyShadowingNames
         """
         Get information of downloading (or downloaded) data file.
@@ -883,22 +948,23 @@ class Downloader(BaseDownloader):
         The information includes a valid subregion name, a default filename, a URL and
         an absolute path where the data file is (to be) saved locally.
 
-        :param subregion_name: name of a (sub)region available on
-            GeofabrikDownloader free download server
+        :param subregion_name: Name of a (sub)region available on the
+            GeofabrikDownloader free download server.
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data
-            available on the download server
+        :param osm_file_format: File format/extension of the OSM data
+            available on the download server.
         :type osm_file_format: str
-        :param download_dir: directory for saving the downloaded file(s), defaults to ``None``;
-            when ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_geofabrik`.
-        :type download_dir: str | None
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=True`` (default), the error will be suppressed.
-        :type raise_error: bool
-        :param kwargs: [optional] parameters of `pyhelpers.dirs.cd()`_,
-            including ``mkdir``(default: ``False``)
-        :return: valid subregion name, filename, download url and absolute file path
-        :rtype: typing.Tuple[str, str, str, str]
+        :param download_dir: Directory for saving the downloaded file(s). Defaults to ``None``.
+            When ``download_dir=None``, it refers to :func:`~pydriosm.utils.cdd_geofabrik`.
+        :type download_dir: str | pathlib.Path | None
+        :param kwargs: Optional keyword arguments. This includes ``raise_error`` (bool) which
+            defaults to ``True`` and dictates whether to raise an exception if the method is
+            unavailable. It also accepts parameters for `pyhelpers.dirs.cd()`_, including
+            ``mkdir`` (defaults to ``False``).
+        :type kwargs: dict
+        :return: Valid subregion name, filename, download URL and absolute file path, or ``None``
+            if the method is unavailable and ``raise_error=False``.
+        :rtype: tuple | None
 
         .. _`pyhelpers.dirs.cd()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/pyhelpers.dirs.cd.html
@@ -906,7 +972,7 @@ class Downloader(BaseDownloader):
         **Examples**::
 
             >>> from pydriosm.downloader import Downloader
-            >>> import os
+            >>> from pyhelpers.dirs import get_relative_path
 
             >>> downloader = Downloader()
 
@@ -919,38 +985,42 @@ class Downloader(BaseDownloader):
             'Greater London'
             >>> osm_filename
             'greater-london-latest.osm.pbf'
-            >>> os.path.dirname(download_url)
-            'https://download.geofabrik.de/europe/united-kingdom/england'
-            >>> os.path.relpath(os.path.dirname(file_pathname))
-            'osm_data\\geofabrik\\europe\\united-kingdom\\england\\greater-london'
+            >>> download_url
+            'https://download.geofabrik.de/europe/united-kingdom/england/greater-london-latest....
+            >>> get_relative_path(file_pathname.parent, as_str=True)
+            'osm_data/geofabrik/europe/united-kingdom/england/greater-london'
 
             >>> # Specify a new directory for downloaded data
             >>> download_dir = "tests/osm_data"
             >>> info_2 = downloader.get_valid_download_info(
-            ...     subregion_name, osm_file_format=osm_file_format, download_dir=download_dir)
+            ...     subregion_name, osm_file_format=osm_file_format, download_dir=download_dir
+            ... )
             >>> _, _, _, file_pathname2 = info_2
-            >>> os.path.relpath(os.path.dirname(file_pathname2))
-            'tests\\osm_data\\greater-london'
+            >>> get_relative_path(file_pathname2.parent, as_str=True)
+            'tests/osm_data/greater-london'
 
             >>> downloader_ = Downloader(download_dir=download_dir)
             >>> info_3 = downloader_.get_valid_download_info(subregion_name, osm_file_format)
             >>> _, _, _, file_pathname3 = info_3
-            >>> os.path.relpath(os.path.dirname(file_pathname3))
-            'tests\\osm_data\\europe\\united-kingdom\\england\\greater-london'
+            >>> get_relative_path(file_pathname3.parent, as_str=True)
+            'tests/osm_data/europe/united-kingdom/england/greater-london'
         """
 
         method_name = self.get_valid_download_info.__name__
+        raise_error = kwargs.pop('raise_error', True)
 
-        if hasattr(self.downloader, method_name):
-            return self.downloader.get_valid_download_info(
-                subregion_name=subregion_name,
-                osm_file_format=osm_file_format,
-                download_dir=download_dir,
-                **kwargs
-            )
-
-        else:
+        try:
+            downloader_method = getattr(self.downloader, method_name)
+        except AttributeError:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
+
+        return downloader_method(
+            subregion_name=subregion_name,
+            osm_file_format=osm_file_format,
+            download_dir=download_dir,
+            **kwargs
+        )
 
     def file_exists(self, subregion_name, osm_file_format, data_dir=None, update=False,
                     verbose=False, ret_file_path=False, raise_error=True):
@@ -967,7 +1037,7 @@ class Downloader(BaseDownloader):
         :param data_dir: directory where the data file (or files) is (or are) stored,
             defaults to ``None``; when ``data_dir=None``, it refers to
             :func:`~pydriosm.utils.cdd_geofabrik`.
-        :type data_dir: str | None
+        :type data_dir: str | pathlib.Path | None
         :param update: whether to (check and) update the data, defaults to ``False``
         :type update: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
@@ -1035,6 +1105,7 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_bbbike_cities(self, update=False, confirmation_required=True, verbose=False,
                           raise_error=True):
@@ -1078,6 +1149,7 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_bbbike_cities_poly(self, update=False, confirmation_required=True, verbose=False,
                                raise_error=True):
@@ -1129,6 +1201,7 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_subregion_index(self, update=False, confirmation_required=True, verbose=False,
                             raise_error=True):
@@ -1179,6 +1252,7 @@ class Downloader(BaseDownloader):
 
         else:
             self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+            return None
 
     def get_sub_catalogue(self, subregion_name, update=False, confirmation_required=True,
                           verbose=False, raise_error=True):
@@ -1234,8 +1308,8 @@ class Downloader(BaseDownloader):
                 raise_error=raise_error,
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def download_data(self, subregion_names, osm_file_formats=None, download_dir=None,
                       update=False, confirmation_required=True, interval=None,
