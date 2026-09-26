@@ -75,7 +75,7 @@ class TestGeofabrikDownloader:
         monkeypatch.setattr('builtins.input', lambda _: "No")
         download_index = gfd.get_download_index(update=True, verbose=True)
         out, _ = capfd.readouterr()
-        assert "Cancelled" in out
+        assert "Canceled." in out
         assert download_index is None
 
     def test_get_subregion_table(self, gfd, capfd):

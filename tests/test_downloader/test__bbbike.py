@@ -34,8 +34,8 @@ class TestBBBikeDownloader:
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
         bbbike_cities = bbd.get_bbbike_cities(update=update, verbose=True)
         out, _ = capfd.readouterr()
-        # if update:
-        #     assert "Retrieving/compiling the data" in out and "Done." in out
+        if update:
+            assert "Retrieving/compiling the data" in out and "Done." in out
         assert isinstance(bbbike_cities, list)
 
     @pytest.mark.parametrize('update', [True, False])
