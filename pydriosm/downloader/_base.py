@@ -193,8 +193,6 @@ class BaseDownloader:
         :type note: str
         :param end: Trailing string appended after the status message. Defaults to ``" ... "``.
         :type end: str
-        :return: ``None``.
-        :rtype: None
 
         **Examples**::
 
@@ -216,14 +214,13 @@ class BaseDownloader:
             Retrieving/compiling data of <data_name> ... Done.
         """
 
-        if verbose:
-            action = "Retrieving/compiling"
-            suffix = "the data" if confirmation_required else f"data of {data_name}"
-            note_str = f" {note}" if note else ""
+        if not verbose:
+            return
 
-            print(f"{action} {suffix}{note_str}", end=end, flush=True)
+        suffix = "the data" if confirmation_required else f"data of {data_name}"
+        note_str = f" {note}" if note else ""
 
-        return None
+        print(f"Retrieving/compiling {suffix}{note_str}", end=end, flush=True)
 
     @classmethod
     def print_status(cls, data_name="<data_name>", file_path="<file_path>", verbose=False,
@@ -250,8 +247,6 @@ class BaseDownloader:
         :param raise_error: Whether to raise the provided exception after printing.
             Defaults to ``False``.
         :type raise_error: bool
-        :return: ``None``.
-        :rtype: None
 
         **Examples**::
 
@@ -271,12 +266,11 @@ class BaseDownloader:
         """
 
         if error_message is not None:
-            _print_failure_message(
-                error_message, prefix="Failed.", verbose=verbose, raise_error=raise_error)
+            _print_failure_message(error_message, "Failed.", verbose, raise_error)
 
         else:
             if verbose == 2:
-                path = Path(file_path) if not isinstance(file_path, Path) else file_path
+                path = Path(file_path)
                 action = "updating" if (update or path.exists()) else "collecting"
                 print(f"The {action} of {data_name} is canceled, or no data is available.")
 
