@@ -2,7 +2,7 @@ import copy
 import os
 
 import pytest
-from pyhelpers.dirs import delete_dir, normalize_pathname
+from pyhelpers.dirs import delete_dir, get_relative_path
 
 from pydriosm.downloader._base import BaseDownloader
 from pydriosm.downloader._bbbike import BBBikeDownloader
@@ -29,12 +29,12 @@ class TestBaseDownloader:
 
     def test_init(self, bd):
         assert bd.NAME == 'OSM downloader'
-        assert os.path.relpath(bd.download_dir) == 'osm_data'
-        assert os.path.relpath(bd.cdd()) == 'osm_data'
+        assert get_relative_path(bd.download_dir, as_str=True) == 'osm_data'
+        assert get_relative_path(bd.cdd(), as_str=True) == 'osm_data'
         assert bd.download_dir == bd.cdd()
 
         _d_test = BaseDownloader(download_dir="tests/osm_data")
-        assert normalize_pathname(os.path.relpath(_d_test.download_dir)) == 'tests/osm_data'
+        assert get_relative_path(_d_test.download_dir, as_str=True) == 'tests/osm_data'
 
     @staticmethod
     def test_cdd():
@@ -43,25 +43,42 @@ class TestBaseDownloader:
     @staticmethod
     def test_format_confirmation_prompt():
         test_1 = BaseDownloader.format_confirmation_prompt()
-        assert test_1 == 'Proceed to retrieve/compile data of <data_name>\n?'
+        assert test_1 == 'Proceed with retrieving/compiling data of <data_name>?\n'
 
         test2 = BaseDownloader.format_confirmation_prompt(update=True)
-        assert test2 == 'Proceed to update the data of <data_name>\n?'
+        assert test2 == 'Proceed with updating the data of <data_name>?\n'
 
     @staticmethod
     def test_print_action_prompt(capfd):
-        assert BaseDownloader.print_action_prompt(verbose=False) is None
+        """
+        Test the ``print_action_prompt`` method of ``BaseDownloader``.
 
+        Verifies output formatting across various combinations of parameter settings
+        including verbosity levels, custom notes and confirmation flags.
+
+        :param capfd: Pytest fixture to capture standard output and error streams.
+        :type capfd: pytest.CaptureFixture
+        """
+
+        # When verbose is False, nothing should be printed and the method returns None
+        BaseDownloader.print_action_prompt(verbose=False)
+        out, err = capfd.readouterr()
+        assert out == ""
+        assert err == ""
+
+        # Default action prompt when verbose is True
         BaseDownloader.print_action_prompt(verbose=True)
         print("Done.")
         out, _ = capfd.readouterr()
         assert "Retrieving/compiling the data ... Done." in out
 
+        # Action prompt with custom note
         BaseDownloader.print_action_prompt(verbose=True, note="(Some notes)")
         print("Done.")
         out, _ = capfd.readouterr()
         assert "Retrieving/compiling the data (Some notes) ... Done." in out
 
+        # Action prompt without confirmation requirement
         BaseDownloader.print_action_prompt(verbose=True, confirmation_required=False)
         print("Done.")
         out, _ = capfd.readouterr()
@@ -69,19 +86,36 @@ class TestBaseDownloader:
 
     @staticmethod
     def test_print_status(capfd):
-        assert BaseDownloader.print_status() is None
+        """
+        Test the ``print_status`` method of ``BaseDownloader``.
 
+        Verifies status messages printed under different verbosity levels and error
+        message conditions.
+
+        :param capfd: Pytest fixture to capture standard output and error streams.
+        :type capfd: pytest.CaptureFixture
+        """
+
+        # When verbose is False, nothing should be printed and the method returns None
+        BaseDownloader.print_status(verbose=False)
+        out, err = capfd.readouterr()
+        assert out == ""
+        assert err == ""
+
+        # Verbose level True (1) prints default cancellation message
         BaseDownloader.print_status(verbose=True)
         out, _ = capfd.readouterr()
-        assert out == 'Cancelled.\n'
+        assert "Canceled." in out
 
+        # Verbose level 2 prints detailed cancellation message
         BaseDownloader.print_status(verbose=2)
         out, _ = capfd.readouterr()
-        assert out == 'The collecting of <data_name> is cancelled, or no data is available.\n'
+        assert out == "The collecting of <data_name> is canceled, or no data is available.\n"
 
+        # Verbose with explicit error message
         BaseDownloader.print_status(verbose=True, error_message="Errors.")
         out, _ = capfd.readouterr()
-        assert out == 'Failed. Errors.\n'
+        assert out == "Failed. Errors.\n"
 
     @staticmethod
     @pytest.mark.parametrize('data_name', [None, '<data_name>'])
@@ -93,40 +127,38 @@ class TestBaseDownloader:
         monkeypatch.setattr('builtins.input', lambda _: "No")
         output = BaseDownloader.get_prepacked_data(callable, verbose=True)
         out, _ = capfd.readouterr()
-        assert 'Cancelled.' in out
+        assert 'Canceled.' in out
         assert output is None
 
-    @staticmethod
-    def test_validate_subregion_name():
+    def test_validate_subregion_name(self, bd):
         with pytest.raises(InvalidSubregionNameError) as exc_info:
-            BaseDownloader.validate_subregion_name('abc')
+            bd.validate_subregion_name('abc')
         assert '1)' in str(exc_info.value) and '2)' in str(exc_info.value)
 
         with pytest.raises(InvalidSubregionNameError) as exc_info:
-            BaseDownloader.validate_subregion_name('abc', ['ab'])
+            bd.validate_subregion_name('abc', ['ab'])
         assert ' -> ' in str(exc_info.value)
 
         subrgn_name = 'usa'
-        subrgn_name_ = BaseDownloader.validate_subregion_name(subrgn_name)
+        subrgn_name_ = bd.validate_subregion_name(subrgn_name)
         assert subrgn_name_ == 'United States of America'
 
         avail_subrgn_names = ['Birmingham', 'Leeds', 'Greater London', 'Great Britain']
 
         subrgn_name = 'Britain'
-        subrgn_name_ = BaseDownloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
+        subrgn_name_ = bd.validate_subregion_name(subrgn_name, avail_subrgn_names)
         assert subrgn_name_ == 'Great Britain'
 
         subrgn_name = 'london'
-        subrgn_name_ = BaseDownloader.validate_subregion_name(subrgn_name, avail_subrgn_names)
+        subrgn_name_ = bd.validate_subregion_name(subrgn_name, avail_subrgn_names)
         assert subrgn_name_ == 'Greater London'
 
-    @staticmethod
-    def test_validate_file_format():
-        assert BaseDownloader.validate_file_format(osm_file_format='pbf') == '.osm.pbf'
-        assert BaseDownloader.validate_file_format(osm_file_format='shp') == '.shp.zip'
+    def test_validate_file_format(self, bd):
+        assert bd.validate_file_format(osm_file_format='pbf') == '.osm.pbf'
+        assert bd.validate_file_format(osm_file_format='shp') == '.shp.zip'
 
         with pytest.raises(InvalidFileFormatError) as e:
-            _ = BaseDownloader.validate_file_format(osm_file_format='abc')  # Raise an error
+            _ = bd.validate_file_format(osm_file_format='abc')  # Raise an error
             assert "`osm_file_format='abc'` -> The input `osm_file_format` is unidentifiable." in e
 
     @staticmethod
@@ -134,16 +166,15 @@ class TestBaseDownloader:
         subrgn_name_ = 'London'
         dwnld_url = 'https://download.bbbike.org/osm/bbbike/London/London.osm.pbf'
 
-        assert BaseDownloader.get_default_sub_path(subrgn_name_, dwnld_url) == '\\london'
+        assert BaseDownloader.get_default_sub_path(subrgn_name_, dwnld_url).name == 'london'
 
     @staticmethod
     def test_make_subregion_dirname():
         assert BaseDownloader.make_subregion_dirname('England') == 'england'
         assert BaseDownloader.make_subregion_dirname('Greater London') == 'greater-london'
 
-    @staticmethod
-    def test_get_subregion_download_url():
-        output = BaseDownloader.get_subregion_download_url('<subregion_name_>', '<download_url>')
+    def test_get_subregion_download_url(self, bd):
+        output = bd.get_subregion_download_url('<subregion_name_>', '<download_url>')
         assert output == ('<subregion_name_>', '<download_url>')
 
     def test_get_valid_download_info(self, bd):
@@ -156,13 +187,13 @@ class TestBaseDownloader:
         assert subregion_name_ == '<subregion_name_>'
         assert osm_filename == '<download_url>'
         assert download_url == '<download_url>'
-        assert os.path.relpath(file_pathname) == os.path.join(
-            "osm_data", "<subregion_name_>", "<download_url>")
+        assert (get_relative_path(file_pathname, as_str=True) ==
+                "osm_data/subregion_name/<download_url>")
 
-        bd.download_dir = os.path.join(cur_dir, '<subregion_name_>')
+        bd.download_dir = cur_dir / '<subregion_name_>'
         _, _, _, file_pathname = bd.get_valid_download_info(subregion_name, osm_file_format)
-        assert os.path.relpath(file_pathname) == os.path.join(
-            "osm_data", "<subregion_name_>", "<download_url>")
+        assert (get_relative_path(file_pathname, as_str=True) ==
+                "osm_data/<subregion_name_>/<download_url>")
 
         download_dir = 'x-osm-pbf'
         _, _, _, file_pathname = bd.get_valid_download_info(
@@ -192,68 +223,68 @@ class TestBaseDownloader:
     def test_file_exists_and_more(self, gfd, bbd):
         subrgn_names, file_format = 'London', ".pbf"
 
-        output = gfd.file_exists_and_more(
+        output = gfd.check_download_status(
             subregion_names=subrgn_names, osm_file_formats=file_format)
         assert output[0] == ['Greater London']
         assert output[1] == ['.osm.pbf']
         assert output[2] is True
-        assert output[3].startswith('Proceed to download data in the format')
+        assert output[3].startswith('Proceed with downloading data in the format')
         assert output[4] == []
 
-        output = bbd.file_exists_and_more(
+        output = bbd.check_download_status(
             subregion_names=subrgn_names, osm_file_formats=file_format)
         assert output[0] == ['London']
         assert output[1] == ['.pbf']
         assert output[2] is True
-        assert output[3].startswith('Proceed to download data in the format')
+        assert output[3].startswith('Proceed with downloading data in the format')
         assert output[4] == []
 
         subrgn_names = ['london', 'rutland']
-        output = gfd.file_exists_and_more(
+        output = gfd.check_download_status(
             subregion_names=subrgn_names, osm_file_formats=file_format)
         assert output[0] == ['Greater London', 'Rutland']
         assert output[1] == ['.osm.pbf']
         assert output[2] is True
-        assert output[3].startswith('Proceed to download data in the format')
+        assert output[3].startswith('Proceed with downloading data in the format')
         assert output[4] == []
 
         subrgn_names = ['birmingham', 'leeds']
-        output = bbd.file_exists_and_more(
+        output = bbd.check_download_status(
             subregion_names=subrgn_names, osm_file_formats=file_format)
         assert output[0] == ['Birmingham', 'Leeds']
         assert output[1] == ['.pbf']
         assert output[2] is True
-        assert output[3].startswith('Proceed to download data in the format')
+        assert output[3].startswith('Proceed with downloading data in the format')
         assert output[4] == []
 
     def test_verify_download_dir(self, bd):
-        assert os.path.relpath(bd.download_dir) == 'osm_data'
+        assert get_relative_path(bd.download_dir, as_str=True) == 'osm_data'
 
         test_download_dir = 'tests/osm_data'
-        bd.verify_download_dir(download_dir=test_download_dir, verify_download_dir=True)
+        bd.update_download_dir(download_dir=test_download_dir, verify_download_dir=True)
 
-        assert normalize_pathname(os.path.relpath(bd.download_dir)) == test_download_dir
+        assert get_relative_path(bd.download_dir, as_str=True) == test_download_dir
 
     def test__download_data(self, bd, tmp_path, capfd):
         filename = "rutland-latest.osm.pbf"
         path_to_file = os.path.join(tmp_path, filename)
         url_ = 'https://download.geofabrik.de/europe/united-kingdom/england/'
 
-        bd.download_data(f'{url_}{filename}', path_to_file, verbose=True)
+        bd._download_data(f'{url_}{filename}', path_to_file, verbose=True)
         out, _ = capfd.readouterr()
         assert f'Saving "{filename}"' in out and ' ... Done.' in out
         assert os.path.isfile(path_to_file)
 
-        bd.download_data(f'{url_}{filename}', path_to_file, verbose=2)
+        bd._download_data(f'{url_}{filename}', path_to_file, verbose=2)
         out, _ = capfd.readouterr()
         assert f'Updating "{filename}"' in out and ' ... Done.' in out
-        assert os.path.basename(bd.data_paths[0]) == filename
+        assert bd.data_paths[0].name == filename
 
-        assert bd.download_dir == str(tmp_path)
+        assert bd.download_dir == tmp_path
 
         with pytest.raises(Exception) as exc_info:
-            bd.download_data(
-                url=f'{url_}unknown.osm.pbf', path_to_file=path_to_file, raise_error=True)
+            bd._download_data(
+                url=f'{url_}unknown.osm.pbf', file_path=path_to_file, raise_error=True)
         assert 'Failed' in str(exc_info.value)
 
         delete_dir(tmp_path, confirmation_required=False, verbose=True)
