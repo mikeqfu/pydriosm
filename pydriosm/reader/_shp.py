@@ -1495,8 +1495,13 @@ class SHP:
               <pydriosm.reader.GeofabrikReader.merge_shp_layers>`.
         """
 
+        if not shp_zip_pathnames:
+            return None
+
         extract_dir_path = cls._extract_files(
-            shp_zip_file_paths=shp_zip_pathnames, layer_name=layer_name, verbose=verbose
+            shp_zip_file_paths=shp_zip_pathnames,
+            layer_name=layer_name,
+            verbose=verbose
         )
 
         # Specify a directory that stores files for the specific layer securely
@@ -1511,7 +1516,8 @@ class SHP:
 
         suffix = "_temp"
         prefix = "-".join([
-            "_".join([y[:3] for y in re.split(r'[- ]', x) if y]) for x in subregion_names
+            "_".join([y[:3] for y in re.split(r'[- ]', x) if y])
+            for x in subregion_names
         ])
         path_to_data_dir = os.path.commonpath([str(p) for p in shp_zip_pathnames])
         merged_dirname_temp = f"{prefix}-{layer_name}{suffix}"
@@ -1571,7 +1577,8 @@ class SHP:
 
             if return_shp_pathname:
                 merged_shp_file_path = glob.glob(
-                    os.path.join(str(path_to_merged_dir), "**", "*.shp"), recursive=True
+                    os.path.join(str(path_to_merged_dir), "**", "*.shp"),
+                    recursive=True
                 )
                 return merged_shp_file_path
 
