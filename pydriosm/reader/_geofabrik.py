@@ -622,46 +622,48 @@ class GeofabrikReader(BaseReader):
 
         return shp_data
 
-    def merge_shp_layers(self, subregion_names, layer_name, data_dir=None, engine='pyshp',
+    def merge_shp_layers(self, subregion_names, layer_name, *, data_dir=None, engine='pyshp',
                          update=False, download=False, rm_zip_extracts=True,
                          merged_shp_dir=None, rm_shp_temp=True, verbose=False,
-                         ret_merged_shp_path=False):
+                         ret_merged_shp_path=False, raise_error=True):
         # noinspection shadowing-names
         """
-        Merge shapefiles for a specific layer of two or multiple geographic regions.
+        Merge shapefiles for a specific layer across multiple geographic regions.
 
-        :param subregion_names: names of geographic region (case-insensitive)
-            that is available on Geofabrik free download server
-        :type subregion_names: list
-        :param layer_name: name of a layer (e.g. 'railways')
+        :param subregion_names: Names of geographic regions available on the Geofabrik
+            download server.
+        :type subregion_names: list | tuple
+        :param layer_name: Name of a shapefile layer (e.g. ``'railways'``).
         :type layer_name: str
-        :param engine: the method used to merge/save shapefiles;
-            options include: ``'pyshp'`` (default) and ``'geopandas'`` (or ``'gpd'``)
-            if ``engine='geopandas'``, this function relies on `geopandas.GeoDataFrame.to_file()`_;
-            otherwise, it by default uses `shapefile.Writer()`_
+        :param data_dir: Directory where shapefile zip archives are stored or saved.
+            If ``None`` (default), uses default data directory.
+        :type data_dir: str | pathlib.Path | os.PathLike | None
+        :param engine: Package used to merge shapefiles. Options include ``'pyshp'``
+            (default) and ``'geopandas'`` (or ``'gpd'``).
         :type engine: str
-        :param update: whether to update the source .shp.zip files, defaults to ``False``
+        :param update: Whether to update source shapefile zip archives. Defaults to ``False``.
         :type update: bool
-        :param download: whether to ask for confirmation
-            before starting to download a file, defaults to ``True``
+        :param download: Whether to ask for confirmation before downloading files.
+            Defaults to ``False``.
         :type download: bool
-        :param data_dir: directory where the .shp.zip data files are located/saved;
-            if ``None`` (default), the default directory
-        :type data_dir: str | None
-        :param rm_zip_extracts: whether to delete the extracted files, defaults to ``False``
+        :param rm_zip_extracts: Whether to delete extracted shapefile folders after merging.
+            Defaults to ``True``.
         :type rm_zip_extracts: bool
-        :param rm_shp_temp: whether to delete temporary layer files, defaults to ``False``
+        :param merged_shp_dir: Output directory where merged shapefiles are saved.
+            If ``None`` (default), uses the layer name as the folder name.
+        :type merged_shp_dir: str | pathlib.Path | os.PathLike | None
+        :param rm_shp_temp: Whether to delete temporary layer files after merging.
+            Defaults to ``True``.
         :type rm_shp_temp: bool
-        :param merged_shp_dir: if ``None`` (default), use the layer name
-            as the name of the folder where the merged .shp files will be saved
-        :type merged_shp_dir: str | None
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param verbose: Verbosity level for console output. Defaults to ``False``.
         :type verbose: bool | int
-        :param ret_merged_shp_path: whether to return the path to the merged .shp file,
-            defaults to ``False``
+        :param ret_merged_shp_path: Whether to return file path(s) to merged shapefiles.
+            Defaults to ``False``.
         :type ret_merged_shp_path: bool
-        :return: the path to the merged file when ``ret_merged_shp_path=True``
-        :rtype: list | str
+        :param raise_error: Whether to raise an exception if execution fails. Defaults to ``True``.
+        :type raise_error: bool
+        :return: Path(s) to merged shapefiles when ``ret_merged_shp_path=True``, otherwise ``None``.
+        :rtype: list | None
 
         .. _`geopandas.GeoDataFrame.to_file()`:
             https://geopandas.org/reference.html#geopandas.GeoDataFrame.to_file
@@ -715,7 +717,7 @@ class GeofabrikReader(BaseReader):
             merged_shp_dir=merged_shp_dir,
             rm_shp_temp=rm_shp_temp,
             verbose=verbose,
-            ret_merged_shp_path=ret_merged_shp_path
+            ret_merged_shp_path=ret_merged_shp_path,
         )
 
     def read_gpkg(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
