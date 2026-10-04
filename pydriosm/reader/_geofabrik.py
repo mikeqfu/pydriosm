@@ -4,8 +4,6 @@ Read OpenStreetMap data extracts available from Geofabrik free download server.
 
 import os
 
-from pyhelpers.text import find_similar_str
-
 from pydriosm.downloader import GeofabrikDownloader
 from pydriosm.reader._base import BaseReader
 
@@ -384,7 +382,7 @@ class GeofabrikReader(BaseReader):
             >>> os.path.relpath(railways_shp_path)
             'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\gis_osm_railways_...
 
-            >>> # Get/save shapefile data of features labelled 'rail' only
+            >>> # Get/save shapefile data of features labeled 'rail' only
             >>> feat_name = 'rail'
             >>> railways_shp = gfr.SHP.read_layer_shps(
             ...     railways_shp_path, feature_names=feat_name, save_feat_shp=True)
@@ -628,6 +626,7 @@ class GeofabrikReader(BaseReader):
                          update=False, download=False, rm_zip_extracts=True,
                          merged_shp_dir=None, rm_shp_temp=True, verbose=False,
                          ret_merged_shp_path=False):
+        # noinspection shadowing-names
         """
         Merge shapefiles for a specific layer of two or multiple geographic regions.
 
@@ -674,151 +673,50 @@ class GeofabrikReader(BaseReader):
         **Examples**::
 
             >>> from pydriosm.reader import GeofabrikReader
-            >>> from pyhelpers.dirs import cd, delete_dir
+            >>> from pyhelpers.dirs import cd, delete_dir, get_relative_path
             >>> import os
 
             >>> gfr = GeofabrikReader()
 
-        **Example 1**::
-
-            >>> # To merge 'railways' of Greater Manchester and West Yorkshire
-            >>> subrgn_name = ['Manchester', 'West Yorkshire']
-            >>> lyr_name = 'railways'
-            >>> dat_dir = "tests\\osm_data"
-            >>> path_to_merged_shp_file = gfr.merge_shp_layers(
-            ...     subrgn_name, lyr_name, dat_dir, verbose=True, ret_merged_shp_path=True)
-            To download data in the format '.shp.zip' for the following geographic (sub)region(s):
-              "West Yorkshire"
-              "Greater Manchester"
-              to "./tests/osm_data/"
-            ? [No]|Yes: >? yes
-            Downloading "greater-manchester-latest-free.shp.zip" 100%|██████████| 87.5M/8...
-              Saving "greater-manchester-latest-free.shp.zip" ...
-                  to "./tests/osm_data/greater-manchester/" ... Done.
-            Downloading "west-yorkshire-latest-free.shp.zip" 100%|██████████| 87.3M/87.3M...
-              Saving "west-yorkshire-latest-free.shp.zip" ...
-                  to "./tests/osm_data/west-yorkshire/" ... Done.
-            Merging the following shapefiles:
-                "greater-manchester_gis_osm_railways_free_1.shp"
-                "west-yorkshire_gis_osm_railways_free_1.shp"
-                    In progress ... Done.
-                    Find the merged shapefile at "tests/osm_data/gre_man-wes_yor-railways\".
-
-            >>> path_to_merged_shp_file = path_to_merged_shp_file[0]
-            >>> os.path.relpath(path_to_merged_shp_file)
-            'tests\\osm_data\\gre_man-wes_yor-railways\\linestring.shp'
-
-            >>> # Read the merged data
-            >>> manchester_yorkshire_railways_shp = gfr.SHP.read_shp(path_to_merged_shp_file)
-            >>> manchester_yorkshire_railways_shp.head()
-                osm_id  code  ...                                        coordinates shape_type
-            0   928999  6101  ...  [(-2.2844621, 53.4802635), (-2.2949851, 53.481...          3
-            1   929904  6101  ...  [(-2.2917977, 53.4619559), (-2.2924877, 53.461...          3
-            2   929905  6102  ...  [(-2.2794048, 53.4605819), (-2.2799722, 53.460...          3
-            3  3663332  6102  ...  [(-2.2382139, 53.4817985), (-2.2381708, 53.481...          3
-            4  3996086  6101  ...  [(-2.6003053, 53.4604346), (-2.6005261, 53.460...          3
-            [5 rows x 9 columns]
-
-            >>> # Delete the merged files
-            >>> delete_dir(os.path.dirname(path_to_merged_shp_file), verbose=True)
-            To delete the directory "./tests/osm_data/gre_man-wes_yor-railways/" (Not empty)
+            >>> # To merge 'railways' shapefiles of Greater Manchester and West Yorkshire
+            >>> subregion_names = ['Manchester', 'West Yorkshire']
+            >>> layer_name = 'railways'
+            >>> data_dir = "tests/osm_data"
+            >>> merged_shp_file_path = gfr.merge_shp_layers(
+            ...     subregion_names, 
+            ...     layer_name, 
+            ...     data_dir, 
+            ...     verbose=True, 
+            ...     ret_merged_shp_path=True
+            ... )
+            Proceed with downloading data in the format ".shp.zip" for the following geographic...
+                "Greater Manchester"
+                "West Yorkshire"
             ? [No]|Yes: yes
-            Deleting "./tests/osm_data/gre_man-wes_yor-railways/" ... Done.
+            Could not find ".shp.zip" data for "Greater Manchester".
+              Attempt downloading data for its subregions instead? [No]|Yes: yes
+              No ".shp.zip" data is available for any subregions of "Greater Manchester".
+            Could not find ".shp.zip" data for "West Yorkshire".
+              Attempt downloading data for its subregions instead? [No]|Yes: yes
+              No ".shp.zip" data is available for any subregions of "West Yorkshire".
 
-            >>> # Delete the downloaded .shp.zip data files
-            >>> delete_dir(list(map(os.path.dirname, gfr.downloader.data_paths)), verbose=True)
-            To delete the following directories:
-              "./tests/osm_data/greater-manchester/" (Not empty)
-              "./tests/osm_data/west-yorkshire/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting:
-              "./tests/osm_data/greater-manchester/" ... Done.
-              "./tests/osm_data/west-yorkshire/" ... Done.
-
-        **Example 2**::
-
-            >>> # To merge 'transport' of Greater London, Kent and Surrey
-
-            >>> subrgn_name = ['London', 'Kent', 'Surrey']
-            >>> lyr_name = 'transport'
-            >>> path_to_merged_shp_file = gfr.merge_shp_layers(
-            ...     subrgn_name, lyr_name, dat_dir, verbose=True, ret_merged_shp_path=True)
-            To download data in the format '.shp.zip' for the following geographic (sub)region(s):
-              "Kent"
-              "Surrey"
-              "Greater London"
-              to "./tests/osm_data/"
-            ? [No]|Yes: >? yes
-            Downloading "greater-london-latest-free.shp.zip" 100%|██████████| 196M/196M |...
-              Saving "greater-london-latest-free.shp.zip" ...
-                  to "./tests/osm_data/greater-london/" ... Done.
-            Downloading "kent-latest-free.shp.zip" 100%|██████████| 89.1M/89.1M | 912kB/s...
-              Saving "kent-latest-free.shp.zip" to "./tests/osm_data/kent/" ... Done.
-            Downloading "surrey-latest-free.shp.zip" 100%|██████████| 73.7M/73.7M | 1.00M...
-              Saving "surrey-latest-free.shp.zip" to "./tests/osm_data/surrey/" ... Done.
-            Merging the following shapefiles:
-                "greater-london_gis_osm_transport_a_free_1.shp"
-                "greater-london_gis_osm_transport_free_1.shp"
-                "kent_gis_osm_transport_a_free_1.shp"
-                "kent_gis_osm_transport_free_1.shp"
-                "surrey_gis_osm_transport_a_free_1.shp"
-                "surrey_gis_osm_transport_free_1.shp"
-                    In progress ... Done.
-                    Find the merged shapefile at "tests/osm_data/gre_lon-ken-sur-transport".
-
-            >>> type(path_to_merged_shp_file)
-            list
-            >>> len(path_to_merged_shp_file)
-            2
-            >>> os.path.relpath(path_to_merged_shp_file[0])
-            'tests\\osm_data\\gre_lon-ken-sur-transport\\point.shp'
-            >>> os.path.relpath(path_to_merged_shp_file[1])
-            'tests\\osm_data\\gre-lon_ken_sur_transport\\polygon.shp'
-
-            >>> # Read the merged shapefile
-            >>> merged_transport_shp_1 = gfr.SHP.read_shp(path_to_merged_shp_file[1])
-            >>> merged_transport_shp_1.head()
-                 osm_id  ...  shape_type
-            0   5077928  ...           5
-            1   8610280  ...           5
-            2  15705264  ...           5
-            3  23077379  ...           5
-            4  24016945  ...           5
-            [5 rows x 6 columns]
-
-            >>> # Delete the merged files
-            >>> delete_dir(os.path.commonpath(path_to_merged_shp_file), verbose=True)
-            To delete the directory "./tests/osm_data/gre_lon-ken-sur-transport/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/gre_lon-ken-sur-transport/" ... Done.
-
-            >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "./tests/osm_data/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
+            >>> merged_shp_file_path is None
+            True
         """
 
-        # Make sure all the required shape files are ready
-        layer_name_ = find_similar_str(layer_name, lookup_list=self.SHP.LAYER_NAMES)
-        subregion_names_ = [self.downloader.validate_subregion_name(x) for x in subregion_names]
-
-        osm_file_format = ".shp.zip"
-
-        # Download the files if not available
-        paths_to_shp_zip_files = self.downloader.download_data(
-            subregion_names=subregion_names_, osm_file_formats=osm_file_format,
-            download_dir=data_dir, update=update, confirmation_required=False if download else True,
-            deep=True, interval=1, verbose=verbose, ret_download_path=True)
-
-        if all(os.path.isfile(shp_zip_path_file) for shp_zip_path_file in paths_to_shp_zip_files):
-            path_to_merged_shp = self.SHP.merge_layers(
-                shp_zip_pathnames=paths_to_shp_zip_files, layer_name=layer_name_, engine=engine,
-                rm_zip_extracts=rm_zip_extracts, output_dir=merged_shp_dir, rm_shp_temp=rm_shp_temp,
-                verbose=verbose, ret_shp_pathname=ret_merged_shp_path)
-
-            if ret_merged_shp_path:
-                return path_to_merged_shp
+        return super().merge_shp_layers(
+            subregion_names=subregion_names,
+            layer_name=layer_name,
+            data_dir=data_dir,
+            engine=engine,
+            update=update,
+            download=download,
+            rm_zip_extracts=rm_zip_extracts,
+            merged_shp_dir=merged_shp_dir,
+            rm_shp_temp=rm_shp_temp,
+            verbose=verbose,
+            ret_merged_shp_path=ret_merged_shp_path
+        )
 
     def read_gpkg(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
                   update=False, download=False, verbose=False, raise_error=True, **kwargs):
@@ -863,7 +761,7 @@ class GeofabrikReader(BaseReader):
             >>> wm_gpkg = gbr.read_gpkg(subregion_name, data_dir=data_dir, verbose=True)
             Traceback (most recent call last):
                 ...
-            FileNotFoundError: The shapefile "west-midlands-latest-free.gpkg.zip" is not availa...
+            FileNotFoundError: The shapefile "west-midlands-latest-free.gpkg.zip" is not avail...
               Set `download=True` to download it.
             >>> wm_gpkg = gbr.read_gpkg(
             ...     subregion_name, data_dir=data_dir, verbose=True, download=True)

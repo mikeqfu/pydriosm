@@ -4,8 +4,6 @@ Read OpenStreetMap data extracts available from BBBike free download server.
 
 import os
 
-from pyhelpers.text import find_similar_str
-
 from pydriosm.downloader import BBBikeDownloader
 from pydriosm.reader._base import BaseReader
 
@@ -574,26 +572,19 @@ class BBBikeReader(BaseReader):
             Deleting "./tests/osm_data/" ... Done.
         """
 
-        # Make sure all the required shape files are ready
-        layer_name_ = find_similar_str(layer_name, lookup_list=self.SHP.LAYER_NAMES)
-        subregion_names_ = [self.downloader.validate_subregion_name(x) for x in subregion_names]
-
-        osm_file_format = ".shp.zip"
-
-        # Download the files if not available
-        paths_to_shp_zip_files = self.downloader.download_data(  # noqa
-            subregion_names=subregion_names_, osm_file_formats=osm_file_format,
-            download_dir=data_dir, update=update, confirmation_required=False if download else True,
-            deep=True, interval=1, verbose=verbose, ret_download_path=True)
-
-        if all(os.path.isfile(shp_zip_path_file) for shp_zip_path_file in paths_to_shp_zip_files):
-            path_to_merged_shp = self.SHP.merge_layers(
-                shp_zip_pathnames=paths_to_shp_zip_files, layer_name=layer_name_, engine=engine,
-                rm_zip_extracts=rm_zip_extracts, output_dir=merged_shp_dir, rm_shp_temp=rm_shp_temp,
-                verbose=verbose, ret_shp_pathname=ret_merged_shp_path)
-
-            if ret_merged_shp_path:
-                return path_to_merged_shp
+        return self.merge_shp_layers(
+            subregion_names=subregion_names,
+            layer_name=layer_name,
+            data_dir=data_dir,
+            engine=engine,
+            update=update,
+            download=download,
+            rm_zip_extracts=rm_zip_extracts,
+            merged_shp_dir=merged_shp_dir,
+            rm_shp_temp=rm_shp_temp,
+            verbose=verbose,
+            ret_merged_shp_path=ret_merged_shp_path
+        )
 
     def read_csv_xz(self, subregion_name, data_dir=None, download=False, verbose=False, **kwargs):
         # noinspection PyShadowingNames,PyUnresolvedReferences
