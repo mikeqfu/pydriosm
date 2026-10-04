@@ -15,44 +15,52 @@ import numpy as np
 import pandas as pd
 import shapely.geometry
 from pyhelpers._cache import _check_dependencies, _print_failure_message
-from pyhelpers.dirs import add_slashes, cd, check_relative_pathname, is_path_to_dir, resolve_dir
+from pyhelpers.dirs import cd, get_relative_path, is_dir_path, resolve_dir_path
 from pyhelpers.text import find_similar_str
 
 
 def get_layer_name(shp_filename):
     """
-    Find the layer name of OSM shapefile given its filename.
+    Find the layer name of an OSM shapefile given its filename.
 
-    :param shp_filename: filename of a shapefile (.shp)
-    :type shp_filename: str
-    :return: layer name of the shapefile
-    :rtype: str
+    :param shp_filename: Filename of a shapefile (e.g. ".shp").
+    :type shp_filename: str | pathlib.Path | os.PathLike | None
+    :return: Layer name extracted from the shapefile name, or ``None`` if invalid.
+    :rtype: str | None
 
     **Examples**::
 
-        >>> from pydriosm.reader._shp import SHP
-        >>> SHP.get_layer_name("") is None
+        >>> from pydriosm.reader._shp import get_layer_name
+
+        >>> get_layer_name("") is None
         True
-        >>> SHP.get_layer_name("gis_osm_railways_free_1.shp")
+
+        >>> get_layer_name("gis_osm_railways_free_1.shp")
         'railways'
-        >>> SHP.get_layer_name("gis_osm_transport_a_free_1.shp")
+
+        >>> get_layer_name("gis_osm_transport_a_free_1.shp")
         'transport'
-        >>> SHP.get_layer_name("gis_osm_protected_areas_a_free_1.shp")
+
+        >>> get_layer_name("gis_osm_protected_areas_a_free_1.shp")
         'protected_areas'
     """
 
     if not shp_filename:
         return None
 
-    if (not shp_filename.startswith('gis_osm_') and 'a_free' not in shp_filename and
-            'README' not in shp_filename):
-        return os.path.splitext(shp_filename)[0]
+    shp_filename_str = str(shp_filename)
 
-    # The pattern captures everything between 'gis_osm_' and the suffix,
-    # then specifically strips the '_a' if it is there.
-    # pattern = re.compile(r'gis_osm_(.*?)_?a?_free_1(?:\.[a-z0-9]+)?$', re.IGNORECASE)
-    pattern = re.compile(r'^gis_osm_(.*?)(?=_?a?_free)(_1)?', re.IGNORECASE)
-    match = re.search(pattern, shp_filename)
+    if (
+            not shp_filename_str.startswith("gis_osm_") and
+            "a_free" not in shp_filename_str and
+            "README" not in shp_filename_str
+    ):
+        return os.path.splitext(shp_filename_str)[0]
+
+    # The pattern captures everything between "gis_osm_" and the suffix,
+    # then specifically strips the "_a" if it is present.
+    pattern = re.compile(r"^gis_osm_(.*?)(?=_?a?_free)(_1)?", re.IGNORECASE)
+    match = re.search(pattern, shp_filename_str)
 
     if match:
         return match.group(1)
@@ -60,64 +68,230 @@ def get_layer_name(shp_filename):
     return None
 
 
-def _unzip_prep(shp_zip_pathname, extract_to=None, layer_names=None, verbose=False):
-    if extract_to:
-        extract_dir = extract_to
-    else:
-        extract_dir = os.path.splitext(shp_zip_pathname)[0].replace(".", "-")
+def _prepare_unzip_args(shp_zip_pathname, extract_to=None, layer_names=None, verbose=False):
+    """
+    Prepare the directory path and standardize layer names for shapefile extraction.
 
-    shp_zip_rel_path, extrdir_rel_path = map(
-        check_relative_pathname, [shp_zip_pathname, extract_dir])
+    This function determines the destination directory and standardizes the format of the provided
+    layer names. It also outputs extraction information if verbose mode is enabled.
+
+    :param shp_zip_pathname: Path to the zipped shapefile data.
+    :type shp_zip_pathname: str | pathlib.Path | os.PathLike
+    :param extract_to: Path to a directory where extracted files will be saved.
+        If ``None``, defaults to the directory of the zipped file.
+    :type extract_to: str | pathlib.Path | os.PathLike | None
+    :param layer_names: Name of a shapefile layer (e.g. "railways") or multiple layers.
+        If ``None``, all available layers are considered.
+    :type layer_names: str | list | tuple | None
+    :param verbose: Whether to print relevant information to the console. Defaults to ``False``.
+    :type verbose: bool | int
+    :return: A tuple containing the extraction directory and the standardized list of layer names.
+    :rtype: tuple
+    """
+
+    extract_dir = extract_to or os.path.splitext(shp_zip_pathname)[0].replace(".", "-")
+
+    rel_shp_zip_path = get_relative_path(shp_zip_pathname, as_str=True, quoted=True)
+    rel_extrdir_path = get_relative_path(extract_dir, as_str=True, quoted=True)
 
     if not layer_names:
-        layer_names_ = layer_names
+        layer_names_ = None
         if verbose:
-            print(
-                f"Extracting {add_slashes(shp_zip_rel_path)}\n"
-                f"  to {add_slashes(extrdir_rel_path)}",
-                end=" ... ")
+            print(f"Extracting {rel_shp_zip_path}\n  to {rel_extrdir_path}", end=" ... ")
     else:
-        layer_names_ = [layer_names] if isinstance(layer_names, str) else layer_names.copy()
+        layer_names_ = [layer_names] if isinstance(layer_names, str) else list(layer_names)
         if verbose:
             layer_name_list = "  " + "\n  ".join([f"'{x}'" for x in layer_names_])
             print(f"Extracting the following layer(s):\n{layer_name_list}")
-            print(f"  from: {add_slashes(shp_zip_rel_path)} ... \n"
-                  f"    to: {add_slashes(extrdir_rel_path)}",
-                  end=" ... ")
+            print(f"  from: {rel_shp_zip_path} ... \n    to: {rel_extrdir_path}", end=" ... ")
 
     return extract_dir, layer_names_
 
 
-def _unzip_trail(extract_dir, extract_files, verbose):
-    file_list = extract_files if extract_files else os.listdir(extract_dir)
-    if 'README' in file_list:
-        file_list.remove('README')
+def _group_extracted_files(extract_dir, extract_files, verbose):
+    """
+    Group extracted shapefile components into respective layer-specific subdirectories.
 
-    filenames, exts = map(lambda x: list(set(x)), zip(*map(os.path.splitext, file_list)))
+    This function iterates through the extracted files and moves them into individual
+    directories named after their corresponding layers.
 
-    layer_names_ = [
-        os.path.basename(f) if is_path_to_dir(f) else get_layer_name(f)
-        for f in filenames]
+    :param extract_dir: Path to the directory containing the extracted files.
+    :type extract_dir: str | pathlib.Path | os.PathLike
+    :param extract_files: A list of extracted file names. If ``None``, the directory contents
+        are read automatically.
+    :type extract_files: list | None
+    :param verbose: Verbosity level for printing grouping progress. Defaults to ``False``.
+    :type verbose: bool | int
+    :return: A list of paths to the newly created layer subdirectories.
+    :rtype: list
+    """
 
-    extract_dirs = []
-    for lyr, fn in zip(layer_names_, filenames):
-        extract_dir_ = os.path.join(extract_dir, lyr)
+    file_list = extract_files or os.listdir(extract_dir)
+
+    layer_files = {}
+    for f in file_list:
+        if f == "README":
+            continue
+
+        fn_base = os.path.splitext(f)[0]
+        lyr = os.path.basename(fn_base) if is_dir_path(f) else get_layer_name(fn_base)
+        layer_files.setdefault(lyr, []).append(f)
+
+    extract_dirs = set()
+    for lyr, files in layer_files.items():
+        extract_dir_ = cd(extract_dir, lyr, mkdir=True)
         if verbose == 2:
-            print("  {}".format(lyr if '_a_' not in fn else lyr + '_a'), end=" ... ")
+            lyr_display = lyr + "_a" if any('_a_' in fn for fn in files) else lyr
+            print(f"  {lyr_display}", end=" ... ")
 
-        for ext in exts:
-            filename = fn + ext
-            orig = cd(extract_dir, filename)
-            dest = cd(extract_dir_, os.path.basename(filename), mkdir=True)
-            shutil.copyfile(orig, dest)
-            os.remove(orig)
+        for f in files:
+            orig = cd(extract_dir, f)
+            dest = cd(extract_dir_, os.path.basename(f))
+            shutil.move(orig, dest)
 
         if verbose == 2:
             print("Done.")
 
-        extract_dirs.append(extract_dir_)
+        extract_dirs.add(extract_dir_)
 
-    return list(set(extract_dirs))
+    return list(extract_dirs)
+
+
+def _specify_pyshp_fields(data, field_names, decimal_precision):
+    """
+    Generate field data specifications for writing shapefiles via
+    `PyShp <https://github.com/GeospatialPython/pyshp>`_.
+
+    :param data: Data table destined for a shapefile.
+    :type data: pandas.DataFrame
+    :param field_names: Names of fields to be written as shapefile records.
+    :type field_names: list | pandas.Index
+    :param decimal_precision: Decimal precision for writing float records.
+    :type decimal_precision: int
+    :return: List of record field definitions for the .shp data.
+    :rtype: list
+
+    .. seealso::
+
+        - Examples for
+          :meth:`SHP.write_to_shapefile()<pydriosm.reader._shp.SHP.write_to_shapefile>`.
+    """
+
+    dtype_shp_type = {
+        'object': 'C',  # Character
+        'str': 'C',
+        'string': 'C',
+        'int64': 'N',  # Numeric
+        'int32': 'N',
+        'float64': 'F',  # Float
+        'float32': 'F',
+        'bool': 'L',  # Logical
+        'datetime64': 'D',  # Date
+        'datetime64[ns]': 'D',  # Explicit pandas datetime
+    }
+
+    fields = []
+
+    for field_name, dtype in data[field_names].dtypes.items():
+        # Utilize the vectorized string accessor for performance on modern Pandas
+        max_size = data[field_name].fillna('None').astype(str).str.len().max()
+
+        shp_type = dtype_shp_type.get(dtype.name, 'C')
+        decimal = decimal_precision if 'float' in dtype.name else 0
+
+        fields.append((field_name, shp_type, int(max_size), decimal))
+
+    return fields
+
+
+def _make_feat_shp_pathnames(shp_pathname, feature_names_):
+    """
+    Specify pathnames for saving data of one or multiple given features.
+
+    This function constructs target file paths by appending the feature name(s) to the
+    filename of their parent layer's shapefile.
+
+    :param shp_pathname: Pathname of a shapefile of a layer.
+    :type shp_pathname: str | pathlib.Path | os.PathLike
+    :param feature_names_: Name or names of one or multiple features in a shapefile layer.
+    :type feature_names_: list | tuple
+    :return: Pathnames corresponding to the provided ``feature_names_``.
+    :rtype: list
+
+    **Examples**::
+
+        >>> from pydriosm.reader._shp import _make_feat_shp_pathnames
+        >>> import os
+
+        >>> fn = "gis_osm_railways_free_1.shp"
+        >>> feats = ['rail']
+        >>> pn = _make_feat_shp_pathnames(shp_pathname=fn, feature_names_=feats)
+        >>> len(pn)
+        1
+        >>> os.path.relpath(pn[0])
+        'gis_osm_railways_free_1_rail.shp'
+
+        >>> fn = "tests\\osm_data\\greater-london\\gis_osm_transport_free_1.shp"
+        >>> feats = ['railway_station', 'bus_stop', 'bus_station']
+        >>> pn = _make_feat_shp_pathnames(shp_pathname=fn, feature_names_=feats)
+        >>> len(pn)
+        3
+        >>> pn
+        ['tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_railway_station.shp',
+         'tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_bus_stop.shp',
+         'tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_bus_station.shp']
+    """
+
+    shp_dir_path, shp_filename_ = os.path.split(str(shp_pathname))
+    shp_filename, ext = os.path.splitext(shp_filename_)
+
+    if len(feature_names_) > 0:
+        feat_shp_pathnames = [
+            os.path.join(shp_dir_path, f"{shp_filename}_{f}{ext}") for f in feature_names_
+        ]
+    else:
+        feat_shp_pathnames = []
+
+    return feat_shp_pathnames
+
+
+def _copy_temp_files(subregion_names, layer_name, path_to_extract_dirs, path_to_merged_dir_temp):
+    """
+    Copy extracted shapefile components into a temporary directory.
+
+    This function iterates over a list of extraction directories, finds files matching the
+    specified layer name and copies them to a designated temporary folder. The destination
+    filenames are prefixed with the formatted subregion name.
+
+    :param subregion_names: List of geographic subregion names.
+    :type subregion_names: list | tuple
+    :param layer_name: Name of the shapefile layer (e.g. "railways").
+    :type layer_name: str
+    :param path_to_extract_dirs: List of paths to the directories containing extracted files.
+    :type path_to_extract_dirs: list | tuple
+    :param path_to_merged_dir_temp: Path to the temporary directory for storing merged files.
+    :type path_to_merged_dir_temp: str | pathlib.Path | os.PathLike
+    :return: List of destination paths for the copied temporary files.
+    :rtype: list
+    """
+
+    paths_to_temp_files = []
+    path_to_merged_dir_temp_str = str(path_to_merged_dir_temp)
+
+    for subregion_name, path_to_extract_dir in zip(subregion_names, path_to_extract_dirs):
+        orig_file_list = glob.glob(
+            os.path.join(str(path_to_extract_dir), "**", f"*{layer_name}*"), recursive=True
+        )
+
+        for orig_file in orig_file_list:
+            fn = os.path.basename(orig_file)
+            prefix = subregion_name.lower().replace(" ", "-")
+            dest = os.path.join(path_to_merged_dir_temp_str, f"{prefix}_{fn}")
+
+            shutil.copyfile(orig_file, dest)
+            paths_to_temp_files.append(dest)
+
+    return paths_to_temp_files
 
 
 class SHP:
@@ -301,89 +475,103 @@ class SHP:
 
     @classmethod
     def unzip_shp_zip(cls, shp_zip_pathname, extract_to=None, layer_names=None, separate=False,
-                      ret_extract_dir=False, verbose=False, raise_error=False):
+                      return_extract_dir=False, verbose=False, raise_error=False):
+        # noinspection shadowing-names,unresolved-references
         """
-        Unzip a zipped shapefile.
+        Unzip a zipped shapefile and optionally separate layers into individual directories.
 
-        :param shp_zip_pathname: path to a zipped shapefile data (.shp.zip)
-        :type shp_zip_pathname: str | os.PathLike[str]
-        :param extract_to: path to a directory where extracted files will be saved;
-            when ``extract_to=None`` (default), the same directory where the .shp.zip file is saved
-        :type extract_to: str | None
-        :param layer_names: name of a .shp layer, e.g. 'railways', or names of multiple layers;
-            when ``layer_names=None`` (default), all available layers
-        :type layer_names: str | list | None
-        :param separate: whether to put the data files of different layer in respective folders,
-            defaults to ``False``
+        This method extracts files from a zipped shapefile archive. It allows targeted extraction
+        by layer names and can automatically group the resulting files into separate directories
+        based on their layer names.
+
+        :param shp_zip_pathname: Path to the zipped shapefile data (e.g. ".shp.zip").
+        :type shp_zip_pathname: str | pathlib.Path | os.PathLike
+        :param extract_to: Path to a directory where extracted files will be saved.
+            When ``None``, defaults to the same directory where the zip file is located.
+        :type extract_to: str | pathlib.Path | os.PathLike | None
+        :param layer_names: Name of a shapefile layer (e.g. "railways") or names of multiple layers.
+            When ``None``, all available layers are extracted.
+        :type layer_names: str | list | tuple | None
+        :param separate: Whether to put the data files of different layers into respective folders.
+            Defaults to ``False``.
         :type separate: bool
-        :param ret_extract_dir: whether to return the pathname of the directory
-            where extracted files are saved, defaults to ``False``
-        :type ret_extract_dir: bool
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param return_extract_dir: Whether to return the pathname(s) of the extraction directory.
+            Defaults to ``False``.
+        :type return_extract_dir: bool
+        :param verbose: Whether to print relevant information to the console. Defaults to ``False``.
         :type verbose: bool | int
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=False`` (default), the error will be suppressed.
+        :param raise_error: Whether to raise the provided exception upon failure.
+            If ``False``, the error will be suppressed.
         :type raise_error: bool
-        :return: the path to the directory of extracted files when ``ret_extract_dir=True``
-        :rtype: str
+        :return: The path(s) to the directory of extracted files when ``return_extract_dir=True``.
+            Returns ``None`` if extraction is aborted.
+        :rtype: str | pathlib.Path | os.PathLike | list | None
 
         **Examples**::
 
             >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import BBBikeDownloader
-            >>> from pyhelpers.dirs import cd, delete_dir
+            >>> from pyhelpers.dirs import cd, delete_dir, get_relative_path
             >>> import os
 
             >>> # Download the shapefile data of London as an example
-            >>> subrgn_name = 'birmingham'
+            >>> subregion_name = 'birmingham'
             >>> file_format = ".shp"
-            >>> dwnld_dir = "tests/osm_data"
+            >>> download_dir = "tests/osm_data"
 
             >>> bbd = BBBikeDownloader()
 
-            >>> bbd.download_data(subrgn_name, file_format, dwnld_dir, verbose=True)
-            Proceed to update the data in the format '.shp.zip' for the following geographic (s...
+            >>> bbd.download_data(subregion_name, file_format, download_dir, verbose=True)
+            Proceed with downloading data in the format ".shp.zip" for the following geographic...
                 "Birmingham"
-              in "./tests/osm_data/birmingham/"
-            ? [No]|Yes: yes
-            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 17.7MB/s ...
-              Updating "Birmingham.osm.shp.zip" in "./tests/osm_data/birmingham/" ... Done.
+              to "tests/osm_data/birmingham/"
+            ? [No]|Yes: >? yes
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.9M/79.9M | 14.1MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "tests/osm_data/birmingham/" ... Done.
 
-            >>> path_to_shp_zip = bbd.data_paths[0]
-            >>> os.path.relpath(path_to_shp_zip)
-            'tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip'
+            >>> shp_zip_file_path = bbd.data_paths[0]
+            >>> get_relative_path(shp_zip_file_path, as_str=True)
+            'tests/osm_data/birmingham/Birmingham.osm.shp.zip'
 
             >>> # To extract data of a specific layer 'railways'
             >>> bham_railways_dir = SHP.unzip_shp_zip(
-            ...     path_to_shp_zip, layer_names='railways', verbose=True, ret_extract_dir=True)
+            ...     shp_zip_file_path,
+            ...     layer_names='railways',
+            ...     verbose=True,
+            ...     return_extract_dir=True
+            ... )
             Extracting the following layer(s):
-                'railways'
-                from "tests\\osm_data\\greater-london\\greater-london-latest-free.shp.zip"
-                  to "tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\" ... Done.
+              'railways'
+              from: "tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
+                to: "tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
 
-            >>> os.path.relpath(bham_railways_dir)  # Check the directory
-            'tests\\osm_data\\birmingham\\Birmingham-osm-shp'
+            >>> get_relative_path(bham_railways_dir, as_str=True)  # Check the directory
+            'tests/osm_data/birmingham/Birmingham-osm-shp'
 
             >>> # When multiple layer names are specified, the extracted files for each of the
             >>> # layers can be put into a separate subdirectory by setting `separate=True`:
-            >>> lyr_names = ['railways', 'landuse']
+            >>> layer_names = ['railways', 'landuse']
             >>> dirs_of_layers = SHP.unzip_shp_zip(
-            ...     shp_zip_pathname=path_to_shp_zip, layer_names=lyr_names, separate=True,
-            ...     verbose=2, ret_extract_dir=True)
+            ...     shp_zip_pathname=shp_zip_file_path,
+            ...     layer_names=layer_names,
+            ...     separate=True,
+            ...     verbose=2,
+            ...     return_extract_dir=True
+            ... )
             Extracting the following layer(s):
               'railways'
               'landuse'
-              from: "./tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
-                to: "./tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
+              from: "tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
+                to: "tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
             Grouping files by layers ...
-              landuse ... Done.
-              railways ... Done.
+              Birmingham-shp/shape/landuse ... Done.
+              Birmingham-shp/shape/railways ... Done.
             Done.
 
             >>> len(dirs_of_layers) == 2
             True
-            >>> os.path.relpath(os.path.commonpath(dirs_of_layers))
-            'tests\\osm_data\\birmingham\\Birmingham-osm-shp'
+            >>> get_relative_path(os.path.commonpath(dirs_of_layers), as_str=True)
+            'tests/osm_data/birmingham/Birmingham-osm-shp/Birmingham-shp/shape'
             >>> set(map(os.path.basename, dirs_of_layers))
             {'landuse', 'railways'}
 
@@ -392,14 +580,17 @@ class SHP:
 
             >>> # To extract all (without specifying `layer_names`
             >>> bham_shp_dir = SHP.unzip_shp_zip(
-            ...     path_to_shp_zip, verbose=True, ret_extract_dir=True)
-            Extracting "./tests/osm_data/birmingham/Birmingham.osm.shp.zip"
-              to "./tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
+            ...     shp_zip_file_path,
+            ...     verbose=True,
+            ...     return_extract_dir=True
+            ... )
+            Extracting "tests/osm_data/birmingham/Birmingham.osm.shp.zip"
+              to "tests/osm_data/birmingham/Birmingham-osm-shp/" ... Done.
 
             >>> # Check the directory
-            >>> os.path.relpath(bham_shp_dir)
-            'tests\\osm_data\\birmingham\\Birmingham-osm-shp'
-            >>> list_of_files = os.listdir(cd(bham_shp_dir, "Birmingham-shp/shape"))
+            >>> get_relative_path(bham_shp_dir, as_str=True)
+            'tests/osm_data/birmingham/Birmingham-osm-shp'
+            >>> list_of_files = list(cd(bham_shp_dir, "Birmingham-shp/shape").iterdir())
             >>> len(list_of_files)
             40
             >>> # Get the names of all available layers
@@ -415,54 +606,65 @@ class SHP:
 
             >>> # Delete the download/data directory
             >>> delete_dir(bbd.download_dir, verbose=True)
-            To delete the directory "./tests/osm_data/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
+            Confirm deletion of the directory "tests/osm_data/" (Not empty)?
+             [No]|Yes: yes
+            Deleting "tests/osm_data/" ... Done.
         """
 
-        extract_dir, layer_names_ = _unzip_prep(
-            shp_zip_pathname=shp_zip_pathname, extract_to=extract_to, layer_names=layer_names,
-            verbose=verbose)
+        extract_dir, layer_names_ = _prepare_unzip_args(
+            shp_zip_pathname=shp_zip_pathname,
+            extract_to=extract_to,
+            layer_names=layer_names,
+            verbose=verbose,
+        )
 
         try:
             with zipfile.ZipFile(file=shp_zip_pathname, mode='r') as sz:
                 if layer_names_:
                     extract_files = [
                         f.filename for f in sz.filelist
-                        if any(x in f.filename for x in layer_names_)]
+                        if any(x in f.filename for x in layer_names_)
+                    ]
                 else:
                     extract_files = None
+
+                # Abort extraction early if specific layers were requested but none were found
+                if isinstance(extract_files, list) and not extract_files:
+                    if verbose:
+                        print("\n  The specified layer does not exist. No data has been extracted.")
+                    return extract_dir if return_extract_dir else None
+
                 sz.extractall(extract_dir, members=extract_files)
 
             if verbose:
-                if isinstance(extract_files, list) and len(extract_files) == 0:
-                    print("\n  The specified layer does not exist. No data has been extracted.")
-                else:
-                    print("Done.")
+                print("Done.")
 
-            if not separate and ret_extract_dir:
+            if not separate and return_extract_dir:
                 return extract_dir
 
             if separate:
                 if verbose:
                     print("Grouping files by layers ... ", end="\n" if verbose == 2 else "")
 
-                extract_dir_list = _unzip_trail(
-                    extract_dir=extract_dir, extract_files=extract_files, verbose=verbose)
+                extract_dir_list = _group_extracted_files(
+                    extract_dir=extract_dir,
+                    extract_files=extract_files,
+                    verbose=verbose
+                )
 
                 if verbose:
                     print("Done.")
 
-                if ret_extract_dir:
+                if return_extract_dir:
                     return extract_dir_list
 
         except Exception as e:
-            _print_failure_message(
-                e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
+            _print_failure_message(e, "Failed. Error:", verbose=verbose, raise_error=raise_error)
 
     @classmethod
     def _covert_to_geometry(cls, x):
-        """Convert the ``(shape_type, coordinates)`` of a feature to a ``shapely.geometry`` object.
+        """
+        Convert the ``(shape_type, coordinates)`` of a feature to a ``shapely.geometry`` object.
 
         :param x: a feature (i.e. one row data) in a shapefile parsed by pyShp.
         :return: the corresponding ``shapely.geometry`` object
@@ -534,7 +736,7 @@ class SHP:
             'tests\\osm_data\\birmingham\\Birmingham.osm.shp.zip'
 
             >>> # Extract all
-            >>> bham_shp_dir = SHP.unzip_shp_zip(bham_shp_zip, ret_extract_dir=True)
+            >>> bham_shp_dir = SHP.unzip_shp_zip(bham_shp_zip, return_extract_dir=True)
 
             >>> # Get the pathname of the .shp data of 'railways'
             >>> path_to_railways_shp = glob.glob(
@@ -634,54 +836,8 @@ class SHP:
         return coordinates, shape_type
 
     @classmethod
-    def _specify_pyshp_fields(cls, data, field_names, decimal_precision):
-        """
-        Make fields data for writing shapefiles by
-        `PyShp <https://github.com/GeospatialPython/pyshp>`_.
-
-        :param data: data of a shapefile
-        :type data: pandas.DataFrame
-        :param field_names: names of fields to be written as shapefile records
-        :type field_names: list | pandas.Index
-        :param decimal_precision: decimal precision for writing float records
-        :type decimal_precision: int
-        :return: list of records in the .shp data
-        :rtype: list
-
-        .. seealso::
-
-            - Examples for
-              :meth:`SHP.write_to_shapefile()<pydriosm.reader._shp.SHP.write_to_shapefile>`.
-        """
-
-        dtype_shp_type = {
-            'object': 'C',  # Character
-            'str': 'C',
-            'string': 'C',
-            'int64': 'N',  # Numeric
-            'int32': 'N',
-            'float64': 'F',  # Float
-            'float32': 'F',
-            'bool': 'L',  # Logical
-            'datetime64': 'D',  # Date
-            'datetime64[ns]': 'D',  # Explicit pandas datetime
-        }
-
-        fields = []
-
-        for field_name, dtype, in data[field_names].dtypes.items():
-            max_size = data[field_name].fillna('None').astype(str).map(len).max()
-
-            shp_type = dtype_shp_type.get(dtype.name, 'C')
-            decimal = decimal_precision if 'float' in dtype.name else 0
-
-            fields.append((field_name, shp_type, int(max_size), decimal))
-
-        return fields
-
-    @classmethod
     def write_to_shapefile(cls, data, write_to, shp_filename=None, decimal_precision=5,
-                           ret_shp_pathname=False, verbose=False, raise_error=False):
+                           return_shp_path=False, verbose=False, raise_error=False):
         """
         Save .shp data as a shapefile by `PyShp <https://github.com/GeospatialPython/pyshp>`_.
 
@@ -694,9 +850,9 @@ class SHP:
         :type shp_filename: str | os.PahtLike[str] | None
         :param decimal_precision: decimal precision for writing float records, defaults to ``5``
         :type decimal_precision: int
-        :param ret_shp_pathname: whether to return the pathname of the output .shp file,
+        :param return_shp_path: whether to return the pathname of the output .shp file,
             defaults to ``False``
-        :type ret_shp_pathname: bool
+        :type return_shp_path: bool
         :param verbose: whether to print relevant information in console, defaults to ``False``
         :type verbose: bool | int
         :param raise_error: Whether to raise the provided exception;
@@ -734,7 +890,7 @@ class SHP:
             >>> lyr_name = 'railways'
 
             >>> railways_shp_dir = SHP.unzip_shp_zip(
-            ...     bham_shp_zip, layer_names=lyr_name, verbose=True, ret_extract_dir=True)
+            ...     bham_shp_zip, layer_names=lyr_name, verbose=True, return_extract_dir=True)
             Extracting the following layer(s):
               'railways'
               from: "./tests/osm_data/birmingham/Birmingham.osm.shp.zip" ...
@@ -759,7 +915,7 @@ class SHP:
 
             >>> # Save the data of 'railways' to the new directory
             >>> path_to_railways_shp_ = SHP.write_to_shapefile(
-            ...     bham_railways_shp, railways_subdir, ret_shp_pathname=True, verbose=True)
+            ...     bham_railways_shp, railways_subdir, return_shp_path=True, verbose=True)
             Writing data to "tests/osm_data/birmingham/railways.*" ... Done.
             >>> os.path.basename(path_to_railways_shp_)
             'railways.shp'
@@ -767,7 +923,7 @@ class SHP:
             >>> # If `shp_filename` is specified
             >>> path_to_railways_shp_ = SHP.write_to_shapefile(
             ...     bham_railways_shp, railways_subdir, shp_filename="rail_data",
-            ...     ret_shp_pathname=True, verbose=True)
+            ...     return_shp_path=True, verbose=True)
             Writing data to "tests/osm_data/birmingham/rail_data.*" ... Done.
             >>> os.path.basename(path_to_railways_shp_)
             'rail_data.shp'
@@ -792,7 +948,8 @@ class SHP:
         write_to_ = os.path.join(os.path.dirname(write_to), filename)
 
         if verbose:
-            print(f'Writing data to "{check_relative_pathname(write_to_)}.*"', end=" ... ")
+            rel_write_to_ = get_relative_path(write_to_, as_str=True)
+            print(f'Writing data to "{rel_write_to_}.*"', end=" ... ")
 
         try:
             key_column_names = ['coordinates', 'shape_type']
@@ -810,7 +967,7 @@ class SHP:
             shape_type = dat['shape_type'].unique()[0]
 
             with pyshp.Writer(target=write_to_, shapeType=shape_type, autoBalance=True) as w:
-                field_info_list = cls._specify_pyshp_fields(
+                field_info_list = _specify_pyshp_fields(
                     data=dat, field_names=field_names, decimal_precision=decimal_precision)
 
                 for f in field_info_list:
@@ -841,65 +998,12 @@ class SHP:
             if verbose:
                 print("Done.")
 
-            if ret_shp_pathname:
+            if return_shp_path:
                 return f"{write_to_}.shp"
 
         except Exception as e:
             _print_failure_message(
                 e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
-
-    @classmethod
-    def _make_feat_shp_pathname(cls, shp_pathname, feature_names_):
-        """
-        Specify a pathname(s) for saving data of one (or multiple) given feature(s)
-        by appending the feature name(s) to the filename of
-        its (or their) parent layer's shapefile).
-
-        :param shp_pathname: pathname of a shapefile of a layer
-        :type shp_pathname: str | os.PathLike[str]
-        :param feature_names_: name (or names) of one (or multiple) feature(s)
-            in a shapefile of a layer
-        :type feature_names_: list
-        :return: pathname(s) of the data of the given ``feature_names``
-        :rtype: list
-
-        **Examples**::
-
-            >>> from pydriosm.reader._shp import SHP
-            >>> import os
-
-            >>> fn = "gis_osm_railways_free_1.shp"
-            >>> feats = ['rail']
-            >>> pn = SHP._make_feat_shp_pathname(shp_pathname=fn, feature_names_=feats)
-            >>> len(pn)
-            1
-            >>> os.path.relpath(pn[0])
-            'gis_osm_railways_free_1_rail.shp'
-
-            >>> fn = "tests\\osm_data\\greater-london\\gis_osm_transport_free_1.shp"
-            >>> feats = ['railway_station', 'bus_stop', 'bus_station']
-            >>> pn = SHP._make_feat_shp_pathname(shp_pathname=fn, feature_names_=feats)
-            >>> len(pn)
-            3
-            >>> pn
-            ['tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_railway_station.shp',
-             'tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_bus_stop.shp',
-             'tests\\osm_data\\greater-london\\gis_osm_transport_a_free_1_bus_station.shp']
-        """
-
-        shp_dir_path, shp_filename_ = os.path.split(shp_pathname)
-        shp_filename, ext = os.path.splitext(shp_filename_)
-
-        # # filename_for_dir = re.search('gis_osm_(.*?)_(a_)?', fn_for_dir_).group(1)
-        # layer_name = cls.find_shp_layer_name(shp_filename_)
-
-        if len(feature_names_) > 0:
-            feat_shp_pathnames = [
-                os.path.join(shp_dir_path, f"{shp_filename}_{f}{ext}") for f in feature_names_]
-        else:
-            feat_shp_pathnames = []
-
-        return feat_shp_pathnames
 
     @classmethod
     def _write_feat_shp(cls, data, feat_col_name, feat_shp_pathnames_):
@@ -990,7 +1094,7 @@ class SHP:
 
             >>> # Extract the downloaded .shp.zip file
             >>> bham_shp_dir = SHP.unzip_shp_zip(
-            ...     bham_shp_zip, layer_names='railways', ret_extract_dir=True)
+            ...     bham_shp_zip, layer_names='railways', return_extract_dir=True)
             >>> os.listdir(cd(bham_shp_dir, "Birmingham-shp/shape"))
             ['railways.cpg',
              'railways.dbf',
@@ -1010,7 +1114,7 @@ class SHP:
             4  3981454  ...  LINESTRING (-1.77412 52.52249, -1.77376 52.522...
             [5 rows x 4 columns]
 
-            >>> # Extract only the features labelled 'rail' and save the extracted data to file
+            >>> # Extract only the features labeled 'rail' and save the extracted data to file
             >>> railways_rail_shp, railways_rail_shp_path = SHP.read_layer_shps(
             ...     bham_railways_shp_path, feature_names='rail', save_feat_shp=True,
             ...     ret_feat_shp_path=True)
@@ -1065,7 +1169,7 @@ class SHP:
                         valid_feature_names = dat[feat_col_name].unique()
                         feature_names_ = [x for x in feat_names_ if x in valid_feature_names]
 
-                        feat_shp_pathnames_ = cls._make_feat_shp_pathname(
+                        feat_shp_pathnames_ = _make_feat_shp_pathnames(
                             shp_pathname=lyr_shp_pathname, feature_names_=feature_names_)
 
                         feat_shp_pathnames_temp = cls._write_feat_shp(
@@ -1080,14 +1184,14 @@ class SHP:
         return data
 
     @classmethod
-    def merge_shps(cls, shp_pathnames, path_to_merged_dir, engine='geopandas', **kwargs):
+    def merge_shps(cls, shp_pathnames, merged_dir, engine='geopandas', **kwargs):
         """
         Merge multiple shapefiles.
 
         :param shp_pathnames: list of paths to shapefiles (in .shp format)
         :type shp_pathnames: list
-        :param path_to_merged_dir: path to a directory where the merged files are to be saved
-        :type path_to_merged_dir: str
+        :param merged_dir: path to a directory where the merged files are to be saved
+        :type merged_dir: str
         :param engine: the open-source package that is used to merge/save shapefiles;
             options include: ``'pyshp'`` (default) and ``'geopandas'`` (or ``'gpd'``)
             when ``engine='geopandas'``,
@@ -1111,10 +1215,10 @@ class SHP:
             - Resource: https://github.com/GeospatialPython/pyshp
         """
 
-        file_stem = os.path.basename(path_to_merged_dir).lower()
+        file_stem = os.path.basename(merged_dir).lower()
         shp_filename = f"{file_stem}.shp"
 
-        out_file_path = os.path.join(path_to_merged_dir, shp_filename)
+        out_file_path = os.path.join(merged_dir, shp_filename)
 
         if engine in {'geopandas', 'gpd'}:
             gpd = _check_dependencies('geopandas')
@@ -1154,110 +1258,149 @@ class SHP:
                         prj.write(cls.EPSG4326_WGS84_ESRI_WKT)
 
     @classmethod
-    def _extract_files(cls, shp_zip_pathnames, layer_name, verbose=False):
+    def _extract_files(cls, shp_zip_file_paths, layer_name, verbose=False):
+        """
+        Extract specific layer files from multiple zipped shapefile archives.
+
+        :param shp_zip_file_paths: Collection of paths to zipped shapefile archives.
+        :type shp_zip_file_paths: list | tuple | set
+        :param layer_name: Name of the shapefile layer to extract (e.g. "railways").
+        :type layer_name: str | list
+        :param verbose: Verbosity level for printing output. Prints extraction details
+            when set to ``2``. Defaults to ``False``.
+        :type verbose: bool | int
+        :return: A list of paths to the directories containing the extracted files.
+        :rtype: list
+        """
+
         path_to_extract_dirs = []
 
-        for zfp in shp_zip_pathnames:
+        for zfp in shp_zip_file_paths:
             extract_dir = cls.unzip_shp_zip(
-                shp_zip_pathname=zfp, layer_names=layer_name,
+                shp_zip_pathname=str(zfp),
+                layer_names=layer_name,
                 verbose=True if verbose == 2 else False,
-                ret_extract_dir=True)
+                return_extract_dir=True,
+            )
             path_to_extract_dirs.append(extract_dir)
 
         return path_to_extract_dirs
 
     @classmethod
-    def _copy_tempfiles(cls, subrgn_names_, layer_name, path_to_extract_dirs,
-                        path_to_merged_dir_temp):
-        # Copy files into a temp directory
-        paths_to_temp_files = []
+    def _make_merged_dir(cls, output_dir, data_dir, temp_merged_dir, suffix):
+        """
+        Create a directory for storing merged shapefile data.
 
-        for subregion_name, path_to_extract_dir in zip(subrgn_names_, path_to_extract_dirs):
-            # orig_filename_list = glob.glob(f"*{layer_name}*", root_dir=path_to_extract_dir)
-            orig_file_list = glob.glob(
-                os.path.join(path_to_extract_dir, "**", f"*{layer_name}*"), recursive=True)
+        :param output_dir: Explicit path for the output directory. If ``None``, a path
+            is constructed automatically based on the data directory.
+        :type output_dir: str | pathlib.Path | os.PathLike | None
+        :param data_dir: Base directory containing the initial data files.
+        :type data_dir: str | pathlib.Path | os.PathLike
+        :param temp_merged_dir: Temporary directory name to be appended and cleaned.
+        :type temp_merged_dir: str
+        :param suffix: Suffix to strip from the ``merged_dirname_temp``.
+        :type suffix: str
+        :return: Path to the newly created merged data directory.
+        :rtype: str
+        """
 
-            for orig_file in orig_file_list:
-                fn = os.path.basename(orig_file)
-                dest = os.path.join(
-                    path_to_merged_dir_temp, f"{subregion_name.lower().replace(' ', '-')}_{fn}")
-
-                shutil.copyfile(orig_file, dest)
-                paths_to_temp_files.append(dest)
-
-        return paths_to_temp_files
-
-    @classmethod
-    def _make_merged_dir(cls, output_dir, path_to_data_dir, merged_dirname_temp, suffix):
         if output_dir:
-            path_to_merged_dir = resolve_dir(path_to_dir=output_dir)
+            # Assumes pyhelpers.dirs.resolve_dir_path is imported and handles PathLike objects
+            merged_dir_path = resolve_dir_path(path_to_dir=str(output_dir))
         else:
-            path_to_merged_dir = os.path.join(
-                path_to_data_dir, merged_dirname_temp.replace(suffix, "", -1))
-        os.makedirs(path_to_merged_dir, exist_ok=True)
+            merged_dir_path = os.path.join(
+                str(data_dir), str(temp_merged_dir).replace(suffix, "", -1)
+            )
 
-        return path_to_merged_dir
+        os.makedirs(merged_dir_path, exist_ok=True)
+
+        return merged_dir_path
 
     @classmethod
-    def _transfer_files(cls, engine, path_to_merged_dir, path_to_merged_dir_temp, prefix, suffix):
+    def _transfer_files(cls, engine, merged_dir, temp_merged_dir, prefix, suffix):
+        """
+        Move temporary output files to the final merged directory.
+
+        This method transfers shapefiles (and their associated components) from a temporary
+        location to the finalized destination and cleans up the temporary directories.
+
+        :param engine: The engine used to process the files (e.g. 'geopandas', 'gpd' or 'pyshp').
+        :type engine: str
+        :param merged_dir: Destination directory path for the merged output files.
+        :type merged_dir: str | pathlib.Path | os.PathLike
+        :param temp_merged_dir: Pathname of the temporary file or directory.
+        :type temp_merged_dir: str | pathlib.Path | os.PathLike
+        :param prefix: The prefix of the temporary files to match.
+        :type prefix: str
+        :param suffix: The suffix to strip when establishing the final output file name.
+        :type suffix: str
+        """
+
+        merged_dir_path = str(merged_dir)
+        temp_merged_dir_path = str(temp_merged_dir)
+
         if engine in {'geopandas', 'gpd'}:
-            if not os.listdir(path_to_merged_dir):
-                temp_path = os.path.join(path_to_merged_dir + "*", f"{prefix}-*")
+            if not os.listdir(merged_dir_path):
+                temp_path = os.path.join(merged_dir_path + "*", f"{prefix}-*")
 
                 temp_dirs = []
                 for temp_output_f in glob.glob(temp_path):
-                    output_file = path_to_merged_dir_temp.replace(suffix, "")
+                    output_file = temp_merged_dir_path.replace(suffix, "")
                     shutil.move(temp_output_f, output_file)
                     temp_dirs.append(os.path.dirname(temp_output_f))
 
                 for temp_dir in set(temp_dirs):
                     shutil.rmtree(temp_dir)
 
-        else:  # engine == 'pyshp': (default)
-            temp_dir = os.path.dirname(path_to_merged_dir)
+        else:  # engine == 'pyshp' (default)
+            temp_dir = os.path.dirname(merged_dir_path)
             paths_to_output_files_temp_ = [
                 glob.glob(os.path.join(temp_dir, f"{prefix}-*.{ext}"))
-                for ext in {"dbf", "shp", "shx"}]
+                for ext in {"dbf", "shp", "shx"}
+            ]
             paths_to_output_files_temp = itertools.chain.from_iterable(paths_to_output_files_temp_)
 
             for temp_output_f in paths_to_output_files_temp:
                 output_file = os.path.join(
-                    path_to_merged_dir, os.path.basename(temp_output_f).replace(suffix, ""))
+                    merged_dir_path, os.path.basename(temp_output_f).replace(suffix, "")
+                )
                 shutil.move(temp_output_f, output_file)
 
     @classmethod
     def merge_layers(cls, shp_zip_pathnames, layer_name, engine='geopandas', rm_zip_extracts=True,
-                     output_dir=None, rm_shp_temp=True, ret_shp_pathname=False, verbose=False,
+                     output_dir=None, rm_shp_temp=True, return_shp_pathname=False, verbose=False,
                      raise_error=False):
+        # noinspection shadowing-names,unresolved-references
         """
-        Merge shapefiles over a layer for multiple geographic regions.
+        Merge shapefiles over a specific layer for multiple geographic regions.
 
-        :param shp_zip_pathnames: list of paths to data of shapefiles (in .shp.zip format)
-        :type shp_zip_pathnames: list
-        :param layer_name: name of a layer (e.g. 'railways')
+        :param shp_zip_pathnames: List of paths to zipped shapefile archives (e.g. ".shp.zip").
+        :type shp_zip_pathnames: list | tuple
+        :param layer_name: Name of a shapefile layer (e.g. "railways").
         :type layer_name: str
-        :param engine: the open-source package used to merge/save shapefiles;
-            options include: ``'pyshp'`` and ``'geopandas'`` (default) (or ``'gpd'``)
-            if ``engine='geopandas'``, this function relies on `geopandas.GeoDataFrame.to_file()`_;
-            otherwise, it by default uses `shapefile.Writer()`_
+        :param engine: The open-source package used to merge and save shapefiles. Options
+            include ``'pyshp'``, ``'geopandas'`` and ``'gpd'``. Defaults to ``'geopandas'``.
+            If ``engine='geopandas'``, this function relies on `geopandas.GeoDataFrame.to_file()`_;
+            otherwise it uses `shapefile.Writer()`_ by default.
         :type engine: str
-        :param rm_zip_extracts: whether to delete the extracted files, defaults to ``False``
+        :param rm_zip_extracts: Whether to delete the extracted files. Defaults to ``True``.
         :type rm_zip_extracts: bool
-        :param rm_shp_temp: whether to delete temporary layer files, defaults to ``False``
+        :param output_dir: Directory where the merged ".shp" files will be saved.
+            If ``None``, the layer name is used as the folder name. Defaults to ``None``.
+        :type output_dir: str | pathlib.Path | os.PathLike | None
+        :param rm_shp_temp: Whether to delete temporary layer files. Defaults to ``True``.
         :type rm_shp_temp: bool
-        :param output_dir: if ``None`` (default), use the layer name as the name of the folder
-            where the merged .shp files will be saved
-        :type output_dir: str | None
-        :param ret_shp_pathname: whether to return the pathname of the merged .shp file,
-            defaults to ``False``
-        :type ret_shp_pathname: bool
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param return_shp_pathname: Whether to return the pathname of the merged ".shp" file.
+            Defaults to ``False``.
+        :type return_shp_pathname: bool
+        :param verbose: Whether to print relevant information to the console. Defaults to ``False``.
         :type verbose: bool | int
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=False`` (default), the error will be suppressed.
+        :param raise_error: Whether to raise an exception upon failure. If ``False``, the error
+            will be suppressed. Defaults to ``False``.
         :type raise_error: bool
-        :return: the path to the merged file when ``ret_merged_shp_path=True``
-        :rtype: list
+        :return: A list containing the path(s) to the merged file when
+            ``return_shp_pathname=True``. Returns ``None`` otherwise.
+        :rtype: list | None
 
         .. _`geopandas.GeoDataFrame.to_file()`:
             https://geopandas.org/reference.html#geopandas.GeoDataFrame.to_file
@@ -1276,55 +1419,60 @@ class SHP:
 
         **Examples**::
 
-            >>> # To merge 'railways' layers of Greater Manchester and West Yorkshire"
+            >>> # Merge 'railways' layers of Greater Manchester and West Yorkshire"
 
             >>> from pydriosm.reader._shp import SHP
             >>> from pydriosm.downloader import BBBikeDownloader
-            >>> from pyhelpers.dirs import delete_dir
+            >>> from pyhelpers.dirs import delete_dir, get_relative_path
             >>> import os
 
             >>> # Download the .shp.zip file of Manchester and West Yorkshire
-            >>> subrgn_names = ['London', 'Birmingham']
-            >>> file_fmt = ".shp"
+            >>> subregion_names = ['London', 'Birmingham']
+            >>> osm_file_format = ".shp"
             >>> data_dir = "tests/osm_data"
 
             >>> bbd = BBBikeDownloader()
 
-            >>> bbd.download_data(subrgn_names, file_fmt, data_dir, verbose=True)
-            Proceed to download data in the format '.shp.zip' for the following geographic (sub...
+            >>> bbd.download_data(subregion_names, osm_file_format, data_dir, verbose=True)
+            Proceed with downloading data in the format ".shp.zip" for the following geographic...
                 "London"
                 "Birmingham"
-              to "./tests/osm_data/"
+              to "tests/osm_data/"
             ? [No]|Yes: yes
-            Downloading "London.osm.shp.zip" 100%|██████████| 248M/248M | 18.1MB/s | ETA:...
-              Saving "London.osm.shp.zip" to "./tests/osm_data/london/" ... Done.
-            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 16.0MB/s ...
-              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
+            Downloading "London.osm.shp.zip" 100%|██████████| 261M/261M | 15.4MB/s | Ela...
+              Saving "London.osm.shp.zip" to "tests/osm_data/london/" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.9M/79.9M | 16.6MB/s...
+              Saving "Birmingham.osm.shp.zip" to "tests/osm_data/birmingham/" ... Done.
 
-            >>> os.path.relpath(bbd.download_dir)
-            'tests\\osm_data'
+            >>> get_relative_path(bbd.download_dir, as_str=True)
+            'tests/osm_data'
             >>> len(bbd.data_paths)
             2
 
             >>> # Merge the layers of 'railways' of the two subregions
-            >>> merged_shp_path = SHP.merge_shp_layers(
-            ...     bbd.data_paths, layer_name='railways', verbose=True, ret_shp_pathname=True)
+            >>> merged_shp_path = SHP.merge_layers(
+            ...     bbd.data_paths,
+            ...     layer_name='railways',
+            ...     verbose=True,
+            ...     return_shp_pathname=True
+            ... )
             Merging the following shapefiles:
               "london_railways.shp"
               "birmingham_railways.shp"
               In progress ... Done.
-                Find the merged shapefile in "./tests/osm_data/lon-bir-railways/".
+                Find the merged shapefile in "tests/osm_data/lon-bir-railways/".
 
             >>> # Check the pathname of the merged shapefile
             >>> type(merged_shp_path)
             list
             >>> len(merged_shp_path)
             1
-            >>> os.path.relpath(merged_shp_path[0])
-            'tests\\osm_data\\lon-bir-railways\\lon-bir-railways.shp'
+            >>> merged_shp_path = merged_shp_path[0]
+            >>> get_relative_path(merged_shp_path, as_str=True)
+            'tests/osm_data/lon-bir-railways/lon-bir-railways.shp'
 
             >>> # Read the merged .shp file
-            >>> merged_shp_data = SHP.read_shp(merged_shp_path[0])
+            >>> merged_shp_data = SHP.read_shp(merged_shp_path)
             >>> merged_shp_data.head()
                osm_id  ...                                           geometry
             0   30804  ...     LINESTRING (0.00486 51.62793, 0.0062 51.62927)
@@ -1336,9 +1484,9 @@ class SHP:
 
             >>> # Delete the test data directory
             >>> delete_dir(bbd.download_dir, verbose=True)
-            To delete the directory "./tests/osm_data/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
+            Confirm deletion of the directory "tests/osm_data/" (Not empty)?
+             [No]|Yes: yes
+            Deleting "tests/osm_data/" ... Done.
 
         .. seealso::
 
@@ -1347,70 +1495,88 @@ class SHP:
               <pydriosm.reader.GeofabrikReader.merge_shp_layers>`.
         """
 
-        path_to_extract_dirs = cls._extract_files(
-            shp_zip_pathnames=shp_zip_pathnames, layer_name=layer_name, verbose=verbose)
+        extract_dir_path = cls._extract_files(
+            shp_zip_file_paths=shp_zip_pathnames, layer_name=layer_name, verbose=verbose
+        )
 
-        # Specify a directory that stores files for the specific layer
-        subrgn_names_ = [
-            re.search(
-                r'.*(?=\.shp\.zip)',
-                os.path.basename(x).replace("-latest-free", "").replace(".osm", "")).group().lower()
-            for x in shp_zip_pathnames]
+        # Specify a directory that stores files for the specific layer securely
+        # by removing potential suffixes from the base filename.
+        subregion_names = [
+            re.sub(r'\.shp\.zip$', '', os.path.basename(str(x)), flags=re.IGNORECASE)
+            .replace("-latest-free", "")
+            .replace(".osm", "")
+            .lower()
+            for x in shp_zip_pathnames
+        ]
 
         suffix = "_temp"
-        prefix = "-".join(["_".join([y[:3] for y in re.split(r'[- ]', x)]) for x in subrgn_names_])
-        # prefix = "_".join([x.lower().replace(' ', '-') for x in region_names]) + "_"
-        path_to_data_dir = os.path.commonpath(shp_zip_pathnames)
+        prefix = "-".join([
+            "_".join([y[:3] for y in re.split(r'[- ]', x) if y]) for x in subregion_names
+        ])
+        path_to_data_dir = os.path.commonpath([str(p) for p in shp_zip_pathnames])
         merged_dirname_temp = f"{prefix}-{layer_name}{suffix}"
         path_to_merged_dir_temp = os.path.join(path_to_data_dir, merged_dirname_temp)
         os.makedirs(path_to_merged_dir_temp, exist_ok=True)
 
-        paths_to_temp_files = cls._copy_tempfiles(
-            subrgn_names_=subrgn_names_, layer_name=layer_name,
-            path_to_extract_dirs=path_to_extract_dirs,
-            path_to_merged_dir_temp=path_to_merged_dir_temp)
+        temp_file_paths = _copy_temp_files(
+            subregion_names=subregion_names,
+            layer_name=layer_name,
+            path_to_extract_dirs=extract_dir_path,
+            path_to_merged_dir_temp=path_to_merged_dir_temp,
+        )
 
         # Get the paths to the target .shp files
-        paths_to_shp_files = [x for x in paths_to_temp_files if x.endswith(".shp")]
+        shp_file_paths = [x for x in temp_file_paths if x.endswith(".shp")]
 
         if verbose:
             print("Merging the following shapefiles:")
-            print("  " + "\n  ".join(f"\"{os.path.basename(f)}\"" for f in paths_to_shp_files))
+            print("  " + "\n  ".join(f'"{os.path.basename(f)}"' for f in shp_file_paths))
             print("  In progress ... ", flush=True, end="")
 
         try:
             path_to_merged_dir = cls._make_merged_dir(
-                output_dir=output_dir, path_to_data_dir=path_to_data_dir,
-                merged_dirname_temp=merged_dirname_temp, suffix=suffix)
+                output_dir=output_dir,
+                data_dir=path_to_data_dir,
+                temp_merged_dir=merged_dirname_temp,
+                suffix=suffix,
+            )
 
             cls.merge_shps(
-                shp_pathnames=paths_to_shp_files, path_to_merged_dir=path_to_merged_dir,
-                engine=engine)
+                shp_pathnames=shp_file_paths,
+                merged_dir=path_to_merged_dir,
+                engine=engine,
+            )
 
             cls._transfer_files(
-                engine=engine, path_to_merged_dir=path_to_merged_dir,
-                path_to_merged_dir_temp=path_to_merged_dir_temp, prefix=prefix, suffix=suffix)
+                engine=engine,
+                merged_dir=path_to_merged_dir,
+                temp_merged_dir=path_to_merged_dir_temp,
+                prefix=prefix,
+                suffix=suffix,
+            )
 
             if verbose:
                 print("Done.")
 
             if rm_zip_extracts:
-                for path_to_extract_dir in path_to_extract_dirs:
+                for path_to_extract_dir in extract_dir_path:
                     shutil.rmtree(path_to_extract_dir)
 
             if rm_shp_temp:
                 shutil.rmtree(path_to_merged_dir_temp)
 
             if verbose:
-                m_rel_path = add_slashes(check_relative_pathname(path_to_merged_dir))
-                print(f"    Find the merged shapefile in {m_rel_path}.")
+                rel_m_path_str = get_relative_path(path_to_merged_dir, as_str=True, quoted=True)
+                print(f"    Find the merged shapefile in {rel_m_path_str}.")
 
-            if ret_shp_pathname:
-                path_to_merged_shp = glob.glob(os.path.join(f"{path_to_merged_dir}*", "*.shp"))
-                # if len(path_to_merged_shp) == 1:
-                #     path_to_merged_shp = path_to_merged_shp[0]
-                return path_to_merged_shp
+            if return_shp_pathname:
+                merged_shp_file_path = glob.glob(
+                    os.path.join(str(path_to_merged_dir), "**", "*.shp"), recursive=True
+                )
+                return merged_shp_file_path
+
+            return None
 
         except Exception as e:
-            _print_failure_message(
-                e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
+            _print_failure_message(e, "Failed. Error:", verbose=verbose, raise_error=raise_error)
+            return None
