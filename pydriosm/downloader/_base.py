@@ -1313,7 +1313,7 @@ class BaseDownloader:
         unintended dynamic dispatch to subclass overrides.
 
         :param url: Web address of the remote dataset.
-        :type url: str
+        :type url: str | None
         :param file_path: Local target storage path.
         :type file_path: pathlib.Path
         :param update: Whether to re-download existing files. Defaults to ``False``.
@@ -1331,6 +1331,9 @@ class BaseDownloader:
 
             >>> path = self._fetch_file_if_needed('https://example.com/data.pbf', Path('data.pbf'))
         """
+
+        if not url:
+            return None
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -1432,9 +1435,7 @@ class BaseDownloader:
             return existing_file_paths if ret_download_path else None
 
         download_paths = download_item_func(subregion_names_, osm_file_formats_)
-        self.update_download_dir(
-            download_dir=download_dir, verify_download_dir=verify_download_dir
-        )
+        self.update_download_dir(download_dir=download_dir, verify_download_dir=verify_download_dir)
         self.data_paths = list(dict.fromkeys(self.data_paths + download_paths))
 
         return download_paths if ret_download_path else None
