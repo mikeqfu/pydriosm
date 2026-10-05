@@ -396,7 +396,7 @@ class BaseReader:
 
         if path_to_osm_pbf is not None:
             suffix = "-pbf.pkl" if readable else "-raw.pkl"
-            path_to_pickle = path_to_osm_pbf.replace(osm_file_format, suffix)
+            path_to_pickle = str(path_to_osm_pbf).replace(osm_file_format, suffix)
 
             if os.path.isfile(path_to_pickle) and not update:
                 osm_pbf_data = load_pickle(path_to_pickle)
