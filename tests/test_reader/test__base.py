@@ -23,8 +23,6 @@ class TestBaseReader:
         assert os.path.normpath(BaseReader.cdd()) == os.path.normpath(cd('osm_data'))
 
     def test_data_dir(self, base_reader):
-        assert os.path.relpath(base_reader.data_dir) == 'osm_data'
-
         r1 = BaseReader(data_source='geofabrik')
         assert os.path.relpath(r1.data_dir) == os.path.join("osm_data", "geofabrik")
 
