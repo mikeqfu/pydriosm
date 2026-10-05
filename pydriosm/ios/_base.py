@@ -26,6 +26,9 @@ class BaseIOS(PostgreSQL):
     with `PostgreSQL`_.
 
     .. _`PostgreSQL`: https://www.postgresql.org/
+
+    This class provides high-level database operations for OpenStreetMap data extracts,
+    integrating PostgreSQL storage with custom reader and downloader utilities.
     """
 
     #: Specify a `data-type <https://www.postgresql.org/docs/current/datatype.html>`_
@@ -43,37 +46,36 @@ class BaseIOS(PostgreSQL):
     def __init__(self, host=None, port=None, username=None, password=None, database_name=None,
                  data_source='Geofabrik', max_tmpfile_size=None, data_dir=None, **kwargs):
         """
-        :param host: host name/address of a PostgreSQL server,
-            e.g. ``'localhost'`` or ``'127.0.0.1'`` (default by installation of PostgreSQL);
-            when ``host=None`` (default), it is initialized as ``'localhost'``
+        Initialize a base OpenStreetMap I/O handler for PostgreSQL.
+
+        :param host: Host name or address of a PostgreSQL server, e.g. ``'localhost'``
+            or ``'127.0.0.1'``. When ``host=None`` (default), it initializes as ``'localhost'``.
         :type host: str | None
-        :param port: listening port used by PostgreSQL; when ``port=None`` (default),
-            it is initialized as ``5432`` (default by installation of PostgreSQL)
+        :param port: Listening port used by PostgreSQL. When ``port=None`` (default),
+            it initializes as ``5432``.
         :type port: int | None
-        :param username: username of a PostgreSQL server; when ``username=None`` (default),
-            it is initialized as ``'postgres'`` (default by installation of PostgreSQL)
+        :param username: Username for the PostgreSQL server. When ``username=None`` (default),
+            it initializes as ``'postgres'``.
         :type username: str | None
-        :param password: user password. When ``password=None`` (default), it requires to
-            mannually type in the correct password to connect the PostgreSQL server.
+        :param password: User password. When ``password=None`` (default), manual password entry
+            is required to connect to the PostgreSQL server.
         :type password: str | int | None
-        :param database_name: name of a database; when ``database=None`` (default),
-            it is initialized as ``'postgres'`` (default by installation of PostgreSQL).
+        :param database_name: Name of a database. When ``database_name=None`` (default),
+            it initializes as ``'postgres'``.
         :type database_name: str | None
-        :param confirm_db_creation: whether to prompt a confirmation before creating a new database
-            (if the specified database does not exist). Defaults to ``False``
-        :param data_source: name of data source. Valid options include ``{'Geofabrik', 'BBBike'}``.
-            Defaults to ``'Geofabrik'``.
+        :param confirm_db_creation: Whether to prompt for confirmation
+            before creating a new database. Defaults to ``False``.
+        :type confirm_db_creation: bool
+        :param data_source: Name of data source. Valid options include ``'Geofabrik'``
+            and ``'BBBike'``. Defaults to ``'Geofabrik'``.
         :type data_source: str
-        :param max_tmpfile_size: See the function `pyhelpers.settings.gdal_configurations()`_.
+        :param max_tmpfile_size: Maximum temporary file size setting for GDAL configurations.
             Defaults to ``None``.
         :type max_tmpfile_size: int | None
-        :param data_dir: directory where the data file is located/saved.
-            When ``data_dir=None``, it should be the same as the directory specified by
-            the corresponding
-            :attr:`~pydriosm.ios.PostgresOSM.downloader`/:attr:`~pydriosm.ios.PostgresOSM.reader`.
-            Defaults to ``None``.
+        :param data_dir: Directory where data files are located or saved. When ``data_dir=None``,
+            it falls back to the default download directory of the downloader.
         :type data_dir: str | None
-        :param kwargs: [optional] parameters of the class `pyhelpers.sql.PostgreSQL`_.
+        :param kwargs: Optional parameters passed to ``pyhelpers.sql.PostgreSQL``.
 
         :ivar str data_source: name of data sources, options include ``{'Geofabrik', 'BBBike'}``
 
@@ -86,7 +88,7 @@ class BaseIOS(PostgreSQL):
         **Examples**::
 
             >>> from pydriosm.ios._base import BaseIOS
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
+            >>> osmdb = BaseIOS(database_name='osmdb_test', verbose=True)
             Password (postgres@localhost:5432): ***
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
@@ -107,19 +109,21 @@ class BaseIOS(PostgreSQL):
 
             >>> # Delete the database 'osmdb_test'
             >>> osmdb.drop_database(verbose=True)
-            To drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
+            Drop the database "osmdb_test" from postgres:***@localhost:5432?
+             [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
         """
 
-        # valid_source_names = set(self.DATA_SOURCES).union({s.lower() for s in self.DATA_SOURCES})
-        # assert data_source in valid_source_names, \
-        #     f"`data_source` must be one of {valid_source_names}."
         self.data_source = find_similar_str(data_source, self.DATA_SOURCES)
 
         super().__init__(
-            host=host, port=port, username=username, password=password, database_name=database_name,
-            **kwargs)
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            database_name=database_name,
+            **kwargs
+        )
 
         self.data_dir = data_dir
         setattr(self, 'data_dir', self.downloader.download_dir)
@@ -128,17 +132,21 @@ class BaseIOS(PostgreSQL):
         setattr(self, 'max_tmpfile_size', self.reader.max_tmpfile_size)
 
     @property
-    def downloader(self, *args, **kwargs):
+    def downloader(self):
         """
-        Instance of either the class :class:`~pydriosm.downloader.GeofabrikDownloader` or
-        :class:`~pydriosm.downloader.BBBikeDownloader`, depending on the specified ``data_source``
-        for creating an instance of the class :class:`~pydriosm.ios.PostgresOSM`.
+        Instance of downloader corresponding to the configured data source.
+
+        :return: An instance of either :class:`~pydriosm.downloader.GeofabrikDownloader` or
+            :class:`~pydriosm.downloader.BBBikeDownloader`, depending on the specified
+            ``data_source`` for creating an instance of the :class:`~pydriosm.ios.PostgresOSM`
+            class.
+        :rtype: pydriosm.downloader.GeofabrikDownloader | pydriosm.downloader.BBBikeDownloader
 
         **Examples**::
 
             >>> from pydriosm.ios._base import BaseIOS
 
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
+            >>> osmdb = BaseIOS(database_name='osmdb_test', verbose=True)
             Password (postgres@localhost:5432): ***
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
@@ -160,118 +168,35 @@ class BaseIOS(PostgreSQL):
             Dropping "osmdb_test" ... Done.
         """
 
+        return Downloader(data_source=self.data_source, download_dir=self.data_dir)
+
+    def get_downloader(self, *args, **kwargs):
+        """
+        Create a custom downloader instance with additional arguments.
+
+        :param args: Positional arguments passed to the downloader constructor.
+        :param kwargs: Keyword arguments passed to the downloader constructor.
+        :return: Downloader instance configured with custom arguments.
+        :rtype: pydriosm.downloader.GeofabrikDownloader | pydriosm.downloader.BBBikeDownloader
+        """
+
         return Downloader(data_source=self.data_source, download_dir=self.data_dir, *args, **kwargs)
 
     @property
-    def NAME(self):
+    def reader(self):
         """
-        Name of the current property :attr:`~pydriosm.ios.PostgresOSM.downloader`.
+        Instance of reader corresponding to the configured data source.
+
+        :return: An instance of either :class:`~pydriosm.reader.GeofabrikReader` or
+            :class:`~pydriosm.reader.BBBikeReader`, depending on the specified ``data_source``
+            for creating an instance of the :class:`~pydriosm.ios.PostgresOSM` class.
+        :rtype: pydriosm.reader.GeofabrikReader | pydriosm.reader.BBBikeReader
 
         **Examples**::
 
             >>> from pydriosm.ios._base import BaseIOS
 
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
-            Password (postgres@localhost:5432): ***
-            Creating a database: "osmdb_test" ... Done.
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> osmdb.data_source
-            'Geofabrik'
-            >>> osmdb.NAME
-            'Geofabrik OpenStreetMap data extracts'
-
-            >>> # Change the data source
-            >>> osmdb.data_source = 'BBBike'
-            >>> osmdb.NAME
-            'BBBike exports of OpenStreetMap data'
-
-            >>> # Delete the database 'osmdb_test'
-            >>> osmdb.drop_database(verbose=True)
-            To drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
-            Dropping "osmdb_test" ... Done.
-        """
-
-        return self.downloader.NAME
-
-    @property
-    def LONG_NAME(self):
-        """
-        Name of the current property :attr:`~pydriosm.ios.PostgresOSM.downloader`.
-
-        **Examples**::
-
-            >>> from pydriosm.ios._base import BaseIOS
-
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
-            Password (postgres@localhost:5432): ***
-            Creating a database: "osmdb_test" ... Done.
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> osmdb.data_source
-            'Geofabrik'
-            >>> osmdb.LONG_NAME
-            'Geofabrik OpenStreetMap data extracts'
-
-            >>> # Change the data source
-            >>> osmdb.data_source = 'BBBike'
-            >>> osmdb.LONG_NAME
-            'BBBike exports of OpenStreetMap data'
-
-            >>> # Delete the database 'osmdb_test'
-            >>> osmdb.drop_database(verbose=True)
-            To drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
-            Dropping "osmdb_test" ... Done.
-        """
-
-        return self.downloader.LONG_NAME
-
-    @property
-    def URL(self):
-        """
-        Homepage URL of data resource for current property
-        :attr:`~pydriosm.ios.PostgresOSM.downloader`.
-
-        **Examples**::
-
-            >>> from pydriosm.ios._base import BaseIOS
-
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
-            Password (postgres@localhost:5432): ***
-            Creating a database: "osmdb_test" ... Done.
-            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
-
-            >>> osmdb.URL
-            'https://download.geofabrik.de/'
-
-            >>> # Change the data source
-            >>> osmdb.data_source = 'BBBike'
-            >>> osmdb.URL
-            'https://download.bbbike.org/osm/bbbike/'
-
-            >>> # Delete the database 'osmdb_test'
-            >>> osmdb.drop_database(verbose=True)
-            To drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
-            Dropping "osmdb_test" ... Done.
-        """
-
-        return self.downloader.URL
-
-    @property
-    def reader(self, **kwargs):
-        """
-        Instance of either :class:`~pydriosm.reader.GeofabrikReader` or
-        :class:`~pydriosm.reader.BBBikeReader`, depending on the specified ``data_source``
-        for creating an instance of the calss :class:`~pydriosm.ios.PostgresOSM`.
-
-        **Examples**::
-
-            >>> from pydriosm.ios._base import BaseIOS
-
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
+            >>> osmdb = BaseIOS(database_name='osmdb_test', verbose=True)
             Password (postgres@localhost:5432): ***
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
@@ -294,7 +219,121 @@ class BaseIOS(PostgreSQL):
         return Reader(
             data_source=self.data_source,
             data_dir=self.downloader.download_dir,
-            max_tmpfile_size=self.max_tmpfile_size, **kwargs)
+            max_tmpfile_size=self.max_tmpfile_size
+        )
+
+    def get_reader(self, **kwargs):
+        """
+        Create a custom reader instance with additional keyword arguments.
+
+        :param kwargs: Keyword arguments passed to the reader constructor.
+        :return: Reader instance configured with custom arguments.
+        :rtype: pydriosm.reader.GeofabrikReader | pydriosm.reader.BBBikeReader
+        """
+
+        return Reader(
+            data_source=self.data_source,
+            data_dir=self.downloader.download_dir,
+            max_tmpfile_size=self.max_tmpfile_size,
+            **kwargs,
+        )
+
+    @property
+    def name(self):
+        """
+        Name of the data source of the active downloader.
+
+        **Examples**::
+
+            >>> from pydriosm.ios._base import BaseIOS
+
+            >>> osmdb = BaseIOS(database_name='osmdb_test', verbose=True)
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> osmdb.data_source
+            'Geofabrik'
+            >>> osmdb.name
+            'Geofabrik OpenStreetMap data extracts'
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> osmdb.name
+            'BBBike exports of OpenStreetMap data'
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
+        """
+
+        return self.downloader.NAME
+
+    @property
+    def long_name(self):
+        """
+        Full descriptive name of the active downloader.
+
+        **Examples**::
+
+            >>> from pydriosm.ios._base import BaseIOS
+
+            >>> osmdb = BaseIOS(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> osmdb.data_source
+            'Geofabrik'
+            >>> osmdb.long_name
+            'Geofabrik OpenStreetMap data extracts'
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> osmdb.long_name
+            'BBBike exports of OpenStreetMap data'
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
+        """
+
+        return self.downloader.LONG_NAME
+
+    @property
+    def url(self):
+        """
+        Homepage URL of the active downloader.
+
+        **Examples**::
+
+            >>> from pydriosm.ios._base import BaseIOS
+
+            >>> osmdb = BaseIOS(database_name='osmdb_test')
+            Password (postgres@localhost:5432): ***
+            Creating a database: "osmdb_test" ... Done.
+            Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
+
+            >>> osmdb.url
+            'https://download.geofabrik.de/'
+
+            >>> # Change the data source
+            >>> osmdb.data_source = 'BBBike'
+            >>> osmdb.url
+            'https://download.bbbike.org/osm/bbbike/'
+
+            >>> # Delete the database 'osmdb_test'
+            >>> osmdb.drop_database(verbose=True)
+            To drop the database "osmdb_test" from postgres:***@localhost:5432
+            ? [No]|Yes: yes
+            Dropping "osmdb_test" ... Done.
+        """
+
+        return self.downloader.URL
 
     def get_table_name(self, subregion_name, table_named_as_subregion=False):
         """
@@ -413,7 +452,7 @@ class BaseIOS(PostgreSQL):
 
     def get_table_column_info(self, subregion_name, layer_name, as_dict=False,
                               table_named_as_subregion=False, schema_named_as_layer=False):
-        # noinspection PyUnresolvedReferences
+        # noinspection PyUnresolvedReferences,shadowing-names
         """
         Get information about columns of a specific schema and table data
         for a geographic (sub)region.
@@ -439,18 +478,18 @@ class BaseIOS(PostgreSQL):
 
             >>> from pydriosm.ios._base import BaseIOS
 
-            >>> osmdb = BaseIOS(database_name='osmdb_test')
+            >>> osmdb = BaseIOS(database_name='osmdb_test', verbose=True)
             Password (postgres@localhost:5432): ***
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> subrgn_name = 'London'
-            >>> lyr_name = 'points'
+            >>> subregion_name = 'London'
+            >>> layer_name = 'points'
 
             >>> # Take for example a table named "points"."London"
-            >>> tbl_col_info = osmdb.get_table_column_info(subrgn_name, lyr_name)
+            >>> tbl_col_info = osmdb.get_table_column_info(subregion_name, layer_name)
             >>> type(tbl_col_info)
-            pandas.core.frame.DataFrame
+            pandas.DataFrame
             >>> tbl_col_info.index.to_list()[:5]
             ['table_catalog',
              'table_schema',
@@ -460,11 +499,15 @@ class BaseIOS(PostgreSQL):
 
             >>> # Another example of a table named "points"."Greater London"
             >>> tbl_col_info_dict = osmdb.get_table_column_info(
-            ...     subrgn_name, lyr_name, as_dict=True, table_named_as_subregion=True,
-            ...     schema_named_as_layer=True)
+            ...     subregion_name=subregion_name,
+            ...     layer_name=layer_name,
+            ...     as_dict=True,
+            ...     table_named_as_subregion=True,
+            ...     schema_named_as_layer=True
+            ... )
             >>> type(tbl_col_info_dict)
             dict
-            >>> list(tbl_col_info_dict.keys())[:5]
+            >>> list(tbl_col_info_dict)[:5]
             ['table_catalog',
              'table_schema',
              'table_name',
@@ -473,8 +516,8 @@ class BaseIOS(PostgreSQL):
 
             >>> # Delete the database 'osmdb_test'
             >>> osmdb.drop_database(verbose=True)
-            To drop the database "osmdb_test" from postgres:***@localhost:5432
-            ? [No]|Yes: yes
+            Drop the database "osmdb_test" from postgres:***@localhost:5432?
+             [No]|Yes: yes
             Dropping "osmdb_test" ... Done.
         """
 
@@ -482,7 +525,10 @@ class BaseIOS(PostgreSQL):
         schema_name_ = get_default_layer_name(layer_name) if schema_named_as_layer else layer_name
 
         column_info = self.get_column_info(
-            table_name=table_name_, schema_name=schema_name_, as_dict=as_dict)
+            table_name=table_name_,
+            schema_name=schema_name_,
+            as_dict=as_dict
+        )
 
         return column_info
 
@@ -521,7 +567,7 @@ class BaseIOS(PostgreSQL):
         :param raise_error: Whether to raise the provided exception.
             If ``raise_error=False``, the error will be suppressed. Defaults to ``True``.
         :type raise_error: bool
-        :param kwargs: Ooptional parameters of `pyhelpers.dbms.PostgreSQL.import_data`_.
+        :param kwargs: Optional parameters of `pyhelpers.dbms.PostgreSQL.import_data`_.
 
         .. _`pyhelpers.dbms.PostgreSQL.import_data`:
             https://pyhelpers.readthedocs.io/en/stable/_generated/
@@ -760,42 +806,48 @@ class BaseIOS(PostgreSQL):
             Creating a database: "osmdb_test" ... Done.
             Connecting postgres:***@localhost:5432/osmdb_test ... Successfully.
 
-            >>> subrgn_name = 'Rutland'  # name of a subregion
-            >>> dat_dir = "tests/osm_data"  # name of a data directory where the subregion data is
+            >>> subregion_name = 'Rutland'  # name of a subregion
+            >>> data_dir = "tests/osm_data"  # name of a data directory where subregion data is
 
         *Example 1* - Import data of a PBF file::
 
             >>> # First, read the PBF data of Rutland
             >>> # (If the data file is not available, it'll be downloaded by confirmation)
             >>> raw_rutland_pbf = osmdb.reader.read_pbf(
-            ...     subrgn_name, dat_dir, download=True, verbose=True)
-            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.92M/1.92M | 4.88MB/s ...
-              Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
-            Reading "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
+            ...     subregion_name, data_dir, download=True, verbose=True
+            ... )
+            Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.94M/1.94M | 4.88MB/s ...
+              Saving "rutland-latest.osm.pbf" to "tests/osm_data/rutland/" ... Done.
+            Reading "tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> type(raw_rutland_pbf)
             dict
-            >>> list(raw_rutland_pbf.keys())
+            >>> list(raw_rutland_pbf)
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
 
             >>> # Import all layers of the raw PBF data of Rutland
-            >>> osmdb.import_osm_data(raw_rutland_pbf, table_name=subrgn_name, verbose=True)
-            Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
+            >>> osmdb.import_osm_data(raw_rutland_pbf, table_name=subregion_name, verbose=True)
+            Proceed to import data into the table "Rutland" at postgres:***@localhost:5432/osmd...
+             [No]|Yes: yes
             Importing the data ...
-              "points" ... Done. (6473 features)
-              "lines" ... Done. (11057 features)
-              "multilinestrings" ... Done. (71 features)
-              "multipolygons" ... Done. (9423 features)
+              "points" ... Done. (6578 features)
+              "lines" ... Done. (11231 features)
+              "multilinestrings" ... Done. (70 features)
+              "multipolygons" ... Done. (9466 features)
               "other_relations" ... Done. (33 features)
 
             >>> # Get parsed PBF data
             >>> parsed_rutland_pbf = osmdb.reader.read_pbf(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, expand=True,
-            ...     parse_geometry=True, parse_other_tags=True, verbose=True)
-            Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
+            ...     subregion_name=subregion_name,
+            ...     data_dir=data_dir,
+            ...     expand=True,
+            ...     parse_geometry=True,
+            ...     parse_other_tags=True,
+            ...     verbose=True
+            ... )
+            Parsing "tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
             >>> type(parsed_rutland_pbf)
             dict
-            >>> list(parsed_rutland_pbf.keys())
+            >>> list(parsed_rutland_pbf)
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
 
             >>> # Import data of selected layers into specific schemas
@@ -804,16 +856,16 @@ class BaseIOS(PostgreSQL):
             ...     "schema_1": 'points',
             ...     "schema_2": 'multipolygons',
             ... }
-            >>> osmdb.import_osm_data(parsed_rutland_pbf, subrgn_name, schemas, verbose=True)
-            Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
+            >>> osmdb.import_osm_data(parsed_rutland_pbf, subregion_name, schemas, verbose=True)
+            Proceed to import data into the table "Rutland" at postgres:***@localhost:5432/osmd...
+             [No]|Yes: yes
             Importing the data ...
-              "schema_0" ... Done. (11057 features)
-              "schema_1" ... Done. (6473 features)
-              "schema_2" ... Done. (9423 features)
+              "schema_0" ... Done. (11231 features)
+              "schema_1" ... Done. (6578 features)
+              "schema_2" ... Done. (9466 features)
 
             >>> # To drop the schemas "schema_0", "schema_1" and "schema_2"
-            >>> osmdb.drop_schema(schemas.keys(), confirmation_required=False, verbose=True)
+            >>> osmdb.drop_schema(schemas, confirmation_required=False, verbose=True)
             Dropping the following schemas from postgres:***@localhost:5432/osmdb_test:
               "schema_0" ... Done.
               "schema_1" ... Done.
@@ -823,13 +875,17 @@ class BaseIOS(PostgreSQL):
 
             >>> # Read GeoPackage data of Rutland
             >>> rutland_gpkg = osmdb.reader.read_gpkg(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, verbose=True)
-            Downloading "rutland-latest-free.gpkg.zip" 100%|██████████| 3.30M/3.30M | 5.0...
-              Saving "rutland-latest-free.gpkg.zip" to "./tests/osm_data/rutland/" ... Done.
+            ...     subregion_name=subregion_name,
+            ...     data_dir=data_dir,
+            ...     download=True,
+            ...     verbose=True
+            ... )
+            Downloading "rutland-latest-free.gpkg.zip" 100%|██████████| 3.32M/3.32M | 5.0...
+              Saving "rutland-latest-free.gpkg.zip" to "tests/osm_data/rutland/" ... Done.
             Parsing the data ... Done.
             >>> type(rutland_gpkg)
             dict
-            >>> list(rutland_gpkg.keys())
+            >>> list(rutland_gpkg)
             ['traffic',
              'places',
              'pois',
@@ -846,44 +902,52 @@ class BaseIOS(PostgreSQL):
              'adminareas']
 
             >>> # Import all layers of the shapefile data of Rutland
-            >>> osmdb.import_osm_data(osm_data=rutland_gpkg, table_name=subrgn_name, verbose=True)
-            Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
+            >>> osmdb.import_osm_data(
+            ...     osm_data=rutland_gpkg,
+            ...     table_name=subregion_name,
+            ...     verbose=True
+            ... )
+            Proceed to import data into table "Rutland" at postgres:***@localhost:5432/osmdb_test?
+             [No]|Yes: yes
             Importing the data ...
-              "traffic" ... Done. (557 features)
-              "places" ... Done. (301 features)
-              "pois" ... Done. (1081 features)
+              "traffic" ... Done. (589 features)
+              "places" ... Done. (300 features)
+              "pois" ... Done. (1107 features)
               "transport" ... Done. (65 features)
               "pofw" ... Done. (65 features)
-              "natural" ... Done. (665 features)
+              "natural" ... Done. (666 features)
               "railways" ... Done. (141 features)
-              "roads" ... Done. (7315 features)
+              "roads" ... Done. (7425 features)
               "waterways" ... Done. (379 features)
               "protected_areas" ... Done. (20 features)
-              "water" ... Done. (233 features)
-              "landuse" ... Done. (2461 features)
-              "buildings" ... Done. (5706 features)
+              "water" ... Done. (234 features)
+              "landuse" ... Done. (2465 features)
+              "buildings" ... Done. (5743 features)
               "adminareas" ... Done. (58 features)
 
         *Example 3* - Import BBBike shapefile data file of Leeds::
 
             >>> # Change the data source
             >>> osmdb.data_source = 'BBBike'
-            >>> subrgn_name = 'Leeds'
+            >>> subregion_name = 'Leeds'
 
             >>> # Read shapefile data of Leeds
             >>> leeds_shp = osmdb.reader.read_shp(
-            ...     subregion_name=subrgn_name, data_dir=dat_dir, download=True, rm_extracts=True,
-            ...     verbose=True)
-            Downloading "Leeds.osm.shp.zip" 100%|██████████| 57.7M/57.7M | 20.6MB/s | ETA...
-              Saving "Leeds.osm.shp.zip" to "./tests/osm_data/leeds/" ... Done.
-            Extracting "./tests/osm_data/leeds/Leeds.osm.shp.zip"
-              to "./tests/osm_data/leeds/" ... Done.
-            Reading the shapefile(s) at "./tests/osm_data/leeds/Leeds-shp/shape/" ... Done.
-            Deleting the extracts "./tests/osm_data/leeds/Leeds-shp/" ... Done.
+            ...     subregion_name=subregion_name,
+            ...     data_dir=data_dir,
+            ...     download=True,
+            ...     rm_extracts=True,
+            ...     verbose=True
+            ... )
+            Downloading "Leeds.osm.shp.zip" 100%|██████████| 61.1M/61.1M | 2.33MB/s | Ela...
+              Saving "Leeds.osm.shp.zip" to "tests/osm_data/leeds/" ... Done.
+            Extracting "tests/osm_data/leeds/Leeds.osm.shp.zip"
+              to "tests/osm_data/leeds/" ... Done.
+            Reading the shapefile(s) at "tests/osm_data/leeds/Leeds-shp/shape/" ... Done.
+            Deleting the extracts "tests/osm_data/leeds/Leeds-shp/" ... Done.
             >>> type(leeds_shp)
             dict
-            >>> list(leeds_shp.keys())
+            >>> list(leeds_shp)
             ['buildings',
              'landuse',
              'natural',
@@ -894,18 +958,18 @@ class BaseIOS(PostgreSQL):
              'waterways']
 
             >>> # Import all layers of the shapefile data of Leeds
-            >>> osmdb.import_osm_data(osm_data=leeds_shp, table_name=subrgn_name, verbose=True)
-            Proceed to import data into table "Leeds" at postgres:***@localhost:5432/osmdb_test
-            ? [No]|Yes: yes
+            >>> osmdb.import_osm_data(osm_data=leeds_shp, table_name=subregion_name, verbose=True)
+            Proceed to import data into table "Leeds" at postgres:***@localhost:5432/osmdb_test?
+             [No]|Yes: yes
             Importing the data ...
-              "buildings" ... Done. (432701 features)
-              "landuse" ... Done. (22180 features)
-              "natural" ... Done. (7759 features)
-              "places" ... Done. (892 features)
-              "points" ... Done. (47332 features)
-              "railways" ... Done. (2897 features)
-              "roads" ... Done. (152155 features)
-              "waterways" ... Done. (3520 features)
+              "buildings" ... Done. (465126 features)
+              "landuse" ... Done. (23742 features)
+              "natural" ... Done. (8087 features)
+              "places" ... Done. (916 features)
+              "points" ... Done. (50399 features)
+              "railways" ... Done. (2909 features)
+              "roads" ... Done. (158803 features)
+              "waterways" ... Done. (3629 features)
 
         Delete the test database and downloaded data files::
 
@@ -916,10 +980,10 @@ class BaseIOS(PostgreSQL):
             Dropping "osmdb_test" ... Done.
 
             >>> # Delete the downloaded data files
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "./tests/osm_data/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
+            >>> delete_dir(data_dir, verbose=True)
+            Confirm deletion of the directory "tests/osm_data/" (Not empty)?
+             [No]|Yes: yes
+            Deleting "tests/osm_data/" ... Done.
         """
 
         data_items = make_data_items(osm_data=osm_data, schema_names=schema_names)
@@ -928,7 +992,7 @@ class BaseIOS(PostgreSQL):
             subregion_name=table_name, table_named_as_subregion=table_named_as_subregion)
         tbl_name = f'"{table_name_}"'
 
-        if not confirmed(f"Proceed to import data into the table {tbl_name} at {self.address}\n?",
+        if not confirmed(f"Proceed to import data into the table {tbl_name} at {self.address}?\n",
                          confirmation_required=confirmation_required):
             if verbose:
                 print("Canceled.")
@@ -969,35 +1033,88 @@ class BaseIOS(PostgreSQL):
 
             del osm_layer
             gc.collect()
+        return None
 
     @staticmethod
-    def _decode_layer_dat(dat, possible_col_names):
-        col_names = [x for x in possible_col_names if x in dat.columns]
+    def _decode_layer_data(data, possible_col_names):
+        """
+        Decode encoded column data in a layer DataFrame.
 
-        if len(col_names) > 0:
-            for col_name in col_names:
-                try:
-                    dat[col_name] = dat[col_name].map(ast.literal_eval)
-                except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
-                    pass
+        This method parses string-encoded Python literals or binary WKB geometries
+        within the specified columns of the given DataFrame.
 
-                try:
-                    dat[col_name] = dat[col_name].map(shapely.wkb.loads)
-                except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
-                    pass
+        :param data: Layer data containing spatial or attribute columns.
+        :type data: pandas.DataFrame
+        :param possible_col_names: Sequence of column names to attempt decoding on.
+        :type possible_col_names: list | tuple | set
+        :return: Decoded DataFrame with transformed columns.
+        :rtype: pandas.DataFrame
+        """
 
-    def _get_dtype(self, table_name_, schema_name_):
+        col_names = [x for x in possible_col_names if x in data.columns]
+
+        for col_name in col_names:
+            try:
+                data[col_name] = data[col_name].map(ast.literal_eval)
+            except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
+                pass
+
+            try:
+                data[col_name] = data[col_name].map(shapely.wkb.loads)
+            except (SyntaxError, TypeError, ValueError, shapely.errors.GEOSException):
+                pass
+
+        return data
+
+    def _get_column_dtypes(self, table_name_, schema_name_):
+        """
+        Retrieve mapped Pandas data types for columns in a database table.
+
+        This method queries column information for the specified schema and table name, then maps
+        PostgreSQL data types to corresponding Pandas data types.
+
+        :param table_name_: Name of the database table.
+        :type table_name_: str
+        :param schema_name_: Name of the database schema.
+        :type schema_name_: str
+        :return: Dictionary mapping column names to Pandas data types.
+        :rtype: dict
+        """
+
         column_info_table = self.get_column_info(table_name=table_name_, schema_name=schema_name_)
 
-        dtype_ = column_info_table['data_type']
-        dtype = dict(zip(column_info_table['column_name'], map(self.DATA_TYPES.get, dtype_)))
+        dtypes = column_info_table['data_type']
+        return dict(
+            zip(column_info_table['column_name'], map(self.DATA_TYPES.get, dtypes))
+        )
 
-        return dtype
+    def _resolve_schema_and_table_names(self, subregion_names, schema_names=None,
+                                        table_named_as_subregion=False,
+                                        schema_named_as_layer=False):
+        """
+        Validate and resolve existing database schemas and table names for subregions.
 
-    def _check_schema_and_table_names(self, subregion_names, schema_names=None,
-                                      table_named_as_subregion=False, schema_named_as_layer=False):
+        This method checks database metadata to determine existing schema and table pairs
+        corresponding to the requested subregions.
+
+        :param subregion_names: Name or list of names of subregions.
+        :type subregion_names: str | list
+        :param schema_names: Schema names to check. If ``None``, inspects all non-system schemas.
+        :type schema_names: str | list | None
+        :param table_named_as_subregion: Whether tables are named directly after subregions.
+            Defaults to ``False``.
+        :type table_named_as_subregion: bool
+        :param schema_named_as_layer: Whether schemas are named directly after layers.
+            Defaults to ``False``.
+        :type schema_named_as_layer: bool
+        :return: Tuple containing sorted lists of existing schema names and validated table names.
+        :rtype: tuple[list, list]
+        """
+
         table_names = self.reader.validate_dtype(subregion_names)
-        table_names_ = sorted([self.get_table_name(x, table_named_as_subregion) for x in table_names])
+        table_names_ = sorted(
+            [self.get_table_name(x, table_named_as_subregion) for x in table_names]
+        )
 
         # Validate the input `schema_names`
         if schema_names is None:
@@ -1005,44 +1122,88 @@ class BaseIOS(PostgreSQL):
             # noinspection PyUnresolvedReferences
             schema_names_ = [
                 x for x in inspector.get_schema_names()
-                if x not in {'public', 'information_schema'}
+                if x not in {'public', 'information_schema', 'pg_catalog'}
             ]
         else:
             schema_names_ = validate_schema_names(
-                schema_names=schema_names, schema_named_as_layer=schema_named_as_layer)
+                schema_names=schema_names,
+                schema_named_as_layer=schema_named_as_layer
+            )
 
-        if len(schema_names_) > 0:
-            existing_schema_names_ = list(set(
+        if schema_names_:
+            prod = itertools.product(schema_names_, table_names_)
+            existing_schema_names_ = set(
                 schema_name
-                for schema_name, table_name in itertools.product(schema_names_, table_names_)
+                for schema_name, table_name in prod
                 if self.subregion_table_exists(
-                    subregion_name=table_name, layer_name=schema_name,
+                    subregion_name=table_name,
+                    layer_name=schema_name,
                     table_named_as_subregion=table_named_as_subregion,
-                    schema_named_as_layer=schema_named_as_layer)))
+                    schema_named_as_layer=schema_named_as_layer
+                )
+            )
+            existing_schema_names_ = list(existing_schema_names_)
         else:
             existing_schema_names_ = schema_names_
 
         return existing_schema_names_, table_names_
 
-    def _get_table_list_and_confirmation_prompt(self, existing_schema_names_, table_names_):
+    def _build_drop_confirmation_prompt(self, existing_schema_names_, table_names_):
+        """
+        Construct table combination pairs and a user confirmation message for deletion.
+
+        This method formats the affected schemas and tables into a human-readable prompt string.
+
+        :param existing_schema_names_: List of existing database schema names.
+        :type existing_schema_names_: list
+        :param table_names_: List of database table names.
+        :type table_names_: list
+        :return: Tuple containing the product list of schema-table pairs and the prompt string.
+        :rtype: tuple[list[tuple[str, str]], str]
+        """
+
         # existing_schema_names_.sort()
         _, schema_pl, prt_schema, _ = self._msg_for_multi_items(
             existing_schema_names_, desc='schema', fmt='"{}"', indent=4)
         _, tbl_pl, prt_tbl, _ = self._msg_for_multi_items(
             table_names_, desc='table', fmt='"{}"', indent=4)
 
-        table_list = list(itertools.product(existing_schema_names_, table_names_))
+        table_list = list(
+            itertools.product(existing_schema_names_, table_names_)
+        )
 
         if len(table_list) == 1:
-            confirmation_prompt = f'Proceed to drop {tbl_pl} {prt_schema}.{prt_tbl}\n' \
-                                  f'  from {self.address}\n?'
+            confirmation_prompt = (
+                f"Proceed to drop {tbl_pl} {prt_schema}.{prt_tbl}\n"
+                f"  from {self.address}\n?"
+            )
         else:
-            confirmation_prompt = f'Proceed to drop {tbl_pl} from {self.address}: {prt_tbl}\n' \
-                                  f'  under the {schema_pl}: {prt_schema}\n?'
+            confirmation_prompt = (
+                f'Proceed to drop {tbl_pl} from {self.address}: {prt_tbl}\n'
+                f'  under the {schema_pl}: {prt_schema}\n?'
+            )
 
         return table_list, confirmation_prompt
 
     def _drop_subregion_table(self, connection, schema, table, verbose=False, raise_error=True):
+        """
+        Drop a specific subregion database table within an active connection context.
+
+        This method executes a ``DROP TABLE IF EXISTS ... CASCADE`` query
+        for the specified schema and table.
+
+        :param connection: Active SQLAlchemy database connection instance.
+        :type connection: sqlalchemy.engine.Connection
+        :param schema: Name of the schema containing the table.
+        :type schema: str
+        :param table: Name of the table to drop.
+        :type table: str
+        :param verbose: Whether to print progress messages. Defaults to ``False``.
+        :type verbose: bool | int
+        :param raise_error: Whether to raise exceptions upon query failure. Defaults to ``True``.
+        :type raise_error: bool
+        """
+
         schema_table = f'"{schema}"."{table}"'
 
         if self.table_exists(table_name=table, schema_name=schema):
@@ -1050,13 +1211,14 @@ class BaseIOS(PostgreSQL):
                 print(f"  {schema_table}", end=" ... ")
 
             try:
-                query = f'DROP TABLE IF EXISTS {schema_table} CASCADE;'
+                query = f"DROP TABLE IF EXISTS {schema_table} CASCADE;"
                 connection.execute(sqlalchemy.text(query))
                 if verbose:
                     print("Done.")
             except Exception as e:
                 _print_failure_message(
-                    e=e, prefix="Failed. Error:", verbose=verbose, raise_error=raise_error)
+                    e, "Failed. Error:", verbose=verbose, raise_error=raise_error
+                )
 
         else:  # The table doesn't exist
             if verbose == 2:
@@ -1066,26 +1228,28 @@ class BaseIOS(PostgreSQL):
                               table_named_as_subregion=False, schema_named_as_layer=False,
                               confirmation_required=True, verbose=False, raise_error=False):
         """
-        Delete all or specific schemas/layers of subregion data from the database being connected.
+        Delete specified subregion tables across schemas from the connected database.
 
-        :param subregion_names: name of table for a subregion (or name of a subregion)
+        This method resolves target schema and table combinations,
+        prompts for user confirmation if required, and
+        drops matching tables within an explicit transaction.
+
+        :param subregion_names: Subregion name or sequence of subregion names.
         :type subregion_names: str | list
-        :param schema_names: names of schemas for each layer of the PBF data,
-            if ``None`` (default), the default layer names as schema names
+        :param schema_names: Schema names corresponding to layers. If ``None``, defaults
+            to layer names as schemas.
         :type schema_names: str | list | None
-        :param table_named_as_subregion: whether to use subregion name as a table name.
-            Defaults to ``False``
+        :param table_named_as_subregion: Whether tables are named as subregions.
+            Defaults to ``False``.
         :type table_named_as_subregion: bool
-        :param schema_named_as_layer: whether a schema is named as a layer name.
-            Defaults to ``False``
+        :param schema_named_as_layer: Whether schemas are named as layers. Defaults to ``False``.
         :type schema_named_as_layer: bool
-        :param confirmation_required: whether to ask for confirmation to proceed.
-            Defaults to ``True``
+        :param confirmation_required: Whether to prompt for confirmation before dropping.
+            Defaults to ``True``.
         :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console. Defaults to ``False``
+        :param verbose: Verbosity level for console output. Defaults to ``False``.
         :type verbose: bool | int
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=False`` (default), the error will be suppressed.
+        :param raise_error: Whether to raise exceptions on failure. Defaults to ``False``.
         :type raise_error: bool
 
         .. seealso::
@@ -1094,17 +1258,20 @@ class BaseIOS(PostgreSQL):
             <pydriosm.ios.PostgresOSM.drop_subregion_tables>` method.
         """
 
-        existing_schema_names_, table_names_ = self._check_schema_and_table_names(
-            subregion_names=subregion_names, schema_names=schema_names,
+        existing_schema_names_, table_names_ = self._resolve_schema_and_table_names(
+            subregion_names=subregion_names,
+            schema_names=schema_names,
             table_named_as_subregion=table_named_as_subregion,
-            schema_named_as_layer=schema_named_as_layer)
+            schema_named_as_layer=schema_named_as_layer
+        )
 
         if not existing_schema_names_:
             print("None of the data exists.")
 
         else:
-            table_list, confirm_msg = self._get_table_list_and_confirmation_prompt(
-                existing_schema_names_=existing_schema_names_, table_names_=table_names_)
+            table_list, confirm_msg = self._build_drop_confirmation_prompt(
+                existing_schema_names_=existing_schema_names_, table_names_=table_names_
+            )
 
             if confirmed(confirm_msg, confirmation_required=confirmation_required):
                 if_tables_exist = any(
@@ -1116,8 +1283,12 @@ class BaseIOS(PostgreSQL):
                         drop_msg = "table" if len(table_list) == 1 else "tables"
                         print(f"Dropping the {drop_msg} ... ")
 
-                    with self.engine.connect() as connection:
+                    with self.engine.begin() as connection:
                         for schema, table in table_list:
                             self._drop_subregion_table(
-                                connection=connection, schema=schema, table=table, verbose=verbose,
-                                raise_error=raise_error)
+                                connection=connection,
+                                schema=schema,
+                                table=table,
+                                verbose=verbose,
+                                raise_error=raise_error
+                            )
