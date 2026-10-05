@@ -84,6 +84,7 @@ def validate_schema_names(schema_names=None, schema_named_as_layer=False):
 
 
 def validate_table_name(table_name, sub_space=''):
+    # noinspection SpellCheckingInspection
     """
     Validate a table name for importing OSM data into a database.
 
