@@ -30,14 +30,19 @@ class GeofabrikDownloader(BaseDownloader):
 
     #: Name of the free download server.
     NAME: str = 'Geofabrik'
+
     #: Full name of the data resource.
     LONG_NAME: str = 'Geofabrik OpenStreetMap data extracts'
+
     #: URL of the homepage to the free download server.
     URL: str = 'https://download.geofabrik.de/'
+
     #: URL of the official download index.
     DOWNLOAD_INDEX_URL: str = urllib.parse.urljoin(URL, 'index-v1.json')
+
     #: Default download directory.
     DEFAULT_DOWNLOAD_DIR: str = "osm_data/geofabrik"
+
     #: Valid file formats.
     FILE_FORMATS: set = {'.osm.pbf', '.gpkg.zip', '.shp.zip', '.osm.bz2'}
 
@@ -103,16 +108,16 @@ class GeofabrikDownloader(BaseDownloader):
         """
         Get a raw directory index (including download information of older file logs).
 
-        :param url: URL of a web page of a data resource (e.g. a subregion)
+        :param url: URL of a web page of a data resource (e.g. a subregion).
         :type url: str
-        :param save_path:
+        :param save_path: Path to save the raw directory index.
         :type save_path: str | pathlib.Path | None
-        :param verbose: whether to print relevant information in console. Defaults to ``False``
+        :param verbose: Whether to print relevant information in console. Defaults to ``False``.
         :type verbose: bool | int
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=False`` (default), the error will be suppressed.
         :type raise_error: bool
-        :return: information of raw directory index
+        :return: Information of raw directory index.
         :rtype: pandas.DataFrame | None
 
         **Examples**::
@@ -156,17 +161,17 @@ class GeofabrikDownloader(BaseDownloader):
 
         Similar to :meth:`~pydriosm.downloader.GeofabrikDownloader.get_catalogue`.
 
-        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``
+        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``.
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed,
-            defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed.
+            Defaults to ``True``.
         :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console. Defaults to ``False``
+        :param verbose: whether to print relevant information in console. Defaults to ``False``.
         :type verbose: bool | int
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=False`` (default), the error will be suppressed.
         :type raise_error: bool
-        :return: the official index of all downloads
+        :return: The official index of all downloads.
         :rtype: pandas.DataFrame | None
 
         **Examples**::
@@ -311,17 +316,17 @@ class GeofabrikDownloader(BaseDownloader):
         """
         Get download catalogues for each continent.
 
-        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``
+        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``.
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed,
-            defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed.
+            Defaults to ``True``.
         :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console. Defaults to ``False``
+        :param verbose: whether to print relevant information in console. Defaults to ``False``.
         :type verbose: bool | int
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=False`` (default), the error will be suppressed.
         :type raise_error: bool
-        :return: download catalogues for each continent
+        :return: Download catalogues for each continent.
         :rtype: dict | None
 
         **Examples**::
@@ -382,27 +387,30 @@ class GeofabrikDownloader(BaseDownloader):
 
         This includes all geographic (sub)regions for which data of subregions is unavailable.
 
-        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``
+        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``.
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed,
-            defaults to ``True``
+        :param confirmation_required: whether asking for confirmation to proceed.
+            Defaults to ``True``
         :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console. Defaults to ``False``
+        :param verbose: whether to print relevant information in console. Defaults to ``False``.
         :type verbose: bool | int
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=False`` (default), the error will be suppressed.
         :type raise_error: bool
-        :return: region-subregion tier and all (sub)regions that have no subregions
+        :return: Region-subregion tier and all (sub)regions that have no subregions.
         :rtype: tuple[dict, list] | tuple[None, None]
 
         **Examples**::
 
             >>> from pydriosm.downloader import GeofabrikDownloader
+
             >>> gfd = GeofabrikDownloader()
+
             >>> # region-subregion tiers, and all regions that have no subregions
             >>> region_subregion_tiers, having_no_subregions = gfd.get_region_subregion_tiers()
             >>> type(region_subregion_tiers)
             dict
+
             >>> # Keys of the region-subregion tier
             >>> list(region_subregion_tiers)
             ['Africa',
@@ -413,10 +421,12 @@ class GeofabrikDownloader(BaseDownloader):
              'Europe',
              'North America',
              'South America']
+
             >>> type(having_no_subregions)
             list
             >>> len(having_no_subregions)
             513
+
             >>> # Example: five regions that have no subregions
             >>> having_no_subregions[0:5]
             ['Antarctica', 'Algeria', 'Angola', 'Benin', 'Botswana']
@@ -457,29 +467,32 @@ class GeofabrikDownloader(BaseDownloader):
 
         Similar to :meth:`~pydriosm.downloader.GeofabrikDownloader.get_download_index`.
 
-        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``
+        :param update: Whether to (check on and) update the prepacked data. Defaults to ``False``.
         :type update: bool
-        :param confirmation_required: whether asking for confirmation to proceed,
-            defaults to ``True``
+        :param confirmation_required: Whether asking for confirmation to proceed.
+            Defaults to ``True``.
         :type confirmation_required: bool
-        :param verbose: whether to print relevant information in console. Defaults to ``False``
+        :param verbose: Whether to print relevant information in console. Defaults to ``False``.
         :type verbose: bool | int
         :param raise_error: Whether to raise the provided exception;
             if ``raise_error=False`` (default), the error will be suppressed.
         :type raise_error: bool
-        :return: a catalogue for all subregion downloads
+        :return: A catalogue for all subregion downloads.
         :rtype: pandas.DataFrame | None
 
         **Examples**::
 
             >>> from pydriosm.downloader import GeofabrikDownloader
+
             >>> gfd = GeofabrikDownloader()
+
             >>> # A download catalogue for all subregions
             >>> dwnld_catalogue = gfd.get_catalogue()
             >>> type(dwnld_catalogue)
             pandas.DataFrame
             >>> dwnld_catalogue.shape
             (543, 7)
+
             >>> dwnld_catalogue.head()
                            subregion  ... .osm.bz2
             0                 Africa  ...     None
@@ -488,6 +501,7 @@ class GeofabrikDownloader(BaseDownloader):
             3  Australia and Oceania  ...     None
             4        Central America  ...     None
             [5 rows x 7 columns]
+
             >>> dwnld_catalogue.columns.to_list()
             ['subregion',
              'subregion-url',
@@ -499,11 +513,6 @@ class GeofabrikDownloader(BaseDownloader):
 
         .. note::
 
-            - Information of
-              `London/Enfield
-              <https://download.geofabrik.de/europe//united-kingdom/england/london/>`_
-              is not directly available from the web page of `Greater London
-              <https://download.geofabrik.de/europe//united-kingdom/england/greater-london.html>`_.
             - Two subregions have the same name - 'Georgia':
               `Europe/Georgia <https://download.geofabrik.de/europe/georgia.html>`_ and
               `US/Georgia <https://download.geofabrik.de/north-america/us/georgia.html>`_;
@@ -771,31 +780,34 @@ class GeofabrikDownloader(BaseDownloader):
 
         The default file path is derived from the download URL of the requested data file.
 
-        :param subregion_name: name of a (sub)region available on Geofabrik free download server
+        :param subregion_name: Name of a (sub)region available on Geofabrik free download server.
         :type subregion_name: str
-        :param osm_file_format: file format/extension of the OSM data
-            available on the download server
+        :param osm_file_format: File format/extension of the OSM data
+            available on the download server.
         :type osm_file_format: str
-        :param mkdir: whether to create a directory. Defaults to ``False``
+        :param mkdir: Whether to create a directory. Defaults to ``False``.
         :type mkdir: bool
-        :param update: whether to (check on and) update the prepacked data. Defaults to ``False``
+        :param update: Whether to (check on and) update the prepacked data. Defaults to ``False``.
         :type update: bool
-        :param verbose: whether to print relevant information in console. Defaults to ``False``
+        :param verbose: Whether to print relevant information in console. Defaults to ``False``.
         :type verbose: bool | int
-        :return: default filename of the subregion and default (absolute) path to the file
+        :return: Default filename of the subregion and default (absolute) path to the file.
         :rtype: tuple[str, str]
 
         **Examples**::
 
             >>> from pydriosm.downloader import GeofabrikDownloader
-            >>> import os
+            >>> from pyhelpers.dirs import get_relative_path
+
             >>> gfd = GeofabrikDownloader()
 
             >>> # Default filename and download path of the PBF data of London
             >>> subregion_name, osm_file_format = 'london', ".geopackage"
             >>> pathname, filename = gfd.get_default_pathname(subregion_name, osm_file_format)
-            >>> os.path.relpath(os.path.dirname(pathname))
-            'osm_data\\geofabrik\\europe\\united-kingdom\\england\\greater-london'
+
+            >>> get_relative_path(pathname.parent, as_str=True)
+            'osm_data/geofabrik/europe/united-kingdom/england/greater-london'
+
             >>> filename
             'greater-london-latest-free.gpkg.zip'
         """

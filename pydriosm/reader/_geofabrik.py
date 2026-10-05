@@ -15,28 +15,31 @@ class GeofabrikReader(BaseReader):
 
     #: Name of the data source.
     NAME: str = GeofabrikDownloader.NAME
+
     #: Full name of the data source.
     LONG_NAME: str = GeofabrikDownloader.LONG_NAME
-    #: str: Default download directory.
+
+    #: Default download directory.
     DEFAULT_DATA_DIR: str = GeofabrikDownloader.DEFAULT_DOWNLOAD_DIR
-    #: set: Valid file formats.
+
+    #: Valid file formats.
     FILE_FORMATS: set = GeofabrikDownloader.FILE_FORMATS
 
     def __init__(self, data_dir=None, max_tmpfile_size=None):
         """
         :param max_tmpfile_size: defaults to ``None``,
-            see also the function `pyhelpers.settings.gdal_configurations()`_
+            see also the function `pyhelpers.settings.gdal_configurations()`_.
         :type max_tmpfile_size: int | None
         :param data_dir: (a path or a name of) a directory where a data file is,
             defaults to ``None``;
             when ``data_dir=None``, it refers to a folder named ``osm_geofabrik``
-            under the current working directory
+            under the current working directory.
         :type data_dir: str | None
 
         :ivar GeofabrikDownloader downloader: instance of the class
-            :py:class:`~pydriosm.downloader.GeofabrikDownloader`
-        :ivar str name: name of the data resource
-        :ivar str url: url of the homepage to the Geofabrik free download server
+            :py:class:`~pydriosm.downloader.GeofabrikDownloader`.
+        :ivar str name: name of the data resource.
+        :ivar str url: url of the homepage to the Geofabrik free download server.
 
         .. _`pyhelpers.settings.gdal_configurations()`:
             https://pyhelpers.readthedocs.io/en/latest/_generated/
@@ -172,48 +175,50 @@ class GeofabrikReader(BaseReader):
         Read a PBF (.osm.pbf) data file of a geographic (sub)region.
 
         :param subregion_name: name of a geographic (sub)region (case-insensitive)
-            that is available on Geofabrik free download server
+            that is available on Geofabrik free download server.
         :type subregion_name: str
         :param data_dir: directory where the .osm.pbf data file is located/saved;
-            if ``None``, the default local directory
+            if ``None``, the default local directory.
         :type data_dir: str | None
-        :param readable: whether to parse each feature in the raw data, defaults to ``False``
+        :param readable: whether to parse each feature in the raw data. Defaults to ``False``.
         :type readable: bool
-        :param expand: whether to expand dict-like data into separate columns, defaults to ``False``
+        :param expand: whether to expand dict-like data into separate columns.
+            Defaults to ``False``.
         :type expand: bool
         :param parse_geometry: whether to represent the ``'geometry'`` field
-            in a `shapely.geometry`_ format, defaults to ``False``
+            in a `shapely.geometry`_ format. Defaults to ``False``.
         :type parse_geometry: bool
         :param parse_properties: whether to represent the ``'properties'`` field
-            in a tabular format, defaults to ``False``
+            in a tabular format. Defaults to ``False``.
         :type parse_properties: bool
         :param parse_other_tags: whether to represent a ``'other_tags'`` (of ``'properties'``)
-            in a `dict`_ format, defaults to ``False``
+            in a `dict`_ format. Defaults to ``False``.
         :type parse_other_tags: bool
         :param download: whether to download/update the PBF data file of the given subregion,
-            if it is not available at the specified path, defaults to ``True``
+            if it is not available at the specified path. Defaults to ``True``.
         :type download: bool
-        :param update: whether to check to update pickle backup (if available), defaults to ``False``
+        :param update: whether to check to update pickle backup (if available).
+            Defaults to ``False``.
         :type update: bool
-        :param pickle_it: whether to save the .pbf data as a pickle file, defaults to ``False``
+        :param pickle_it: whether to save the .pbf data as a pickle file. Defaults to ``False``.
         :type pickle_it: bool
-        :param ret_pickle_path: (when ``pickle_it=True``)
-            whether to return a path to the saved pickle file
+        :param ret_pickle_path: Whether to return a path to the saved pickle file
+            (when ``pickle_it=True``). Defaults to ``False``.
         :type ret_pickle_path: bool
-        :param rm_pbf_file: whether to delete the downloaded .osm.pbf file, defaults to ``False``
+        :param rm_pbf_file: whether to delete the downloaded .osm.pbf file. Defaults to ``False``.
         :type rm_pbf_file: bool
         :param chunk_size_limit: threshold (in MB) that triggers the use of chunk parser,
             defaults to ``50``;
             if the size of the .osm.pbf file (in MB) is greater than ``chunk_size_limit``,
-            it will be parsed in a chunk-wise way
+            it will be parsed in a chunk-wise way.
         :type chunk_size_limit: int | None
-        :param verbose: whether to print relevant information in console as the function runs,
-            defaults to ``False``
+        :param verbose: Whether to print relevant information in console as the function runs.
+            Defaults to ``False``.
         :type verbose: bool | int
-        :param kwargs: [optional] parameters of
+        :param kwargs: Optional parameters of
             :meth:`PBF.read_pbf()<pydriosm.reader._pbf.PBF.read_pbf>`.
-        :return: dictionary of the .osm.pbf data;
-            when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file
+        :return: Dictionary of the .osm.pbf data;
+            when ``pickle_it=True``, return a tuple of the dictionary and a path to the pickle file.
         :rtype: dict | tuple | None
 
         .. _`shapely.geometry`:
@@ -227,24 +232,30 @@ class GeofabrikReader(BaseReader):
 
             >>> from pydriosm.reader import GeofabrikReader
             >>> from pyhelpers.dirs import delete_dir
+
             >>> gfr = GeofabrikReader()
+
             >>> subregion_name = 'rutland'
             >>> data_dir = "tests/osm_data"
+
             >>> # If the PBF data of Rutland is not available at the specified data directory,
             >>> # the function can download the latest data by setting `download=True` (default)
             >>> pbf_raw = gfr.read_pbf(subregion_name, data_dir=data_dir, verbose=True)
             Downloading "rutland-latest.osm.pbf" 100%|██████████| 1.83M/1.83M | 5.63MB/s ...
-                Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
+              Saving "rutland-latest.osm.pbf" to "./tests/osm_data/rutland/" ... Done.
             Reading "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
+
             >>> type(pbf_raw)
             dict
             >>> list(pbf_raw.keys())
             ['points', 'lines', 'multilinestrings', 'multipolygons', 'other_relations']
+
             >>> pbf_raw_points = pbf_raw['points']
             >>> type(pbf_raw_points)
             list
             >>> type(pbf_raw_points[0])
             osgeo.ogr.Feature
+
             >>> # Set `readable=True`
             >>> pbf_parsed = gfr.read_pbf(subregion_name, data_dir, readable=True, verbose=True)
             Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
@@ -256,9 +267,11 @@ class GeofabrikReader(BaseReader):
             3    {'type': 'Feature', 'geometry': {'type': 'Poin...
             4    {'type': 'Feature', 'geometry': {'type': 'Poin...
             Name: points, dtype: object
+
             >>> # Set `expand=True`, which would force `readable=True`
             >>> pbf_parsed_ = gfr.read_pbf(subregion_name, data_dir, expand=True, verbose=True)
             Parsing "./tests/osm_data/rutland/rutland-latest.osm.pbf" ... Done.
+
             >>> pbf_parsed_points_ = pbf_parsed_['points']
             >>> pbf_parsed_points_.head()
                      id  ...                                         properties
@@ -268,9 +281,11 @@ class GeofabrikReader(BaseReader):
             3  14558402  ...  {'osm_id': '14558402', 'name': None, 'barrier'...
             4  14558409  ...  {'osm_id': '14558409', 'name': None, 'barrier'...
             [5 rows x 3 columns]
+
             >>> # Set `readable` and `parse_geometry` to be `True`
             >>> pbf_parsed_1 = gfr.read_pbf(
             ...     subregion_name, data_dir, readable=True, parse_geometry=True)
+
             >>> pbf_parsed_1_point = pbf_parsed_1['points'][0]
             >>> pbf_parsed_1_point['geometry']
             'POINT (-0.5313354 52.6737716)'
@@ -285,15 +300,18 @@ class GeofabrikReader(BaseReader):
             {'type': 'Point', 'coordinates': [-0.5313354, 52.6737716]}
             >>> pbf_parsed_2_point['properties']['highway']
             'motorway_junction'
+
             >>> # Set `readable`, `parse_geometry` and `parse_other_tags` to be `True`
             >>> pbf_parsed_3 = gfr.read_pbf(
             ...     subregion_name, data_dir, readable=True, parse_geometry=True,
             ...     parse_other_tags=True)
+
             >>> pbf_parsed_3_point = pbf_parsed_3['points'][0]
             >>> pbf_parsed_3_point['geometry']
             'POINT (-0.5313354 52.6737716)'
             >>> pbf_parsed_3_point['properties']['highway']
             'motorway_junction'
+
             >>> # Delete the example data and the test data directory
             >>> delete_dir(data_dir, verbose=True)
             To delete the directory "./tests/osm_data/" (Not empty)
@@ -302,11 +320,21 @@ class GeofabrikReader(BaseReader):
         """
 
         osm_pbf_data = super().read_pbf(
-            subregion_name=subregion_name, data_dir=data_dir, readable=readable, expand=expand,
-            parse_geometry=parse_geometry, parse_properties=parse_properties,
-            parse_other_tags=parse_other_tags, update=update, download=download,
-            pickle_it=pickle_it, ret_pickle_path=ret_pickle_path, rm_pbf_file=rm_pbf_file,
-            chunk_size_limit=chunk_size_limit, verbose=verbose, **kwargs)
+            subregion_name=subregion_name,
+            data_dir=data_dir,
+            readable=readable,
+            expand=expand,
+            parse_geometry=parse_geometry,
+            parse_properties=parse_properties,
+            parse_other_tags=parse_other_tags,
+            update=update, download=download,
+            pickle_it=pickle_it,
+            ret_pickle_path=ret_pickle_path,
+            rm_pbf_file=rm_pbf_file,
+            chunk_size_limit=chunk_size_limit,
+            verbose=verbose,
+            **kwargs
+        )
 
         return osm_pbf_data
 
@@ -316,18 +344,18 @@ class GeofabrikReader(BaseReader):
         Get path(s) to .shp file(s) for a geographic (sub)region
         (by searching a local data directory).
 
-        :param subregion_name: name of a geographic (sub)region (case-insensitive)
+        :param subregion_name: Name of a geographic (sub)region (case-insensitive)
             that is available on Geofabrik free download server
         :type subregion_name: str
-        :param layer_name: name of a .shp layer (e.g. ``'railways'``), defaults to ``None``
+        :param layer_name: Name of a .shp layer (e.g. ``'railways'``). Defaults to ``None``.
         :type layer_name: str | None
         :param feature_name: name of a feature (e.g. ``'rail'``);
-            if ``None`` (default), all available features included
+            if ``None`` (default), all available features included.
         :type feature_name: str | None
-        :param data_dir: directory where the search is conducted; if ``None`` (default),
-            the default directory
+        :param data_dir: Directory where the search is conducted; if ``None`` (default),
+            the default directory.
         :type data_dir: str | None
-        :return: path(s) to .shp file(s)
+        :return: Path(s) to .shp file(s).
         :rtype: list
 
         **Examples**::
@@ -446,23 +474,23 @@ class GeofabrikReader(BaseReader):
         :param data_dir: directory where the .shp.zip data file is located/saved;
             if ``None``, the default directory
         :type data_dir: str | None
-        :param update: whether to check to update pickle backup (if available), defaults to ``False``
+        :param update: whether to check to update pickle backup (if available). Defaults to ``False``.
         :type update: bool
         :param download: whether to ask for confirmation
-            before starting to download a file, defaults to ``True``
+            before starting to download a file. Defaults to ``True``.
         :type download: bool
-        :param pickle_it: whether to save the .shp data as a pickle file, defaults to ``False``
+        :param pickle_it: whether to save the .shp data as a pickle file. Defaults to ``False``.
         :type pickle_it: bool
         :param ret_pickle_path: (when ``pickle_it=True``)
             whether to return a path to the saved pickle file
         :type ret_pickle_path: bool
-        :param rm_extracts: whether to delete extracted files from the .shp.zip file,
-            defaults to ``False``
+        :param rm_extracts: whether to delete extracted files from the .shp.zip file.
+            Defaults to ``False``.
         :type rm_extracts: bool
-        :param rm_shp_zip: whether to delete the downloaded .shp.zip file, defaults to ``False``
+        :param rm_shp_zip: whether to delete the downloaded .shp.zip file. Defaults to ``False``.
         :type rm_shp_zip: bool
-        :param verbose: whether to print relevant information in console as the function runs,
-            defaults to ``False``
+        :param verbose: whether to print relevant information in console as the function runs.
+            Defaults to ``False``.
         :type verbose: bool | int
         :return: dictionary of the shapefile data,
             with keys and values being layer names and tabular data
@@ -744,8 +772,8 @@ class GeofabrikReader(BaseReader):
         :type download: bool
         :param verbose: Whether to print progress messages to the console; defaults to ``False``.
         :type verbose: bool
-        :param raise_error: Whether to raise an exception if an error occurs during parsing;
-            defaults to ``True``.
+        :param raise_error: Whether to raise an exception if an error occurs during parsing.
+            Defaults to ``True``.
         :type raise_error: bool
         :param kwargs: Additional optional arguments for :func:`pyhelpers.store.load_geopackage`.
         :type kwargs: Any
