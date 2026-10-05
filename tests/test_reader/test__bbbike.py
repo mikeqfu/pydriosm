@@ -31,7 +31,7 @@ class TestBBBikeReader:
         path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, tmp_path)
         assert os.path.isfile(path_to_pbf)
 
-        assert path_to_pbf.startswith(str(tmp_path))
+        assert str(path_to_pbf).startswith(str(tmp_path))
 
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
         delete_dir(tmp_path, verbose=True)
