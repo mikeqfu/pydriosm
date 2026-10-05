@@ -1174,8 +1174,7 @@ class BaseIOS(PostgreSQL):
 
         if len(table_list) == 1:
             confirmation_prompt = (
-                f"Proceed to drop {tbl_pl} {prt_schema}.{prt_tbl}\n"
-                f"  from {self.address}\n?"
+                f"Proceed to drop {tbl_pl} {prt_schema}.{prt_tbl} from {self.address}?\n"
             )
         else:
             confirmation_prompt = (
