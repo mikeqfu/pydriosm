@@ -13,7 +13,7 @@ from pydriosm.reader._shp import SHP
 class TestPBF:
 
     @pytest.fixture(scope='class')
-    def path_to_pbf(self):
+    def pbf_file_path(self):
         return "tests/data/rutland/rutland-latest.osm.pbf"
 
     @staticmethod
@@ -24,7 +24,8 @@ class TestPBF:
             'lines': 'LineString',
             'multilinestrings': 'MultiLineString',
             'multipolygons': 'MultiPolygon',
-            'other_relations': 'GeometryCollection'}
+            'other_relations': 'GeometryCollection'
+        }
 
     @staticmethod
     @pytest.mark.parametrize('layer_name', ['points', 'other_relations'])
@@ -36,22 +37,29 @@ class TestPBF:
                                        parse_other_tags):
         path_to_file = f"tests/data/rutland/{layer_name}_{dat_id}.pkl"
         layer_data = load_data(path_to_file)
-        lyr_dat = PBF.transform_pbf_layer_field(layer_data=layer_data, layer_name=layer_name)
+        lyr_dat = PBF.transform_pbf_layer_field(
+            layer_data=layer_data,
+            layer_name=layer_name,
+            parse_geometry=parse_geometry,
+            parse_properties=parse_properties,
+            parse_other_tags=parse_other_tags,
+        )
 
         assert isinstance(lyr_dat, (pd.Series, pd.DataFrame))
 
     @pytest.mark.parametrize('readable', [False, True])
     @pytest.mark.parametrize('expand', [False, True])
     @pytest.mark.parametrize('number_of_chunks', [None, 5])
-    def test_read_pbf(self, path_to_pbf, readable, expand, number_of_chunks):
+    def test_read_pbf(self, pbf_file_path, readable, expand, number_of_chunks):
         rutland_pbf = PBF.read_pbf(
-            path_to_file=path_to_pbf,
+            path_to_file=pbf_file_path,
             readable=readable,
             expand=expand,
-            number_of_chunks=number_of_chunks)
+            number_of_chunks=number_of_chunks
+        )
 
         assert isinstance(rutland_pbf, dict)
-        assert set(rutland_pbf.keys()) == {
+        assert set(rutland_pbf) == {
             'points',
             'lines',
             'multilinestrings',
@@ -82,25 +90,25 @@ class TestSHP:
     def test_unzip_shp_zip(self, path_to_shp_zip, tmp_path):
         rutland_shp_dir = SHP.unzip_shp_zip(
             path_to_shp_zip, extract_to=tmp_path, layer_names='railways',
-            verbose=True, ret_extract_dir=True)
+            verbose=True, return_extract_dir=True)
         assert os.path.normpath(rutland_shp_dir) == str(tmp_path)
 
         lyr_names = ['railways', 'transport', 'traffic']
         dirs_of_layers = SHP.unzip_shp_zip(
             path_to_shp_zip, extract_to=tmp_path, layer_names=lyr_names,
-            separate=True, verbose=2, ret_extract_dir=True)
+            separate=True, verbose=2, return_extract_dir=True)
         assert os.path.normpath(os.path.commonpath(dirs_of_layers)) == str(tmp_path)
         assert all(x in lyr_names for x in map(os.path.basename, dirs_of_layers))
 
         rutland_shp_dir = SHP.unzip_shp_zip(
-            path_to_shp_zip, extract_to=tmp_path, ret_extract_dir=True, verbose=True)
+            path_to_shp_zip, extract_to=tmp_path, return_extract_dir=True, verbose=True)
         layer_names = set(
             filter(None, map(SHP.get_layer_name, os.listdir(rutland_shp_dir))))
         assert all(x in SHP.LAYER_NAMES for x in layer_names)
 
     def test_read_shp(self, path_to_shp_zip, tmp_path):
         rutland_shp_dir = SHP.unzip_shp_zip(
-            path_to_shp_zip, extract_to=tmp_path, ret_extract_dir=True)
+            path_to_shp_zip, extract_to=tmp_path, return_extract_dir=True)
         path_to_railways_shp = glob.glob(os.path.join(rutland_shp_dir, "*railways*.shp"))[0]
 
         rutland_railways = SHP.read_shp(path_to_railways_shp)
@@ -118,7 +126,7 @@ class TestSHP:
     def test_read_layer_shps(self, path_to_shp_zip, tmp_path):
         # import tempfile; tmp_path = tempfile.mkdtemp()
         rutland_shp_dir = SHP.unzip_shp_zip(
-            path_to_shp_zip, extract_to=tmp_path, ret_extract_dir=True, verbose=True)
+            path_to_shp_zip, extract_to=tmp_path, return_extract_dir=True, verbose=True)
         rutland_railways_shp_path = os.path.join(rutland_shp_dir, "gis_osm_railways_free_1.shp")
 
         london_railways_shp = SHP.read_layer_shps(shp_pathnames=rutland_railways_shp_path)

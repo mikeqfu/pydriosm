@@ -2,10 +2,6 @@
 Read OpenStreetMap data extracts available from BBBike free download server.
 """
 
-import os
-
-from pyhelpers.text import find_similar_str
-
 from pydriosm.downloader import BBBikeDownloader
 from pydriosm.reader._base import BaseReader
 
@@ -50,7 +46,7 @@ class BBBikeReader(BaseReader):
         super().__init__(data_source='bbbike', data_dir=data_dir, max_tmpfile_size=max_tmpfile_size)
 
     def get_file_path(self, subregion_name, osm_file_format, data_dir=None):
-        # noinspection PyShadowingNames
+        # noinspection PyShadowingNames,unresolved-references
         """
         Get the local path to an OSM data file of a geographic (sub)region.
 
@@ -63,52 +59,64 @@ class BBBikeReader(BaseReader):
             if ``None`` (default), the default local directory
         :type data_dir: str | None
         :return: path to PBF (.osm.pbf) file
-        :rtype: str | None
+        :rtype: pathlib.Path | None
 
         **Examples**::
 
             >>> from pydriosm.reader import BBBikeReader
-            >>> from pyhelpers.dirs import delete_dir
+            >>> from pyhelpers.dirs import delete_dir, get_relative_path
             >>> import os
+
             >>> bbr = BBBikeReader()
+
             >>> subregion_name = 'rutland'
             >>> osm_file_format = ".pbf"
             >>> data_dir = "tests/osm_data"
+
             >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
             Traceback (most recent call last):
                 ...
             pydriosm.errors.InvalidSubregionNameError:
               `subregion_name='rutland'` -> The input of `subregion_name` is not recognizable.
               Check the `.data_source`, or try another one instead.
+
             >>> subregion_name = 'birmingham'
             >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
+
             >>> # When "Birmingham.osm.pbf" is unavailable at the data directory
-            >>> os.path.isfile(path_to_pbf)
+            >>> path_to_pbf.is_file()
             False
+
             >>> # Download the PBF data file of Birmingham to "./tests/osm_data/"
             >>> bbr.downloader.download_data(
-            ...     subregion_name, osm_file_format, data_dir, verbose=True)
-            Proceed to download data in the format '.pbf' for the following geographic (sub)reg...
-              "Birmingham"
-              to "./tests/osm_data/birmingham/"
+            ...     subregion_name, osm_file_format, data_dir, verbose=True
+            ... )
+            Proceed with downloading data in the format ".pbf" for the following geographic (su...
+                "Birmingham"
+              to "tests/osm_data/birmingham/"
             ? [No]|Yes: yes
-            Downloading "Birmingham.osm.pbf" 100%|██████████| 55.8M/55.8M | 15.3MB/s | ET...
-              Saving "Birmingham.osm.pbf" to "./tests/osm_data/birmingham/" ... Done.
+            Downloading "Birmingham.osm.pbf" 100%|██████████| 57.3M/57.3M | 16.3MB/s | E...
+              Saving "Birmingham.osm.pbf" to "tests/osm_data/birmingham/" ... Done.
+
             >>> # Check again
             >>> path_to_pbf = bbr.get_file_path(subregion_name, osm_file_format, data_dir)
-            >>> os.path.isfile(path_to_pbf)
+            >>> path_to_pbf.is_file()
             True
-            >>> os.path.relpath(path_to_pbf)  # (on Windows)
-            'tests\\osm_data\\birmingham\\Birmingham.osm.pbf'
+            >>> get_relative_path(path_to_pbf, as_str=True)
+            'tests/osm_data/birmingham/Birmingham.osm.pbf'
+
             >>> # Delete the test data directory
             >>> delete_dir(data_dir, verbose=True)
-            To delete the directory "./tests/osm_data/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
+            Confirm deletion of the directory "tests/osm_data/" (Not empty)?
+             [No]|Yes: yes
+            Deleting "tests/osm_data/" ... Done.
         """
 
         path_to_file = super().get_file_path(
-            subregion_name=subregion_name, osm_file_format=osm_file_format, data_dir=data_dir)
+            subregion_name=subregion_name,
+            osm_file_format=osm_file_format,
+            data_dir=data_dir
+        )
 
         return path_to_file
 
@@ -458,45 +466,48 @@ class BBBikeReader(BaseReader):
 
         return shp_data
 
-    def merge_shp_layers(self, subregion_names, layer_name, data_dir=None, engine='pyshp',
+    def merge_shp_layers(self, subregion_names, layer_name, *, data_dir=None, engine='pyshp',
                          update=False, download=False, rm_zip_extracts=True,
                          merged_shp_dir=None, rm_shp_temp=True, verbose=False,
-                         ret_merged_shp_path=False):
+                         ret_merged_shp_path=False, raise_error=True):
+        # noinspection shadowing-names
         """
-        Merge shapefiles for a specific layer of two or multiple geographic regions.
+        Merge shapefiles for a specific layer across multiple geographic regions.
 
-        :param subregion_names: names of geographic region (case-insensitive)
-            that is available on Geofabrik free download server
-        :type subregion_names: list
-        :param layer_name: name of a layer (e.g. 'railways')
+        :param subregion_names: Names of geographic regions available on the BBBike
+            download server.
+        :type subregion_names: list | tuple
+        :param layer_name: Name of a shapefile layer (e.g. ``'railways'``).
         :type layer_name: str
-        :param engine: the method used to merge/save shapefiles;
-            options include: ``'pyshp'`` (default) and ``'geopandas'`` (or ``'gpd'``)
-            if ``engine='geopandas'``, this function relies on `geopandas.GeoDataFrame.to_file()`_;
-            otherwise, it by default uses `shapefile.Writer()`_
+        :param data_dir: Directory where shapefile zip archives are stored or saved.
+            If ``None`` (default), uses default data directory.
+        :type data_dir: str | pathlib.Path | os.PathLike | None
+        :param engine: Package used to merge shapefiles. Options include ``'pyshp'``
+            (default) and ``'geopandas'`` (or ``'gpd'``).
         :type engine: str
-        :param update: whether to update the source .shp.zip files, defaults to ``False``
+        :param update: Whether to update source shapefile zip archives. Defaults to ``False``.
         :type update: bool
-        :param download: whether to ask for confirmation
-            before starting to download a file, defaults to ``True``
+        :param download: Whether to ask for confirmation before downloading files.
+            Defaults to ``False``.
         :type download: bool
-        :param data_dir: directory where the .shp.zip data files are located/saved;
-            if ``None`` (default), the default directory
-        :type data_dir: str | None
-        :param rm_zip_extracts: whether to delete the extracted files, defaults to ``False``
+        :param rm_zip_extracts: Whether to delete extracted shapefile folders after merging.
+            Defaults to ``True``.
         :type rm_zip_extracts: bool
-        :param rm_shp_temp: whether to delete temporary layer files, defaults to ``False``
+        :param merged_shp_dir: Output directory where merged shapefiles are saved.
+            If ``None`` (default), uses the layer name as the folder name.
+        :type merged_shp_dir: str | pathlib.Path | os.PathLike | None
+        :param rm_shp_temp: Whether to delete temporary layer files after merging.
+            Defaults to ``True``.
         :type rm_shp_temp: bool
-        :param merged_shp_dir: if ``None`` (default), use the layer name
-            as the name of the folder where the merged .shp files will be saved
-        :type merged_shp_dir: str | None
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param verbose: Verbosity level for console output. Defaults to ``False``.
         :type verbose: bool | int
-        :param ret_merged_shp_path: whether to return the path to the merged .shp file,
-            defaults to ``False``
+        :param ret_merged_shp_path: Whether to return file path(s) to merged shapefiles.
+            Defaults to ``False``.
         :type ret_merged_shp_path: bool
-        :return: the path to the merged file when ``ret_merged_shp_path=True``
-        :rtype: list | str
+        :param raise_error: Whether to raise an exception if execution fails. Defaults to ``True``.
+        :type raise_error: bool
+        :return: Path(s) to merged shapefiles when ``ret_merged_shp_path=True``, otherwise ``None``.
+        :rtype: list | None
 
         .. _`geopandas.GeoDataFrame.to_file()`:
             https://geopandas.org/reference.html#geopandas.GeoDataFrame.to_file
@@ -508,7 +519,7 @@ class BBBikeReader(BaseReader):
         **Examples**::
 
             >>> from pydriosm.reader import BBBikeReader
-            >>> from pyhelpers.dirs import cd, delete_dir
+            >>> from pyhelpers.dirs import cd, delete_dir, get_relative_path
             >>> import os
 
             >>> bbr = BBBikeReader()
@@ -516,32 +527,34 @@ class BBBikeReader(BaseReader):
         **Example 1**::
 
             >>> # To merge 'railways' of London and Birmingham
-            >>> subrgn_name = ['London', 'Birmingham']
-            >>> lyr_name = 'railways'
-            >>> dat_dir = "tests/osm_data"
-            >>> path_to_merged_shp_file = bbr.merge_shp_layers(
-            ...     subrgn_name, lyr_name, dat_dir, verbose=True, ret_merged_shp_path=True)
-            Proceed to download data in the format '.shp.zip' for the following geographic (sub...
+            >>> subregion_names = ['London', 'Birmingham']
+            >>> layer_name = 'railways'
+            >>> data_dir = "tests/osm_data"
+            >>> merged_shp_file_path = bbr.merge_shp_layers(
+            ...     subregion_names, layer_name, data_dir=data_dir,
+            ...     verbose=True,
+            ...     ret_merged_shp_path=True
+            ... )
+            Proceed with downloading data in the format ".shp.zip" for the following geographic...
                 "London"
                 "Birmingham"
-              to "./tests/osm_data/"
+              to "tests/osm_data/"
             ? [No]|Yes: yes
-            Downloading "London.osm.shp.zip" 100%|██████████| 248M/248M | 16.5MB/s | ETA:...
-              Saving "London.osm.shp.zip" to "./tests/osm_data/london/" ... Done.
-            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 79.1M/79.1M | 16.9MB/s ...
-              Saving "Birmingham.osm.shp.zip" to "./tests/osm_data/birmingham/" ... Done.
+            Downloading "London.osm.shp.zip" 100%|██████████| 261M/261M | 17.7MB/s | Ela...
+              Saving "London.osm.shp.zip" to "tests/osm_data/london/" ... Done.
+            Downloading "Birmingham.osm.shp.zip" 100%|██████████| 80.0M/80.0M | 17.8MB/s ...
+              Saving "Birmingham.osm.shp.zip" to "tests/osm_data/birmingham/" ... Done.
             Merging the following shapefiles:
               "london_railways.shp"
               "birmingham_railways.shp"
               In progress ... Done.
-                Find the merged shapefile in "./tests/osm_data/lon-bir-railways/".
+                Find the merged shapefile in "tests/osm_data/lon-bir-railways/".
 
-            >>> path_to_merged_shp_file = path_to_merged_shp_file[0]
-            >>> os.path.relpath(path_to_merged_shp_file)
-            'tests\\osm_data\\lon-bir-railways\\lon-bir-railways.shp'
+            >>> get_relative_path(merged_shp_file_path, as_str=True)
+            'tests/osm_data/lon-bir-railways/lon-bir-railways.shp'
 
             >>> # Read the merged data
-            >>> lon_bir_railways_shp = bbr.SHP.read_shp(path_to_merged_shp_file)
+            >>> lon_bir_railways_shp = bbr.SHP.read_shp(merged_shp_file_path)
             >>> lon_bir_railways_shp.head()
                osm_id  ...                                           geometry
             0   30804  ...     LINESTRING (0.00486 51.62793, 0.0062 51.62927)
@@ -552,48 +565,41 @@ class BBBikeReader(BaseReader):
             [5 rows x 4 columns]
 
             >>> # Delete the merged files
-            >>> delete_dir(os.path.dirname(path_to_merged_shp_file), verbose=True)
-            To delete the directory "./tests/osm_data/lon-bir-railways/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/lon-bir-railways/" ... Done.
+            >>> delete_dir(os.path.dirname(merged_shp_file_path), verbose=True)
+            Confirm deletion of the directory "tests/osm_data/lon-bir-railways/" (Not empty)?
+             [No]|Yes: yes
+            Deleting "tests/osm_data/lon-bir-railways/" ... Done.
 
             >>> # Delete the downloaded .shp.zip data files
             >>> delete_dir(list(map(os.path.dirname, bbr.downloader.data_paths)), verbose=True)
-            To delete the following directories:
-              "./tests/osm_data/london/" (Not empty)
-              "./tests/osm_data/birmingham/" (Not empty)
+            Confirm deletion of the following directories:
+              "tests/osm_data/london/" (Not empty)
+              "tests/osm_data/birmingham/" (Not empty)
             ? [No]|Yes: yes
             Deleting:
-              "./tests/osm_data/london/" ... Done.
-              "./tests/osm_data/birmingham/" ... Done.
+              "tests/osm_data/london/" ... Done.
+              "tests/osm_data/birmingham/" ... Done.
 
             >>> # Delete the example data and the test data directory
-            >>> delete_dir(dat_dir, verbose=True)
-            To delete the directory "./tests/osm_data/" (Not empty)
-            ? [No]|Yes: yes
-            Deleting "./tests/osm_data/" ... Done.
+            >>> delete_dir(data_dir, verbose=True)
+            Confirm deletion of the directory "tests/osm_data/"?
+             [No]|Yes: yes
+            Deleting "tests/osm_data/" ... Done.
         """
 
-        # Make sure all the required shape files are ready
-        layer_name_ = find_similar_str(layer_name, lookup_list=self.SHP.LAYER_NAMES)
-        subregion_names_ = [self.downloader.validate_subregion_name(x) for x in subregion_names]
-
-        osm_file_format = ".shp.zip"
-
-        # Download the files if not available
-        paths_to_shp_zip_files = self.downloader.download_data(  # noqa
-            subregion_names=subregion_names_, osm_file_formats=osm_file_format,
-            download_dir=data_dir, update=update, confirmation_required=False if download else True,
-            deep=True, interval=1, verbose=verbose, ret_download_path=True)
-
-        if all(os.path.isfile(shp_zip_path_file) for shp_zip_path_file in paths_to_shp_zip_files):
-            path_to_merged_shp = self.SHP.merge_layers(
-                shp_zip_pathnames=paths_to_shp_zip_files, layer_name=layer_name_, engine=engine,
-                rm_zip_extracts=rm_zip_extracts, output_dir=merged_shp_dir, rm_shp_temp=rm_shp_temp,
-                verbose=verbose, ret_shp_pathname=ret_merged_shp_path)
-
-            if ret_merged_shp_path:
-                return path_to_merged_shp
+        return super().merge_shp_layers(
+            subregion_names=subregion_names,
+            layer_name=layer_name,
+            data_dir=data_dir,
+            engine=engine,
+            update=update,
+            download=download,
+            rm_zip_extracts=rm_zip_extracts,
+            merged_shp_dir=merged_shp_dir,
+            rm_shp_temp=rm_shp_temp,
+            verbose=verbose,
+            ret_merged_shp_path=ret_merged_shp_path,
+        )
 
     def read_csv_xz(self, subregion_name, data_dir=None, download=False, verbose=False, **kwargs):
         # noinspection PyShadowingNames,PyUnresolvedReferences

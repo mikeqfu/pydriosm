@@ -19,6 +19,11 @@ import datetime
 import json
 import pkgutil
 
+from .downloader import BBBikeDownloader, Downloader, GeofabrikDownloader
+from .ios import BBBikeIOS, GeofabrikIOS, PostgresOSM
+from .reader import BBBikeReader, GeofabrikReader, Reader
+
+# noinspection unresolved-references
 metadata = json.loads(pkgutil.get_data(__name__, "data/.metadata").decode())
 
 __project__ = metadata['Project']
@@ -36,3 +41,27 @@ __version__ = metadata['Version']
 __license__ = metadata['License']
 
 __first_release__ = metadata['First release']
+
+__all__ = [
+    # Downloaders
+    'downloader',
+    'Downloader',
+    'BBBikeDownloader',
+    'GeofabrikDownloader',
+
+    # Readers
+    'reader',
+    'Reader',
+    'GeofabrikReader',
+    'BBBikeReader',
+
+    # Database I/O
+    'ios',
+    'BBBikeIOS',
+    'GeofabrikIOS',
+    'PostgresOSM',
+
+    # Helper modules
+    'errors',
+    'utils',
+]

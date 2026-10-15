@@ -100,27 +100,47 @@ class Reader(BaseReader):
             raise ValueError(f'Unsupported source: "{data_source}".')
 
     def _raise_unavailable_method_error(self, method_name, raise_error=True):
+        """
+        Raise an exception when a requested method is not available for the active reader.
+
+        :param method_name: Name of the method that is unsupported by ``self.reader``.
+        :type method_name: str
+        :param raise_error: Whether to raise ``MethodNotAvailableError``. Defaults to ``True``.
+            If ``False``, the error is suppressed and ``None`` is returned.
+        :type raise_error: bool
+        :return: ``None`` when ``raise_error`` is ``False``.
+        :rtype: None
+        :raises MethodNotAvailableError: If ``raise_error`` is ``True``.
+        """
+
         if raise_error:
             raise MethodNotAvailableError(method_name, self.reader)
+        return None
 
     def get_file_path(self, subregion_name, osm_file_format, data_dir=None, raise_error=True):
         # noinspection PyShadowingNames
         """
-        Get the local path to an OSM data file of a geographic (sub)region.
+        Get local path to an OSM data file for a given geographic subregion.
 
-        :param subregion_name: name of a geographic (sub)region (case-insensitive)
-            that is available on Geofabrik free download server
+        This method retrieves the absolute local file path for an OSM dataset matching the
+        specified subregion and file format. Method execution is delegated to the active underlying
+        reader instance.
+
+        :param subregion_name: Name of a geographic subregion available on the download server
+            (case-insensitive).
         :type subregion_name: str
-        :param osm_file_format: file format of the OSM data available on the free download server
+        :param osm_file_format: File format extension of the OSM dataset (e.g. ``".osm.pbf"``).
         :type osm_file_format: str
-        :param data_dir: directory where the data file of the ``subregion_name`` is located/saved;
-            if ``None`` (default), the default local directory
+        :param data_dir: Directory where the dataset file is stored. Defaults to ``None``.
         :type data_dir: str | None
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=True`` (default), the error will be suppressed.
+        :param raise_error: Whether to raise an exception if the method is unsupported.
+            Defaults to ``True``. If ``False``, the error is suppressed.
         :type raise_error: bool
-        :return: path to PBF (.osm.pbf) file
+        :return: Local file path to the requested OSM dataset, or ``None`` if unavailable
+            and ``raise_error`` is ``False``.
         :rtype: str | None
+        :raises MethodNotAvailableError: If the underlying reader does not support this method
+            and ``raise_error`` is ``True``.
 
         **Examples**::
 
@@ -163,11 +183,11 @@ class Reader(BaseReader):
             return self.reader.get_file_path(
                 subregion_name=subregion_name,
                 osm_file_format=osm_file_format,
-                data_dir=data_dir
+                data_dir=data_dir,
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def get_pbf_layer_names(self, subregion_name, data_dir=None, raise_error=True):
         """
@@ -229,8 +249,8 @@ class Reader(BaseReader):
         if hasattr(self.reader, method_name):
             return self.reader.get_pbf_layer_names(subregion_name=subregion_name, data_dir=data_dir)
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def get_shp_pathname(self, subregion_name, layer_name=None, feature_name=None, data_dir=None,
                          raise_error=True):
@@ -307,7 +327,7 @@ class Reader(BaseReader):
             >>> os.path.relpath(railways_shp_path)
             'tests\\osm_data\\greater-london\\greater-london-latest-free-shp\\gis_osm_railways_...
 
-            >>> # Get/save shapefile data of features labelled 'rail' only
+            >>> # Get/save shapefile data of features labeled 'rail' only
             >>> feat_name = 'rail'
             >>> railways_shp = reader.SHP.read_layer_shps(
             ...     railways_shp_path, feature_names=feat_name, save_feat_shp=True)
@@ -358,8 +378,8 @@ class Reader(BaseReader):
                 data_dir=data_dir,
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def read_pbf(self, subregion_name, data_dir=None, readable=False, expand=False,
                  parse_geometry=False, parse_properties=False, parse_other_tags=False,
@@ -523,8 +543,8 @@ class Reader(BaseReader):
                 **kwargs
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def read_shp(self, subregion_name, layer_names=None, feature_names=None, data_dir=None,
                  update=False, download=False, pickle_it=False, ret_pickle_path=False,
@@ -711,41 +731,57 @@ class Reader(BaseReader):
                 **kwargs
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
-    def merge_shp_layers(self, shp_zip_pathnames, layer_name, engine='geopandas',
-                         rm_zip_extracts=True, output_dir=None, rm_shp_temp=True,
-                         ret_shp_pathname=False, verbose=False, raise_error=False):
+    def merge_shp_layers(self, subregion_names, layer_name, *, data_dir=None, engine='pyshp',
+                         update=False, download=False, rm_zip_extracts=True, merged_shp_dir=None,
+                         rm_shp_temp=True, verbose=False, ret_merged_shp_path=False,
+                         raise_error=False):
+        # noinspection shadowing-names,unresolved-references
         """
-        Merge shapefiles over a layer for multiple geographic regions.
+        Merge shapefiles of a specific layer across multiple geographic subregions.
 
-        :param shp_zip_pathnames: list of paths to data of shapefiles (in .shp.zip format)
-        :type shp_zip_pathnames: list
-        :param layer_name: name of a layer (e.g. 'railways')
+        This method delegates layer merging to the active reader instance.
+
+        :param subregion_names: Geographic subregion names available on the data server.
+        :type subregion_names: list | tuple
+        :param layer_name: Name of a shapefile layer (e.g. ``"railways"``).
         :type layer_name: str
-        :param engine: the open-source package used to merge/save shapefiles;
-            options include: ``'pyshp'`` and ``'geopandas'`` (default) (or ``'gpd'``)
-            if ``engine='geopandas'``, this function relies on `geopandas.GeoDataFrame.to_file()`_;
-            otherwise, it by default uses `shapefile.Writer()`_
+        :param data_dir: Directory where shapefile zip archives are stored or saved.
+            Defaults to ``None``.
+        :type data_dir: str | pathlib.Path | os.PathLike | None
+        :param engine: Open-source package used to merge shapefiles. Options include
+            ``"pyshp"`` (default) and ``"geopandas"`` (or ``"gpd"``).
         :type engine: str
-        :param rm_zip_extracts: whether to delete the extracted files, defaults to ``False``
+        :param update: Whether to update existing shapefile zip archives.
+            Defaults to ``False``.
+        :type update: bool
+        :param download: Whether to ask for confirmation before downloading files.
+            Defaults to ``False``.
+        :type download: bool
+        :param rm_zip_extracts: Whether to delete extracted shapefile folders after merging.
+            Defaults to ``True``.
         :type rm_zip_extracts: bool
-        :param rm_shp_temp: whether to delete temporary layer files, defaults to ``False``
+        :param merged_shp_dir: Output directory where merged shapefiles are saved.
+            If ``None`` (default), uses the layer name as the folder name.
+        :type merged_shp_dir: str | pathlib.Path | os.PathLike | None
+        :param rm_shp_temp: Whether to delete temporary layer files after merging.
+            Defaults to ``True``.
         :type rm_shp_temp: bool
-        :param output_dir: if ``None`` (default), use the layer name as the name of the folder
-            where the merged .shp files will be saved
-        :type output_dir: str | None
-        :param ret_shp_pathname: whether to return the pathname of the merged .shp file,
-            defaults to ``False``
-        :type ret_shp_pathname: bool
-        :param verbose: whether to print relevant information in console, defaults to ``False``
+        :param verbose: Verbosity level for console output. Defaults to ``False``.
         :type verbose: bool | int
-        :param raise_error: Whether to raise the provided exception;
-            if ``raise_error=False`` (default), the error will be suppressed.
+        :param ret_merged_shp_path: Whether to return file paths to merged shapefiles.
+            Defaults to ``False``.
+        :type ret_merged_shp_path: bool
+        :param raise_error: Whether to raise an exception if the method is unsupported.
+            Defaults to ``False``. If ``False``, the error is suppressed.
         :type raise_error: bool
-        :return: the path to the merged file when ``ret_merged_shp_path=True``
-        :rtype: list
+        :return: Path(s) to merged shapefiles when ``ret_merged_shp_path=True``,
+            otherwise ``None``.
+        :rtype: list | None
+        :raises MethodNotAvailableError: If active reader does not support this method
+            and ``raise_error=True``.
 
         .. _`geopandas.GeoDataFrame.to_file()`:
             https://geopandas.org/reference.html#geopandas.GeoDataFrame.to_file
@@ -773,11 +809,16 @@ class Reader(BaseReader):
             >>> reader = Reader(data_source='bbbike')
 
             >>> # Download the .shp.zip file of Manchester and West Yorkshire
-            >>> subrgn_names = ['London', 'Birmingham']
-            >>> file_fmt = ".shp"
+            >>> subregion_names = ['London', 'Birmingham']
+            >>> osm_file_format = ".shp"
             >>> data_dir = "tests/osm_data"
 
-            >>> reader.downloader.download_data(subrgn_names, file_fmt, data_dir, verbose=True)
+            >>> reader.downloader.download_data(
+            ...     subregion_names,
+            ...     osm_file_format,
+            ...     data_dir,
+            ...     verbose=True
+            ... )
             Proceed to download data in the format '.shp.zip' for the following geographic (sub...
                 "Birmingham"
                 "London"
@@ -845,20 +886,22 @@ class Reader(BaseReader):
         method_name = self.merge_shp_layers.__name__
 
         if hasattr(self.reader, method_name):
-            return self.SHP.merge_layers(
-                shp_zip_pathnames=shp_zip_pathnames,
+            return self.reader.merge_shp_layers(
+                subregion_names=subregion_names,
                 layer_name=layer_name,
+                data_dir=data_dir,
                 engine=engine,
+                update=update,
+                download=download,
                 rm_zip_extracts=rm_zip_extracts,
-                output_dir=output_dir,
+                merged_shp_dir=merged_shp_dir,
                 rm_shp_temp=rm_shp_temp,
                 verbose=verbose,
-                ret_shp_pathname=ret_shp_pathname,
-                raise_error=raise_error
+                ret_merged_shp_path=ret_merged_shp_path,
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def read_csv_xz(self, subregion_name, data_dir=None, download=False, verbose=False,
                     raise_error=True, **kwargs):
@@ -924,8 +967,8 @@ class Reader(BaseReader):
                 **kwargs
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None
 
     def read_geojson_xz(self, subregion_name, data_dir=None, parse_geometry=False, download=False,
                         verbose=False, raise_error=True, **kwargs):
@@ -1015,5 +1058,5 @@ class Reader(BaseReader):
                 **kwargs
             )
 
-        else:
-            self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        self._raise_unavailable_method_error(method_name=method_name, raise_error=raise_error)
+        return None

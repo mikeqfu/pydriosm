@@ -1,7 +1,7 @@
 import gc
 
 import pandas as pd
-from pyhelpers._cache import _check_dependencies, _check_relative_pathname, _print_failure_message
+from pyhelpers._cache import _check_dependencies, _get_relative_path, _print_failure_message
 from pyhelpers.ops import get_number_of_chunks, split_list
 from pyhelpers.store import save_data
 
@@ -24,7 +24,8 @@ class ImportPBF(BaseIOS):
         number_of_chunks = get_number_of_chunks(path_to_osm_pbf, chunk_size_limit)
 
         if verbose:
-            print(f'Reading "{_check_relative_pathname(path_to_osm_pbf)}"', end=" ... ")
+            rel_pbf_path_str = _get_relative_path(path_to_osm_pbf, as_str=True, quoted=True)
+            print(f"Reading {rel_pbf_path_str}", end=" ... ")
 
         osm_pbf_data = PBF.read_pbf(
             path_to_file=path_to_osm_pbf,
@@ -46,7 +47,7 @@ class ImportPBF(BaseIOS):
             )
 
             if pickle_pbf_file:
-                path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")
+                path_to_pickle = str(path_to_osm_pbf).replace(osm_file_format, "-pbf.pkl")
                 save_data(osm_pbf_data, path_to_pickle, verbose=verbose)
 
         del osm_pbf_data
@@ -169,7 +170,7 @@ class ImportPBF(BaseIOS):
 
         if pickle_pbf_file:
             osm_pbf_data = dict(zip(layer_names, layer_data_list))
-            path_to_pickle = path_to_osm_pbf.replace(osm_file_format, "-pbf.pickle")
+            path_to_pickle = str(path_to_osm_pbf).replace(osm_file_format, "-pbf.pkl")
             save_data(osm_pbf_data, path_to_pickle, verbose=verbose)
 
         del osm_pbf_data

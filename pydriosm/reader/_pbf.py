@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import shapely.geometry
 from pyhelpers._cache import _check_dependencies, _print_failure_message
-from pyhelpers.dirs import check_relative_pathname
+from pyhelpers.dirs import get_relative_path
 from pyhelpers.ops import split_list
 from pyhelpers.settings import gdal_configurations
 
@@ -143,10 +143,8 @@ class PBF:
         """
 
         if verbose:
-
-            print(
-                f"Getting the layer names of \"{check_relative_pathname(path_to_file)}\"",
-                end=" ... ")
+            rel_path_str = get_relative_path(path_to_file, as_str=True, quoted=True)
+            print(f"Getting the layer names of {rel_path_str}", end=" ... ")
 
         try:
             osgeo_ogr = _check_dependencies('osgeo.ogr')
