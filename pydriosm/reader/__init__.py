@@ -9,6 +9,9 @@ from ._geofabrik import GeofabrikReader
 from ._wrapper import Reader
 
 __all__ = [
+    '_pbf',
+    '_shp',
+    '_var',
     'formatter',
     'BaseReader',
     'BBBikeReader',
