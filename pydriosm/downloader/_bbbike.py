@@ -3,7 +3,6 @@ Downloads OSM data from BBBike free download server.
 """
 
 import itertools
-import os
 from pathlib import Path
 
 from pyhelpers._cache import _print_failure_message
