@@ -3,7 +3,6 @@ Provide various helper functions for use across the package.
 """
 
 import importlib.resources
-import os
 import re
 import shutil
 from pathlib import Path
