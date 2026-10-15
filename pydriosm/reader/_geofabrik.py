@@ -2,8 +2,6 @@
 Read OpenStreetMap data extracts available from Geofabrik free download server.
 """
 
-import os
-
 from pydriosm.downloader import GeofabrikDownloader
 from pydriosm.reader._base import BaseReader
 
