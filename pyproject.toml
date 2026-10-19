@@ -57,8 +57,8 @@ pyshp = [
     "pyshp",
 ]
 all = [
-    "gdal",
-    "pyshp",
+    "pydriosm[gdal]",
+    "pydriosm[pyshp]",
 ]
 
 
@@ -125,24 +125,32 @@ gdal = [
 # --------------------
 # Build configuration
 # --------------------
+[tool.hatch.build]
+artifacts = [
+    "pydriosm/data/**/*"
+]
+
 [tool.hatch.build.targets.sdist]
 include = [
-    "/pydriosm",
-    "/pyproject.toml",
-    "/CHANGELOG.md",
-    "/CITATION.cff",
-    "/LICENSE",
-    "/README.md"
+    "pydriosm",
+    "pyproject.toml",
+    "CHANGELOG.md",
+    "CITATION.cff",
+    "LICENSE",
+    "README.md"
 ]
 exclude = [
-    "/.venv",
-    "/docs",
-    "/tests",
-    "/tutorials"
+    ".venv",
+    "docs",
+    "tests",
+    "tutorials"
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["pydriosm"]
+exclude = [
+    "**/.gitkeep",
+]
 
 [tool.hatch.build.targets.wheel.force-include]
 "pyproject.toml" = "pydriosm/pyproject.toml"
@@ -151,9 +159,10 @@ packages = ["pydriosm"]
 # Custom metadata section
 [tool.pydriosm.metadata]
 funder = ""
+project-name = "PyDriosm"
 project-start = "2019-09"
 
-[[tool.pydriosm.metadata.corresponding-authors]]
+[[tool.pydriosm.metadata.corresponding-author]]
 name = "Qian Fu"
 affiliation = "Birmingham Energy Institute, University of Birmingham"
 email = "q.fu@bham.ac.uk"
