@@ -9,6 +9,12 @@ from pyhelpers.dirs import delete_dir
 from pydriosm.downloader._geofabrik import GeofabrikDownloader
 
 
+@pytest.fixture(scope='class')
+def gfd():
+    # gfd = GeofabrikDownloader()
+    return GeofabrikDownloader()
+
+
 class TestGeofabrikDownloader:
 
     SUBREGION_TABLE_COLUMN_NAMES = [
@@ -20,11 +26,6 @@ class TestGeofabrikDownloader:
         '.shp.zip',
         '.osm.bz2',
     ]
-
-    @pytest.fixture(scope='class')
-    def gfd(self):
-        # gfd = GeofabrikDownloader()
-        return GeofabrikDownloader()
 
     def test_init(self, gfd):
         assert gfd.NAME == 'Geofabrik'

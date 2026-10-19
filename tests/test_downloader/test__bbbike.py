@@ -8,12 +8,13 @@ import pytest
 from pydriosm.downloader._bbbike import BBBikeDownloader
 
 
-class TestBBBikeDownloader:
+@pytest.fixture(scope='class')
+def bbd():
+    # bbd = BBBikeDownloader()
+    return BBBikeDownloader()
 
-    @pytest.fixture(scope='class')
-    def bbd(self):
-        # bbd = BBBikeDownloader()
-        return BBBikeDownloader()
+
+class TestBBBikeDownloader:
 
     def test_init(self, bbd):
         assert bbd.NAME == 'BBBike'
