@@ -6,12 +6,13 @@ from pyhelpers._cache import _check_dependencies
 from pydriosm.reader._geofabrik import GeofabrikReader
 
 
-class TestGeofabrikReader:
+@pytest.fixture(scope='class')
+def gfr():
+    # gfr = GeofabrikReader()
+    return GeofabrikReader()
 
-    @pytest.fixture(scope='class')
-    def gfr(self):
-        # gfr = GeofabrikReader()
-        return GeofabrikReader()
+
+class TestGeofabrikReader:
 
     @pytest.mark.parametrize('readable', [True, False])
     @pytest.mark.parametrize('parse_geometry', [True, False])

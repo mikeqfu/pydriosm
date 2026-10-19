@@ -10,11 +10,12 @@ from pydriosm.reader._pbf import PBF
 from pydriosm.reader._shp import SHP
 
 
-class TestPBF:
+@pytest.fixture(scope='class')
+def pbf_file_path():
+    return "tests/data/rutland/rutland-latest.osm.pbf"
 
-    @pytest.fixture(scope='class')
-    def pbf_file_path(self):
-        return "tests/data/rutland/rutland-latest.osm.pbf"
+
+class TestPBF:
 
     @staticmethod
     def test_get_layer_geom_types():
@@ -68,11 +69,12 @@ class TestPBF:
         }
 
 
-class TestSHP:
+@pytest.fixture(scope='class')
+def path_to_shp_zip():
+    return "tests/data/rutland/rutland-latest-free.shp.zip"
 
-    @pytest.fixture(scope='class')
-    def path_to_shp_zip(self):
-        return "tests/data/rutland/rutland-latest-free.shp.zip"
+
+class TestSHP:
 
     @staticmethod
     def test_validate_layer_names():
