@@ -56,9 +56,13 @@ gdal = [
 pyshp = [
     "pyshp",
 ]
+tqdm = [
+    "tqdm",
+]
 all = [
     "pydriosm[gdal]",
     "pydriosm[pyshp]",
+    "pydriosm[tqdm]",
 ]
 
 
