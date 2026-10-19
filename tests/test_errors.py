@@ -1,4 +1,6 @@
-"""Tests the module: :mod:`pydriosm.errors`."""
+"""
+Tests for the :mod:`pydriosm.errors` module.
+"""
 
 import pytest
 

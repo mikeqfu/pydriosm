@@ -1,4 +1,6 @@
-"""Tests the class: :class:`pydriosm.downloader._geofabrik.GeofabrikDownloader`."""
+"""
+Tests for the :class:`pydriosm.downloader._geofabrik.GeofabrikDownloader` class.
+"""
 
 import os
 

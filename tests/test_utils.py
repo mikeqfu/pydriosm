@@ -1,5 +1,5 @@
 """
-Tests the module: :mod:`pydriosm.utils`.
+Tests the :mod:`pydriosm.utils` module.
 """
 
 import shutil
