@@ -1,29 +1,35 @@
-# Environments
-venv/
+# Environment and IDE configurations
+.env
 .idea/
-*/vscode/
-**/__pycache__/
+.vscode/
+.venv/
+venv/
+
+# Python runtime and bytecode
+__pycache__/
+*.py[cod]
 
 # Sphinx documentation
-*/build/
-**/_generated/
+docs/build/
+docs/source/_generated/
 
 # Jupyter Notebooks
-**/.ipynb_checkpoints/
+.ipynb_checkpoints/
 
-# Tests and code coverage
+# Testing and code coverage
 .coverage
+.coverage.*
+reports/
 .pytest_cache/
-cov_reports/
 
-# Distribution / packaging
+# Distribution and packaging
 dist/
 *.egg-info/
 
-# Project-specific directories / files
-*[!_]_.py
+# Project-specific directories and local data files
 pydriosm/data/*
-!.metadata
+!pydriosm/data/.gitkeep
 tutorials/*
+!tutorials/.gitkeep
 .pypirc
 cmd.md
