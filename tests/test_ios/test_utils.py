@@ -1,4 +1,6 @@
-"""Tests the submodule: :mod:`pydriosm.ios.utils`."""
+"""
+Tests for the :mod:`pydriosm.ios.utils` submodule.
+"""
 
 import pytest
 

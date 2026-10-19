@@ -1,17 +1,17 @@
 [build-system]
-requires = ["setuptools>=70", "wheel", "build"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
 
 [project]
 name = "pydriosm"
-dynamic = [
-    "version",
-    "description",
-    "urls",
-    "authors",
-    "license"
+version = "2.4.0"
+description = "An open-source tool for downloading, reading and performing PostgreSQL-based I/O of OpenStreetMap data."
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Qian Fu" },
 ]
-readme = { file = "README.md", content-type = "text/markdown" }
 keywords = [
     "Python",
     "OpenStreetMap",
@@ -21,28 +21,215 @@ keywords = [
     "Protocolbuffer Binary Format",
     "PBF",
     "Shapefile",
-    "PostgreSQL"
+    "GeoPackage",
+    "PostgreSQL",
+    "Data management",
 ]
 requires-python = ">=3.12"
-dependencies = [
-    "pyhelpers ~= 2.5.3",
-    "pyrcs ~= 1.2.1",
-    "geopandas >= 1.1.0, < 2.0.0",
-]
 classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
     "Intended Audience :: Science/Research",
     "Topic :: Database",
-    "Topic :: Database :: Database Engines/Servers",
     "Topic :: Education",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development",
     "Topic :: Utilities",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
 ]
+dependencies = [
+    "pyhelpers~=2.5.3",
+    "pyrcs~=1.2.1",
+    "geopandas>=1.1.0,<2.0.0",
+]
 
-[tool.setuptools]
-packages = { find = {} }
+[project.optional-dependencies]
+gdal = [
+    "gdal",
+]
+pyshp = [
+    "pyshp",
+]
+tqdm = [
+    "tqdm",
+]
+all = [
+    "pydriosm[gdal]",
+    "pydriosm[pyshp]",
+    "pydriosm[tqdm]",
+]
+
+
+[project.urls]
+Homepage = "https://github.com/mikeqfu/pydriosm"
+Documentation = "https://pydriosm.readthedocs.io/en/latest/"
+Repository = "https://github.com/mikeqfu/pydriosm"
+"Bug Tracker" = "https://github.com/mikeqfu/pydriosm/issues"
+Changelog = "https://github.com/mikeqfu/pydriosm/blob/master/CHANGELOG.md"
+
+
+# -----------------------
+# Local developer tooling
+# -----------------------
+[dependency-groups]
+docs = [
+    "furo",
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinx-new-tab-link",
+    "sphinx-toggleprompt",
+]
+notebook = [
+    "notebook",
+]
+test = [
+    "coverage",
+    "orjson",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "python-dotenv",
+    "python-rapidjson",
+    "ujson",
+]
+dev = [
+    { include-group = "docs" },
+    { include-group = "notebook" },
+    { include-group = "test" },
+]
+
+
+# -----------------
+# UV configuration
+# -----------------
+[tool.uv]
+link-mode = "copy"
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+]
+
+[[tool.uv.index]]
+name = "geospatial-wheels"
+url = "https://nathanjmcdougall.github.io/geospatial-wheels-index/"
+explicit = true
+
+[tool.uv.sources]
+gdal = [
+    { index = "geospatial-wheels", marker = "sys_platform == 'win32'" },
+]
+
+
+# --------------------
+# Build configuration
+# --------------------
+[tool.hatch.build]
+artifacts = [
+    "pydriosm/data/**/*"
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "pydriosm",
+    "pyproject.toml",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+]
+exclude = [
+    ".venv",
+    "docs",
+    "tests",
+    "tutorials"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pydriosm"]
+exclude = [
+    "**/.gitkeep",
+]
+
+[tool.hatch.build.targets.wheel.force-include]
+"pyproject.toml" = "pydriosm/pyproject.toml"
+
+
+# Custom metadata section
+[tool.pydriosm.metadata]
+funder = ""
+project-name = "PyDriosm"
+project-start = "2019-09"
+
+[[tool.pydriosm.metadata.corresponding-author]]
+name = "Qian Fu"
+affiliation = "Birmingham Energy Institute, University of Birmingham"
+email = "q.fu@bham.ac.uk"
+
+
+# --------------------
+# Pytest configuration
+# --------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+markers = [
+    "network: tests that call live external services",
+]
+addopts = [
+    "-v",
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=pydriosm",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-report=html",
+]
+xfail_strict = true
+
+filterwarnings = [
+    "error",
+    "ignore:Support for class-based `config` is deprecated:UserWarning",
+    "ignore:distutils Version classes are deprecated:DeprecationWarning",
+    "ignore:codecs\\.open\\(\\) is deprecated:DeprecationWarning",
+]
+
+
+# ----------------------
+# Coverage configuration
+# ----------------------
+[tool.coverage.run]
+source = ["pydriosm"]
+branch = true
+parallel = true
+relative_files = true
+
+[tool.coverage.paths]
+source = [
+    "pydriosm",
+    "*/site-packages/pydriosm",
+    "*/pydriosm",
+]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+exclude_also = [
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "raise NotImplementedError",
+    "if __name__ == [\"']__main__[\"']:",
+]
+
+# Report destinations
+[tool.coverage.xml]
+output = "reports/coverage.xml"
+
+[tool.coverage.html]
+directory = "reports/htmlcov"

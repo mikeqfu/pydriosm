@@ -10,22 +10,25 @@ from pydriosm.downloader._geofabrik import GeofabrikDownloader
 from pydriosm.errors import InvalidFileFormatError, InvalidSubregionNameError
 
 
+@pytest.fixture(scope='class')
+def gfd():
+    # gfd = GeofabrikDownloader()
+    return GeofabrikDownloader()
+
+
+@pytest.fixture(scope='class')
+def bbd():
+    # bbd = BBBikeDownloader()
+    return BBBikeDownloader()
+
+
+@pytest.fixture(scope='class')
+def bd():
+    # bd = BaseDownloader()
+    return BaseDownloader()
+
+
 class TestBaseDownloader:
-
-    @pytest.fixture(scope='class')
-    def gfd(self):
-        # gfd = GeofabrikDownloader()
-        return GeofabrikDownloader()
-
-    @pytest.fixture(scope='class')
-    def bbd(self):
-        # bbd = BBBikeDownloader()
-        return BBBikeDownloader()
-
-    @pytest.fixture(scope='class')
-    def bd(self):
-        # bd = BaseDownloader()
-        return BaseDownloader()
 
     def test_init(self, bd):
         assert bd.NAME == 'OSM downloader'

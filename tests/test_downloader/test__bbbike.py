@@ -1,4 +1,6 @@
-"""Tests the class: :class:`pydriosm.downloader._bbbike.BBBikeDownloader`."""
+"""
+Tests for the :class:`pydriosm.downloader._bbbike.BBBikeDownloader` class.
+"""
 
 import os
 
@@ -8,12 +10,13 @@ import pytest
 from pydriosm.downloader._bbbike import BBBikeDownloader
 
 
-class TestBBBikeDownloader:
+@pytest.fixture(scope='class')
+def bbd():
+    # bbd = BBBikeDownloader()
+    return BBBikeDownloader()
 
-    @pytest.fixture(scope='class')
-    def bbd(self):
-        # bbd = BBBikeDownloader()
-        return BBBikeDownloader()
+
+class TestBBBikeDownloader:
 
     def test_init(self, bbd):
         assert bbd.NAME == 'BBBike'

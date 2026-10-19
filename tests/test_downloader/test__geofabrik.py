@@ -1,12 +1,20 @@
-"""Tests the class: :class:`pydriosm.downloader._geofabrik.GeofabrikDownloader`."""
+"""
+Tests for the :class:`pydriosm.downloader._geofabrik.GeofabrikDownloader` class.
+"""
 
 import os
 
 import pandas as pd
 import pytest
-from pyhelpers.dirs import delete_dir
+from pyhelpers.dirs import delete_dir, get_relative_path, normalize_path
 
 from pydriosm.downloader._geofabrik import GeofabrikDownloader
+
+
+@pytest.fixture(scope='class')
+def gfd():
+    # gfd = GeofabrikDownloader()
+    return GeofabrikDownloader()
 
 
 class TestGeofabrikDownloader:
@@ -20,11 +28,6 @@ class TestGeofabrikDownloader:
         '.shp.zip',
         '.osm.bz2',
     ]
-
-    @pytest.fixture(scope='class')
-    def gfd(self):
-        # gfd = GeofabrikDownloader()
-        return GeofabrikDownloader()
 
     def test_init(self, gfd):
         assert gfd.NAME == 'Geofabrik'
@@ -260,13 +263,17 @@ class TestGeofabrikDownloader:
 
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
         gfd.download_data(
-            subregion_names=subregion_names, osm_file_formats=osm_file_format, verbose=True)
+            subregion_names=subregion_names,
+            osm_file_formats=osm_file_format,
+            verbose=True
+        )
         out, _ = capfd.readouterr()
         assert "Saving " in out and "Done." in out
         assert len(gfd.data_paths) == 2
-        assert os.path.relpath(gfd.download_dir) == os.path.join("osm_data", "geofabrik")
+        rel_download_dir_path: str = get_relative_path(gfd.download_dir, as_str=True)
+        assert "osm_data/geofabrik" in rel_download_dir_path
 
-        download_dir = os.path.dirname(gfd.download_dir)
+        download_dir = gfd.download_dir.parent
 
         delete_dir(download_dir, confirmation_required=False, verbose=True)
 
@@ -275,32 +282,46 @@ class TestGeofabrikDownloader:
 
         # import tempfile; tmp_path = tempfile.mkdtemp()
         gfd.download_data(
-            subregion_names=subregion_names, osm_file_formats=osm_file_format,
-            download_dir=tmp_path, confirmation_required=False, verbose=True)
+            subregion_names=subregion_names,
+            osm_file_formats=osm_file_format,
+            download_dir=tmp_path,
+            confirmation_required=False,
+            verbose=True
+        )
         out, _ = capfd.readouterr()
-        assert "No '.shp.zip' data is available for \"West Yorkshire\"." in out
+        assert "No \".shp.zip\" data is available for any subregions of \"West Yorkshire\"." in out
         assert len(gfd.data_paths) == 2
 
         osm_file_format = ".geopackage"
         gfd.download_data(
-            subregion_names=subregion_names, osm_file_formats=osm_file_format,
-            download_dir=tmp_path, confirmation_required=False, verbose=True)
+            subregion_names=subregion_names,
+            osm_file_formats=osm_file_format,
+            download_dir=tmp_path,
+            confirmation_required=False,
+            verbose=True
+        )
         assert len(gfd.data_paths) == 3
-        assert os.path.normpath(gfd.data_paths[-1]) == os.path.join(
-            tmp_path, "west-yorkshire", "west-yorkshire-latest-free.gpkg.zip")
-        assert os.path.normpath(gfd.download_dir) == str(tmp_path)
-        assert os.path.relpath(gfd.cdd()) == os.path.join("osm_data", "geofabrik")
+        assert (normalize_path(gfd.data_paths[-1]) ==
+                f"{normalize_path(tmp_path)}/west-yorkshire/west-yorkshire-latest-free.gpkg.zip")
+        assert normalize_path(gfd.download_dir) == normalize_path(tmp_path)
+        assert get_relative_path(gfd.cdd(), as_str=True) == "osm_data/geofabrik"
 
         delete_dir(tmp_path, confirmation_required=False, verbose=True)
 
-        subrgn_name = 'England'
-        file_format = ".pbf"
+        subregion_name = 'England'
+        osm_file_format = ".pbf"
         download_dir = "tests/osm_data"
 
         monkeypatch.setattr('builtins.input', lambda _: "Yes")
         download_file_pathnames = gfd.download_data(
-            subrgn_name, file_format, download_dir=download_dir, deep=True, update=True,
-            verbose=True, ret_download_path=True)
+            subregion_names=subregion_name,
+            osm_file_formats=osm_file_format,
+            download_dir=download_dir,
+            deep=True,
+            update=True,
+            verbose=True,
+            ret_download_path=True
+        )
 
         assert len(download_file_pathnames) > 40
         assert os.path.commonpath(download_file_pathnames) == os.path.normpath(gfd.download_dir)

@@ -7,12 +7,13 @@ from pydriosm.reader._base import BaseReader
 from pydriosm.reader._shp import SHP
 
 
-class TestBaseReader:
+@pytest.fixture(scope='class')
+def base_reader():
+    # base_reader = BaseReader()
+    return BaseReader()
 
-    @pytest.fixture(scope='class')
-    def base_reader(self):
-        # base_reader = BaseReader()
-        return BaseReader()
+
+class TestBaseReader:
 
     def test_init(self, base_reader):
         assert base_reader.NAME == 'OSM Reader'

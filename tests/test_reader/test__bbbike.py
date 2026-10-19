@@ -7,12 +7,13 @@ from pydriosm.errors import InvalidSubregionNameError
 from pydriosm.reader._bbbike import BBBikeReader
 
 
-class TestBBBikeReader:
+@pytest.fixture(scope='class')
+def bbr():
+    # bbr = BBBikeReader()
+    return BBBikeReader()
 
-    @pytest.fixture(scope='class')
-    def bbr(self):
-        # bbr = BBBikeReader()
-        return BBBikeReader()
+
+class TestBBBikeReader:
 
     def test_get_file_path(self, bbr, monkeypatch, tmp_path):
         osm_file_format = ".pbf"
