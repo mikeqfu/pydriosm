@@ -139,7 +139,6 @@ include = [
     "pydriosm",
     "pyproject.toml",
     "CHANGELOG.md",
-    "CITATION.cff",
     "LICENSE",
     "README.md"
 ]
