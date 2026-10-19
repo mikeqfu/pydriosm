@@ -2,22 +2,25 @@
 Configuration file for the Sphinx documentation builder.
 """
 
-# == Path setup ====================================================================================
+import datetime
 import os
 import sys
 
-# If the directory is relative to the documentation root, use os.path.abspath to make it absolute:
+from pygments.formatters.latex import LatexFormatter
+from sphinx.highlighting import PygmentsBridge
+
+from pydriosm import __affiliation__, __author__, __copyright__, __description__, \
+    __first_release__, __pkgname__, __project__, __version__
+
+# == Path setup ====================================================================================
 sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../pydriosm'))
 sys.path.insert(0, os.path.abspath('../../pydriosm/data'))
 
 # == Project information ===========================================================================
-from pydriosm import __affil__, __author__, __copyright__, __desc__, __pkgname__, \
-    __project__, __version__, __first_release__
-
-# General information about the project:
 project = __project__
-copyright = __copyright__
+# noinspection shadowing-builtins
+copyright = __copyright__.replace('Copyright (c) ', '')
 
 # The version info for the project:
 version = __version__  # The short X.Y.Z version
@@ -219,10 +222,6 @@ copybutton_prompt_is_regexp = True
 
 
 # == Options for LaTeX output ======================================================================
-from pygments.formatters.latex import LatexFormatter
-from sphinx.highlighting import PygmentsBridge
-
-
 class CustomLatexFormatter(LatexFormatter):
     def __init__(self, **options):
         super(CustomLatexFormatter, self).__init__(**options)
@@ -265,14 +264,13 @@ latex_maketitle = r'''
         \vspace{50mm}
         \LARGE \textbf{{%s}} \par
         \Large \textit{{%s}} \par
-        \Large \textit{{%s}} \par
 
         \vspace{50mm}
         \Large {{First release:}} \large \textbf{{%s}} \par
         \Large {{Last updated:}} \large \textbf{{\MonthYearFormat\today}} \par
 
         \vspace{20mm}
-        \large \textcopyright \space Copyright %s \par
+        \large Copyright \textcopyright\space %s \par
 
     \end{titlepage}
     \restoregeometry
@@ -292,12 +290,13 @@ latex_maketitle = r'''
     \clearpage
     \pagenumbering{arabic}
     ''' % (__project__,
-           __desc__,
+           __description__,
            __version__,
            __author__,
-           __affil__.split(', ')[0], __affil__.split(', ')[1],
-           __first_release__,
-           __copyright__)
+           __affiliation__,
+           datetime.datetime.strptime(__first_release__, '%Y-%m').strftime('%B %Y'),
+           __copyright__.replace('Copyright (c) ', '')
+           )
 
 latex_preamble = r'''
     \setlength{\headheight}{14pt}
